@@ -1,137 +1,209 @@
-# backend/app/routers/users.py
-from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
-from app.core.auth import get_current_user, require_admin  # <-- only admin for user mgmt
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from jose import jwt, JWTError
+from pydantic import BaseModel, EmailStr
+
+from app.core.config import settings
 from app.db.mongo import get_db
-from app.core.security import hash_password
-from app.models.user import CreateUserRequest, UserOut, Role, AccessLevel
-from app.repositories.projects import ProjectRepository
+from app.models.user import Role, ACCESS_LEVEL
+from app.core.auth import get_current_user, require_head, CurrentUser
 
 router = APIRouter(prefix="/api/users", tags=["users"])
-proj_repo = ProjectRepository()
 
 
-# ---------- Helpers ----------
+# ---------------------------
+# Auth / Admin-only dependency
+# ---------------------------
+class CurrentUser(BaseModel):
+    email: EmailStr
+    role: Role
 
-def _is_head(user) -> bool:
-    return user.role in {Role.GD, Role.DH}
+async def admin_required(request: Request) -> CurrentUser:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    token = auth_header.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    sub = payload.get("sub")
+    raw_role = payload.get("role")
+    if not sub or raw_role is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    try:
+        role = Role(raw_role)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid role in token")
+
+    if role != Role.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+
+    return CurrentUser(email=sub, role=role)
 
 
-# ---------- Admin-only endpoints ----------
+# ---------------------------
+# Schemas
+# ---------------------------
+class UserCreate(BaseModel):
+    first_name: str
+    last_name: Optional[str] = None
+    email: EmailStr
+    password: str              # plain text (as per your requirement)
+    role: Role
+    is_active: bool = True
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[Role] = None
+    is_active: Optional[bool] = None
+    # NOTE: email change is intentionally NOT allowed (email is the ID)
+
+class UserOut(BaseModel):
+    first_name: str
+    last_name: Optional[str] = None
+    email: EmailStr
+    role: Role
+    access_level_value: int
+    is_active: bool
+    created_at: datetime
+    last_login_at: Optional[datetime] = None
+
+
+def _normalize_user(doc: dict) -> UserOut:
+    role = doc.get("role", Role.STUDENT)
+    if isinstance(role, str):
+        role = Role(role)
+    return UserOut(
+        first_name=doc["first_name"],
+        last_name=doc.get("last_name"),
+        email=doc["email"],
+        role=role,
+        access_level_value=ACCESS_LEVEL[role],
+        is_active=doc.get("is_active", True),
+        created_at=doc.get("created_at"),
+        last_login_at=doc.get("last_login_at"),
+    )
+
+
+# ---------------------------
+# CRUD (Admin only)
+# ---------------------------
 
 @router.post("", response_model=UserOut)
-async def create_user(payload: CreateUserRequest, user=Depends(get_current_user)):
-    # Only ADMIN can create users
-    require_admin(user)
+async def create_user(body: UserCreate, _: CurrentUser = Depends(admin_required)):
     db = await get_db()
-    if await db.users.find_one({"username": payload.username}):
-        raise HTTPException(status_code=400, detail="User already exists")
+    # Ensure unique email
+    existing = await db.users.find_one({"email": body.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
 
     doc = {
-        "username": payload.username,
-        "password_hash": hash_password(payload.password),
-        "role": payload.role,
-        # Optional fields like email can be added if present in payload
+        "first_name": body.first_name,
+        "last_name": body.last_name,
+        "email": body.email,
+        "password": body.password,          # plain text, as requested
+        "role": body.role.value,            # store as string
+        "is_active": body.is_active,
+        "created_at": datetime.utcnow(),
+        "last_login_at": None,
     }
     await db.users.insert_one(doc)
-
-    return UserOut(
-        _id=str(doc.get("_id")) if doc.get("_id") else None,
-        username=doc["username"],
-        role=doc["role"],
-        access_level_value=AccessLevel[doc["role"]],
-    )
+    return _normalize_user(doc)
 
 
 @router.get("", response_model=List[UserOut])
 async def list_users(
     page: int = Query(1, ge=1),
-    limit: int = Query(100, ge=1, le=200),
-    role: str | None = None,
-    q: str | None = None,
-    user=Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=200),
+    q: Optional[str] = Query(None, description="Search by first_name/last_name/email"),
+    role: Optional[Role] = None,
+    _: CurrentUser = Depends(admin_required),
 ):
-    # Only ADMIN can list users
-    require_admin(user)
-
     db = await get_db()
-    qry = {}
-    if role:
-        qry["role"] = role
+    qry: dict = {}
     if q:
-        qry["username"] = {"$regex": q, "$options": "i"}
+        qry["$or"] = [
+            {"first_name": {"$regex": q, "$options": "i"}},
+            {"last_name": {"$regex": q, "$options": "i"}},
+            {"email": {"$regex": q, "$options": "i"}},
+        ]
+    if role:
+        qry["role"] = role.value
 
     cursor = (
         db.users.find(qry)
-        .sort("username", 1)
+        .sort("created_at", -1)
         .skip((page - 1) * limit)
         .limit(limit)
     )
     docs = await cursor.to_list(length=limit)
-    out = []
-    for d in docs:
-        out.append(
-            UserOut(
-                _id=str(d.get("_id")) if d.get("_id") else None,
-                username=d["username"],
-                role=d.get("role", Role.GD),
-                access_level_value=AccessLevel[d.get("role", Role.GD)],
-            )
-        )
-    return out
+    return [_normalize_user(d) for d in docs]
 
 
-@router.get("/overview")
-async def users_overview(user=Depends(get_current_user)):
-    # Only ADMIN can see user stats
-    require_admin(user)
+@router.get("/{email}", response_model=UserOut)
+async def get_user(email: EmailStr, _: CurrentUser = Depends(admin_required)):
     db = await get_db()
-    total = await db.users.count_documents({})
-    pipeline = [
-        {"$group": {"_id": "$role", "count": {"$sum": 1}}},
-        {"$project": {"role": "$_id", "count": 1, "_id": 0}},
-        {"$sort": {"role": 1}},
-    ]
-    by_role = [*(await db.users.aggregate(pipeline).to_list(length=100))]
-    return {"total": total, "by_role": by_role}
+    doc = await db.users.find_one({"email": str(email)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _normalize_user(doc)
 
 
-@router.get("/counts")
-async def users_counts(user=Depends(get_current_user)):
-    # Only ADMIN can see counts
-    require_admin(user)
-    return await users_overview(user)
-
-
-@router.delete("/{username}")
-async def delete_user(username: str, user=Depends(get_current_user)):
-    # Only ADMIN can delete users
-    require_admin(user)
-
+@router.patch("/{email}", response_model=UserOut)
+async def update_user(email: EmailStr, body: UserUpdate, _: CurrentUser = Depends(admin_required)):
     db = await get_db()
-    res = await db.users.delete_one({"username": username})
-    if not res.deleted_count:
+    updates = {}
+    if body.first_name is not None: updates["first_name"] = body.first_name
+    if body.last_name is not None:  updates["last_name"] = body.last_name
+    if body.password is not None:   updates["password"] = body.password  # plain text
+    if body.role is not None:       updates["role"] = body.role.value
+    if body.is_active is not None:  updates["is_active"] = body.is_active
+
+    if not updates:
+        # nothing to do; return current
+        doc = await db.users.find_one({"email": str(email)})
+        if not doc:
+            raise HTTPException(status_code=404, detail="User not found")
+        return _normalize_user(doc)
+
+    res = await db.users.update_one({"email": str(email)}, {"$set": updates})
+    if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Cascade remove from every project
-    await proj_repo.remove_member_everywhere(username)
+    doc = await db.users.find_one({"email": str(email)})
+    return _normalize_user(doc)
+
+
+@router.delete("/{email}")
+async def delete_user(email: EmailStr, _: CurrentUser = Depends(admin_required)):
+    db = await get_db()
+    res = await db.users.delete_one({"email": str(email)})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
     return {"ok": True}
 
-
-# ---------- Shared endpoint needed by GD/DH to add members ----------
-
 @router.get("/search")
-async def search_users(q: str, limit: int = 10, user=Depends(get_current_user)):
-    # Allow ADMIN + GD + DH to search (used for adding members)
-    if not (user.role == Role.ADMIN or _is_head(user)):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+async def search_users(q: str = Query(..., min_length=1), limit: int = 10, user: CurrentUser = Depends(get_current_user)):
+    # GD/DH only
+    require_head(user)
     db = await get_db()
     cursor = (
-        db.users.find({"username": {"$regex": q, "$options": "i"}})
-        .sort("username", 1)
-        .limit(limit)
+        db.users.find({"email": {"$regex": q, "$options": "i"}}, {"email": 1, "_id": 1, "first_name": 1, "last_name": 1})
+        .sort("email", 1).limit(limit)
     )
     docs = await cursor.to_list(length=limit)
-    return [{"username": d["username"], "role": d.get("role", Role.GD)} for d in docs]
+    return [
+        {
+            "email": d["email"],
+            "user_id": str(d["_id"]),
+            "name": f'{d.get("first_name","")}{(" " + d.get("last_name","")) if d.get("last_name") else ""}'.strip()
+        } for d in docs
+    ]

@@ -4,5 +4,3 @@ node_modules/
 # Python virtual environment
 venv/
 
-# Environment variables
-.env

@@ -1,18 +1,28 @@
-# app/routers/auth.py (only the login bits)
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from jose import jwt
+from pydantic import BaseModel, EmailStr
 from app.db.mongo import get_db
-from app.core.security import verify_password
 from app.core.config import settings
-from app.models.user import LoginRequest, TokenResponse, Role, AccessLevel
+from app.models.user import Role, ACCESS_LEVEL
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-def _make_token(username: str, role: Role) -> str:
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    email: EmailStr
+    role: Role
+    access_level_value: int
+
+def _make_token(email: str, role: Role) -> str:
     now = datetime.utcnow()
     payload = {
-        "sub": username,
+        "sub": email,
         "role": role.value if isinstance(role, Role) else role,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=settings.jwt_exp_minutes)).timestamp()),
@@ -22,16 +32,15 @@ def _make_token(username: str, role: Role) -> str:
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest):
     db = await get_db()
-    user = await db.users.find_one({"username": body.username})
-    if not user or not verify_password(body.password, user.get("password_hash", "")):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+    user = await db.users.find_one({"email": body.email})
+    if not user or user.get("password") != body.password:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    role = user.get("role", Role.GD)
-    token = _make_token(user["username"], role)
-    return TokenResponse(
-        access_token=token,
-        username=user["username"],
-        role=role,
-        access_level_value=AccessLevel[role],
-        email=user.get("email"),
-    )
+    role = user.get("role", Role.STUDENT)
+    if isinstance(role, str):
+        role = Role(role)
+
+    await db.users.update_one({"email": user["email"]}, {"$set": {"last_login_at": datetime.utcnow()}})
+
+    token = _make_token(user["email"], role)
+    return TokenResponse(access_token=token, email=user["email"], role=role, access_level_value=ACCESS_LEVEL[role])
