@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.routers import auth
 from app.routers import users 
 from app.routers import projects
+from app.routers import documents
 app = FastAPI(title="flightdv minimal backend")
 
 app.add_middleware(
@@ -21,3 +22,4 @@ async def health():
 app.include_router(auth.router)
 app.include_router(users.router)    
 app.include_router(projects.router)
+app.include_router(documents.router)

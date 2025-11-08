@@ -1,6 +1,6 @@
-// src/components/app/UploadMinutesModal.jsx
+// src/components/app/UploadSectionDocumentModal.jsx
 import React, { useState } from "react";
-import { FiUploadCloud, FiPlus, FiCalendar } from "react-icons/fi";
+import { FiUploadCloud, FiCalendar } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
 
 const BORDER = "#E5E7EB";
@@ -20,16 +20,16 @@ async function computeSha256(file) {
  * Props:
  *  - open: boolean
  *  - onClose: () => void
- *  - subsection: "tcm" | "pmrc" | "ebm" | "gdm"
+ *  - section: string   // "inventory_records", "divisional_records", ...
  *  - onUploaded: () => void
  */
-export default function UploadMinutesModal({
+export default function UploadSectionDocumentModal({
   open,
   onClose,
-  subsection,
+  section,
   onUploaded,
 }) {
-  const [meetingDate, setMeetingDate] = useState("");
+  const [docDate, setDocDate] = useState("");
   const [tag, setTag] = useState("");
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,16 +45,16 @@ export default function UploadMinutesModal({
       setError("Please select a file to upload.");
       return;
     }
-    if (!meetingDate) {
-      setError("Please select a meeting date.");
+    if (!docDate) {
+      setError("Please select a date.");
       return;
     }
     if (!tag.trim()) {
       setError("Please enter a tag name.");
       return;
     }
-    if (!subsection) {
-      setError("No subsection selected.");
+    if (!section) {
+      setError("No section specified.");
       return;
     }
 
@@ -66,10 +66,10 @@ export default function UploadMinutesModal({
 
       // 2) Ask backend for upload URL
       const initPayload = {
-        section: "minutes_of_meeting",
-        subsection, // 'tcm' | 'pmrc' | 'ebm' | 'gdm'
+        section, // e.g. "inventory_records"
+        subsection: null,
         tag,
-        doc_date: meetingDate, // 'YYYY-MM-DD'
+        doc_date: docDate, // 'YYYY-MM-DD'
         filename: file.name,
         content_type: file.type || "application/octet-stream",
         size_bytes: file.size,
@@ -92,10 +92,10 @@ export default function UploadMinutesModal({
 
       // 4) Confirm upload with backend
       const confirmPayload = {
-        section: "minutes_of_meeting",
-        subsection,
+        section,
+        subsection: null,
         tag,
-        doc_date: meetingDate,
+        doc_date: docDate,
         storage_key,
         original_name: file.name,
         content_type: file.type || "application/octet-stream",
@@ -111,7 +111,7 @@ export default function UploadMinutesModal({
       // Reset form
       setFile(null);
       setTag("");
-      setMeetingDate("");
+      setDocDate("");
     } catch (err) {
       console.error(err);
       if (err?.response?.status === 409) {
@@ -160,59 +160,14 @@ export default function UploadMinutesModal({
             color: "#0f172a",
           }}
         >
-          Upload Meeting Minutes
+          Upload Document
         </h2>
 
         <form
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 18 }}
         >
-          {/* Action Point (just UI, not stored for now) */}
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: 13,
-                color: "#4b5563",
-                marginBottom: 6,
-              }}
-            >
-              Action Point
-            </label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input
-                type="text"
-                placeholder="CFD analysis to be conducted for airbus 320"
-                style={{
-                  flex: 1,
-                  height: 40,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F9FAFB",
-                  padding: "0 12px",
-                  fontSize: 14,
-                }}
-              />
-              <button
-                type="button"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  border: `1px solid ${BORDER}`,
-                  background: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "default",
-                }}
-              >
-                <FiPlus size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* Meeting Date */}
+          {/* Date */}
           <div style={{ maxWidth: 260 }}>
             <label
               style={{
@@ -222,7 +177,7 @@ export default function UploadMinutesModal({
                 marginBottom: 6,
               }}
             >
-              Meeting Date
+              Date
             </label>
             <div
               style={{
@@ -239,8 +194,8 @@ export default function UploadMinutesModal({
               <FiCalendar size={16} style={{ color: "#6b7280" }} />
               <input
                 type="date"
-                value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
+                value={docDate}
+                onChange={(e) => setDocDate(e.target.value)}
                 style={{
                   border: "none",
                   outline: "none",
@@ -253,62 +208,33 @@ export default function UploadMinutesModal({
             </div>
           </div>
 
-          {/* Tag + Action on */}
-          <div style={{ display: "flex", gap: 16 }}>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  color: "#4b5563",
-                  marginBottom: 6,
-                }}
-              >
-                Tag Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Strategy Planning, Team Sync"
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 40,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F9FAFB",
-                  padding: "0 12px",
-                  fontSize: 14,
-                }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  color: "#4b5563",
-                  marginBottom: 6,
-                }}
-              >
-                Action on
-              </label>
-              <input
-                type="text"
-                value="John Doe"
-                readOnly
-                style={{
-                  width: "100%",
-                  height: 40,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F9FAFB",
-                  padding: "0 12px",
-                  fontSize: 14,
-                  color: "#4b5563",
-                }}
-              />
-            </div>
+          {/* Tag */}
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: 13,
+                color: "#4b5563",
+                marginBottom: 6,
+              }}
+            >
+              Tag Name
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., Q1 Inventory, Division A, etc."
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              style={{
+                width: "100%",
+                height: 40,
+                borderRadius: 6,
+                border: `1px solid ${BORDER}`,
+                background: "#F9FAFB",
+                padding: "0 12px",
+                fontSize: 14,
+              }}
+            />
           </div>
 
           {/* Upload box */}
@@ -338,7 +264,7 @@ export default function UploadMinutesModal({
                   color: "#111827",
                 }}
               >
-                Upload Data files
+                Upload files
               </h3>
               <p
                 style={{
@@ -347,7 +273,7 @@ export default function UploadMinutesModal({
                   color: "#6b7280",
                 }}
               >
-                Drag and drop your PDF/Word files here, or click to browse
+                Drag and drop your files here, or click to browse
               </p>
 
               <label
@@ -384,7 +310,7 @@ export default function UploadMinutesModal({
                   color: "#9ca3af",
                 }}
               >
-                Supported formats: PDF/Word/any (up to backend limits)
+                Supported formats: any (PDF, Word, Excel, etc.)
               </p>
             </div>
           </div>
@@ -439,7 +365,7 @@ export default function UploadMinutesModal({
               }}
             >
               <FiUploadCloud size={16} />
-              <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
+              <span>{isSubmitting ? "Uploading..." : "Upload"}</span>
             </button>
           </div>
         </form>

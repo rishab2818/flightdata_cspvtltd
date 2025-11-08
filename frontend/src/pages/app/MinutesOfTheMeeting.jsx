@@ -1,5 +1,5 @@
 // src/pages/app/MinutesOfTheMeeting.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   FiFileText,
   FiEye,
@@ -9,23 +9,106 @@ import {
   FiEdit2,
 } from "react-icons/fi";
 import UploadMinutesModal from "../../components/app/UploadMinutesModal";
+import { documentsApi } from "../../api/documentsApi";
 
 const BORDER = "#0000001A";
 const PRIMARY = "#1976D2";
 
-const dummyRows = [
-  { id: 1, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 2, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 3, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 4, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 5, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 6, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 7, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
-  { id: 8, fileName: "TCM_MOM_01", tag: "TCM_2Jul", actionOn: "John Doe", meetingDate: "Jul 2, 2025" },
+// Back-end subsection codes:
+const MOM_TABS = [
+  { key: "tcm", label: "Technology Council(TCM)" },
+  { key: "pmrc", label: "PMRC" },
+  { key: "ebm", label: "Executive Board meeting" },
+  { key: "gdm", label: "Group Director Meeting" },
 ];
 
+function formatDate(isoDateString) {
+  if (!isoDateString) return "";
+  const d = new Date(isoDateString);
+  if (Number.isNaN(d.getTime())) return isoDateString;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function MinutesOfTheMeeting() {
+  const [activeSubsection, setActiveSubsection] = useState("tcm"); // "tcm" | "pmrc" | "ebm" | "gdm"
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const loadData = useCallback(
+    async (subsection) => {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await documentsApi.listMinutes(subsection);
+        // data is an array of UserDocumentOut from backend
+        const mapped = data.map((doc) => ({
+          id: doc.doc_id,
+          fileName: doc.original_name,
+          tag: doc.tag,
+          actionOn: "Me",
+          meetingDate: formatDate(doc.doc_date),
+        }));
+        setRows(mapped);
+      } catch (e) {
+        console.error("Failed to load minutes:", e);
+        setError("Failed to load minutes. Please try again.");
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    loadData(activeSubsection);
+  }, [activeSubsection, loadData]);
+
+  const handleUploadSuccess = () => {
+    loadData(activeSubsection);
+  };
+
+  const handleDownload = async (row) => {
+    try {
+      const id = row.id;
+      if (!id) return;
+      const res = await documentsApi.getDownloadUrl(id);
+      const url = res?.download_url;
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        console.error("Download url missing:", res);
+        alert("Download link is missing.");
+      }
+    } catch (e) {
+      console.error("Download failed:", e);
+      alert("Failed to download document.");
+    }
+  };
+
+  const handleDelete = async (row) => {
+    if (!window.confirm("Are you sure you want to delete this document?")) {
+      return;
+    }
+    try {
+      const id = row.id;
+      if (!id) return;
+      await documentsApi.remove(id);
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      console.error("Delete failed:", e);
+      alert("Failed to delete document.");
+    }
+  };
+
+  const activeTab =
+    MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
 
   return (
     <div style={{ width: 1026 }}>
@@ -61,19 +144,30 @@ export default function MinutesOfTheMeeting() {
           padding: "35px 25px",
         }}
       >
-        <TabsRow />
+        <TabsRow
+          activeKey={activeSubsection}
+          onChange={(key) => setActiveSubsection(key)}
+        />
 
-        <NextMeetingBanner />
+        <NextMeetingBanner sectionLabel={activeTab.label} />
 
         <UploadHeader onUploadClick={() => setShowUploadModal(true)} />
 
-        <MinutesTable rows={dummyRows} />
+        <MinutesTable
+          rows={rows}
+          loading={loading}
+          error={error}
+          onDownload={handleDownload}
+          onDelete={handleDelete}
+        />
       </div>
 
       {/* upload modal */}
       <UploadMinutesModal
         open={showUploadModal}
         onClose={() => setShowUploadModal(false)}
+        subsection={activeSubsection} // "tcm" | "pmrc" | "ebm" | "gdm"
+        onUploaded={handleUploadSuccess}
       />
     </div>
   );
@@ -81,14 +175,7 @@ export default function MinutesOfTheMeeting() {
 
 /* ---------- small components ---------- */
 
-function TabsRow() {
-  const tabs = [
-    "Technology Council(TCM)",
-    "PMRC",
-    "Executive Board meeting",
-    "Group Director Meeting",
-  ];
-
+function TabsRow({ activeKey, onChange }) {
   return (
     <div
       style={{
@@ -99,12 +186,13 @@ function TabsRow() {
         paddingBottom: 4,
       }}
     >
-      {tabs.map((tab, idx) => {
-        const active = idx === 0;
+      {MOM_TABS.map((tab) => {
+        const active = tab.key === activeKey;
         return (
           <button
-            key={tab}
+            key={tab.key}
             type="button"
+            onClick={() => onChange(tab.key)}
             style={{
               border: "none",
               background: "transparent",
@@ -114,10 +202,12 @@ function TabsRow() {
               cursor: "pointer",
               color: active ? PRIMARY : "#475569",
               fontWeight: active ? 600 : 500,
-              borderBottom: active ? `2px solid ${PRIMARY}` : "2px solid transparent",
+              borderBottom: active
+                ? `2px solid ${PRIMARY}`
+                : "2px solid transparent",
             }}
           >
-            {tab}
+            {tab.label}
           </button>
         );
       })}
@@ -125,7 +215,7 @@ function TabsRow() {
   );
 }
 
-function NextMeetingBanner() {
+function NextMeetingBanner({ sectionLabel }) {
   return (
     <div
       style={{
@@ -143,7 +233,7 @@ function NextMeetingBanner() {
       }}
     >
       <span style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>
-        Next TMC Meeting
+        Next {sectionLabel} Meeting
       </span>
       <div
         style={{
@@ -214,7 +304,7 @@ function UploadHeader({ onUploadClick }) {
   );
 }
 
-function MinutesTable({ rows }) {
+function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
   return (
     <div style={{ marginTop: 8, overflowX: "auto" }}>
       <table
@@ -239,20 +329,77 @@ function MinutesTable({ rows }) {
             <th style={{ padding: "10px 4px" }}>Action On</th>
             <th style={{ padding: "10px 4px" }}>Meeting Date</th>
             <th style={{ padding: "10px 4px" }}>My Action</th>
-            <th style={{ padding: "10px 4px", textAlign: "center" }}>Actions</th>
+            <th style={{ padding: "10px 4px", textAlign: "center" }}>
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, idx) => (
-            <MinutesRow key={row.id || idx} row={row} />
-          ))}
+          {loading && (
+            <tr>
+              <td
+                colSpan={7}
+                style={{
+                  padding: "18px 4px",
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "#6b7280",
+                }}
+              >
+                Loading documents...
+              </td>
+            </tr>
+          )}
+
+          {!loading && error && (
+            <tr>
+              <td
+                colSpan={7}
+                style={{
+                  padding: "18px 4px",
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "#b91c1c",
+                }}
+              >
+                {error}
+              </td>
+            </tr>
+          )}
+
+          {!loading && !error && rows.length === 0 && (
+            <tr>
+              <td
+                colSpan={7}
+                style={{
+                  padding: "18px 4px",
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "#6b7280",
+                }}
+              >
+                No minutes uploaded yet.
+              </td>
+            </tr>
+          )}
+
+          {!loading &&
+            !error &&
+            rows.map((row) => (
+              <MinutesRow
+                key={row.id}
+                row={row}
+                onDownload={onDownload}
+                onDelete={onDelete}
+              />
+            ))}
         </tbody>
       </table>
     </div>
   );
 }
 
-function MinutesRow({ row }) {
+function MinutesRow({ row, onDownload, onDelete }) {
   return (
     <tr
       style={{
@@ -265,7 +412,9 @@ function MinutesRow({ row }) {
           <IconBadge>
             <FiFileText size={16} />
           </IconBadge>
-          <span style={{ fontSize: 13, color: "#0f172a" }}>{row.fileName}</span>
+          <span style={{ fontSize: 13, color: "#0f172a" }}>
+            {row.fileName}
+          </span>
         </div>
       </td>
 
@@ -315,13 +464,13 @@ function MinutesRow({ row }) {
             gap: 8,
           }}
         >
-          <IconBadge>
+          <IconBadge clickable onClick={() => onDownload(row)}>
             <FiEye size={16} />
           </IconBadge>
-          <IconBadge>
+          <IconBadge clickable onClick={() => onDownload(row)}>
             <FiDownload size={16} />
           </IconBadge>
-          <IconBadge>
+          <IconBadge clickable onClick={() => onDelete(row)}>
             <FiTrash2 size={16} />
           </IconBadge>
         </div>
@@ -330,9 +479,10 @@ function MinutesRow({ row }) {
   );
 }
 
-function IconBadge({ children }) {
+function IconBadge({ children, clickable, onClick }) {
   return (
     <div
+      onClick={clickable ? onClick : undefined}
       style={{
         width: 37.33,
         height: 32,
@@ -344,6 +494,7 @@ function IconBadge({ children }) {
         alignItems: "center",
         justifyContent: "center",
         background: "#F9FAFB",
+        cursor: clickable ? "pointer" : "default",
       }}
     >
       {children}
