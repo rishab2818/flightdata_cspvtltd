@@ -23,4 +23,5 @@ export const usersApi = {
     const { data } = await axiosClient.delete(`/api/users/${encodeURIComponent(email)}`);
     return data;
   },
+
 };
