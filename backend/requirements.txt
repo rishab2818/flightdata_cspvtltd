@@ -12,3 +12,4 @@ redis
 pandas
 openpyxl
 pyarrow
+plotly==5.17.0
