@@ -1,4 +1,5 @@
-"""Routes for project‑scoped flight data file uploads.
+"""
+Routes for project‑scoped flight data file uploads.
 
 This router exposes CRUD operations for uploading large CSV/Excel
 files that contain flight data. Files are organised by project and
@@ -24,8 +25,8 @@ from app.models.flight_data import (
     FlightDataFileOut,
 )
 
-from pydantic import BaseModel
 from app.tasks.flightdata_tasks import extract_flightdata_headers
+from pydantic import BaseModel, Field
 
 
 router = APIRouter(prefix="/api/flightdata", tags=["flightdata"])
@@ -115,7 +116,7 @@ async def confirm_flightdata_upload(
 ):
     """Register a flight data file once it has been uploaded.
 
-    Inserts a document into the `flight_files` collection and kicks off
+    Inserts a document into the ``flight_files`` collection and kicks off
     an asynchronous task to extract column headers. Returns the
     persisted metadata to the client.
     """
@@ -165,7 +166,7 @@ async def list_flightdata_files(
     """List all flight data files visible to the current user within a project.
 
     A file is visible if the user is the owner or has been granted
-    access via its `access_emails` list.
+    access via its ``access_emails`` list.
     """
     db = await get_db()
     # Confirm membership
@@ -201,118 +202,88 @@ async def list_flightdata_files(
     return results
 
 
-@router.get("/{file_id}/download-url")
-async def get_flightdata_download_url(
+class ShareRequest(BaseModel):
+    user_email: str = Field(..., description="Email of user to share access with")
+
+
+@router.post("/{file_id}/share")
+async def share_file(
     file_id: str,
+    payload: ShareRequest,
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Provide a presigned URL to download a flight data file.
+    """Share a flight data file with another user by email.
 
-    Only the owner or someone in the access list can generate a
-    download URL.
+    Only the owner can share a file. The provided email must correspond to
+    a member of the project. If the user already has access, the
+    operation is idempotent.
     """
     db = await get_db()
-    row = await db.flight_files.find_one({"_id": ObjectId(file_id)})
-    if not row:
+    doc = await db.flight_files.find_one({"_id": ObjectId(file_id)})
+    if not doc:
         raise HTTPException(status_code=404, detail="File not found")
-    # Check access
-    if not (row["owner_email"] == user.email or user.email in row.get("access_emails", [])):
-        raise HTTPException(status_code=403, detail="Not authorised to access this file")
-    minio_client = get_minio_client()
-    bucket = getattr(settings, "minio_flightdata_bucket", settings.minio_docs_bucket)
-    object_key = row["storage_key"]
-    download_url = minio_client.presigned_get_object(
-        bucket_name=bucket,
-        object_name=object_key,
-        expires=timedelta(hours=1),
+    # Check ownership
+    if doc["owner_email"] != user.email:
+        raise HTTPException(status_code=403, detail="Only the owner can share files")
+    # Ensure target is a member of the project
+    await _ensure_project_member(db, doc["project_id"], payload.user_email)
+    # Idempotently add user to access list
+    await db.flight_files.update_one(
+        {"_id": ObjectId(file_id)},
+        {"$addToSet": {"access_emails": payload.user_email}},
     )
-    return {
-        "download_url": download_url,
-        "original_name": row["original_name"],
-        "content_type": row.get("content_type"),
-        "expires_in": 3600,
-    }
-
-
-@router.delete("/{file_id}")
-async def delete_flightdata_file(
-    file_id: str,
-    user: CurrentUser = Depends(get_current_user),
-):
-    """Delete a flight data file from storage and metadata.
-
-    Only the owner can delete a file. Upon deletion the object is
-    removed from MinIO/S3 and then the metadata document is deleted.
-    """
-    db = await get_db()
-    row = await db.flight_files.find_one({"_id": ObjectId(file_id)})
-    if not row:
-        raise HTTPException(status_code=404, detail="File not found")
-    if row["owner_email"] != user.email:
-        raise HTTPException(status_code=403, detail="Only the owner can delete this file")
-    minio_client = get_minio_client()
-    bucket = getattr(settings, "minio_flightdata_bucket", settings.minio_docs_bucket)
-    object_key = row["storage_key"]
-    # Try to delete object first; failure is ignored to avoid blocking metadata removal
-    try:
-        minio_client.remove_object(bucket_name=bucket, object_name=object_key)
-    except Exception:
-        pass
-    await db.flight_files.delete_one({"_id": row["_id"]})
     return {"ok": True}
 
 
-class SharePatch(BaseModel):
-    """Schema for granting or revoking access to a file."""
-
-    add_emails: List[str] = []
-    remove_emails: List[str] = []
-
-
-@router.patch("/{file_id}/share", response_model=FlightDataFileOut)
-async def patch_file_sharing(
+@router.delete("/{file_id}")
+async def delete_file(
     file_id: str,
-    payload: SharePatch,
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Add or remove users from a file's access list.
+    """Delete a flight data file and its metadata.
 
-    Only the owner of the file may modify its sharing settings. Emails
-    provided in add_emails will be added to the access list (if they
-    exist in the system); emails in remove_emails will be removed.
+    Only the owner can delete a file. The object will be removed from
+    MinIO and the document will be removed from the database. This
+    operation is irreversible.
     """
     db = await get_db()
-    row = await db.flight_files.find_one({"_id": ObjectId(file_id)})
-    if not row:
+    doc = await db.flight_files.find_one({"_id": ObjectId(file_id)})
+    if not doc:
         raise HTTPException(status_code=404, detail="File not found")
-    if row["owner_email"] != user.email:
-        raise HTTPException(status_code=403, detail="Only the owner can update access")
+    if doc["owner_email"] != user.email:
+        raise HTTPException(status_code=403, detail="Only the owner can delete files")
+    # Delete from storage
+    minio_client = get_minio_client()
+    bucket = getattr(settings, "minio_flightdata_bucket", settings.minio_docs_bucket)
+    minio_client.remove_object(bucket, doc["storage_key"])
+    # Remove document
+    await db.flight_files.delete_one({"_id": ObjectId(file_id)})
+    return {"ok": True}
 
-    # Normalise lists
-    adds = list(dict.fromkeys([e for e in payload.add_emails if isinstance(e, str)]))
-    removes = list(dict.fromkeys([e for e in payload.remove_emails if isinstance(e, str)]))
-    access = set(row.get("access_emails", []))
-    # Remove
-    for rm in removes:
-        access.discard(rm)
-    # Add
-    for a in adds:
-        # Avoid self; owner already has access implicitly
-        if a and a != user.email:
-            access.add(a)
-    updated = list(access)
-    await db.flight_files.update_one({"_id": row["_id"]}, {"$set": {"access_emails": updated}})
-    # Return updated document
-    return FlightDataFileOut(
-        file_id=str(row["_id"]),
-        project_id=row["project_id"],
-        owner_email=row["owner_email"],
-        section=row["section"],
-        original_name=row["original_name"],
-        storage_key=row["storage_key"],
-        size_bytes=row.get("size_bytes"),
-        content_type=row.get("content_type"),
-        uploaded_at=row["uploaded_at"],
-        headers=row.get("headers"),
-        access_emails=updated,
+
+# ---------------------------------------------------------------------------
+# Download
+# ---------------------------------------------------------------------------
+
+@router.get("/{file_id}/download-url")
+async def get_download_url(
+    file_id: str,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Generate a presigned URL for downloading a flight data file.
+
+    Only owners and users with access may request a download URL.
+    """
+    db = await get_db()
+    doc = await db.flight_files.find_one({"_id": ObjectId(file_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    # Ensure user has access
+    if doc["owner_email"] != user.email and user.email not in doc.get("access_emails", []):
+        raise HTTPException(status_code=403, detail="No access to download file")
+    minio_client = get_minio_client()
+    bucket = getattr(settings, "minio_flightdata_bucket", settings.minio_docs_bucket)
+    url = minio_client.presigned_get_object(
+        bucket_name=bucket, object_name=doc["storage_key"], expires=timedelta(hours=1)
     )
+    return {"download_url": url}

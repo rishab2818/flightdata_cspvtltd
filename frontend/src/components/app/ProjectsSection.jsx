@@ -1,10 +1,9 @@
-// Improved ProjectsSection component.
+// ProjectsSection component with project navigation.
 //
-// This file demonstrates how to use the centralised design tokens
-// (``COLORS`` and ``SPACING``) and the reusable ``Button`` component.
-// The behaviour and layout remain the same as the original
-// ``ProjectsSection``.  Only constant definitions and repetitive
-// styling have been refactored.
+// This component lists all projects and renders a ProjectCard for each.
+// Each card includes a link to the project-specific Data Injection page
+// using the project's MongoDB identifier. The component retains the
+// existing layout and behaviour of the original ProjectsSection.
 
 import React, { useEffect, useState, useContext } from 'react';
 import ProjectCard from './ProjectCard';
@@ -21,7 +20,7 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-export default function ProjectsSectionImproved() {
+export default function ProjectsSection() {
   const { user } = useContext(AuthContext);
   const role = user?.role?.toUpperCase?.();
   const [projects, setProjects] = useState([]);
@@ -31,7 +30,9 @@ export default function ProjectsSectionImproved() {
   const loadProjects = async () => {
     try {
       const data = await projectApi.list();
-      const sorted = (data || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const sorted = (data || [])
+        .slice()
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setProjects(sorted);
     } catch (err) {
       console.error('Failed to load projects', err);
@@ -86,7 +87,11 @@ export default function ProjectsSectionImproved() {
           Projects
         </h2>
         {canCreate && (
-          <Button onClick={() => setShowModal(true)} variant="primary" style={{ width: 188, height: 44, borderRadius: 4 }}>
+          <Button
+            onClick={() => setShowModal(true)}
+            variant="primary"
+            style={{ width: 188, height: 44, borderRadius: 4 }}
+          >
             + New Project
           </Button>
         )}
@@ -95,6 +100,7 @@ export default function ProjectsSectionImproved() {
       {projects.map((p, i) => (
         <ProjectCard
           key={p._id || i}
+          projectId={p._id}
           name={p.project_name}
           type="Aero Data"
           date={formatDate(p.created_at)}

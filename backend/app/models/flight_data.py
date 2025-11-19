@@ -1,4 +1,5 @@
-"""Pydantic models for Flight Data file uploads.
+"""
+Pydantic models for Flight Data file uploads.
 
 This module defines the schemas used when uploading large Excel/CSV
 flight data files. Each file is associated with a project and a

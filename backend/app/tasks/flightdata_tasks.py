@@ -1,8 +1,9 @@
-"""Celery tasks for flight data processing.
+"""
+Celery tasks for flight data processing.
 
-The tasks defined here run outside of the web request context. They
+The tasks defined here run outside of the web request context.  They
 download uploaded files from object storage, read their header row
-and persist that metadata back into MongoDB. Using Celery ensures
+and persist that metadata back into MongoDB.  Using Celery ensures
 that large files (potentially hundreds of gigabytes) are parsed
 asynchronously and do not block the API server.
 """
@@ -30,8 +31,8 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
     Parameters
     ----------
     file_id: str
-        The MongoDB identifier of the file document in the flight_files
-        collection. This task will look up the document, download the
+        The MongoDB identifier of the file document in the ``flight_files``
+        collection.  This task will look up the document, download the
         file from object storage and update the document with a list
         of column names.
 
@@ -54,7 +55,7 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
 
         # Stream the object into memory. MinIO returns a response that
         # must be read completely to release resources. We'll load
-        # everything into an in‑memory buffer – this is acceptable as
+        # everything into an in-memory buffer – this is acceptable as
         # Pandas needs to seek within the buffer to determine the
         # header. If file sizes are truly massive the worker can be
         # configured with adequate resources or further optimised
@@ -69,8 +70,9 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
 
         headers: List[str]
         try:
+            # Use pyarrow engine when available for speed on large CSV
             if doc.get("content_type", "").startswith("text/csv") or doc["original_name"].lower().endswith(".csv"):
-                df = pd.read_csv(io.BytesIO(data), nrows=0)
+                df = pd.read_csv(io.BytesIO(data), nrows=0, engine="pyarrow")
             else:
                 # Excel/other: Pandas will infer engine automatically.
                 df = pd.read_excel(io.BytesIO(data), nrows=0)

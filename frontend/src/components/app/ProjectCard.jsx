@@ -1,15 +1,18 @@
-// Improved ProjectCard component.
+// ProjectCard component with navigation.
 //
 // This version of the ProjectCard imports colour constants from the
-// global theme instead of hard-coding them.  It retains the same
-// layout and functionality as the original component.
+// global theme instead of hard-coding them. It also wraps the "View
+// Project" button with a NavLink so that clicking it navigates to the
+// project-specific dashboard (Data Injection page). Pass a
+// ``projectId`` prop along with the existing props.
 
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { FiCalendar, FiUser, FiEye } from 'react-icons/fi';
 import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
 
-export default function ProjectCardImproved({ name, type, date, members, desc }) {
+export default function ProjectCard({ projectId, name, type, date, members, desc }) {
   return (
     <div
       style={{
@@ -108,9 +111,11 @@ export default function ProjectCardImproved({ name, type, date, members, desc })
           </div>
         </div>
         {/* view project button */}
-        <Button variant="secondary" style={{ padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 999 }}>
-          <FiEye size={16} /> <span>View Project</span>
-        </Button>
+        <NavLink to={`/app/project/${projectId}/data-injection`} style={{ textDecoration: 'none' }}>
+          <Button variant="secondary" style={{ padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 999 }}>
+            <FiEye size={16} /> <span>View Project</span>
+          </Button>
+        </NavLink>
       </div>
     </div>
   );

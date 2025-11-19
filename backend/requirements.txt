@@ -9,6 +9,6 @@ email-validator
 minio==7.2.7
 celery==5.3.6
 redis
-minio
 pandas
 openpyxl
+pyarrow
