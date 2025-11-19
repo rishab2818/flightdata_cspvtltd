@@ -1,13 +1,12 @@
-"""
-Celery tasks for generating flight data plots.
+"""Celery tasks for generating flight data plots.
 
 This task downloads the specified columns from one or more flight data
 files, constructs an interactive Plotly figure and stores the result as
 an HTML file in object storage. Progress is reported back to the
-database document so that clients can poll for updates. Using
-Plotly (which renders in the browser) avoids memory pressure on the
-backend while still producing high-quality plots for very large data
-sets.
+database document and via the task state so that clients can poll
+for updates. Using Plotly (which renders in the browser) avoids
+memory pressure on the backend while still producing high-quality
+plots for very large data sets.
 """
 
 import io
@@ -15,9 +14,8 @@ from typing import List
 
 import pandas as pd
 import plotly.graph_objects as go
-from celery.utils.log import get_task_logger
 from celery import states
-from celery.exceptions import Ignore
+from celery.utils.log import get_task_logger
 
 from app.core.celery import celery_app
 from app.core.minio_client import get_minio_client
@@ -42,40 +40,37 @@ def generate_flightplot(self, plot_id: str) -> None:
     """
     import asyncio
 
+    # Mark task as started
+    self.update_state(state=states.STARTED, meta={"progress": 0.0, "message": "Starting plot generation"})
+
     async def _run() -> None:
         db = await get_db()
         doc = await db.flight_plots.find_one({"_id": plot_id})
         if not doc:
             raise ValueError(f"flight plot {plot_id} not found")
-        # Mark as running
+        # Mark as running in the DB
         await db.flight_plots.update_one(
             {"_id": plot_id}, {"$set": {"status": "running", "progress": 0.0}}
         )
         columns: List[dict] = doc["columns"]
-        # Each element: {'file_id':..., 'column_name':..., 'label':...}
         data_series = []
         total_cols = len(columns)
         minio_client = get_minio_client()
         bucket = getattr(settings, "minio_flightdata_bucket", settings.minio_docs_bucket)
-        # Read each column separately to limit memory usage
         for idx, col in enumerate(columns):
             file_doc = await db.flight_files.find_one({"_id": col["file_id"]})
             if not file_doc:
                 raise ValueError(f"flight file {col['file_id']} not found")
             object_key = file_doc["storage_key"]
-            # Download object
             response = minio_client.get_object(bucket, object_key)
             try:
                 data = response.read()
             finally:
                 response.close()
                 response.release_conn()
-            # Determine file type and read only selected columns
             usecols = [col["column_name"]]
-            # Always include 'time' or similar if present to use as x-axis
             time_cols = ["time", "time_s", "Time", "Timestamp"]
             for tcol in time_cols:
-                # add time col if exists in headers
                 if file_doc.get("headers") and tcol in file_doc["headers"]:
                     usecols.append(tcol)
                     break
@@ -87,7 +82,6 @@ def generate_flightplot(self, plot_id: str) -> None:
             except Exception as exc:
                 logger.exception("Failed to read data for plot %s", plot_id)
                 raise exc
-            # Set x-axis
             if len(usecols) == 2:
                 x_col = usecols[1]
             else:
@@ -98,24 +92,19 @@ def generate_flightplot(self, plot_id: str) -> None:
                 "name": col.get("label") or col["column_name"],
             }
             data_series.append(series)
-            # Update progress
-            progress = (idx + 1) / total_cols * 0.8  # 80% reserved for data loading
+            progress = (idx + 1) / total_cols * 0.8  # allocate 80% of progress
             await db.flight_plots.update_one(
                 {"_id": plot_id}, {"$set": {"progress": progress}}
             )
-        # Build Plotly figure
+            # Also update task state for clients polling Celery
+            self.update_state(state=states.STARTED, meta={"progress": progress, "message": f"Processed {idx + 1}/{total_cols} columns"})
         fig = go.Figure()
         for s in data_series:
-            fig.add_trace(
-                go.Scatter(x=s["x"], y=s["y"], mode="lines", name=s["name"])
-            )
+            fig.add_trace(go.Scatter(x=s["x"], y=s["y"], mode="lines", name=s["name"]))
         title = doc.get("title") or "Flight Data Plot"
         fig.update_layout(title=title, xaxis_title="Index", yaxis_title="Value")
-        # Serialize to HTML
         html = fig.to_html(include_plotlyjs="cdn")
-        # Store result in MinIO
         result_key = f"plots/{plot_id}.html"
-        # Ensure bucket exists
         if not minio_client.bucket_exists(bucket):
             minio_client.make_bucket(bucket)
         minio_client.put_object(
@@ -125,7 +114,6 @@ def generate_flightplot(self, plot_id: str) -> None:
             length=len(html.encode("utf-8")),
             content_type="text/html",
         )
-        # Update document with completion
         finished_at = pd.Timestamp.utcnow().to_pydatetime()
         await db.flight_plots.update_one(
             {"_id": plot_id},
@@ -133,26 +121,35 @@ def generate_flightplot(self, plot_id: str) -> None:
                 "status": "completed",
                 "progress": 1.0,
                 "result_key": result_key,
-                "result_url": None,  # will be generated lazily via presigned URL
+                "result_url": None,
                 "finished_at": finished_at,
             }},
         )
         return
 
     try:
-        asyncio.get_event_loop().run_until_complete(_run())
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        # Mark task as succeeded
+        self.update_state(state=states.SUCCESS, meta={"progress": 1.0, "message": "Plot generated"})
     except Exception as exc:
-        # Mark as failure
-        self.update_state(state=states.FAILURE, meta=str(exc))
+        # Update the DB status to failed
         try:
             import asyncio as _asyncio
-            db = asyncio.get_event_loop().run_until_complete(get_db())
-            asyncio.get_event_loop().run_until_complete(
+            loop = _asyncio.new_event_loop()
+            _asyncio.set_event_loop(loop)
+            db = loop.run_until_complete(get_db())
+            loop.run_until_complete(
                 db.flight_plots.update_one(
-                    {"_id": plot_id},
-                    {"$set": {"status": "failed", "progress": 1.0}},
+                    {"_id": plot_id}, {"$set": {"status": "failed", "progress": 1.0}}
                 )
             )
-        except Exception:
-            pass
-        raise Ignore()
+        finally:
+            loop.close()
+        # Mark task as failure and propagate the exception
+        self.update_state(state=states.FAILURE, meta=str(exc))
+        raise

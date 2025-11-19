@@ -1,20 +1,18 @@
-"""
-Celery tasks for flight data processing.
+"""Celery tasks for flight data processing.
 
-The tasks defined here run outside of the web request context.  They
-download uploaded files from object storage, read their header row
-and persist that metadata back into MongoDB.  Using Celery ensures
-that large files (potentially hundreds of gigabytes) are parsed
-asynchronously and do not block the API server.
+This module defines a task that extracts the header row from a
+flight data file stored in MinIO. The task is executed
+asynchronously via Celery so that large files can be processed
+without blocking the API server. Progress updates are reported
+through the task state.
 """
 
 import io
 from typing import List
 
 import pandas as pd
-from celery.utils.log import get_task_logger
 from celery import states
-from celery.exceptions import Ignore
+from celery.utils.log import get_task_logger
 
 from app.core.celery import celery_app
 from app.core.minio_client import get_minio_client
@@ -43,6 +41,9 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
     """
     import asyncio
 
+    # Mark task as started with 0 progress
+    self.update_state(state=states.STARTED, meta={"progress": 0.0, "message": "Starting header extraction"})
+
     async def _run() -> List[str]:
         db = await get_db()
         doc = await db.flight_files.find_one({"_id": file_id})
@@ -53,14 +54,9 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
         bucket = getattr(settings, "minio_flightdata_bucket", settings.minio_docs_bucket)
         object_key = doc["storage_key"]
 
-        # Stream the object into memory. MinIO returns a response that
-        # must be read completely to release resources. We'll load
-        # everything into an in-memory buffer – this is acceptable as
-        # Pandas needs to seek within the buffer to determine the
-        # header. If file sizes are truly massive the worker can be
-        # configured with adequate resources or further optimised
-        # (e.g. reading first N bytes). For CSV, nrows=0 avoids
-        # reading data rows.
+        # Download entire object into memory. For extremely large files this
+        # could be optimised by reading only the first row, but Pandas
+        # requires a buffer seek for header inference.
         response = minio_client.get_object(bucket_name=bucket, object_name=object_key)
         try:
             data = response.read()
@@ -68,20 +64,18 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
             response.close()
             response.release_conn()
 
-        headers: List[str]
+        # Extract headers
         try:
-            # Use pyarrow engine when available for speed on large CSV
             if doc.get("content_type", "").startswith("text/csv") or doc["original_name"].lower().endswith(".csv"):
                 df = pd.read_csv(io.BytesIO(data), nrows=0, engine="pyarrow")
             else:
-                # Excel/other: Pandas will infer engine automatically.
                 df = pd.read_excel(io.BytesIO(data), nrows=0)
             headers = list(df.columns)
         except Exception as exc:
             logger.exception("Failed to parse headers for file %s", file_id)
             raise exc
 
-        # Update document with extracted headers and timestamp
+        # Persist headers back to MongoDB
         await db.flight_files.update_one(
             {"_id": file_id},
             {"$set": {"headers": headers, "headers_extracted_at": pd.Timestamp.utcnow().to_pydatetime()}},
@@ -89,7 +83,21 @@ def extract_flightdata_headers(self, file_id: str) -> List[str]:
         return headers
 
     try:
-        return asyncio.get_event_loop().run_until_complete(_run())
+        # Run the async function in a fresh event loop. Using a new event
+        # loop avoids interference with Celery's internal loop and works on
+        # platforms where no default loop is present (e.g. Windows).
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        # Mark task as successful with 100% progress
+        self.update_state(state=states.SUCCESS, meta={"progress": 1.0, "message": "Headers extracted"})
+        return result
     except Exception as exc:
+        # Update task state to failure and propagate the error so Celery
+        # records the failure instead of "ignored". Do not raise
+        # celery.exceptions.Ignore, which causes an "ignored" status.
         self.update_state(state=states.FAILURE, meta=str(exc))
-        raise Ignore()
+        raise
