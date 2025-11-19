@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import { flightdataApi, computeSha256 } from '../../../api/flightdata';
 import { COLORS, SPACING } from '../../../styles/constants';
 import Button from '../../../components/common/Button';
@@ -18,6 +19,7 @@ export default function DataInjection() {
   const [section, setSection] = useState('wind_tunnel');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [files, setFiles] = useState([]);
   const [error, setError] = useState(null);
 
@@ -39,6 +41,7 @@ export default function DataInjection() {
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
+    setProgress(0);
     setError(null);
     try {
       // Compute hash
@@ -54,12 +57,16 @@ export default function DataInjection() {
       };
       // Request presigned upload URL
       const initRes = await flightdataApi.initUpload(initPayload);
-      // Upload to presigned URL
-      await fetch(initRes.upload_url, {
-        method: 'PUT',
-        body: file,
+      // Upload to presigned URL using axios so we can track progress
+      await axios.put(initRes.upload_url, file, {
         headers: {
           'Content-Type': initPayload.content_type || 'application/octet-stream',
+        },
+        onUploadProgress: (e) => {
+          if (e.total) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            setProgress(percent);
+          }
         },
       });
       // Confirm upload
@@ -77,6 +84,7 @@ export default function DataInjection() {
       await loadFiles();
       // Reset state
       setFile(null);
+      setProgress(0);
     } catch (err) {
       console.error(err);
       setError(err?.response?.data?.detail || 'Upload failed');
@@ -147,9 +155,20 @@ export default function DataInjection() {
           style={{ fontSize: 14 }}
         />
         <Button onClick={handleUpload} disabled={!file || uploading}>
-          {uploading ? 'Uploading…' : 'Upload'}
+          {uploading ? `Uploading… (${progress}%)` : 'Upload'}
         </Button>
         {error && <span style={{ color: 'red' }}>{error}</span>}
+        {uploading && (
+          <div style={{ width: '100%', background: COLORS.mutedBackground, borderRadius: 4, overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${progress}%`,
+                background: COLORS.primary,
+                height: 8,
+              }}
+            ></div>
+          </div>
+        )}
       </div>
       {/* File list */}
       <div>
