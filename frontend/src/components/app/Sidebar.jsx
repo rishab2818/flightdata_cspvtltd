@@ -1,3 +1,4 @@
+// src/components/app/Sidebar.jsx
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
@@ -19,9 +20,7 @@ export default function Sidebar() {
   const { user } = useContext(AuthContext);
   const role = user?.role?.toUpperCase?.();
 
-  const baseItems = [
-    { path: "/app", icon: dashboard, text: "Dashboard Overview" },
-  ];
+  const baseItems = [{ path: "/app", icon: dashboard, text: "Dashboard Overview" }];
 
   const gdDhOnlyItems = [
     { path: "/app/minutes", icon: Minutesofmeeting, text: "Minutes of the Meeting" },
@@ -34,7 +33,6 @@ export default function Sidebar() {
     { path: "/app/setting", icon: Setting, text: "Setting" },
   ];
 
-  // combine based on role
   const items =
     role === "GD" || role === "DH" ? [...baseItems, ...gdDhOnlyItems] : baseItems;
 
@@ -77,6 +75,7 @@ export default function Sidebar() {
           <li key={i} style={{ listStyle: "none" }}>
             <NavLink
               to={it.path}
+              end={it.path === "/app"} // <<< this fixes Dashboard being active on sub-routes
               style={({ isActive }) => ({
                 display: "flex",
                 alignItems: "center",
