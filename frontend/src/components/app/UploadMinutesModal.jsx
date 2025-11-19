@@ -1,6 +1,6 @@
 // src/components/app/UploadMinutesModal.jsx
 import React, { useState } from "react";
-import { FiUploadCloud, FiPlus, FiCalendar } from "react-icons/fi";
+import { FiUploadCloud, FiPlus, FiCalendar, FiX } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
 
 const BORDER = "#E5E7EB";
@@ -35,7 +35,54 @@ export default function UploadMinutesModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // For multi action points
+  const [actionPointInput, setActionPointInput] = useState("");
+  const [actionPoints, setActionPoints] = useState([]);
+
+  // For multi "Action on"
+  const [actionOnInput, setActionOnInput] = useState("");
+  const [actionOnList, setActionOnList] = useState([]);
+
   if (!open) return null;
+
+  const resetForm = () => {
+    setMeetingDate("");
+    setTag("");
+    setFile(null);
+    setError("");
+    setActionPointInput("");
+    setActionPoints([]);
+    setActionOnInput("");
+    setActionOnList([]);
+  };
+
+  const handleCancel = () => {
+    if (isSubmitting) return;
+    resetForm();
+    onClose();
+  };
+
+  const handleAddActionPoint = () => {
+    const v = actionPointInput.trim();
+    if (!v) return;
+    setActionPoints((prev) => [...prev, v]);
+    setActionPointInput("");
+  };
+
+  const handleRemoveActionPoint = (index) => {
+    setActionPoints((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddActionOn = () => {
+    const v = actionOnInput.trim();
+    if (!v) return;
+    setActionOnList((prev) => [...prev, v]);
+    setActionOnInput("");
+  };
+
+  const handleRemoveActionOn = (index) => {
+    setActionOnList((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,6 +104,14 @@ export default function UploadMinutesModal({
       setError("No subsection selected.");
       return;
     }
+    if (actionPoints.length === 0) {
+      setError("Please add at least one action point.");
+      return;
+    }
+    if (actionOnList.length === 0) {
+      setError("Please add at least one 'Action on' entry.");
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -74,6 +129,10 @@ export default function UploadMinutesModal({
         content_type: file.type || "application/octet-stream",
         size_bytes: file.size,
         content_hash,
+
+        // NEW: Multi action fields
+        action_points: actionPoints,
+        action_on: actionOnList,
       };
 
       const { upload_url, storage_key } = await documentsApi.initUpload(
@@ -101,21 +160,30 @@ export default function UploadMinutesModal({
         content_type: file.type || "application/octet-stream",
         size_bytes: file.size,
         content_hash,
+
+        // NEW: same fields on confirm
+        action_points: actionPoints,
+        action_on: actionOnList,
       };
 
       await documentsApi.confirmUpload(confirmPayload);
 
       // 5) Done
       if (onUploaded) onUploaded();
+      resetForm();
       onClose();
-      // Reset form
-      setFile(null);
-      setTag("");
-      setMeetingDate("");
     } catch (err) {
       console.error(err);
       if (err?.response?.status === 409) {
         setError("This document already exists (duplicate detected).");
+      } else if (err?.response?.data?.detail) {
+        // surface backend validation
+        const detail = err.response.data.detail;
+        setError(
+          Array.isArray(detail)
+            ? detail.map((d) => d.msg || String(d)).join(", ")
+            : String(detail)
+        );
       } else {
         setError("Upload failed. Please try again.");
       }
@@ -127,6 +195,20 @@ export default function UploadMinutesModal({
   const handleFileChange = (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) setFile(f);
+  };
+
+  const handleActionPointKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddActionPoint();
+    }
+  };
+
+  const handleActionOnKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddActionOn();
+    }
   };
 
   return (
@@ -167,7 +249,7 @@ export default function UploadMinutesModal({
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 18 }}
         >
-          {/* Action Point (just UI, not stored for now) */}
+          {/* Action Points (multiple) */}
           <div>
             <label
               style={{
@@ -177,12 +259,15 @@ export default function UploadMinutesModal({
                 marginBottom: 6,
               }}
             >
-              Action Point
+              Action Points
             </label>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="CFD analysis to be conducted for airbus 320"
+                placeholder="CFD analysis to be conducted for Airbus 320"
+                value={actionPointInput}
+                onChange={(e) => setActionPointInput(e.target.value)}
+                onKeyDown={handleActionPointKeyDown}
                 style={{
                   flex: 1,
                   height: 40,
@@ -195,6 +280,7 @@ export default function UploadMinutesModal({
               />
               <button
                 type="button"
+                onClick={handleAddActionPoint}
                 style={{
                   width: 36,
                   height: 36,
@@ -204,12 +290,46 @@ export default function UploadMinutesModal({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  cursor: "default",
+                  cursor: "pointer",
                 }}
               >
                 <FiPlus size={18} />
               </button>
             </div>
+            {actionPoints.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                }}
+              >
+                {actionPoints.map((pt, idx) => (
+                  <span
+                    key={`${pt}-${idx}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      borderRadius: 999,
+                      border: `1px solid ${BORDER}`,
+                      background: "#F1F5F9",
+                      padding: "4px 8px",
+                      fontSize: 11,
+                      color: "#111827",
+                    }}
+                  >
+                    {pt}
+                    <FiX
+                      size={12}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleRemoveActionPoint(idx)}
+                    />
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Meeting Date */}
@@ -253,7 +373,7 @@ export default function UploadMinutesModal({
             </div>
           </div>
 
-          {/* Tag + Action on */}
+          {/* Tag + Action on (multiple) */}
           <div style={{ display: "flex", gap: 16 }}>
             <div style={{ flex: 1 }}>
               <label
@@ -291,23 +411,77 @@ export default function UploadMinutesModal({
                   marginBottom: 6,
                 }}
               >
-                Action on
+                Action on (Person / Role / Team)
               </label>
-              <input
-                type="text"
-                value="John Doe"
-                readOnly
-                style={{
-                  width: "100%",
-                  height: 40,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F9FAFB",
-                  padding: "0 12px",
-                  fontSize: 14,
-                  color: "#4b5563",
-                }}
-              />
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="e.g., CFD Team, Rishab, WT Group"
+                  value={actionOnInput}
+                  onChange={(e) => setActionOnInput(e.target.value)}
+                  onKeyDown={handleActionOnKeyDown}
+                  style={{
+                    flex: 1,
+                    height: 40,
+                    borderRadius: 6,
+                    border: `1px solid ${BORDER}`,
+                    background: "#F9FAFB",
+                    padding: "0 12px",
+                    fontSize: 14,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddActionOn}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    border: `1px solid ${BORDER}`,
+                    background: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <FiPlus size={18} />
+                </button>
+              </div>
+              {actionOnList.length > 0 && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                  }}
+                >
+                  {actionOnList.map((ao, idx) => (
+                    <span
+                      key={`${ao}-${idx}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        borderRadius: 999,
+                        border: `1px solid ${BORDER}`,
+                        background: "#F1F5F9",
+                        padding: "4px 8px",
+                        fontSize: 11,
+                        color: "#111827",
+                      }}
+                    >
+                      {ao}
+                      <FiX
+                        size={12}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleRemoveActionOn(idx)}
+                      />
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -406,7 +580,7 @@ export default function UploadMinutesModal({
           >
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCancel}
               disabled={isSubmitting}
               style={{
                 padding: "8px 24px",

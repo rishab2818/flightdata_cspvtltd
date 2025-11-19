@@ -1,145 +1,116 @@
-// src/components/app/ProjectCard.jsx
-import React from "react";
-import { FiCalendar, FiUser, FiEye } from "react-icons/fi";
+// Improved ProjectCard component.
+//
+// This version of the ProjectCard imports colour constants from the
+// global theme instead of hard-coding them.  It retains the same
+// layout and functionality as the original component.
 
-const BORDER = "#0000001A";
+import React from 'react';
+import { FiCalendar, FiUser, FiEye } from 'react-icons/fi';
+import { COLORS, SPACING } from '../../styles/constants';
+import Button from '../common/Button';
 
-export default function ProjectCard({ name, type, date, members, desc }) {
+export default function ProjectCardImproved({ name, type, date, members, desc }) {
   return (
     <div
       style={{
         width: 573,
         height: 215,
-        gap: 10,
+        gap: SPACING.md,
         borderRadius: 8,
-        background: "#fff",
-        border: `1px solid ${BORDER}`,
-        padding: "35px 25px",
-        display: "flex",
-        flexDirection: "column",
+        background: COLORS.background,
+        border: `1px solid ${COLORS.border}`,
+        padding: `${SPACING.lg + SPACING.md}px ${SPACING.lg}px`,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* title + chips */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
           <h3
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-              color: "#0f172a",
-              margin: 0,
-            }}
+            style={{ fontSize: 16, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }}
           >
             {name}
           </h3>
           <span
             style={{
-              padding: "4px 10px",
+              padding: `${SPACING.sm}px ${SPACING.md}px`,
               borderRadius: 999,
-              background: "#F1F5F9",
-              color: "#334155",
+              background: COLORS.mutedBackground,
+              color: COLORS.textSecondary,
               fontSize: 12,
-              border: `1px solid ${BORDER}`,
+              border: `1px solid ${COLORS.border}`,
             }}
           >
             {type}
           </span>
           <span
             style={{
-              padding: "4px 10px",
+              padding: `${SPACING.sm}px ${SPACING.md}px`,
               borderRadius: 999,
-              background: "#E7F4E8",
-              color: "#1E8E3E",
+              background: COLORS.successBackground,
+              color: COLORS.successText,
               fontSize: 12,
-              border: `1px solid ${BORDER}`,
+              border: `1px solid ${COLORS.border}`,
             }}
           >
             Active
           </span>
         </div>
       </div>
-
       {/* description */}
       <p
         style={{
           fontSize: 13,
-          color: "#334155",
-          marginTop: 8,
-          marginRight: 24,
+          color: COLORS.textSecondary,
+          marginTop: SPACING.sm,
+          marginRight: SPACING.lg,
           lineHeight: 1.5,
           flexGrow: 1,
         }}
       >
         {desc}
       </p>
-
       {/* bottom row: created + members + button all in one line */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: 12,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: SPACING.md,
           fontSize: 14,
-          color: "#475569",
+          color: COLORS.textMuted,
         }}
       >
         {/* created + members group */}
-        <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.lg + SPACING.sm }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
             <FiCalendar size={16} />
             <div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>Created</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted }}>Created</div>
               <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  marginTop: 2,
-                }}
+                style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginTop: 2 }}
               >
                 {date}
               </div>
             </div>
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
             <FiUser size={16} />
             <div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>Members</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted }}>Members</div>
               <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  marginTop: 2,
-                }}
+                style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginTop: 2 }}
               >
-                {String(members).padStart(2, "0")}
+                {String(members).padStart(2, '0')}
               </div>
             </div>
           </div>
         </div>
-
         {/* view project button */}
-        <button
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 16px",
-            borderRadius: 999,
-            border: `1px solid #0f172a`,
-            background: "#ffffff",
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: 500,
-            color: "#0f172a",
-          }}
-        >
-          <FiEye size={16} />
-          <span>View Project</span>
-        </button>
+        <Button variant="secondary" style={{ padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 999 }}>
+          <FiEye size={16} /> <span>View Project</span>
+        </Button>
       </div>
     </div>
   );

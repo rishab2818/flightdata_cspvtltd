@@ -47,13 +47,21 @@ export default function MinutesOfTheMeeting() {
         setError("");
         const data = await documentsApi.listMinutes(subsection);
         // data is an array of UserDocumentOut from backend
-        const mapped = data.map((doc) => ({
-          id: doc.doc_id,
-          fileName: doc.original_name,
-          tag: doc.tag,
-          actionOn: "Me",
-          meetingDate: formatDate(doc.doc_date),
-        }));
+        const mapped = data.map((doc) => {
+          const actionOnList = doc.action_on || [];
+          const actionPointsList = doc.action_points || [];
+          return {
+            id: doc.doc_id,
+            fileName: doc.original_name,
+            tag: doc.tag,
+            actionOn:
+              Array.isArray(actionOnList) && actionOnList.length > 0
+                ? actionOnList.join(", ")
+                : "—",
+            meetingDate: formatDate(doc.doc_date),
+            actionPoints: actionPointsList,
+          };
+        });
         setRows(mapped);
       } catch (e) {
         console.error("Failed to load minutes:", e);
