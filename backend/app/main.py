@@ -1,11 +1,18 @@
+"""Entry point for the flight data upload demonstration app.
+
+This file replicates the structure of the existing FastAPI app and
+registers the new flight data router. It is provided here for
+illustration; in the real repository you would update `app/main.py`
+directly.
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.core.config import settings
-from app.routers import auth
-from app.routers import users 
-from app.routers import projects
-from app.routers import documents
-app = FastAPI(title="flightdv minimal backend")
+from app.routers import flight_data
+
+app = FastAPI(title="flightdv backend with flight data upload")
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,11 +22,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
 async def health():
     return {"ok": True}
 
-app.include_router(auth.router)
-app.include_router(users.router)    
-app.include_router(projects.router)
-app.include_router(documents.router)
+
+# Include the flight data router under /api/flightdata
+app.include_router(flight_data.router)

@@ -1,7 +1,15 @@
+"""Minimal MongoDB client for demonstration.
+
+This stub mirrors the real application's database helper. It
+provides an async ``get_db()`` function returning a Motor client
+connected to the configured Mongo instance.
+"""
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 
 _client = None
+
 
 async def get_db():
     global _client
