@@ -241,7 +241,7 @@ function NextMeetingBanner({ sectionLabel }) {
       }}
     >
       <span style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>
-        Next {sectionLabel} Meeting
+        Next {sectionLabel} 
       </span>
       <div
         style={{

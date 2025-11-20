@@ -4,7 +4,7 @@
 # --- Configuration ---
 $MINIO_USER = "minioadmin"
 $MINIO_PASS = "minioadmin"
-$DATA_DIR = "D:\minio-data"
+$DATA_DIR = "C:\data"
 $MINIO_EXE = "C:\minio\minio.exe"
 $SERVER_ADDRESS = ":9000"
 $CONSOLE_ADDRESS = ":9090"

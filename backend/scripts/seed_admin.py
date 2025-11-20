@@ -1,16 +1,25 @@
 import asyncio
 from datetime import datetime
-from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config import settings
-from app.models.user import Role
+from enum import Enum
 
-load_dotenv()
+
+# --- Direct config here ---
+MONGO_URI = "mongodb://127.0.0.1:27017"
+MONGO_DB = "flightdv"
+
+
+# --- Define Role enum directly (if you need it) ---
+class Role(str, Enum):
+    ADMIN = "ADMIN"
+    USER = "user"
+
 
 async def main():
-    client = AsyncIOMotorClient(settings.mongo_uri)
-    db = client[settings.mongo_db]
+    client = AsyncIOMotorClient(MONGO_URI)
+    db = client[MONGO_DB]
 
+    # Ensure unique email index
     await db.users.create_index("email", unique=True)
 
     admin_email = "admin@example.com"
@@ -18,7 +27,7 @@ async def main():
         "first_name": "Admin",
         "last_name": "User",
         "email": admin_email,
-        "password": "admin",
+        "password": "admin",  # You may want to hash later
         "role": Role.ADMIN.value,
         "is_active": True,
         "created_at": datetime.utcnow(),
@@ -27,6 +36,7 @@ async def main():
 
     await db.users.update_one({"email": admin_email}, {"$set": doc}, upsert=True)
     print(f"Seeded admin: {admin_email} / password=admin")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
