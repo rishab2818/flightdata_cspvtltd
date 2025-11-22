@@ -1,0 +1,336 @@
+import io
+import json
+import os
+import tempfile
+from datetime import datetime
+from itertools import product
+from typing import Iterable, List
+
+import pandas as pd
+import plotly.graph_objects as go
+import pyarrow as pa
+import pyarrow.parquet as pq
+from bson import ObjectId
+from celery import states
+
+from app.core.celery_app import celery_app
+from app.core.config import settings
+from app.core.minio_client import get_minio_client
+from app.core.redis_client import get_sync_redis
+from app.db.sync_mongo import get_sync_db
+
+
+def _set_status(redis, viz_id: str, status: str, progress: int, message: str):
+    pipe = redis.pipeline()
+    name = f"visualization:{viz_id}:status"
+    pipe.hset(name, "status", status)
+    pipe.hset(name, "progress", progress)
+    pipe.hset(name, "message", message)
+    pipe.execute()
+
+
+def _publish(viz_id: str, status: str, progress: int, message: str = ""):
+    redis = get_sync_redis()
+    payload = json.dumps(
+        {"status": status, "progress": progress, "message": message or status}
+    )
+    redis.publish(f"visualization:{viz_id}:events", payload)
+    _set_status(redis, viz_id, status, progress, message or status)
+
+
+def _iter_csv_frames(
+    path: str,
+    header_mode: str,
+    custom_headers: list[str] | None,
+    chunk_size: int,
+    delim_whitespace: bool = False,
+) -> Iterable[pd.DataFrame]:
+    read_kwargs: dict = {
+        "chunksize": chunk_size,
+        "engine": "python" if delim_whitespace else "c",
+    }
+    if delim_whitespace:
+        read_kwargs["delim_whitespace"] = True
+    if header_mode == "none":
+        read_kwargs["header"] = None
+    elif header_mode == "custom":
+        read_kwargs["header"] = None
+        if custom_headers:
+            read_kwargs["names"] = custom_headers
+    else:
+        read_kwargs["header"] = 0
+
+    columns_cache: List[str] | None = None
+    for chunk in pd.read_csv(path, **read_kwargs):
+        if header_mode == "none" and not custom_headers:
+            if columns_cache is None:
+                columns_cache = [f"column_{i+1}" for i in range(len(chunk.columns))]
+            chunk.columns = columns_cache
+        yield chunk
+
+
+def _iter_excel_frames(
+    path: str, header_mode: str, custom_headers: list[str] | None, chunk_size: int
+) -> Iterable[pd.DataFrame]:
+    # pandas does not support streaming Excel reads directly; emulate with windows
+    skiprows = 0
+    columns_cache: List[str] | None = None
+    header_row = 0 if header_mode == "file" else None
+    while True:
+        df = pd.read_excel(
+            path,
+            sheet_name=0,
+            skiprows=skiprows if skiprows else None,
+            nrows=chunk_size,
+            header=header_row,
+        )
+        if df.empty:
+            break
+        if header_mode == "none" and not custom_headers:
+            if columns_cache is None:
+                columns_cache = [f"column_{i+1}" for i in range(len(df.columns))]
+            df.columns = columns_cache
+        elif header_mode == "custom" and custom_headers:
+            df.columns = custom_headers
+        elif header_mode == "file" and header_row == 0:
+            columns_cache = list(df.columns)
+            header_row = None
+        skiprows += len(df)
+        yield df
+
+
+def _iter_frames(
+    path: str, ext: str, header_mode: str, custom_headers: list[str] | None, chunk_size: int
+) -> Iterable[pd.DataFrame]:
+    ext = ext.lower()
+    if ext in [".csv"]:
+        yield from _iter_csv_frames(path, header_mode, custom_headers, chunk_size)
+    elif ext in [".dat", ".txt"]:
+        yield from _iter_csv_frames(
+            path, header_mode, custom_headers, chunk_size, delim_whitespace=True
+        )
+    elif ext in [".xlsx", ".xlsm", ".xls"]:
+        yield from _iter_excel_frames(path, header_mode, custom_headers, chunk_size)
+    else:
+        yield from _iter_csv_frames(path, header_mode, custom_headers, chunk_size)
+
+
+def _download_object(minio, bucket: str, key: str, dest_path: str):
+    response = minio.get_object(bucket, key)
+    with open(dest_path, "wb") as fh:
+        for data in response.stream(1 * 1024 * 1024):
+            fh.write(data)
+
+
+def _figure_from_table(table: pa.Table):
+    df = table.to_pandas()
+    fig = go.Figure()
+    z_present = "z" in df.columns
+    for series_name, group in df.groupby("series"):
+        if z_present and "z" in group.columns:
+            fig.add_trace(
+                go.Scatter3d(
+                    x=group["x"],
+                    y=group["y"],
+                    z=group["z"],
+                    mode="markers",
+                    name=series_name,
+                    marker={"size": 2},
+                )
+            )
+        else:
+            fig.add_trace(
+                go.Scattergl(
+                    x=group["x"],
+                    y=group["y"],
+                    mode="markers",
+                    name=series_name,
+                    marker={"size": 2},
+                )
+            )
+
+    fig.update_layout(
+        autosize=True,
+        height=720,
+        showlegend=True,
+        margin={"t": 24, "r": 12, "l": 48, "b": 48},
+    )
+    return fig
+
+
+@celery_app.task(bind=True, name=f"{settings.celery_task_prefix}.build_visualization")
+def build_visualization(self, viz_id: str):
+    redis = get_sync_redis()
+    db = get_sync_db()
+    minio = get_minio_client()
+
+    doc = db.visualizations.find_one({"_id": ObjectId(viz_id)})
+    if not doc:
+        return
+
+    bucket = settings.visualization_bucket
+    if not minio.bucket_exists(bucket):
+        minio.make_bucket(bucket)
+
+    chunk_size = doc.get("chunk_size", 50000)
+    chunk_prefix = doc.get("chunk_prefix")
+    image_format = doc.get("image_format", "png")
+    series = doc.get("series") or []
+
+    _publish(viz_id, states.STARTED, 5, "Preparing visualization")
+    db.visualizations.update_one(
+        {"_id": ObjectId(viz_id)},
+        {"$set": {"status": states.STARTED, "progress": 5, "updated_at": datetime.utcnow()}},
+    )
+
+    chunk_index = 0
+    total_rows = 0
+    trace_labels: list[dict] = []
+
+    try:
+        for series_idx, s in enumerate(series):
+            job_id = s.get("job_id")
+            job = db.ingestion_jobs.find_one({"_id": ObjectId(job_id)})
+            if not job:
+                raise ValueError(f"Ingestion job {job_id} missing")
+
+            tmp_fd, tmp_path = tempfile.mkstemp()
+            os.close(tmp_fd)
+            try:
+                _publish(
+                    viz_id,
+                    states.STARTED,
+                    max(5, int(10 + (series_idx / max(len(series), 1)) * 20)),
+                    f"Downloading {job.get('filename', 'file')} from object store",
+                )
+                _download_object(
+                    minio, settings.ingestion_bucket, job["storage_key"], tmp_path
+                )
+
+                ext = os.path.splitext(job.get("filename", "")[0:256].lower())[-1]
+                combos = list(
+                    product(
+                        s.get("x_axes") or [],
+                        s.get("y_axes") or [],
+                        (s.get("z_axes") or [None]),
+                    )
+                )
+                header_mode = job.get("header_mode", "file")
+                custom_headers = job.get("custom_headers")
+
+                for chunk in _iter_frames(
+                    tmp_path, ext, header_mode, custom_headers, chunk_size
+                ):
+                    output_tables: list[pa.Table] = []
+                    for x_col, y_col, z_col in combos:
+                        label = s.get("label") or job.get("filename") or "series"
+                        trace_label = (
+                            f"{label}: {x_col} vs {y_col}"
+                            + (f" vs {z_col}" if z_col else "")
+                        )
+                        if not any(t.get("label") == trace_label for t in trace_labels):
+                            trace_labels.append({"label": trace_label, "has_z": bool(z_col)})
+
+                        payload = {
+                            "x": chunk[x_col],
+                            "y": chunk[y_col],
+                            "series": trace_label,
+                        }
+                        if z_col:
+                            payload["z"] = chunk[z_col]
+                        output_tables.append(
+                            pa.Table.from_pandas(pd.DataFrame(payload), preserve_index=False)
+                        )
+
+                    if not output_tables:
+                        continue
+                    combined = (
+                        pa.concat_tables(output_tables)
+                        if len(output_tables) > 1
+                        else output_tables[0]
+                    )
+                    total_rows += combined.num_rows
+
+                    tmp_out = tempfile.NamedTemporaryFile(delete=False)
+                    tmp_out.close()
+                    pq.write_table(combined, tmp_out.name)
+                    object_key = f"{chunk_prefix}/chunk_{chunk_index}.parquet"
+                    with open(tmp_out.name, "rb") as data:
+                        stat = os.stat(tmp_out.name)
+                        minio.put_object(
+                            bucket_name=bucket,
+                            object_name=object_key,
+                            data=data,
+                            length=stat.st_size,
+                            content_type="application/octet-stream",
+                        )
+                    os.remove(tmp_out.name)
+
+                    try:
+                        fig = _figure_from_table(combined)
+                        image_bytes = fig.to_image(
+                            format=image_format,
+                            engine="kaleido",
+                            width=1280,
+                            height=720,
+                            scale=1,
+                        )
+                        img_obj = io.BytesIO(image_bytes)
+                        image_key = (
+                            f"{chunk_prefix}/images/chunk_{chunk_index}.{image_format}"
+                        )
+                        minio.put_object(
+                            bucket_name=bucket,
+                            object_name=image_key,
+                            data=img_obj,
+                            length=len(image_bytes),
+                            content_type="image/png",
+                        )
+                    except Exception:
+                        # Keep plot generation best-effort; data chunks remain available
+                        pass
+                    chunk_index += 1
+
+                progress = int(30 + ((series_idx + 1) / max(len(series), 1)) * 50)
+                _publish(
+                    viz_id,
+                    states.STARTED,
+                    min(progress, 90),
+                    f"Processed {series_idx + 1}/{len(series)} source files",
+                )
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+
+        db.visualizations.update_one(
+            {"_id": ObjectId(viz_id)},
+            {
+                "$set": {
+                    "status": states.SUCCESS,
+                    "progress": 100,
+                    "chunk_count": chunk_index,
+                    "rows_total": total_rows,
+                    "trace_labels": trace_labels,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+        _publish(viz_id, states.SUCCESS, 100, "Visualization ready")
+    except Exception as exc:  # noqa: BLE001
+        _set_status(redis, viz_id, states.FAILURE, 100, str(exc))
+        redis.publish(
+            f"visualization:{viz_id}:events",
+            json.dumps({"status": states.FAILURE, "progress": 100, "message": str(exc)}),
+        )
+        db.visualizations.update_one(
+            {"_id": ObjectId(viz_id)},
+            {
+                "$set": {
+                    "status": states.FAILURE,
+                    "progress": 100,
+                    "message": str(exc),
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+        raise

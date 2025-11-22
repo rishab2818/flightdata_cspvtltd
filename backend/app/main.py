@@ -8,6 +8,7 @@ from app.routers import documents
 from app.routers import records
 from app.routers import student_engagement
 from app.routers import ingestion
+from app.routers import visualizations
 app = FastAPI(title="flightdv minimal backend")
 
 app.add_middleware(
@@ -29,3 +30,4 @@ app.include_router(documents.router)
 app.include_router(records.router)
 app.include_router(student_engagement.router)
 app.include_router(ingestion.router)
+app.include_router(visualizations.router)
