@@ -89,7 +89,7 @@ def _parse_csv(
 def _parse_excel(
     path: str, header_mode: str = "file", custom_headers: list[str] | None = None
 ):
-    read_kwargs = {"sheet_name": 0, "chunksize": 1000}
+    read_kwargs = {"sheet_name": 0, "nrows": 5000}
     if header_mode == "none":
         read_kwargs["header"] = None
     elif header_mode == "custom":
@@ -98,7 +98,7 @@ def _parse_excel(
             read_kwargs["names"] = custom_headers
     else:
         read_kwargs["header"] = 0
-    df_iter = pd.read_excel(path, **read_kwargs)
+    df_iter = [pd.read_excel(path, **read_kwargs)]
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
