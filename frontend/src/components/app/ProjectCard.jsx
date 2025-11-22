@@ -13,13 +13,13 @@ export default function ProjectCardImproved({ name, type, date, members, desc })
   return (
     <div
       style={{
-        width: 573,
-        height: 215,
+        width: '100%',
+        minHeight: 215,
         gap: SPACING.md,
         borderRadius: 8,
         background: COLORS.background,
         border: `1px solid ${COLORS.border}`,
-        padding: `${SPACING.lg + SPACING.md}px ${SPACING.lg}px`,
+        padding: `${SPACING.lg + SPACING.sm}px ${SPACING.lg}px`,
         display: 'flex',
         flexDirection: 'column',
       }}
