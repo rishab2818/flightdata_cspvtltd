@@ -13,6 +13,9 @@ class IngestionRepository:
         filename: str,
         storage_key: str,
         owner_email: str,
+        dataset_type: str | None = None,
+        header_mode: str | None = None,
+        custom_headers: list[str] | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
@@ -20,6 +23,9 @@ class IngestionRepository:
             "project_id": project_id,
             "filename": filename,
             "storage_key": storage_key,
+            "dataset_type": dataset_type,
+            "header_mode": header_mode,
+            "custom_headers": custom_headers,
             "status": "queued",
             "progress": 0,
             "owner_email": owner_email,
@@ -58,3 +64,7 @@ class IngestionRepository:
             d["job_id"] = str(d["_id"])
             d.pop("_id", None)
         return docs
+
+    async def delete_job(self, job_id: str):
+        db = await get_db()
+        await db[self.collection_name].delete_one({"_id": ObjectId(job_id)})

@@ -8,6 +8,9 @@ class IngestionJobOut(BaseModel):
     project_id: str
     filename: str
     storage_key: str
+    dataset_type: str | None = None
+    header_mode: str | None = None
+    custom_headers: Optional[List[str]] = None
     status: str
     progress: int = 0
     message: Optional[str] = None
@@ -27,6 +30,8 @@ class IngestionCreateResponse(BaseModel):
     project_id: str
     filename: str
     storage_key: str
+    dataset_type: str | None = None
+    header_mode: str | None = None
     status: str
     autoscale: dict
 

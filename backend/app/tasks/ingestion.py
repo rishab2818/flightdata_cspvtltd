@@ -32,11 +32,19 @@ def _publish(job_id: str, status: str, progress: int, message: str = ""):
     )
 
 
-def _summarise_dataframe(chunks):
+def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file"):
     sample_rows = []
     columns: List[str] = []
     rows_seen = 0
     for chunk in chunks:
+        if header_mode == "none" and not provided_headers:
+            chunk.columns = [f"column_{i+1}" for i in range(len(chunk.columns))]
+        elif provided_headers:
+            if len(provided_headers) != len(chunk.columns):
+                raise ValueError(
+                    "Number of custom headers does not match detected columns"
+                )
+            chunk.columns = provided_headers
         if not columns:
             columns = list(chunk.columns)
         rows_seen += len(chunk)
@@ -49,21 +57,56 @@ def _summarise_dataframe(chunks):
         "sample_rows": sample_rows,
         "rows_seen": rows_seen,
     }
+def _parse_csv(
+    path: str,
+    header_mode: str = "file",
+    custom_headers: list[str] | None = None,
+    delimiter: str = ",",
+):
+    read_kwargs = {"chunksize": 2000, "delimiter": delimiter}
+    if header_mode == "none":
+        read_kwargs["header"] = None
+    elif header_mode == "custom":
+        read_kwargs["header"] = None
+        if custom_headers:
+            read_kwargs["names"] = custom_headers
+    else:
+        read_kwargs["header"] = 0
+
+    chunks = pd.read_csv(path, **read_kwargs)
+    return _summarise_dataframe(chunks, custom_headers, header_mode)
 
 
-def _parse_csv(path: str, delimiter: str = ","):
-    chunks = pd.read_csv(path, chunksize=2000, delimiter=delimiter)
-    return _summarise_dataframe(chunks)
+def _parse_excel(
+    path: str, header_mode: str = "file", custom_headers: list[str] | None = None
+):
+    read_kwargs = {"sheet_name": 0, "chunksize": 1000}
+    if header_mode == "none":
+        read_kwargs["header"] = None
+    elif header_mode == "custom":
+        read_kwargs["header"] = None
+        if custom_headers:
+            read_kwargs["names"] = custom_headers
+    else:
+        read_kwargs["header"] = 0
+    df_iter = pd.read_excel(path, **read_kwargs)
+    return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
-def _parse_excel(path: str):
-    df_iter = pd.read_excel(path, sheet_name=0, chunksize=1000)
-    return _summarise_dataframe(df_iter)
-
-
-def _parse_dat(path: str):
-    chunks = pd.read_csv(path, delim_whitespace=True, chunksize=2000, engine="python")
-    return _summarise_dataframe(chunks)
+def _parse_dat(
+    path: str, header_mode: str = "file", custom_headers: list[str] | None = None
+):
+    read_kwargs = {"delim_whitespace": True, "chunksize": 2000, "engine": "python"}
+    if header_mode == "none":
+        read_kwargs["header"] = None
+    elif header_mode == "custom":
+        read_kwargs["header"] = None
+        if custom_headers:
+            read_kwargs["names"] = custom_headers
+    else:
+        read_kwargs["header"] = 0
+    chunks = pd.read_csv(path, **read_kwargs)
+    return _summarise_dataframe(chunks, custom_headers, header_mode)
 
 
 def _parse_mat(path: str):
@@ -94,7 +137,16 @@ def _parse_mat(path: str):
 
 
 @celery_app.task(bind=True, name=f"{settings.celery_task_prefix}.ingest_file")
-def ingest_file(self, job_id: str, bucket: str, storage_key: str, filename: str):
+def ingest_file(
+    self,
+    job_id: str,
+    bucket: str,
+    storage_key: str,
+    filename: str,
+    header_mode: str = "file",
+    custom_headers: list[str] | None = None,
+    dataset_type: str | None = None,
+):
     redis = get_sync_redis()
     db = get_sync_db()
     minio = get_minio_client()
@@ -115,15 +167,23 @@ def ingest_file(self, job_id: str, bucket: str, storage_key: str, filename: str)
         )
         ext = os.path.splitext(filename.lower())[-1]
         if ext in [".csv"]:
-            summary = _parse_csv(tmp_path)
+            summary = _parse_csv(
+                tmp_path, header_mode=header_mode, custom_headers=custom_headers
+            )
         elif ext in [".xlsx", ".xlsm", ".xls"]:
-            summary = _parse_excel(tmp_path)
+            summary = _parse_excel(
+                tmp_path, header_mode=header_mode, custom_headers=custom_headers
+            )
         elif ext in [".dat", ".txt"]:
-            summary = _parse_dat(tmp_path)
+            summary = _parse_dat(
+                tmp_path, header_mode=header_mode, custom_headers=custom_headers
+            )
         elif ext in [".mat"]:
             summary = _parse_mat(tmp_path)
         else:
-            summary = _parse_csv(tmp_path)
+            summary = _parse_csv(
+                tmp_path, header_mode=header_mode, custom_headers=custom_headers
+            )
 
         _publish(job_id, states.SUCCESS, 100, "Ingestion finished")
         db.ingestion_jobs.update_one(
@@ -136,6 +196,9 @@ def ingest_file(self, job_id: str, bucket: str, storage_key: str, filename: str)
                     "columns": summary.get("columns"),
                     "rows_seen": summary.get("rows_seen"),
                     "metadata": summary.get("metadata"),
+                    "dataset_type": dataset_type,
+                    "header_mode": header_mode,
+                    "custom_headers": custom_headers,
                     "updated_at": datetime.utcnow(),
                 }
             },

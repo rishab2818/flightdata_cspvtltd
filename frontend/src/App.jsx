@@ -20,7 +20,10 @@ import Setting from './pages/app/Setting'
 import ProtectedGDorDH from './routes/ProtectedGDorDH'
 import AdminShell from './pages/admin/AdminShell'
 import Settings from './pages/admin/Settings'
-import ProjectDetail from './pages/app/ProjectDetail'
+import ProjectShell from './pages/app/project/ProjectShell'
+import ProjectUpload from './pages/app/project/ProjectUpload'
+import ProjectDataManagement from './pages/app/project/ProjectDataManagement'
+import ProjectSettings from './pages/app/project/ProjectSettings'
 export default function App(){
   return (
     <Routes>
@@ -37,7 +40,7 @@ export default function App(){
       {/* USER APP (Sidebar + Header persist via AppShell) */}
       <Route path="/app" element={<AppShell />}>
         <Route index element={<Dashboard />} />
-        <Route element={<ProtectedGDorDH />}>
+        <Route element={<ProtectedGDorDH />}> 
         <Route path="minutes" element={<MinutesOfTheMeeting />} />
         <Route path="student-engagement" element={<StudentEngagement />} />
         <Route path="inventory-records" element={<InventoryRecords />} />
@@ -47,7 +50,14 @@ export default function App(){
         <Route path="technical-reports" element={<TechnicalReports />} />
         <Route path="setting" element={<Setting />} />
         </Route>
-        <Route path="projects/:projectId" element={<ProjectDetail />} />
+      </Route>
+
+      <Route element={<ProtectedGDorDH />}>
+        <Route path="/app/projects/:projectId/*" element={<ProjectShell />}>
+          <Route index element={<ProjectUpload />} />
+          <Route path="data" element={<ProjectDataManagement />} />
+          <Route path="settings" element={<ProjectSettings />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
