@@ -12,6 +12,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from bson import ObjectId
 from celery import states
+import psutil
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
@@ -122,6 +123,42 @@ def _download_object(minio, bucket: str, key: str, dest_path: str):
             fh.write(data)
 
 
+def _stat_size(minio, bucket: str, key: str) -> int:
+    try:
+        meta = minio.stat_object(bucket, key)
+        return getattr(meta, "size", 0) or 0
+    except Exception:
+        return 0
+
+
+def select_chunk_size(file_size_bytes: int, combo_count: int, base_chunk_size: int = 50000) -> int:
+    """Choose a chunk size that balances RAM usage and throughput.
+
+    The calculation leans on available memory, file size, and how many axis
+    combinations will be expanded per chunk. It intentionally caps the
+    resulting chunk size to avoid overwhelming the worker while still keeping
+    throughput reasonable for smaller files.
+    """
+
+    mem = psutil.virtual_memory()
+    safety_window = max(64 * 1024 * 1024, int(mem.available * 0.08))
+    per_row_estimate = 256 * max(combo_count, 1)
+
+    budget_rows = safety_window // per_row_estimate
+    budget_rows = max(1000, min(200000, budget_rows))
+
+    if file_size_bytes:
+        target_chunks = max(1, min(32, file_size_bytes // (64 * 1024 * 1024)))
+        rows_by_size = (file_size_bytes // max(target_chunks, 1)) // per_row_estimate
+        rows_by_size = max(1000, min(200000, int(rows_by_size)))
+        budget_rows = min(budget_rows, rows_by_size)
+
+    if base_chunk_size:
+        budget_rows = min(budget_rows, int(base_chunk_size))
+
+    return int(max(1000, budget_rows))
+
+
 def _figure_from_table(table: pa.Table):
     df = table.to_pandas()
     fig = go.Figure()
@@ -187,6 +224,9 @@ def build_visualization(self, viz_id: str):
     total_rows = 0
     trace_labels: list[dict] = []
 
+    combined_writer: pq.ParquetWriter | None = None
+    combined_path: str | None = None
+
     try:
         for series_idx, s in enumerate(series):
             job_id = s.get("job_id")
@@ -218,8 +258,20 @@ def build_visualization(self, viz_id: str):
                 header_mode = job.get("header_mode", "file")
                 custom_headers = job.get("custom_headers")
 
+                combo_count = max(1, len(combos))
+                file_size_bytes = _stat_size(
+                    minio, settings.ingestion_bucket, job["storage_key"]
+                )
+                dynamic_chunk_size = select_chunk_size(
+                    file_size_bytes, combo_count, base_chunk_size=chunk_size
+                )
+                if not combined_path:
+                    handle = tempfile.NamedTemporaryFile(delete=False)
+                    combined_path = handle.name
+                    handle.close()
+
                 for chunk in _iter_frames(
-                    tmp_path, ext, header_mode, custom_headers, chunk_size
+                    tmp_path, ext, header_mode, custom_headers, dynamic_chunk_size
                 ):
                     output_tables: list[pa.Table] = []
                     for x_col, y_col, z_col in combos:
@@ -250,6 +302,10 @@ def build_visualization(self, viz_id: str):
                         else output_tables[0]
                     )
                     total_rows += combined.num_rows
+
+                    if combined_writer is None:
+                        combined_writer = pq.ParquetWriter(combined_path, combined.schema)
+                    combined_writer.write_table(combined)
 
                     tmp_out = tempfile.NamedTemporaryFile(delete=False)
                     tmp_out.close()
@@ -315,8 +371,44 @@ def build_visualization(self, viz_id: str):
                 }
             },
         )
+        if combined_writer:
+            combined_writer.close()
+        if combined_path and os.path.exists(combined_path):
+            try:
+                combined_table = pq.read_table(combined_path)
+                fig = _figure_from_table(combined_table)
+                final_image = fig.to_image(
+                    format=image_format,
+                    engine="kaleido",
+                    width=1280,
+                    height=720,
+                    scale=1,
+                )
+                final_key = f"{chunk_prefix}/images/final.{image_format}"
+                minio.put_object(
+                    bucket_name=bucket,
+                    object_name=final_key,
+                    data=io.BytesIO(final_image),
+                    length=len(final_image),
+                    content_type="image/png",
+                )
+            finally:
+                try:
+                    os.remove(combined_path)
+                except Exception:
+                    pass
         _publish(viz_id, states.SUCCESS, 100, "Visualization ready")
     except Exception as exc:  # noqa: BLE001
+        if combined_writer:
+            try:
+                combined_writer.close()
+            except Exception:
+                pass
+        if combined_path and os.path.exists(combined_path):
+            try:
+                os.remove(combined_path)
+            except Exception:
+                pass
         _set_status(redis, viz_id, states.FAILURE, 100, str(exc))
         redis.publish(
             f"visualization:{viz_id}:events",

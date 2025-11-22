@@ -30,12 +30,8 @@ export const visualizationApi = {
     )
     return data
   },
-  image: async (vizId, chunkIndex = 0) => {
-    const params = new URLSearchParams()
-    params.set('chunk_index', chunkIndex)
-    const { data } = await axiosClient.get(
-      `/api/visualizations/jobs/${vizId}/image?${params.toString()}`
-    )
+  image: async (vizId) => {
+    const { data } = await axiosClient.get(`/api/visualizations/jobs/${vizId}/image`)
     return data
   },
 }
