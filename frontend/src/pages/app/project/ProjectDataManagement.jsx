@@ -175,7 +175,7 @@ export default function ProjectDataManagement() {
               <div className="data-card" key={viz.viz_id}>
                 <p className="data-card__name">{viz.name}</p>
                 <div className="data-card__meta">{viz.description || 'No description'}</div>
-                <div className="data-card__meta">{viz.chunk_count || 0} chunks · {viz.rows_total || 0} rows</div>
+                <div className="data-card__meta">{viz.rows_total || 0} rows · {viz.trace_labels?.length || 0} traces</div>
                 <span className="badge">{viz.status}</span>
               </div>
             ))}

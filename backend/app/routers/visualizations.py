@@ -20,7 +20,7 @@ from app.models.visualization import (
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.visualizations import VisualizationRepository
-from app.tasks.visualization import build_visualization
+from app.tasks.visualization import build_visualization, select_chunk_size
 
 router = APIRouter(prefix="/api/visualizations", tags=["visualizations"])
 
@@ -60,6 +60,7 @@ async def create_visualization(
     _validate_series(payload.series)
 
     # Ensure referenced ingestion jobs belong to the same project
+    series_jobs: list[tuple[SeriesRequest, dict]] = []
     for s in payload.series:
         job = await ingestions.get_job(s.job_id)
         if not job or job.get("project_id") != project_id:
@@ -67,6 +68,24 @@ async def create_visualization(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Ingestion job {s.job_id} not found for this project",
             )
+        series_jobs.append((s, job))
+
+    minio = get_minio_client()
+    computed_sizes: list[int] = []
+
+    for s, job in series_jobs:
+        try:
+            stat = minio.stat_object(
+                settings.ingestion_bucket, job.get("storage_key", "")
+            )
+            file_size_bytes = getattr(stat, "size", 0) or 0
+        except Exception:
+            file_size_bytes = 0
+
+        combos = len(s.x_axes) * len(s.y_axes) * max(len(s.z_axes or []), 1)
+        computed_sizes.append(select_chunk_size(file_size_bytes, combos))
+
+    chunk_size = min(computed_sizes) if computed_sizes else 50000
 
     viz_id = await repo.create(
         project_id,
@@ -74,7 +93,7 @@ async def create_visualization(
         payload.name,
         payload.description,
         [s.model_dump() for s in payload.series],
-        payload.chunk_size,
+        chunk_size,
     )
     build_visualization.delay(viz_id)
 
@@ -83,7 +102,7 @@ async def create_visualization(
         project_id=project_id,
         name=payload.name,
         status="queued",
-        chunk_size=payload.chunk_size,
+        chunk_size=chunk_size,
         image_format="png",
     )
 
@@ -205,13 +224,15 @@ async def download_chunk(
 
 @router.get("/jobs/{viz_id}/image", response_model=VisualizationImage)
 async def visualization_image(
-    viz_id: str, chunk_index: int = Query(0, ge=0), user: CurrentUser = Depends(get_current_user)
+    viz_id: str,
+    chunk_index: Optional[int] = Query(None, ge=0),
+    user: CurrentUser = Depends(get_current_user),
 ):
     doc = await repo.get(viz_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Visualization not found")
     await _ensure_project_member(doc["project_id"], user)
-    if chunk_index >= doc.get("chunk_count", 0):
+    if chunk_index is not None and chunk_index >= doc.get("chunk_count", 0):
         raise HTTPException(status_code=404, detail="Chunk out of range")
 
     minio = get_minio_client()
@@ -220,10 +241,13 @@ async def visualization_image(
         raise HTTPException(status_code=404, detail="Visualization bucket missing")
 
     image_format = doc.get("image_format", "png")
-    object_key = f"{doc['chunk_prefix']}/images/chunk_{chunk_index}.{image_format}"
+    if chunk_index is None:
+        object_key = f"{doc['chunk_prefix']}/images/final.{image_format}"
+    else:
+        object_key = f"{doc['chunk_prefix']}/images/chunk_{chunk_index}.{image_format}"
     try:
         minio.stat_object(bucket, object_key)
     except Exception:
-        raise HTTPException(status_code=404, detail="Image chunk not ready")
+        raise HTTPException(status_code=404, detail="Image not ready")
     url = minio.presigned_get_object(bucket_name=bucket, object_name=object_key)
     return VisualizationImage(url=url)

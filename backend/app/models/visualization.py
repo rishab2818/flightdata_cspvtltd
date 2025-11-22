@@ -23,12 +23,6 @@ class VisualizationCreate(BaseModel):
     name: str
     description: Optional[str] = None
     series: List[SeriesRequest] = Field(min_length=1)
-    chunk_size: int = Field(
-        default=50000,
-        ge=1000,
-        le=500000,
-        description="How many rows to process per chunk for memory safety",
-    )
 
 
 class VisualizationOut(BaseModel):

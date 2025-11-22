@@ -18,13 +18,12 @@ export default function ProjectVisualization() {
     zAxes: [],
     label: '',
   })
-  const [vizForm, setVizForm] = useState({ name: '', description: '', chunkSize: 50000 })
+  const [vizForm, setVizForm] = useState({ name: '', description: '' })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [selectedViz, setSelectedViz] = useState(null)
-  const [loadingChunk, setLoadingChunk] = useState(false)
-  const [currentChunk, setCurrentChunk] = useState(null)
+  const [renderingImage, setRenderingImage] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
 
@@ -93,7 +92,6 @@ export default function ProjectVisualization() {
       const payload = {
         name: vizForm.name,
         description: vizForm.description,
-        chunk_size: vizForm.chunkSize,
         series: seriesList.map((s) => ({
           job_id: s.job_id,
           x_axes: s.x_axes,
@@ -104,7 +102,7 @@ export default function ProjectVisualization() {
       }
       await visualizationApi.create(projectId, payload)
       await refresh()
-      setVizForm({ name: '', description: '', chunkSize: vizForm.chunkSize })
+      setVizForm({ name: '', description: '' })
       setSeriesList([])
       setStatusMessage('Visualization request queued. It will process in the background.')
     } catch (err) {
@@ -114,21 +112,18 @@ export default function ProjectVisualization() {
     }
   }
 
-  const fetchImageChunk = async (vizId, chunkIndex = 0) => {
+  const fetchFinalImage = async (vizId) => {
     if (!vizId && !selectedViz?.viz_id) return
-    setLoadingChunk(true)
+    setRenderingImage(true)
     try {
-      const data = await visualizationApi.image(vizId || selectedViz.viz_id, chunkIndex)
+      const data = await visualizationApi.image(vizId || selectedViz.viz_id)
       if (activeVizRef.current !== (vizId || selectedViz.viz_id)) return
       setImageUrl(data.url)
-      setCurrentChunk(chunkIndex)
-      setStatusMessage(
-        `Rendered chunk ${chunkIndex + 1} / ${selectedViz?.chunk_count || ''} in backend; streaming as image.`
-      )
+      setStatusMessage('Rendered the full-resolution graph in the backend; streaming final image.')
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)
     } finally {
-      setLoadingChunk(false)
+      setRenderingImage(false)
     }
   }
 
@@ -137,7 +132,6 @@ export default function ProjectVisualization() {
     activeVizRef.current = viz.viz_id
     setSelectedViz(viz)
     setImageUrl('')
-    setCurrentChunk(null)
     setStatusMessage('Preparing visualization…')
     try {
       const detail = await visualizationApi.detail(viz.viz_id)
@@ -147,9 +141,9 @@ export default function ProjectVisualization() {
         setStatusMessage('Still processing. Refresh status to see progress.')
         return
       }
-      if (detail.chunk_count > 0) {
-        setStatusMessage('Backend rendered chunk 1 as an image; loading…')
-        await fetchImageChunk(detail.viz_id, 0)
+      if (detail.rows_total > 0) {
+        setStatusMessage('Backend rendered the full plot as an image; loading…')
+        await fetchFinalImage(detail.viz_id)
       } else {
         setStatusMessage('No data rows available to render yet.')
       }
@@ -167,7 +161,7 @@ export default function ProjectVisualization() {
             <h2 style={{ margin: '4px 0 0 0' }}>Generate multi-axis graphs</h2>
             <p className="summary-label">Pick any uploaded files and map headers to X, Y, Z axes for {project?.project_name || 'this project'}.</p>
           </div>
-          <div className="badge">RAM-safe chunking</div>
+          <div className="badge">Auto RAM-safe streaming</div>
         </div>
 
         {error && <div className="project-shell__error">{error}</div>}
@@ -185,17 +179,6 @@ export default function ProjectVisualization() {
             />
           </label>
           <label className="input-group">
-            <span>Chunk size per stream (rows)</span>
-            <input
-              type="number"
-              min={1000}
-              max={500000}
-              value={vizForm.chunkSize}
-              onChange={(e) => setVizForm({ ...vizForm, chunkSize: Number(e.target.value) })}
-            />
-            <p className="summary-label">Keeps memory steady; data is streamed chunk by chunk.</p>
-          </label>
-          <label className="input-group">
             <span>Description (optional)</span>
             <textarea
               rows={2}
@@ -204,6 +187,10 @@ export default function ProjectVisualization() {
               placeholder="Plotting pitch vs altitude vs yaw from all runs"
             />
           </label>
+          <div className="hint">
+            Backend automatically picks a RAM-safe streaming window based on file size and
+            available resources before assembling the full plot image.
+          </div>
         </div>
 
         <div className="series-row">
@@ -341,7 +328,7 @@ export default function ProjectVisualization() {
             <div>
               <p className="summary-label">Saved graphs</p>
               <h3 style={{ margin: 0 }}>Data Management / Visualizations</h3>
-              <p className="summary-label">Pick a graph to view backend-rendered chunk images without downsampling.</p>
+              <p className="summary-label">Pick a graph to view backend-rendered full images without downsampling.</p>
             </div>
             <button className="project-shell__nav-link" onClick={refresh}>
               Refresh list
@@ -359,22 +346,11 @@ export default function ProjectVisualization() {
                 <span className="badge">{viz.status || 'QUEUED'}</span>
               </div>
               <div className="data-card__meta">
-                {viz.chunk_count || 0} chunks · {viz.rows_total || 0} rows · chunk size {viz.chunk_size}
+                {viz.rows_total || 0} rows · {viz.trace_labels?.length || 0} traces · window {viz.chunk_size} rows
               </div>
               <div className="data-card__actions">
                 <button className="project-shell__nav-link" onClick={() => loadVisualization(viz)}>
                   Load
-                </button>
-                <button
-                  className="project-shell__nav-link"
-                  onClick={() =>
-                    visualizationApi
-                      .downloadChunk(viz.viz_id, 0)
-                      .then(({ url }) => window.open(url, '_blank'))
-                      .catch((err) => setError(err?.response?.data?.detail || err.message))
-                  }
-                >
-                  Download chunk 0
                 </button>
               </div>
             </div>
@@ -387,7 +363,7 @@ export default function ProjectVisualization() {
               <div>
                 <h3 style={{ margin: '0 0 6px 0' }}>{selectedViz.name}</h3>
                 <p className="summary-label" style={{ margin: 0 }}>
-                  {selectedViz.rows_total || 0} rows · {selectedViz.chunk_count || 0} chunks · {selectedViz.trace_labels?.length || 0} traces
+                  {selectedViz.rows_total || 0} rows · {selectedViz.trace_labels?.length || 0} traces · window {selectedViz.chunk_size} rows
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -401,46 +377,20 @@ export default function ProjectVisualization() {
                 Status: {selectedViz.status} · Progress {selectedViz.progress || 0}% · {selectedViz.message || 'processing'}
               </div>
             )}
-            {selectedViz.status === 'SUCCESS' && selectedViz.chunk_count === 0 && (
-              <div className="summary-label">No chunks available to render yet.</div>
-            )}
-            {selectedViz.status === 'SUCCESS' && selectedViz.chunk_count > 0 && (
+            {selectedViz.status === 'SUCCESS' && (
               <div>
-                <div className="actions-row" style={{ justifyContent: 'flex-start', gap: 8 }}>
-                  <button
-                    className="project-shell__nav-link"
-                    disabled={currentChunk === null || currentChunk === 0}
-                    onClick={() => fetchImageChunk(selectedViz.viz_id, Math.max((currentChunk || 0) - 1, 0))}
-                  >
-                    Previous chunk image
-                  </button>
-                  <button
-                    className="project-shell__nav-link"
-                    disabled={
-                      currentChunk === null || currentChunk + 1 >= (selectedViz.chunk_count || 0)
-                    }
-                    onClick={() =>
-                      fetchImageChunk(
-                        selectedViz.viz_id,
-                        Math.min((currentChunk || 0) + 1, (selectedViz.chunk_count || 1) - 1)
-                      )
-                    }
-                  >
-                    Next chunk image
-                  </button>
-                </div>
                 {imageUrl ? (
                   <img
                     src={imageUrl}
-                    alt={`Visualization chunk ${currentChunk !== null ? currentChunk + 1 : ''}`}
+                    alt={`Visualization ${selectedViz.name}`}
                     style={{ width: '100%', maxHeight: 540, objectFit: 'contain', borderRadius: 8 }}
                   />
                 ) : (
-                  <div className="summary-label">Select a visualization to load rendered chunks.</div>
+                  <div className="summary-label">Select a visualization to load the rendered image.</div>
                 )}
               </div>
             )}
-            {loadingChunk && <div className="summary-label">Loading rendered chunk…</div>}
+            {renderingImage && <div className="summary-label">Loading rendered image…</div>}
           </div>
         )}
       </div>
