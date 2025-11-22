@@ -10,9 +10,13 @@ class CurrentUser(BaseModel):
 
 async def get_current_user(request: Request) -> CurrentUser:
     auth = request.headers.get("Authorization", "")
-    if not auth.lower().startswith("bearer "):
+    token = None
+    if auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1]
+    elif "token" in request.query_params:
+        token = request.query_params["token"]
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    token = auth.split(" ", 1)[1]
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except JWTError:

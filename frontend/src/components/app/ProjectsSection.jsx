@@ -7,6 +7,7 @@
 // styling have been refactored.
 
 import React, { useEffect, useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProjectCard from './ProjectCard';
 import NewProjectModal from './NewProjectModal';
 import { projectApi } from '../../api/projectapi';
@@ -24,6 +25,7 @@ function formatDate(dateStr) {
 export default function ProjectsSectionImproved() {
   const { user } = useContext(AuthContext);
   const role = user?.role?.toUpperCase?.();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -115,6 +117,7 @@ export default function ProjectsSectionImproved() {
               date={formatDate(p.created_at)}
               members={p.members?.length || 0}
               desc={p.project_description}
+              onView={() => navigate(`/app/projects/${p._id}`)}
             />
           ))}
         </div>

@@ -20,6 +20,7 @@ import Setting from './pages/app/Setting'
 import ProtectedGDorDH from './routes/ProtectedGDorDH'
 import AdminShell from './pages/admin/AdminShell'
 import Settings from './pages/admin/Settings'
+import ProjectDetail from './pages/app/ProjectDetail'
 export default function App(){
   return (
     <Routes>
@@ -46,6 +47,7 @@ export default function App(){
         <Route path="technical-reports" element={<TechnicalReports />} />
         <Route path="setting" element={<Setting />} />
         </Route>
+        <Route path="projects/:projectId" element={<ProjectDetail />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
