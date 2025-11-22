@@ -3,7 +3,9 @@ import { storage } from './storage'
 
 export const axiosClient = axios.create({
   baseURL: 'http://127.0.0.1:8000',
-  timeout: 15000,
+  // Disable request timeout so very large uploads are allowed to stream fully
+  // from the browser to the backend without aborting.
+  timeout: 0,
 })
 export function attachUnauthorizedHandler(onUnauthorized){
   axiosClient.interceptors.response.use(

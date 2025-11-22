@@ -1,7 +1,5 @@
 import asyncio
 import json
-import os
-import tempfile
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -90,28 +88,19 @@ async def start_ingestion(
 
     object_key = f"projects/{project_id}/{uuid4()}_{file.filename}"
 
-    # stream upload to temp file then to MinIO to keep memory low
-    tmp_fd, tmp_path = tempfile.mkstemp()
-    os.close(tmp_fd)
-    try:
-        with open(tmp_path, "wb") as out:
-            while True:
-                chunk = await file.read(1024 * 1024)
-                if not chunk:
-                    break
-                out.write(chunk)
-        size = os.path.getsize(tmp_path)
-        with open(tmp_path, "rb") as data:
-            minio.put_object(
-                bucket_name=bucket,
-                object_name=object_key,
-                data=data,
-                length=size,
-                content_type=file.content_type,
-            )
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+    # Stream the uploaded file directly to MinIO in multi-part chunks to avoid
+    # loading the whole payload into memory or duplicating it on disk.
+    await file.seek(0)
+    data_stream = iter(lambda: file.file.read(10 * 1024 * 1024), b"")
+    minio.put_object(
+        bucket_name=bucket,
+        object_name=object_key,
+        data=data_stream,
+        length=-1,
+        part_size=10 * 1024 * 1024,
+        content_type=file.content_type or "application/octet-stream",
+    )
+    await file.close()
 
     job_id = await repo.create_job(
         project_id,
