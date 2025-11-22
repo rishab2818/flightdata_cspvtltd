@@ -25,4 +25,8 @@ export const projectApi = {
     });
     return data;
   },
+  getById: async (projectId) => {
+    const { data } = await axiosClient.get(`/api/projects/${projectId}`);
+    return data;
+  },
 };
