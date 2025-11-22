@@ -190,21 +190,27 @@ def main() -> None:
             ],
         )
     )
-    processes.append(
-        start_process(
-            "celery",
-            [
-                sys.executable,
-                "-m",
-                "celery",
-                "-A",
-                "app.core.celery_app.celery_app",
-                "worker",
-                f"--autoscale={autoscale['autoscale_max']},{autoscale['autoscale_min']}",
-                "--loglevel=info",
-            ],
+    celery_cmd: List[str] = [
+        sys.executable,
+        "-m",
+        "celery",
+        "-A",
+        "app.core.celery_app.celery_app",
+        "worker",
+        "--loglevel=info",
+    ]
+
+    if sys.platform.startswith("win"):
+        # Celery's prefork pool is unsupported on Windows; use solo to avoid
+        # spawn/unpack errors like "not enough values to unpack".
+        celery_cmd.extend(["-P", "solo"])
+        print("[celery] Windows detected; using solo pool (autoscale disabled)")
+    else:
+        celery_cmd.append(
+            f"--autoscale={autoscale['autoscale_max']},{autoscale['autoscale_min']}"
         )
-    )
+
+    processes.append(start_process("celery", celery_cmd))
 
     def handle_signal(signum, frame):
         print("\n[proc] stopping processes...")

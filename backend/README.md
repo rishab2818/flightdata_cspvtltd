@@ -19,6 +19,8 @@ its dependencies (MongoDB, Redis, and MinIO) locally.
      (creating them if needed and storing data under `backend/data/`).
    - Launch uvicorn for the API.
    - Launch a Celery worker with autoscale bounds derived from your CPU/RAM.
+     On Windows, Celery falls back to the `solo` pool (autoscale disabled)
+     because the prefork pool is unsupported.
 
 Access the API at `http://<host>:<port>/docs` and the MinIO console at
 `http://<host>:9090`. Press `Ctrl+C` to stop uvicorn and Celery; the Docker
