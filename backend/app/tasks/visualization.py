@@ -276,7 +276,10 @@ def build_visualization(self, viz_id: str):
             if not job:
                 raise ValueError(f"Ingestion job {job_id} missing")
 
-            tmp_fd, tmp_path = tempfile.mkstemp()
+            filename = (job.get("filename") or "")[0:256]
+            ext = os.path.splitext(filename.lower())[-1]
+
+            tmp_fd, tmp_path = tempfile.mkstemp(suffix=ext if ext else "")
             os.close(tmp_fd)
             try:
                 _publish(
@@ -289,7 +292,6 @@ def build_visualization(self, viz_id: str):
                     minio, settings.ingestion_bucket, job["storage_key"], tmp_path
                 )
 
-                ext = os.path.splitext(job.get("filename", "")[0:256].lower())[-1]
                 combos = list(
                     product(
                         s.get("x_axes") or [],
