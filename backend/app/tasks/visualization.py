@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta
 
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 import plotly.io as pio
 from bson import ObjectId
 from celery import states
@@ -70,15 +70,33 @@ def _load_dataframe(url: str, ext: str, x_axis: str, y_axis: str):
     return frame
 
 
-def _build_figure(df: pd.DataFrame, x_axis: str, y_axis: str, chart_type: str):
+def _build_figure(series_frames: list[dict], x_axis: str, chart_type: str):
     chart_type = (chart_type or "scatter").lower()
-    if chart_type == "line":
-        fig = px.line(df, x=x_axis, y=y_axis, title=f"{y_axis} vs {x_axis}")
-    elif chart_type == "bar":
-        fig = px.bar(df, x=x_axis, y=y_axis, title=f"{y_axis} by {x_axis}")
-    else:
-        fig = px.scatter(df, x=x_axis, y=y_axis, title=f"{y_axis} vs {x_axis}", opacity=0.7)
-    fig.update_layout(template="plotly_white")
+    fig = go.Figure()
+
+    for item in series_frames:
+        series = item["series"]
+        df = item["frame"]
+        label = series.get("label") or series.get("y_axis") or "Series"
+
+        if chart_type == "bar":
+            fig.add_bar(name=label, x=df[x_axis], y=df[series["y_axis"]])
+        elif chart_type == "line":
+            fig.add_scatter(name=label, x=df[x_axis], y=df[series["y_axis"]], mode="lines")
+        else:
+            fig.add_scatter(
+                name=label,
+                x=df[x_axis],
+                y=df[series["y_axis"]],
+                mode="markers",
+                opacity=0.7,
+            )
+
+    fig.update_layout(
+        template="plotly_white",
+        title=f"{', '.join([item['series'].get('label') or item['series'].get('y_axis') or 'Series' for item in series_frames])} vs {x_axis}",
+        legend_title_text="Series",
+    )
     return fig
 
 
@@ -90,30 +108,78 @@ def generate_visualization(self, viz_id: str):
         doc = db.visualizations.find_one({"_id": ObjectId(viz_id)})
         if not doc:
             return
-        job = db.ingestion_jobs.find_one({"_id": ObjectId(doc["job_id"])})
-        if not job:
-            _update_db_status(db, viz_id, status=states.FAILURE, progress=100, message="Dataset not found")
+        series_list = doc.get("series") or []
+        if not series_list and doc.get("y_axis"):
+            series_list = [
+                {
+                    "job_id": doc.get("job_id"),
+                    "y_axis": doc.get("y_axis"),
+                    "label": doc.get("y_axis"),
+                    "filename": doc.get("filename", "dataset"),
+                }
+            ]
+
+        if not series_list:
+            _update_db_status(
+                db,
+                viz_id,
+                status=states.FAILURE,
+                progress=100,
+                message="No series configured for visualization",
+            )
             return
+
+        series_jobs: list[dict] = []
+        for series in series_list:
+            job_id = series.get("job_id")
+            y_axis = series.get("y_axis")
+            if not job_id or not y_axis:
+                _update_db_status(
+                    db,
+                    viz_id,
+                    status=states.FAILURE,
+                    progress=100,
+                    message="Series missing dataset or Y axis",
+                )
+                return
+
+            job = db.ingestion_jobs.find_one({"_id": ObjectId(job_id)})
+            if not job:
+                _update_db_status(
+                    db,
+                    viz_id,
+                    status=states.FAILURE,
+                    progress=100,
+                    message="Dataset not found",
+                )
+                return
+
+            series_jobs.append({"series": series, "job": job})
 
         _set_status(redis, viz_id, states.STARTED, 10, "Preparing visualization")
         _update_db_status(db, viz_id, status=states.STARTED, progress=10, message="Preparing visualization")
 
         minio = get_minio_client()
-        data_url = minio.presigned_get_object(
-            bucket_name=settings.ingestion_bucket,
-            object_name=job["storage_key"],
-            expires=timedelta(hours=6),
-        )
-        ext = os.path.splitext(job.get("filename", "").lower())[-1]
+        series_frames = []
 
-        _set_status(redis, viz_id, states.STARTED, 30, "Sampling dataset")
-        frame = _load_dataframe(data_url, ext, doc["x_axis"], doc["y_axis"])
-        frame = frame.dropna()
-        if len(frame) > SAMPLE_ROWS:
-            frame = frame.sample(SAMPLE_ROWS, random_state=42)
+        for idx, item in enumerate(series_jobs, start=1):
+            data_url = minio.presigned_get_object(
+                bucket_name=settings.ingestion_bucket,
+                object_name=item["job"]["storage_key"],
+                expires=timedelta(hours=6),
+            )
+            ext = os.path.splitext(item["job"].get("filename", "").lower())[-1]
+
+            _set_status(redis, viz_id, states.STARTED, 30, f"Loading series {idx}")
+            frame = _load_dataframe(data_url, ext, doc["x_axis"], item["series"]["y_axis"])
+            frame = frame.dropna()
+            if len(frame) > SAMPLE_ROWS:
+                frame = frame.sample(SAMPLE_ROWS, random_state=42)
+
+            series_frames.append({"series": item["series"], "frame": frame})
 
         _set_status(redis, viz_id, states.STARTED, 60, "Building Plotly figure")
-        fig = _build_figure(frame, doc["x_axis"], doc["y_axis"], doc.get("chart_type", "scatter"))
+        fig = _build_figure(series_frames, doc["x_axis"], doc.get("chart_type", "scatter"))
         html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
 
         _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")

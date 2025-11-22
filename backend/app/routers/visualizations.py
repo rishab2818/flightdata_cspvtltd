@@ -7,11 +7,7 @@ from pydantic import ValidationError
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
-from app.models.visualization import (
-    VisualizationCreateRequest,
-    VisualizationOut,
-    VisualizationStatus,
-)
+from app.models.visualization import VisualizationCreateRequest, VisualizationOut, VisualizationStatus
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.visualizations import VisualizationRepository
@@ -24,7 +20,7 @@ repo = VisualizationRepository()
 ingestions = IngestionRepository()
 projects = ProjectRepository()
 
-REQUIRED_VIZ_FIELDS = {"job_id", "filename", "x_axis", "y_axis", "chart_type"}
+REQUIRED_VIZ_FIELDS = {"x_axis", "chart_type", "series"}
 
 
 def _inject_url(doc: dict | None):
@@ -40,6 +36,23 @@ def _inject_url(doc: dict | None):
     return doc
 
 
+def _with_series(doc: dict | None):
+    if not doc:
+        return doc
+    if not doc.get("series") and doc.get("y_axis"):
+        doc["series"] = [
+            {
+                "job_id": doc.get("job_id"),
+                "y_axis": doc.get("y_axis"),
+                "label": doc.get("y_axis"),
+                "filename": doc.get("filename", "dataset"),
+            }
+        ]
+    for item in doc.get("series", []):
+        item.setdefault("label", item.get("y_axis"))
+    return doc
+
+
 async def _ensure_member(project_id: str, user: CurrentUser):
     doc = await projects.get_if_member(project_id, user.email)
     if not doc:
@@ -52,28 +65,46 @@ async def create_visualization(
     payload: VisualizationCreateRequest, user: CurrentUser = Depends(get_current_user)
 ):
     await _ensure_member(payload.project_id, user)
-    job = await ingestions.get_job(payload.job_id)
-    if not job or job["project_id"] != payload.project_id:
-        raise HTTPException(status_code=404, detail="Dataset not found for this project")
-    if job.get("columns"):
-        missing = [col for col in [payload.x_axis, payload.y_axis] if col not in job["columns"]]
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Columns not found in dataset: {', '.join(missing)}",
-            )
+    if not payload.series:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please include at least one Y axis series",
+        )
+
+    series_docs = []
+    for idx, item in enumerate(payload.series, start=1):
+        job = await ingestions.get_job(item.job_id)
+        if not job or job["project_id"] != payload.project_id:
+            raise HTTPException(status_code=404, detail=f"Dataset not found for series {idx}")
+        if job.get("columns"):
+            missing = [col for col in [payload.x_axis, item.y_axis] if col not in job["columns"]]
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Columns not found in dataset for series {idx}: {', '.join(missing)}",
+                )
+
+        series_docs.append(
+            {
+                "job_id": item.job_id,
+                "y_axis": item.y_axis,
+                "label": item.label or item.y_axis,
+                "filename": job.get("filename", "dataset"),
+            }
+        )
+
+    primary_filename = series_docs[0]["filename"] if series_docs else "dataset"
 
     viz_id = await repo.create(
         payload.project_id,
-        payload.job_id,
-        job.get("filename", "dataset"),
         payload.x_axis,
-        payload.y_axis,
         payload.chart_type,
         user.email,
+        series_docs,
+        filename=primary_filename,
     )
     generate_visualization.delay(viz_id)
-    doc = await repo.get(viz_id)
+    doc = _with_series(await repo.get(viz_id))
     return VisualizationOut(**doc)
 
 
@@ -83,7 +114,7 @@ async def get_visualization(viz_id: str, user: CurrentUser = Depends(get_current
     if not doc:
         raise HTTPException(status_code=404, detail="Visualization not found")
     await _ensure_member(doc["project_id"], user)
-    doc = _inject_url(doc)
+    doc = _inject_url(_with_series(doc))
     return VisualizationOut(**doc)
 
 
@@ -95,10 +126,11 @@ async def visualization_status(
     if not doc:
         raise HTTPException(status_code=404, detail="Visualization not found")
     await _ensure_member(doc["project_id"], user)
+    prepared = _with_series(doc)
     return VisualizationStatus(
-        status=doc.get("status", "queued"),
-        progress=doc.get("progress", 0),
-        message=doc.get("message"),
+        status=prepared.get("status", "queued"),
+        progress=prepared.get("progress", 0),
+        message=prepared.get("message"),
     )
 
 
@@ -131,15 +163,16 @@ async def list_project_visualizations(
     output = []
     for doc in docs:
         try:
-            missing_fields = REQUIRED_VIZ_FIELDS.difference(doc.keys())
+            hydrated = _with_series(doc)
+            missing_fields = REQUIRED_VIZ_FIELDS.difference(hydrated.keys())
             if missing_fields:
                 logger.warning(
                     "Skipping visualization %s due to missing fields: %s",
-                    doc.get("viz_id", "unknown"),
+                    hydrated.get("viz_id", "unknown"),
                     ", ".join(sorted(missing_fields)),
                 )
                 continue
-            output.append(VisualizationOut(**_inject_url(doc)))
+            output.append(VisualizationOut(**_inject_url(hydrated)))
         except ValidationError as exc:
             logger.warning(
                 "Skipping visualization %s due to validation error: %s",

@@ -12,22 +12,20 @@ class VisualizationRepository:
     async def create(
         self,
         project_id: str,
-        job_id: str,
-        filename: str,
         x_axis: str,
-        y_axis: str,
         chart_type: str,
         owner_email: str,
+        series: list[dict],
+        filename: str | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
         doc = {
             "project_id": project_id,
-            "job_id": job_id,
-            "filename": filename,
             "x_axis": x_axis,
-            "y_axis": y_axis,
             "chart_type": chart_type,
+            "series": series,
+            "filename": filename,
             "status": "queued",
             "progress": 0,
             "owner_email": owner_email,
