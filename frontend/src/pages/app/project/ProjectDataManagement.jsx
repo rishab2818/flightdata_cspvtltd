@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
-import { visualizationApi } from '../../../api/visualizationApi'
 
 const filterTabs = [
   { key: 'all', label: 'All' },
@@ -19,7 +18,6 @@ export default function ProjectDataManagement() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
-  const [visualizations, setVisualizations] = useState([])
 
   const refresh = async () => {
     try {
@@ -35,17 +33,6 @@ export default function ProjectDataManagement() {
 
   useEffect(() => {
     refresh()
-  }, [projectId])
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const list = await visualizationApi.list(projectId)
-        setVisualizations(list)
-      } catch (err) {
-        // non-blocking
-      }
-    })()
   }, [projectId])
 
   const filtered = useMemo(() => {
@@ -160,28 +147,6 @@ export default function ProjectDataManagement() {
         </div>
       )}
 
-      {visualizations.length > 0 && (
-        <div className="project-card" style={{ marginTop: 16 }}>
-          <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ margin: 0 }}>Saved visualizations</h3>
-              <p className="summary-label" style={{ margin: 0 }}>
-                Stored in backend; open the Visualization module to stream them.
-              </p>
-            </div>
-          </div>
-          <div className="data-grid">
-            {visualizations.map((viz) => (
-              <div className="data-card" key={viz.viz_id}>
-                <p className="data-card__name">{viz.name}</p>
-                <div className="data-card__meta">{viz.description || 'No description'}</div>
-                <div className="data-card__meta">{viz.rows_total || 0} rows · {viz.trace_labels?.length || 0} traces</div>
-                <span className="badge">{viz.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

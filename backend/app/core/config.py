@@ -26,10 +26,6 @@ class Settings(BaseSettings):
     ingestion_bucket: str = Field(
         default="ingestion", alias="MINIO_INGESTION_BUCKET"
     )
-    visualization_bucket: str = Field(
-        default="visualizations", alias="MINIO_VISUALIZATION_BUCKET"
-    )
-
     # ---------- Redis / Celery (Option 2 standard stack) ----------
     redis_url: str = Field(default="redis://127.0.0.1:6379/0", alias="REDIS_URL")
     celery_task_prefix: str = Field(default="flightdata", alias="CELERY_TASK_PREFIX")
