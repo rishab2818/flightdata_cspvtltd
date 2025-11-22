@@ -14,9 +14,9 @@ export default function ProjectVisualisation() {
   const { project } = useOutletContext()
   const [jobs, setJobs] = useState([])
   const [visualizations, setVisualizations] = useState([])
-  const [selectedJobId, setSelectedJobId] = useState('')
+  const [xJobId, setXJobId] = useState('')
   const [xAxis, setXAxis] = useState('')
-  const [yAxis, setYAxis] = useState('')
+  const [series, setSeries] = useState([{ jobId: '', yAxis: '', label: '' }])
   const [chartType, setChartType] = useState('scatter')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -25,9 +25,11 @@ export default function ProjectVisualisation() {
   const [statusMessage, setStatusMessage] = useState('Select a dataset to begin')
   const pollTimer = useRef(null)
 
-  const selectedJob = useMemo(
-    () => jobs.find((job) => job.job_id === selectedJobId),
-    [jobs, selectedJobId]
+  const xJob = useMemo(() => jobs.find((job) => job.job_id === xJobId), [jobs, xJobId])
+
+  const validSeries = useMemo(
+    () => series.filter((item) => item.jobId && item.yAxis),
+    [series]
   )
 
   const fetchJobs = async () => {
@@ -57,9 +59,9 @@ export default function ProjectVisualisation() {
   }, [projectId])
 
   const resetForm = () => {
-    setSelectedJobId('')
+    setXJobId('')
     setXAxis('')
-    setYAxis('')
+    setSeries([{ jobId: '', yAxis: '', label: '' }])
     setChartType('scatter')
   }
 
@@ -93,8 +95,8 @@ export default function ProjectVisualisation() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedJobId || !xAxis || !yAxis) {
-      setError('Please choose a dataset and both axes before generating a plot')
+    if (!xJobId || !xAxis || validSeries.length === 0) {
+      setError('Please choose an X axis dataset, X axis column, and at least one Y series')
       return
     }
     setError(null)
@@ -105,9 +107,12 @@ export default function ProjectVisualisation() {
     try {
       const res = await visualizationApi.create({
         project_id: projectId,
-        job_id: selectedJobId,
         x_axis: xAxis,
-        y_axis: yAxis,
+        series: validSeries.map((item) => ({
+          job_id: item.jobId,
+          y_axis: item.yAxis,
+          label: item.label?.trim() || undefined,
+        })),
         chart_type: chartType,
       })
       setActiveViz(res)
@@ -120,7 +125,35 @@ export default function ProjectVisualisation() {
     }
   }
 
-  const columns = selectedJob?.columns || []
+  const xColumns = xJob?.columns || []
+
+  const getColumnsForJob = (jobId) => jobs.find((job) => job.job_id === jobId)?.columns || []
+
+  const updateSeriesItem = (index, field, value) => {
+    setSeries((prev) => {
+      const clone = [...prev]
+      clone[index] = { ...clone[index], [field]: value }
+      return clone
+    })
+  }
+
+  const addSeriesRow = () => setSeries((prev) => [...prev, { jobId: '', yAxis: '', label: '' }])
+
+  const removeSeriesRow = (index) => {
+    setSeries((prev) => prev.filter((_, idx) => idx !== index))
+  }
+
+  const summarizeSeries = (viz) => {
+    const items = viz?.series?.length
+      ? viz.series
+      : viz?.y_axis
+        ? [{ y_axis: viz.y_axis, label: viz.y_axis, filename: viz.filename }]
+        : []
+    if (!items.length) return 'No series'
+    return items.map((item) => item.label || item.y_axis).join(', ')
+  }
+
+  const primaryFilename = (viz) => viz?.filename || viz?.series?.[0]?.filename || 'dataset'
 
   return (
     <div className="project-card" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16 }}>
@@ -139,11 +172,14 @@ export default function ProjectVisualisation() {
         {error && <div className="project-shell__error">{error}</div>}
 
         <form onSubmit={handleSubmit} className="viz-form">
-          <label className="summary-label">Dataset</label>
+          <label className="summary-label">X Axis Dataset</label>
           <select
             className="input-control"
-            value={selectedJobId}
-            onChange={(e) => setSelectedJobId(e.target.value)}
+            value={xJobId}
+            onChange={(e) => {
+              setXJobId(e.target.value)
+              setXAxis('')
+            }}
           >
             <option value="">Select a file to plot</option>
             {jobs.map((job) => (
@@ -158,24 +194,90 @@ export default function ProjectVisualisation() {
               <label className="summary-label">X Axis</label>
               <select className="input-control" value={xAxis} onChange={(e) => setXAxis(e.target.value)}>
                 <option value="">Select column</option>
-                {columns.map((col) => (
+                {xColumns.map((col) => (
                   <option key={col} value={col}>
                     {col}
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="summary-label">Y Axis</label>
-              <select className="input-control" value={yAxis} onChange={(e) => setYAxis(e.target.value)}>
-                <option value="">Select column</option>
-                {columns.map((col) => (
-                  <option key={col} value={col}>
-                    {col}
-                  </option>
-                ))}
-              </select>
+          </div>
+
+          <div className="project-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+              <div>
+                <p className="summary-label" style={{ margin: 0 }}>
+                  Y Axis Series ({series.length})
+                </p>
+                <h4 style={{ margin: 0 }}>Add one or more columns to plot</h4>
+              </div>
+              <button type="button" className="project-shell__nav-link" onClick={addSeriesRow}>
+                Add series
+              </button>
             </div>
+
+            {series.map((item, index) => {
+              const columns = getColumnsForJob(item.jobId)
+              return (
+                <div key={`series-${index}`} className="viz-grid" style={{ alignItems: 'flex-end' }}>
+                  <div>
+                    <label className="summary-label">Dataset</label>
+                    <select
+                      className="input-control"
+                      value={item.jobId}
+                      onChange={(e) => {
+                        updateSeriesItem(index, 'jobId', e.target.value)
+                        updateSeriesItem(index, 'yAxis', '')
+                      }}
+                    >
+                      <option value="">Select a file</option>
+                      {jobs.map((job) => (
+                        <option key={job.job_id} value={job.job_id}>
+                          {job.filename} ({job.columns?.length || 0} columns)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="summary-label">Y Axis</label>
+                    <select
+                      className="input-control"
+                      value={item.yAxis}
+                      onChange={(e) => updateSeriesItem(index, 'yAxis', e.target.value)}
+                    >
+                      <option value="">Select column</option>
+                      {columns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="summary-label">Legend label (optional)</label>
+                    <input
+                      type="text"
+                      className="input-control"
+                      value={item.label}
+                      onChange={(e) => updateSeriesItem(index, 'label', e.target.value)}
+                      placeholder="Defaults to column name"
+                    />
+                  </div>
+
+                  {series.length > 1 && (
+                    <button
+                      type="button"
+                      className="project-shell__nav-link"
+                      onClick={() => removeSeriesRow(index)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           <div>
@@ -216,11 +318,9 @@ export default function ProjectVisualisation() {
             {visualizations.map((viz) => (
               <div key={viz.viz_id} className="viz-item">
                 <div>
-                  <p className="data-card__name" style={{ margin: 0 }}>
-                    {viz.filename}
-                  </p>
+                  <p className="data-card__name" style={{ margin: 0 }}>{primaryFilename(viz)}</p>
                   <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
-                    {viz.chart_type} · {viz.x_axis} vs {viz.y_axis}
+                    {viz.chart_type} · {viz.x_axis} vs {summarizeSeries(viz)}
                   </p>
                   <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
                     Status: {viz.status}
@@ -250,7 +350,7 @@ export default function ProjectVisualisation() {
         <div className="actions-row" style={{ justifyContent: 'space-between' }}>
           <div>
             <p className="summary-label" style={{ margin: 0 }}>Render preview</p>
-            <h3 style={{ margin: '2px 0 0 0' }}>{activeViz?.filename || 'Awaiting selection'}</h3>
+            <h3 style={{ margin: '2px 0 0 0' }}>{primaryFilename(activeViz) || 'Awaiting selection'}</h3>
             <p className="summary-label" style={{ margin: 0 }}>{statusMessage}</p>
           </div>
           {activeViz?.status && (
