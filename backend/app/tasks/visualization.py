@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_sync_redis
 from app.db.sync_mongo import get_sync_db
+from app.repositories.notifications import create_sync_notification
 
 CHUNK_SIZE = 250_000
 LOD_LEVELS = (256, 1024, 4096)
@@ -256,6 +257,7 @@ def generate_visualization(self, viz_id: str):
         doc = db.visualizations.find_one({"_id": ObjectId(viz_id)})
         if not doc:
             return
+        owner_email = doc.get("owner_email")
         series_list = doc.get("series") or []
         if not series_list and doc.get("y_axis"):
             series_list = [
@@ -375,7 +377,23 @@ def generate_visualization(self, viz_id: str):
             tiles=tile_metadata,
             series_stats=stats_metadata,
         )
+        if owner_email:
+            create_sync_notification(
+                owner_email,
+                f"Visualization ready for {doc.get('chart_type', 'chart')} on {doc.get('x_axis')}",
+                title="Visualization complete",
+                category="visualization",
+                link=f"/app/projects/{doc.get('project_id')}/visualisation" if doc.get("project_id") else None,
+            )
     except Exception as exc:  # noqa: BLE001
         _set_status(redis, viz_id, states.FAILURE, 100, str(exc))
         _update_db_status(db, viz_id, status=states.FAILURE, progress=100, message=str(exc))
+        if owner_email:
+            create_sync_notification(
+                owner_email,
+                f"Visualization failed: {str(exc)}",
+                title="Visualization error",
+                category="visualization",
+                link=f"/app/projects/{doc.get('project_id')}/visualisation" if doc.get("project_id") else None,
+            )
         raise

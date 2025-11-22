@@ -1,7 +1,6 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
-import { MdKeyboardArrowDown } from "react-icons/md";
+import React, { useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import TopBarActions from "./TopBarActions";
 import "../../styles/layout.css";
 
 const pageMeta = {
@@ -41,39 +40,17 @@ const pageMeta = {
 };
 
 export default function Header() {
-  const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef(null);
 
   const normalizedPath = pathname.endsWith("/") && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
   const isDashboard = normalizedPath === "/app" || normalizedPath === "/admin";
 
-  const userId = user?.email || user?.username || user?.name || "User";
-  const roleLabel = user?.role || "";
-
   const meta = useMemo(() => {
     const base = pageMeta[normalizedPath] || { title: "Dashboard", subtitle: "" };
-    if (normalizedPath === "/app") return { ...base, subtitle: userId };
-    if (normalizedPath === "/admin") return { ...base, subtitle: roleLabel };
+    if (normalizedPath === "/app") return { ...base };
+    if (normalizedPath === "/admin") return { ...base };
     return base;
-  }, [normalizedPath, roleLabel, userId]);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login", { replace: true });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [normalizedPath]);
 
   return (
     <header className={`app-shell__header ${isDashboard ? "app-shell__header--dashboard" : ""}`}>
@@ -82,31 +59,7 @@ export default function Header() {
         {meta.subtitle ? <p className="header__subtitle">{meta.subtitle}</p> : null}
       </div>
 
-      <div className="header__actions" ref={menuRef}>
-        <div className="header__profile">
-          <div className="header__avatar" aria-hidden />
-          <div className="header__info">
-            <span className="header__name">{userId}</span>
-            <span className="header__role">{roleLabel}</span>
-          </div>
-          <button
-            type="button"
-            className="header__toggle"
-            aria-label="Open user menu"
-            onClick={() => setOpen((v) => !v)}
-          >
-            <MdKeyboardArrowDown size={22} />
-          </button>
-        </div>
-
-        {open && (
-          <div className="header__menu">
-            <button type="button" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-        )}
-      </div>
+      <TopBarActions />
     </header>
   );
 }
