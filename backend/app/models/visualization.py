@@ -33,6 +33,8 @@ class VisualizationOut(BaseModel):
     html_key: Optional[str] = None
     html_url: Optional[str] = None
     html: Optional[str] = None
+    tiles: Optional[list[dict]] = None
+    series_stats: Optional[list[dict]] = None
     created_at: datetime
     updated_at: datetime
     filename: Optional[str] = None

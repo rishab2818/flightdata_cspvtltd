@@ -21,4 +21,8 @@ export const visualizationApi = {
     const { data } = await axiosClient.get(`/api/visualizations/${vizId}/download`)
     return data
   },
+  tileData: async (vizId, params = {}) => {
+    const { data } = await axiosClient.get(`/api/visualizations/${vizId}/tiles`, { params })
+    return data
+  },
 }
