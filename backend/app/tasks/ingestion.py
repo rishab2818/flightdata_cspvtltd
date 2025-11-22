@@ -16,20 +16,29 @@ from app.core.redis_client import get_sync_redis
 from app.db.sync_mongo import get_sync_db
 
 
+def _set_status(redis, job_id: str, status: str, progress: int, message: str):
+    """Persist the job status in Redis.
+
+    Redis servers older than 4.0 do not support setting multiple fields with a
+    single HSET call, so we update each field individually via a pipeline for
+    compatibility.
+    """
+
+    pipe = redis.pipeline()
+    name = f"ingestion:{job_id}:status"
+    pipe.hset(name, "status", status)
+    pipe.hset(name, "progress", progress)
+    pipe.hset(name, "message", message)
+    pipe.execute()
+
+
 def _publish(job_id: str, status: str, progress: int, message: str = ""):
     redis = get_sync_redis()
     payload = json.dumps(
         {"status": status, "progress": progress, "message": message or status}
     )
     redis.publish(f"ingestion:{job_id}:events", payload)
-    redis.hset(
-        f"ingestion:{job_id}:status",
-        mapping={
-            "status": status,
-            "progress": progress,
-            "message": message or status,
-        },
-    )
+    _set_status(redis, job_id, status, progress, message or status)
 
 
 def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file"):
@@ -204,10 +213,7 @@ def ingest_file(
             },
         )
     except Exception as exc:  # noqa: BLE001
-        redis.hset(
-            f"ingestion:{job_id}:status",
-            mapping={"status": states.FAILURE, "progress": 100, "message": str(exc)},
-        )
+        _set_status(redis, job_id, states.FAILURE, 100, str(exc))
         redis.publish(
             f"ingestion:{job_id}:events",
             json.dumps(
