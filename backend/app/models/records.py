@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field, validator
 
 
 class RecordSection(str, Enum):
-    INVENTORY_RECORDS = "inventory_records"
-    DIVISIONAL_RECORDS = "divisional_records"
-    CUSTOMER_FEEDBACKS = "customer_feedbacks"
-    TECHNICAL_REPORTS = "technical_reports"
-    TRAINING_RECORDS = "training_records"
+    INVENTORY_RECORDS = "inventory-records"
+    DIVISIONAL_RECORDS = "divisional-records"
+    CUSTOMER_FEEDBACKS = "customer-feedbacks"
+    TECHNICAL_REPORTS = "technical-reports"
+    TRAINING_RECORDS = "training-records"
 
 
 class BaseRecordFile(BaseModel):

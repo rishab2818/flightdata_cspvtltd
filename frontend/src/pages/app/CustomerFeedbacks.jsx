@@ -257,8 +257,16 @@ function FeedbackModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.project_name) {
-      setError("Please provide project name.");
+    const requiredFields = [
+      "project_name",
+      "division",
+      "feedback_from",
+      "rating",
+      "feedback_date",
+      "feedback_text",
+    ];
+    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
+      setError("Please complete all feedback fields.");
       return;
     }
     try {

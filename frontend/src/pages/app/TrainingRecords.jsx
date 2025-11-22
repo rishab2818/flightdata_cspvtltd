@@ -287,8 +287,16 @@ function TrainingModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.trainee_name || !form.training_name) {
-      setError("Please fill trainee and training name.");
+    const requiredFields = [
+      "trainee_name",
+      "training_name",
+      "training_type",
+      "start_date",
+      "end_date",
+      "status",
+    ];
+    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
+      setError("Please complete all required training fields.");
       return;
     }
     try {
