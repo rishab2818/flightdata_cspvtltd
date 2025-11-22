@@ -48,13 +48,13 @@ docker run -d --name flightdata-redis -p 6379:6379 redis:7
 ```
 > If you already have a native MinIO install, you can instead run `../start-minio.ps1` after adjusting its `MINIO_EXE` and data directory paths.
 
-## 5. Launch the API and Celery with autoscale
-The helper script computes autoscale bounds from your CPU/RAM and then launches uvicorn and Celery workers. Run it from `backend/` with your virtual environment active:
+## 5. Launch the API and Celery
+The helper script computes autoscale bounds from your CPU/RAM and then launches uvicorn and Celery workers. Because Celery's prefork pool is not supported on Windows, the script uses the `solo` pool (single worker) to avoid spawn/unpack errors you may see in the logs. Run it from `backend/` with your virtual environment active:
 ```pwsh
 ./scripts/run-stack.ps1 -PythonPath "./.venv/Scripts/python.exe" -Host "127.0.0.1" -ApiPort 8000
 ```
 - API will be available at `http://127.0.0.1:8000`.
-- Celery workers will autoscale between the computed min/max printed at startup.
+- Celery runs with the `solo` pool on Windows; autoscale is disabled because it depends on the prefork pool.
 - If Redis is not running, the script will start a `flightdata-redis` Docker container automatically.
 
 ## 6. Verifying and interacting
