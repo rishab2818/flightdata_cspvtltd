@@ -2,11 +2,20 @@ import asyncio
 import json
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+    Response,
+)
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.auth import CurrentUser, get_current_user
@@ -39,9 +48,40 @@ async def _ensure_project_member(project_id: str, user: CurrentUser):
 async def start_ingestion(
     project_id: str,
     file: UploadFile = File(...),
+    dataset_type: str | None = Form(None),
+    header_mode: str = Form("file"),
+    custom_headers: str | None = Form(None),
     user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_project_member(project_id, user)
+
+    parsed_headers: list[str] | None = None
+    if custom_headers:
+        try:
+            parsed_headers = json.loads(custom_headers)
+            if not isinstance(parsed_headers, list) or not all(
+                isinstance(item, str) for item in parsed_headers
+            ):
+                raise ValueError
+        except ValueError as exc:  # noqa: BLE001
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="custom_headers must be a JSON array of strings",
+            ) from exc
+    if header_mode == "custom" and not parsed_headers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide custom_headers when header_mode is 'custom'",
+        )
+
+    header_mode = header_mode or "file"
+
+    valid_header_modes = {"file", "none", "custom"}
+    if header_mode not in valid_header_modes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"header_mode must be one of {', '.join(sorted(valid_header_modes))}",
+        )
 
     minio = get_minio_client()
     bucket = settings.ingestion_bucket
@@ -73,14 +113,32 @@ async def start_ingestion(
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    job_id = await repo.create_job(project_id, file.filename, object_key, user.email)
-    ingest_file.delay(job_id, bucket, object_key, file.filename)
+    job_id = await repo.create_job(
+        project_id,
+        file.filename,
+        object_key,
+        user.email,
+        dataset_type=dataset_type,
+        header_mode=header_mode,
+        custom_headers=parsed_headers,
+    )
+    ingest_file.delay(
+        job_id,
+        bucket,
+        object_key,
+        file.filename,
+        header_mode,
+        parsed_headers,
+        dataset_type,
+    )
 
     return IngestionCreateResponse(
         job_id=job_id,
         project_id=project_id,
         filename=file.filename,
         storage_key=object_key,
+        dataset_type=dataset_type,
+        header_mode=header_mode,
         status="queued",
         autoscale=describe_autoscale(),
     )
@@ -93,6 +151,43 @@ async def get_job(job_id: str, user: CurrentUser = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Job not found")
     await _ensure_project_member(doc["project_id"], user)
     return IngestionJobOut(**doc)
+
+
+@router.get("/jobs/{job_id}/download")
+async def get_download_url(job_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+    minio = get_minio_client()
+    bucket = settings.ingestion_bucket
+    if not minio.bucket_exists(bucket):
+        raise HTTPException(status_code=404, detail="Object bucket missing")
+    url = minio.presigned_get_object(
+        bucket_name=bucket,
+        object_name=doc["storage_key"],
+        expires=timedelta(hours=1),
+    )
+    return {"url": url}
+
+
+@router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_job(job_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    minio = get_minio_client()
+    bucket = settings.ingestion_bucket
+    if minio.bucket_exists(bucket):
+        try:
+            minio.remove_object(bucket_name=bucket, object_name=doc["storage_key"])
+        except Exception:  # noqa: BLE001
+            # if object missing we still remove job record
+            pass
+    await repo.delete_job(job_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/project/{project_id}", response_model=list[IngestionJobOut])
