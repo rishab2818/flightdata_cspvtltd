@@ -1,6 +1,8 @@
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import ValidationError
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
@@ -14,6 +16,8 @@ from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.visualizations import VisualizationRepository
 from app.tasks.visualization import generate_visualization
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/visualizations", tags=["visualizations"])
 repo = VisualizationRepository()
@@ -124,5 +128,12 @@ async def list_project_visualizations(
     docs = await repo.list_for_project(project_id)
     output = []
     for doc in docs:
-        output.append(VisualizationOut(**_inject_url(doc)))
+        try:
+            output.append(VisualizationOut(**_inject_url(doc)))
+        except ValidationError as exc:
+            logger.warning(
+                "Skipping visualization %s due to validation error: %s",
+                doc.get("viz_id", "unknown"),
+                exc,
+            )
     return output
