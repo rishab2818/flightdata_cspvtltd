@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_sync_redis
 from app.db.sync_mongo import get_sync_db
+from app.repositories.notifications import create_sync_notification
 
 
 def _set_status(redis, job_id: str, status: str, progress: int, message: str):
@@ -169,6 +170,10 @@ def ingest_file(
     redis = get_sync_redis()
     db = get_sync_db()
     minio = get_minio_client()
+    job_doc = db.ingestion_jobs.find_one({"_id": ObjectId(job_id)}) or {}
+    owner_email = job_doc.get("owner_email")
+    project_id = job_doc.get("project_id")
+    filename = job_doc.get("filename", filename)
 
     tmp_fd, tmp_path = tempfile.mkstemp()
     os.close(tmp_fd)
@@ -246,6 +251,14 @@ def ingest_file(
                 }
             },
         )
+        if owner_email:
+            create_sync_notification(
+                owner_email,
+                f"File ingestion completed for {filename}",
+                title="Upload complete",
+                category="ingestion",
+                link=f"/app/projects/{project_id}/data" if project_id else None,
+            )
     except Exception as exc:  # noqa: BLE001
         _set_status(redis, job_id, states.FAILURE, 100, str(exc))
         redis.publish(
@@ -265,6 +278,14 @@ def ingest_file(
                 }
             },
         )
+        if owner_email:
+            create_sync_notification(
+                owner_email,
+                f"File ingestion failed for {filename}",
+                title="Upload failed",
+                category="ingestion",
+                link=f"/app/projects/{project_id}/upload" if project_id else None,
+            )
         raise
     finally:
         if os.path.exists(tmp_path):

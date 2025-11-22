@@ -128,6 +128,122 @@
   position: relative;
 }
 
+.notification {
+  position: relative;
+}
+
+.notification__button {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #0f172a;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.notification__badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notification__panel {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  width: 340px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.notification__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.notification__title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.notification__meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notification__link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification__list {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.notification__item {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: #ffffff;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.notification__item:last-child {
+  border-bottom: none;
+}
+
+.notification__item--unread {
+  background: #f8fafc;
+}
+
+.notification__item-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.notification__item-message {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.notification__item-time {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+.notification__empty {
+  padding: 18px 14px;
+  text-align: center;
+  color: #94a3b8;
+}
+
 .header__profile {
   display: inline-flex;
   align-items: center;

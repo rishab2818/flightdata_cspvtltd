@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { projectApi } from '../../../api/projectapi'
 import brandIcon from '../../../assets/Database.svg'
+import TopBarActions from '../../../components/layout/TopBarActions'
 import '../../../styles/project.css'
 
 const navItems = [
@@ -14,6 +15,7 @@ const navItems = [
 export default function ProjectShell() {
   const { projectId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -72,23 +74,19 @@ export default function ProjectShell() {
       </aside>
       <div className="project-shell__content">
         <header className="project-shell__header">
-          <div>
-            <p className="project-shell__header-label">Project Overview</p>
-            <h1 className="project-shell__header-title">{project?.project_name || 'Project'}</h1>
-            {project?.project_description && (
-              <p className="project-shell__header-desc">{project.project_description}</p>
-            )}
-          </div>
-          <div className="project-shell__summary">
+          <div className="project-shell__header-main">
+            <button type="button" className="project-shell__back" onClick={() => navigate('/app')}>
+              Back to projects
+            </button>
             <div>
-              <div className="summary-label">Owner</div>
-              <div className="summary-value">{project?.created_by || 'N/A'}</div>
-            </div>
-            <div>
-              <div className="summary-label">Members</div>
-              <div className="summary-value">{project?.members?.length || 0}</div>
+              <p className="project-shell__header-label">Project Overview</p>
+              <h1 className="project-shell__header-title">{project?.project_name || 'Project'}</h1>
+              {project?.project_description && (
+                <p className="project-shell__header-desc">{project.project_description}</p>
+              )}
             </div>
           </div>
+          <TopBarActions />
         </header>
 
         {error && <div className="project-shell__error">{error}</div>}
