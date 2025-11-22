@@ -23,6 +23,7 @@ import Settings from './pages/admin/Settings'
 import ProjectShell from './pages/app/project/ProjectShell'
 import ProjectUpload from './pages/app/project/ProjectUpload'
 import ProjectDataManagement from './pages/app/project/ProjectDataManagement'
+import ProjectVisualisation from './pages/app/project/ProjectVisualisation'
 import ProjectSettings from './pages/app/project/ProjectSettings'
 export default function App(){
   return (
@@ -56,6 +57,7 @@ export default function App(){
         <Route path="/app/projects/:projectId/*" element={<ProjectShell />}>
           <Route index element={<ProjectUpload />} />
           <Route path="data" element={<ProjectDataManagement />} />
+          <Route path="visualisation" element={<ProjectVisualisation />} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
       </Route>
