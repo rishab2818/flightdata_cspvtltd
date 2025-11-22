@@ -16,7 +16,7 @@ function formatTotal(value) {
   return n.toString().padStart(2, '0');
 }
 
-export default function StatsCardsImproved() {
+export default function StatsCardsImproved({ className = 'stats-grid' }) {
   const [totalProjects, setTotalProjects] = useState(null);
   useEffect(() => {
     let cancelled = false;
@@ -47,15 +47,7 @@ export default function StatsCardsImproved() {
     { title: 'Total Reports', value: '12k' },
   ];
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-        gap: SPACING.md,
-        width: '100%',
-        marginTop: SPACING.lg,
-      }}
-    >
+    <div className={className}>
       {stats.map((s, i) => (
         <div
           key={i}

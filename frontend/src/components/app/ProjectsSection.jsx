@@ -61,7 +61,8 @@ export default function ProjectsSectionImproved() {
   return (
     <div
       style={{
-        width: 573,
+        width: '100%',
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
         gap: SPACING.lg,
@@ -73,6 +74,8 @@ export default function ProjectsSectionImproved() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
         }}
       >
         <h2
