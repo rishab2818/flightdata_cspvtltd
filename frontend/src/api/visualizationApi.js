@@ -34,4 +34,8 @@ export const visualizationApi = {
     const { data } = await axiosClient.get(`/api/visualizations/jobs/${vizId}/image`)
     return data
   },
+  delete: async (vizId) => {
+    await axiosClient.delete(`/api/visualizations/jobs/${vizId}`)
+    return true
+  },
 }

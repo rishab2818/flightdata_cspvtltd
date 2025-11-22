@@ -2,7 +2,7 @@ import tempfile
 from typing import List, Optional
 
 import pyarrow.parquet as pq
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
@@ -251,3 +251,30 @@ async def visualization_image(
         raise HTTPException(status_code=404, detail="Image not ready")
     url = minio.presigned_get_object(bucket_name=bucket, object_name=object_key)
     return VisualizationImage(url=url)
+
+
+@router.delete("/jobs/{viz_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_visualization(
+    viz_id: str, user: CurrentUser = Depends(get_current_user)
+):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Visualization not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    minio = get_minio_client()
+    bucket = settings.visualization_bucket
+    if minio.bucket_exists(bucket):
+        for obj in minio.list_objects(
+            bucket_name=bucket, prefix=doc.get("chunk_prefix", ""), recursive=True
+        ):
+            try:
+                minio.remove_object(bucket, obj.object_name)
+            except Exception:
+                # Best-effort cleanup; continue deleting metadata
+                pass
+
+    redis = await get_async_redis()
+    await redis.delete(f"visualization:{viz_id}:status")
+    await repo.delete(viz_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

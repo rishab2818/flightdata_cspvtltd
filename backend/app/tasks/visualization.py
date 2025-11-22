@@ -195,6 +195,15 @@ def _figure_from_table(table: pa.Table):
     return fig
 
 
+def _numeric(series: pd.Series) -> pd.Series:
+    """Best-effort numeric coercion with float dtype for Arrow parity."""
+
+    coerced = pd.to_numeric(series, errors="coerce")
+    if coerced.dtype != "float64":
+        coerced = coerced.astype("float64")
+    return coerced
+
+
 @celery_app.task(bind=True, name=f"{settings.celery_task_prefix}.build_visualization")
 def build_visualization(self, viz_id: str):
     redis = get_sync_redis()
@@ -284,12 +293,12 @@ def build_visualization(self, viz_id: str):
                             trace_labels.append({"label": trace_label, "has_z": bool(z_col)})
 
                         payload = {
-                            "x": chunk[x_col],
-                            "y": chunk[y_col],
+                            "x": _numeric(chunk[x_col]),
+                            "y": _numeric(chunk[y_col]),
                             "series": trace_label,
                         }
                         if z_col:
-                            payload["z"] = chunk[z_col]
+                            payload["z"] = _numeric(chunk[z_col])
                         output_tables.append(
                             pa.Table.from_pandas(pd.DataFrame(payload), preserve_index=False)
                         )
