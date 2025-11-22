@@ -83,7 +83,16 @@ async def _insert_record(
         "created_at": now,
         "updated_at": now,
     }
-    doc.update(payload_data)
+    # Convert payload data and normalize date values so Mongo can store them
+    normalized_payload = {}
+    for key, value in payload_data.items():
+        # pymongo cannot encode ``datetime.date`` directly, so convert
+        if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
+            normalized_payload[key] = datetime(value.year, value.month, value.day)
+        else:
+            normalized_payload[key] = value
+
+    doc.update(normalized_payload)
 
     res = await db.records.insert_one(doc)
     return str(res.inserted_id), doc

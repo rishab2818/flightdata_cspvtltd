@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { FiUploadCloud } from "react-icons/fi";
+import { studentEngagementApi } from "../../api/studentEngagementApi";
+import { computeSha256 } from "../../lib/fileUtils";
 
 const PRIMARY = "#1D6FE6";
 const BORDER = "#E2E8F0";
@@ -7,75 +10,6 @@ const BADGE_COLORS = {
   Completed: { bg: "#DCFCE7", text: "#15803D" },
   Upcoming: { bg: "#EEF2FF", text: "#4F46E5" },
 };
-
-const basePrograms = [
-  {
-    student: "Parik Kapoor",
-    programName: "Quantum Encryption Project",
-    type: "Internship",
-    duration: "12 Months",
-    startDate: "2024-01-12",
-    endDate: "2024-12-15",
-    status: "Completed",
-  },
-  {
-    student: "Vivek Roy",
-    programName: "Advanced Privacy Initiative",
-    type: "Internship",
-    duration: "10 Months",
-    startDate: "2024-02-01",
-    endDate: "2024-11-01",
-    status: "Ongoing",
-  },
-  {
-    student: "Shanaya Gill",
-    programName: "Zero Trust Network Optimization",
-    type: "Internship",
-    duration: "9 Months",
-    startDate: "2024-03-10",
-    endDate: "2024-12-10",
-    status: "Ongoing",
-  },
-  {
-    student: "Anaya Reddy",
-    programName: "Infrastructure Upgrade",
-    type: "Internship",
-    duration: "6 Months",
-    startDate: "2024-05-01",
-    endDate: "2024-11-01",
-    status: "Ongoing",
-  },
-  {
-    student: "Aman Patel",
-    programName: "Cloud Native Security",
-    type: "Internship",
-    duration: "6 Months",
-    startDate: "2024-07-01",
-    endDate: "2024-12-30",
-    status: "Upcoming",
-  },
-];
-
-const waitingPrograms = [
-  {
-    student: "Niharika Das",
-    programName: "Secure SDLC Audit",
-    type: "Internship",
-    duration: "6 Months",
-    startDate: "2024-08-05",
-    endDate: "2025-02-05",
-    status: "Ongoing",
-  },
-  {
-    student: "Harsh Khatri",
-    programName: "API Security Lab",
-    type: "Project",
-    duration: "3 Months",
-    startDate: "2024-09-01",
-    endDate: "2024-12-01",
-    status: "Upcoming",
-  },
-];
 
 function StatCard({ title, value, icon, accent }) {
   return (
@@ -166,225 +100,462 @@ export default function StudentEngagement() {
   const [tab, setTab] = useState("approved");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    student: "",
+    program_name: "",
+    program_type: "Internship",
+    duration_months: "6",
+    start_date: "",
+    end_date: "",
+    status: "Ongoing",
+    approval_status: "waiting",
+    notes: "",
+  });
+  const [file, setFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const programs = tab === "approved" ? basePrograms : waitingPrograms;
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const data = await studentEngagementApi.list();
+        setRecords(data);
+      } catch (err) {
+        setError("Failed to load student engagement records");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const filtered = useMemo(() => {
-    return programs.filter((p) => {
-      const matchesType = typeFilter === "all" || p.type === typeFilter;
-      const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-      return matchesType && matchesStatus;
-    });
-  }, [programs, typeFilter, statusFilter]);
+    return records
+      .filter((r) =>
+        tab === "approved"
+          ? r.approval_status === "approved"
+          : r.approval_status === "waiting"
+      )
+      .filter((r) => {
+        const matchesType = typeFilter === "all" || r.program_type === typeFilter;
+        const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+        return matchesType && matchesStatus;
+      });
+  }, [records, statusFilter, tab, typeFilter]);
 
   const stats = useMemo(() => {
-    const totalStudents = basePrograms.length + waitingPrograms.length;
-    const internships = [...basePrograms, ...waitingPrograms].filter(
-      (p) => p.type === "Internship"
-    ).length;
-    const ongoing = [...basePrograms, ...waitingPrograms].filter(
-      (p) => p.status === "Ongoing"
-    ).length;
-    const completed = [...basePrograms, ...waitingPrograms].filter(
-      (p) => p.status === "Completed"
-    ).length;
+    const totalStudents = records.length;
+    const internships = records.filter((p) => p.program_type === "Internship").length;
+    const ongoing = records.filter((p) => p.status === "Ongoing").length;
+    const completed = records.filter((p) => p.status === "Completed").length;
     return [
       { title: "Total Students", value: totalStudents, icon: "👥" },
       { title: "Internships", value: internships, icon: "🎓" },
       { title: "Ongoing Programs", value: ongoing, icon: "🌀" },
       { title: "Completed", value: completed, icon: "✅" },
     ];
-  }, []);
+  }, [records]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!form.student.trim() || !form.program_name.trim()) {
+      setError("Student and program name are required");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      let storage_key;
+      let original_name;
+      let content_type;
+      let size_bytes;
+
+      if (file) {
+        const content_hash = await computeSha256(file);
+        const initRes = await studentEngagementApi.initUpload({
+          filename: file.name,
+          content_type: file.type || "application/octet-stream",
+          size_bytes: file.size,
+          content_hash,
+        });
+        await fetch(initRes.upload_url, { method: "PUT", body: file });
+        storage_key = initRes.storage_key;
+        original_name = file.name;
+        content_type = file.type || "application/octet-stream";
+        size_bytes = file.size;
+      }
+
+      const payload = {
+        ...form,
+        duration_months: Number(form.duration_months || 0),
+        storage_key,
+        original_name,
+        content_type,
+        size_bytes,
+      };
+
+      const created = await studentEngagementApi.create(payload);
+      setRecords((prev) => [created, ...prev]);
+      setForm({
+        student: "",
+        program_name: "",
+        program_type: "Internship",
+        duration_months: "6",
+        start_date: "",
+        end_date: "",
+        status: "Ongoing",
+        approval_status: "waiting",
+        notes: "",
+      });
+      setFile(null);
+    } catch (err) {
+      setError("Unable to save student engagement record");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div style={{ width: "100%", maxWidth: 1220, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 22, color: "#0F172A" }}>
-            Student Engagement
-          </h2>
-          <p style={{ margin: "6px 0 0", color: "#475569", fontSize: 14 }}>
-            Track student programs, internships, and approvals in one place.
-          </p>
-        </div>
-      </div>
+      <header style={{ marginBottom: 16 }}>
+        <p style={{ color: "#6B7280", margin: 0 }}>Operations · Student Engagement</p>
+        <h1 style={{ margin: 0, color: "#0F172A" }}>Student Engagement</h1>
+        <p style={{ color: "#475569", marginTop: 8 }}>
+          Track student programs, internships, and approvals in one place.
+        </p>
+      </header>
 
-      {/* stats */}
-      <div
+      <section
         style={{
-          marginTop: 20,
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: 12,
+          marginBottom: 20,
         }}
       >
         {stats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
-      </div>
+      </section>
 
-      {/* filters */}
-      <div
+      <section
         style={{
-          marginTop: 18,
           background: "#fff",
           border: `1px solid ${BORDER}`,
           borderRadius: 12,
-          padding: 20,
+          padding: 16,
+          marginBottom: 20,
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>Add Student Engagement</h3>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}
+        >
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Student Name</span>
+            <input
+              type="text"
+              value={form.student}
+              onChange={(e) => onChange("student", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+              required
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Program Name</span>
+            <input
+              type="text"
+              value={form.program_name}
+              onChange={(e) => onChange("program_name", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+              required
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Program Type</span>
+            <select
+              value={form.program_type}
+              onChange={(e) => onChange("program_type", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+            >
+              <option value="Internship">Internship</option>
+              <option value="Project">Project</option>
+              <option value="Research">Research</option>
+            </select>
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Duration (months)</span>
+            <input
+              type="number"
+              min={1}
+              value={form.duration_months}
+              onChange={(e) => onChange("duration_months", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Start Date</span>
+            <input
+              type="date"
+              value={form.start_date}
+              onChange={(e) => onChange("start_date", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+              required
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>End Date</span>
+            <input
+              type="date"
+              value={form.end_date}
+              onChange={(e) => onChange("end_date", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+              required
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Status</span>
+            <select
+              value={form.status}
+              onChange={(e) => onChange("status", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+            >
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+              <option value="Upcoming">Upcoming</option>
+            </select>
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Approval</span>
+            <select
+              value={form.approval_status}
+              onChange={(e) => onChange("approval_status", e.target.value)}
+              style={{
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "0 10px",
+              }}
+            >
+              <option value="approved">Approved</option>
+              <option value="waiting">Waiting</option>
+            </select>
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Notes</span>
+            <textarea
+              value={form.notes}
+              onChange={(e) => onChange("notes", e.target.value)}
+              rows={3}
+              style={{
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                padding: "8px 10px",
+                resize: "vertical",
+              }}
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document</span>
+            <div
+              style={{
+                border: `1px dashed ${BORDER}`,
+                borderRadius: 10,
+                padding: "10px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <FiUploadCloud />
+              <input
+                type="file"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                style={{ flex: 1 }}
+              />
+            </div>
+          </label>
+
+          <div style={{ gridColumn: "span 2", display: "flex", justifyContent: "flex-end" }}>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                border: "none",
+                background: PRIMARY,
+                color: "#fff",
+                padding: "10px 16px",
+                borderRadius: 10,
+                cursor: "pointer",
+              }}
+            >
+              {submitting ? "Saving..." : "Save Engagement"}
+            </button>
+          </div>
+        </form>
+        {error && <p style={{ color: "#b91c1c", marginTop: 10 }}>{error}</p>}
+      </section>
+
+      <section
+        style={{
+          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 12,
+          padding: 16,
         }}
       >
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
-            gap: 16,
-            alignItems: "center",
             justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+            flexWrap: "wrap",
+            gap: 12,
           }}
         >
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            {["approved", "waiting"].map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${t === tab ? PRIMARY : BORDER}`,
+                  background: t === tab ? PRIMARY : "#fff",
+                  color: t === tab ? "#fff" : "#0F172A",
+                  cursor: "pointer",
+                }}
+              >
+                {t === "approved" ? "Approved" : "Waiting"}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <FilterSelect
-              label="Filter by Type"
+              label="Program Type"
               value={typeFilter}
               onChange={setTypeFilter}
               options={[
-                { label: "All Types", value: "all" },
-                { label: "Internship", value: "Internship" },
-                { label: "Project", value: "Project" },
+                { value: "all", label: "All" },
+                { value: "Internship", label: "Internship" },
+                { value: "Project", label: "Project" },
+                { value: "Research", label: "Research" },
               ]}
             />
             <FilterSelect
-              label="Filter by Status"
+              label="Status"
               value={statusFilter}
               onChange={setStatusFilter}
               options={[
-                { label: "All Status", value: "all" },
-                { label: "Ongoing", value: "Ongoing" },
-                { label: "Completed", value: "Completed" },
-                { label: "Upcoming", value: "Upcoming" },
+                { value: "all", label: "All" },
+                { value: "Ongoing", label: "Ongoing" },
+                { value: "Completed", label: "Completed" },
+                { value: "Upcoming", label: "Upcoming" },
               ]}
             />
           </div>
-
-          <button
-            type="button"
-            style={{
-              padding: "10px 18px",
-              background: PRIMARY,
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            + Add Student
-          </button>
         </div>
 
-        <div style={{ marginTop: 20 }}>
-          <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-            <button
-              type="button"
-              onClick={() => setTab("approved")}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: tab === "approved" ? "none" : `1px solid ${BORDER}`,
-                background: tab === "approved" ? PRIMARY : "#fff",
-                color: tab === "approved" ? "#fff" : "#0F172A",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Approved
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("waiting")}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: tab === "waiting" ? "none" : `1px solid ${BORDER}`,
-                background: tab === "waiting" ? PRIMARY : "#fff",
-                color: tab === "waiting" ? "#fff" : "#0F172A",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Waiting approval
-            </button>
-          </div>
-
+        {loading ? (
+          <p style={{ margin: 0 }}>Loading records...</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ margin: 0 }}>No student engagements found.</p>
+        ) : (
           <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                minWidth: 760,
-              }}
-            >
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr
-                  style={{
-                    textAlign: "left",
-                    color: "#64748B",
-                    borderBottom: `1px solid ${BORDER}`,
-                  }}
-                >
-                  {["Student Name", "Program Name", "Type", "Duration", "Start Date", "End Date", "Status"].map(
-                    (col) => (
-                      <th key={col} style={{ padding: "12px 8px", fontWeight: 600 }}>
-                        {col}
-                      </th>
-                    )
-                  )}
+                <tr style={{ background: "#F8FAFC", textAlign: "left" }}>
+                  {[
+                    "Student",
+                    "Program Name",
+                    "Type",
+                    "Duration",
+                    "Start",
+                    "End",
+                    "Status",
+                  ].map((col) => (
+                    <th key={col} style={{ padding: "12px 10px", fontWeight: 600 }}>
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row) => (
-                  <tr
-                    key={`${row.student}-${row.programName}`}
-                    style={{ borderBottom: `1px solid ${BORDER}` }}
-                  >
-                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>
-                      {row.student}
+                  <tr key={`${row.record_id}`} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    <td style={{ padding: "12px 10px" }}>
+                      <div style={{ fontWeight: 600 }}>{row.student}</div>
+                      <div style={{ color: "#6B7280", fontSize: 12 }}>{row.notes || "—"}</div>
                     </td>
-                    <td style={{ padding: "12px 8px", color: "#334155" }}>
-                      {row.programName}
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>{row.type}</td>
-                    <td style={{ padding: "12px 8px" }}>{row.duration}</td>
-                    <td style={{ padding: "12px 8px" }}>
-                      {new Date(row.startDate).toLocaleDateString("en-GB")}
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>
-                      {new Date(row.endDate).toLocaleDateString("en-GB")}
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>
+                    <td style={{ padding: "12px 10px" }}>{row.program_name}</td>
+                    <td style={{ padding: "12px 10px" }}>{row.program_type}</td>
+                    <td style={{ padding: "12px 10px" }}>{`${row.duration_months} months`}</td>
+                    <td style={{ padding: "12px 10px" }}>{row.start_date}</td>
+                    <td style={{ padding: "12px 10px" }}>{row.end_date}</td>
+                    <td style={{ padding: "12px 10px" }}>
                       <Badge value={row.status} />
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      style={{
-                        textAlign: "center",
-                        padding: 16,
-                        color: "#94A3B8",
-                      }}
-                    >
-                      No programs match the selected filters.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+        )}
+      </section>
     </div>
   );
 }
