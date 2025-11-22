@@ -12,6 +12,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from bson import ObjectId
 from celery import states
+from openpyxl import load_workbook
 import psutil
 
 from app.core.celery_app import celery_app
@@ -73,31 +74,63 @@ def _iter_csv_frames(
 def _iter_excel_frames(
     path: str, header_mode: str, custom_headers: list[str] | None, chunk_size: int
 ) -> Iterable[pd.DataFrame]:
-    # pandas does not support streaming Excel reads directly; emulate with windows
-    skiprows = 0
-    columns_cache: List[str] | None = None
-    header_row = 0 if header_mode == "file" else None
-    while True:
-        df = pd.read_excel(
-            path,
-            sheet_name=0,
-            skiprows=skiprows if skiprows else None,
-            nrows=chunk_size,
-            header=header_row,
-        )
-        if df.empty:
-            break
-        if header_mode == "none" and not custom_headers:
-            if columns_cache is None:
-                columns_cache = [f"column_{i+1}" for i in range(len(df.columns))]
-            df.columns = columns_cache
+    """Stream rows from an Excel worksheet without re-reading the file.
+
+    pandas.read_excel() rereads from the start of the file on every call when
+    combined with skiprows/nrows. That quickly becomes quadratic (and appears to
+    "hang") on large spreadsheets. Using openpyxl in read-only mode lets us
+    stream rows once and emit DataFrames in windowed batches.
+    """
+
+    wb = load_workbook(path, read_only=True, data_only=True)
+    try:
+        ws = wb.active
+        rows = ws.iter_rows(values_only=True)
+
+        headers: List[str] | None = None
+        if header_mode == "file":
+            try:
+                first_row = next(rows)
+            except StopIteration:
+                return
+            headers = [
+                str(cell) if cell is not None else f"column_{idx+1}"
+                for idx, cell in enumerate(first_row)
+            ]
         elif header_mode == "custom" and custom_headers:
-            df.columns = custom_headers
-        elif header_mode == "file" and header_row == 0:
-            columns_cache = list(df.columns)
-            header_row = None
-        skiprows += len(df)
-        yield df
+            headers = list(custom_headers)
+
+        chunk: list[list] = []
+        for row in rows:
+            chunk.append(list(row))
+            if len(chunk) >= chunk_size:
+                df = pd.DataFrame(chunk)
+                chunk = []
+
+                if headers:
+                    width = len(headers)
+                    if df.shape[1] < width:
+                        df = df.reindex(columns=range(width))
+                    df = df.iloc[:, :width]
+                    df.columns = headers
+                elif header_mode == "none" and not custom_headers:
+                    df.columns = [f"column_{i+1}" for i in range(len(df.columns))]
+
+                yield df
+
+        if chunk:
+            df = pd.DataFrame(chunk)
+            if headers:
+                width = len(headers)
+                if df.shape[1] < width:
+                    df = df.reindex(columns=range(width))
+                df = df.iloc[:, :width]
+                df.columns = headers
+            elif header_mode == "none" and not custom_headers:
+                df.columns = [f"column_{i+1}" for i in range(len(df.columns))]
+            yield df
+    finally:
+        wb.close()
 
 
 def _iter_frames(
