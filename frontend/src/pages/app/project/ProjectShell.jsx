@@ -7,6 +7,7 @@ import '../../../styles/project.css'
 const navItems = [
   { key: 'upload', to: '', label: 'Upload File' },
   { key: 'data', to: 'data', label: 'Data Management' },
+  { key: 'visualisation', to: 'visualisation', label: 'Data Visualisation' },
   { key: 'settings', to: 'settings', label: 'Settings' },
 ]
 

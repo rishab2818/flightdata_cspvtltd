@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
+import { visualizationApi } from '../../../api/visualizationApi'
 
 const filterTabs = [
   { key: 'all', label: 'All' },
@@ -18,6 +19,9 @@ export default function ProjectDataManagement() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
+  const [visualizations, setVisualizations] = useState([])
+  const [vizPreview, setVizPreview] = useState(null)
+  const [loadingViz, setLoadingViz] = useState(false)
 
   const refresh = async () => {
     try {
@@ -33,6 +37,7 @@ export default function ProjectDataManagement() {
 
   useEffect(() => {
     refresh()
+    loadVisualizations()
   }, [projectId])
 
   const filtered = useMemo(() => {
@@ -58,6 +63,30 @@ export default function ProjectDataManagement() {
       await ingestionApi.remove(job.job_id)
       await refresh()
       if (selected?.job_id === job.job_id) setSelected(null)
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message)
+    }
+  }
+
+  const loadVisualizations = async () => {
+    try {
+      setLoadingViz(true)
+      const list = await visualizationApi.listForProject(projectId)
+      setVisualizations(list)
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message)
+    } finally {
+      setLoadingViz(false)
+    }
+  }
+
+  const openVisualization = async (vizId) => {
+    try {
+      const detail = await visualizationApi.detail(vizId)
+      setVizPreview(detail)
+      if (detail.html_url) {
+        window.open(detail.html_url, '_blank')
+      }
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)
     }
@@ -146,6 +175,54 @@ export default function ProjectDataManagement() {
           )}
         </div>
       )}
+
+      <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ margin: '0 0 4px 0' }}>Visualizations</h3>
+            <p className="summary-label" style={{ margin: 0 }}>
+              Download or open plots generated in the Data Visualisation workspace.
+            </p>
+          </div>
+          <button className="project-shell__nav-link" type="button" onClick={loadVisualizations}>
+            {loadingViz ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+        {visualizations.length === 0 && !loadingViz && (
+          <div className="empty-state">No visualizations generated yet.</div>
+        )}
+        <div className="data-grid">
+          {visualizations.map((viz) => (
+            <div className="data-card" key={viz.viz_id}>
+              <p className="data-card__name">{viz.filename}</p>
+              <div className="data-card__meta">{viz.chart_type} · {viz.x_axis} vs {viz.y_axis}</div>
+              <div className="data-card__meta">Status: {viz.status}</div>
+              <div className="data-card__actions">
+                <button className="project-shell__nav-link" onClick={() => openVisualization(viz.viz_id)}>
+                  View
+                </button>
+                {viz.html_url && (
+                  <button
+                    className="project-shell__nav-link"
+                    onClick={() => window.open(viz.html_url, '_blank')}
+                  >
+                    Download
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {vizPreview?.html && (
+          <div className="viz-preview" style={{ height: 320 }}>
+            <iframe
+              title="visualization-preview"
+              srcDoc={vizPreview.html}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
+        )}
+      </div>
 
     </div>
   )
