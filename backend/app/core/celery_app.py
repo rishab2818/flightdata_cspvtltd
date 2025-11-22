@@ -6,7 +6,7 @@ celery_app = Celery(
     settings.celery_task_prefix,
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.ingestion", "app.tasks.visualization"],
+    include=["app.tasks.ingestion"],
 )
 
 celery_app.conf.update(
