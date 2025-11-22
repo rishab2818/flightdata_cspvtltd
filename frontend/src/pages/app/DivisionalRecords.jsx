@@ -261,7 +261,8 @@ function DivisionalModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.division_name || !form.record_type) {
+    const requiredFields = ["division_name", "record_type", "created_date", "rating", "remarks"];
+    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
       setError("Please complete required fields.");
       return;
     }

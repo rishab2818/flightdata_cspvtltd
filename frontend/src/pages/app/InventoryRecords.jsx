@@ -330,8 +330,22 @@ function SupplyOrderModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.so_number || !form.particular || !form.supplier_name) {
+    const requiredFields = [
+      "so_number",
+      "particular",
+      "supplier_name",
+      "start_date",
+      "delivery_date",
+      "duty_officer",
+      "holder",
+      "amount",
+    ];
+    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
       setError("Please fill all required fields.");
+      return;
+    }
+    if (Number(form.quantity) <= 0 || Number(form.duration_months) <= 0) {
+      setError("Quantity and duration must be greater than zero.");
       return;
     }
     try {

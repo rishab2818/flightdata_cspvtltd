@@ -235,8 +235,9 @@ function ReportModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.name) {
-      setError("Please enter report name.");
+    const requiredFields = ["name", "description", "report_type", "created_date"];
+    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
+      setError("Please enter report name, type, description, and date.");
       return;
     }
     try {
