@@ -33,5 +33,7 @@ Start-Process -NoNewWindow -FilePath $PythonPath -ArgumentList "-m", "uvicorn", 
 Write-Host "API listening on http://$Host:$ApiPort" -ForegroundColor Green
 
 # Start Celery worker
-Start-Process -NoNewWindow -FilePath $PythonPath -ArgumentList "-m", "celery", "-A", "app.core.celery_app.celery_app", "worker", "--autoscale=$celeryMax,$celeryMin", "--loglevel=info"
-Write-Host "Celery worker started (autoscale $celeryMin-$celeryMax)" -ForegroundColor Green
+# Windows cannot use the prefork pool; force the solo pool to avoid spawn/unpack errors
+$celeryArgs = @("-m", "celery", "-A", "app.core.celery_app.celery_app", "worker", "--pool=solo", "--concurrency=1", "--loglevel=info")
+Start-Process -NoNewWindow -FilePath $PythonPath -ArgumentList $celeryArgs
+Write-Host "Celery worker started with solo pool (concurrency 1)" -ForegroundColor Green
