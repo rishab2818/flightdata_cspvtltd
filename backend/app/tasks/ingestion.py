@@ -51,6 +51,7 @@ def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file
 
     columns: List[str] = []
     rows_seen = 0
+    sample_rows: list[dict] = []
     for chunk in chunks:
         if header_mode == "none" and not provided_headers:
             chunk.columns = [f"column_{i+1}" for i in range(len(chunk.columns))]
@@ -62,11 +63,13 @@ def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file
             chunk.columns = provided_headers
         if not columns:
             columns = list(chunk.columns)
+        if not sample_rows:
+            sample_rows = chunk.head(5).to_dict(orient="records")
         rows_seen += len(chunk)
         break
     return {
         "columns": columns,
-        "sample_rows": [],
+        "sample_rows": sample_rows,
         "rows_seen": rows_seen,
     }
 
@@ -80,13 +83,13 @@ def _parse_csv(
     read_kwargs = {"delimiter": delimiter}
     if header_mode == "none":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
 
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
@@ -97,13 +100,13 @@ def _parse_excel(
     read_kwargs = {"sheet_name": 0}
     if header_mode == "none":
         read_kwargs["header"] = None
-        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=20, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=20, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-        df_iter = [pd.read_excel(path, nrows=0, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=20, **read_kwargs)]
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
@@ -113,13 +116,13 @@ def _parse_dat(
     read_kwargs = {"delim_whitespace": True, "engine": "python"}
     if header_mode == "none":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
