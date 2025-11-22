@@ -71,3 +71,8 @@ class VisualizationRepository:
             d["viz_id"] = str(d["_id"])
             d.pop("_id", None)
         return docs
+
+    async def delete(self, viz_id: str) -> bool:
+        db = await get_db()
+        res = await db[self.collection_name].delete_one({"_id": ObjectId(viz_id)})
+        return bool(res.deleted_count)

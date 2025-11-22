@@ -26,6 +26,7 @@ export default function ProjectVisualization() {
   const [renderingImage, setRenderingImage] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [deletingId, setDeletingId] = useState('')
 
   const activeVizRef = useRef(null)
 
@@ -149,6 +150,26 @@ export default function ProjectVisualization() {
       }
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)
+    }
+  }
+
+  const handleDelete = async (vizId) => {
+    if (!vizId) return
+    const confirmed = window.confirm('Delete this visualization and its generated files?')
+    if (!confirmed) return
+    try {
+      setDeletingId(vizId)
+      await visualizationApi.delete(vizId)
+      if (selectedViz?.viz_id === vizId) {
+        setSelectedViz(null)
+        setImageUrl('')
+      }
+      setStatusMessage('Visualization deleted successfully.')
+      await refresh()
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message)
+    } finally {
+      setDeletingId('')
     }
   }
 
@@ -348,13 +369,20 @@ export default function ProjectVisualization() {
               <div className="data-card__meta">
                 {viz.rows_total || 0} rows · {viz.trace_labels?.length || 0} traces · window {viz.chunk_size} rows
               </div>
-              <div className="data-card__actions">
-                <button className="project-shell__nav-link" onClick={() => loadVisualization(viz)}>
-                  Load
-                </button>
-              </div>
+            <div className="data-card__actions">
+              <button className="project-shell__nav-link" onClick={() => loadVisualization(viz)}>
+                Load
+              </button>
+              <button
+                className="project-shell__nav-link danger"
+                onClick={() => handleDelete(viz.viz_id)}
+                disabled={deletingId === viz.viz_id}
+              >
+                {deletingId === viz.viz_id ? 'Deleting…' : 'Delete'}
+              </button>
             </div>
-          ))}
+          </div>
+        ))}
         </div>
 
         {selectedViz && (
