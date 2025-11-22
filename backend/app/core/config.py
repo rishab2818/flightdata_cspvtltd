@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     minio_secure: bool = Field(default=False, alias="MINIO_SECURE")
     # Bucket where all user docs live
     minio_docs_bucket: str = Field(default="user-docs", alias="MINIO_DOCS_BUCKET")
+    ingestion_bucket: str = Field(
+        default="ingestion", alias="MINIO_INGESTION_BUCKET"
+    )
+
+    # ---------- Redis / Celery (Option 2 standard stack) ----------
+    redis_url: str = Field(default="redis://127.0.0.1:6379/0", alias="REDIS_URL")
+    celery_task_prefix: str = Field(default="flightdata", alias="CELERY_TASK_PREFIX")
 
     model_config = SettingsConfigDict(
         env_file=".env", extra="allow", populate_by_name=True
