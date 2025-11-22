@@ -39,6 +39,21 @@ def _publish(viz_id: str, status: str, progress: int, message: str = ""):
     redis.publish(f"visualization:{viz_id}:events", payload)
     _set_status(redis, viz_id, status, progress, message or status)
 
+    # Mirror the latest task status in Mongo so API callers can still observe
+    # progress even if Redis state is unavailable or evicted.
+    db = get_sync_db()
+    db.visualizations.update_one(
+        {"_id": ObjectId(viz_id)},
+        {
+            "$set": {
+                "status": status,
+                "progress": progress,
+                "message": message or status,
+                "updated_at": datetime.utcnow(),
+            }
+        },
+    )
+
 
 def _iter_csv_frames(
     path: str,

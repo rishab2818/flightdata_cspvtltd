@@ -29,6 +29,7 @@ export default function ProjectVisualization() {
   const [deletingId, setDeletingId] = useState('')
 
   const activeVizRef = useRef(null)
+  const pollRef = useRef(null)
 
   const selectedJob = useMemo(
     () => jobs.find((j) => j.job_id === seriesForm.jobId),
@@ -127,6 +128,43 @@ export default function ProjectVisualization() {
       setRenderingImage(false)
     }
   }
+
+  useEffect(() => {
+    if (!selectedViz || selectedViz.status === 'SUCCESS' || selectedViz.status === 'FAILURE') {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+      return undefined
+    }
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const status = await visualizationApi.status(selectedViz.viz_id)
+        if (activeVizRef.current !== selectedViz.viz_id) return
+        setSelectedViz((prev) => (prev ? { ...prev, ...status } : prev))
+
+        if (status.status === 'SUCCESS') {
+          setStatusMessage('Backend rendered the full plot as an image; loading…')
+          await fetchFinalImage(selectedViz.viz_id)
+          await refresh()
+          clearInterval(pollRef.current)
+          pollRef.current = null
+        } else {
+          setStatusMessage(`Status: ${status.status} · Progress ${status.progress || 0}% · ${status.message || 'processing'}`)
+        }
+      } catch (err) {
+        setError(err?.response?.data?.detail || err.message)
+      }
+    }, 3000)
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [selectedViz])
 
   const loadVisualization = async (viz) => {
     if (!viz) return
