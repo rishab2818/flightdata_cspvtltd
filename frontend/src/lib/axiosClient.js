@@ -1,8 +1,10 @@
 import axios from 'axios'
 import { storage } from './storage'
 
+const baseURL = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
+
 export const axiosClient = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL,
   // Disable request timeout so very large uploads are allowed to stream fully
   // from the browser to the backend without aborting.
   timeout: 0,

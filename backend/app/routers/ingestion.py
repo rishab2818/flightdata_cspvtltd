@@ -91,11 +91,10 @@ async def start_ingestion(
     # Stream the uploaded file directly to MinIO in multi-part chunks to avoid
     # loading the whole payload into memory or duplicating it on disk.
     await file.seek(0)
-    data_stream = iter(lambda: file.file.read(10 * 1024 * 1024), b"")
     minio.put_object(
         bucket_name=bucket,
         object_name=object_key,
-        data=data_stream,
+        data=file.file,
         length=-1,
         part_size=10 * 1024 * 1024,
         content_type=file.content_type or "application/octet-stream",
