@@ -18,6 +18,8 @@ export default function ProjectUpload() {
   const [activeJob, setActiveJob] = useState(null)
   const [progress, setProgress] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(null)
+  const [uploadingFilename, setUploadingFilename] = useState('')
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -53,6 +55,8 @@ export default function ProjectUpload() {
   const submitFile = async (file) => {
     if (!file) return
     setUploading(true)
+    setUploadingFilename(file.name)
+    setUploadProgress(0)
     setError(null)
     try {
       const headersList =
@@ -66,6 +70,14 @@ export default function ProjectUpload() {
         datasetType,
         headerMode,
         customHeaders: headersList,
+        onUploadProgress: (evt) => {
+          if (!evt.total) {
+            setUploadProgress(null)
+            return
+          }
+          const pct = Math.round((evt.loaded / evt.total) * 100)
+          setUploadProgress(pct)
+        },
       })
       setActiveJob(job)
       setProgress({ status: 'queued', progress: 0 })
@@ -73,6 +85,8 @@ export default function ProjectUpload() {
       setError(err?.response?.data?.detail || err.message)
     } finally {
       setUploading(false)
+      setUploadProgress(null)
+      setUploadingFilename('')
     }
   }
 
@@ -171,7 +185,25 @@ export default function ProjectUpload() {
           style={{ display: 'none' }}
           onChange={onFileChange}
         />
-        {uploading && <div className="summary-label">Uploading…</div>}
+        {uploading && (
+          <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="actions-row">
+              <strong>{uploadingFilename || 'Uploading file'}</strong>
+              <span className="badge">Uploading</span>
+            </div>
+            <div className="progress-bar">
+              <div
+                className="progress-bar__value"
+                style={{ width: `${uploadProgress ?? 5}%` }}
+              />
+            </div>
+            <div className="summary-label">
+              {uploadProgress != null
+                ? `${uploadProgress}% streamed to server`
+                : 'Streaming file in chunks…'}
+            </div>
+          </div>
+        )}
         {error && <div className="project-shell__error">{error}</div>}
         {activeJob && (
           <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

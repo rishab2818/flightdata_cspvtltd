@@ -10,26 +10,18 @@ def detect_resources():
 
 
 def autoscale_bounds():
-    """Compute Celery autoscale bounds based on RAM/CPU.
+    """Return Celery autoscale bounds.
 
-    Designed to run comfortably on 8 GB with conservative bounds while
-    allowing larger hosts to scale up without manual tuning.
+    We target eight workers so large ingestion jobs (including multi-GB files)
+    can be processed concurrently without manual tuning.
     """
-    total_gb, cpu_count = detect_resources()
 
-    if total_gb <= 8:
-        max_workers = min(2, max(1, cpu_count))
-    elif total_gb <= 16:
-        max_workers = min(4, max(2, cpu_count))
-    elif total_gb <= 32:
-        max_workers = min(8, max(3, cpu_count * 2 // 3))
-    elif total_gb <= 64:
-        max_workers = min(12, cpu_count * 2)
-    else:
-        # On 128 GB+ let CPU drive the scale up to a safe ceiling
-        max_workers = min(24, cpu_count * 4)
-
-    min_workers = max(1, max_workers // 2)
+    _total_gb, cpu_count = detect_resources()
+    # Honour host resources but never drop below an 8-worker ceiling requested
+    # for heavy workloads. When CPUs are fewer than 8 we still cap at 8 to
+    # favour throughput; Celery/OS scheduling will share cores as needed.
+    max_workers = max(8, cpu_count)
+    min_workers = max(4, max_workers // 2)
     return min_workers, max_workers
 
 

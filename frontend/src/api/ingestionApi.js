@@ -11,6 +11,9 @@ export const ingestionApi = {
     }
     const { data } = await axiosClient.post(`/api/ingestion/${projectId}`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: options.onUploadProgress,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
     })
     return data
   },
