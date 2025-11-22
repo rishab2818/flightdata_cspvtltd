@@ -68,6 +68,17 @@ async def create_visualization(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Ingestion job {s.job_id} not found for this project",
             )
+        columns = job.get("columns") or []
+        requested_axes = set((s.x_axes or []) + (s.y_axes or []) + (s.z_axes or []))
+        missing_axes = [axis for axis in requested_axes if axis not in columns]
+        if missing_axes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Selected axes do not match the ingested columns: "
+                    + ", ".join(sorted(missing_axes))
+                ),
+            )
         series_jobs.append((s, job))
 
     minio = get_minio_client()
