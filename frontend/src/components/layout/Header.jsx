@@ -4,19 +4,40 @@ import { AuthContext } from "../../context/AuthContext";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import "../../styles/layout.css";
 
-const pageTitles = {
-  "/app": "Dashboard Overview",
-  "/app/minutes": "Minutes of meeting",
-  "/app/student-engagement": "Student Engagement",
-  "/app/inventory-records": "Inventory records",
-  "/app/divisional-records": "Divisional Records",
-  "/app/customer-feedbacks": "Customer Feedbacks",
-  "/app/training-records": "Training Records",
-  "/app/technical-reports": "Technical Reports",
-  "/app/setting": "Settings",
-  "/admin": "Dashboard",
-  "/admin/users": "User Management",
-  "/admin/settings": "Settings",
+const pageMeta = {
+  "/app": { title: "Welcome!", subtitle: "" },
+  "/app/minutes": {
+    title: "Minutes of the Meeting",
+    subtitle: "Upload, manage, and track meeting minutes with task assignments",
+  },
+  "/app/student-engagement": {
+    title: "Student Engagement",
+    subtitle: "Description here",
+  },
+  "/app/inventory-records": {
+    title: "Inventory Records",
+    subtitle: "Description here",
+  },
+  "/app/divisional-records": {
+    title: "Divisional Records",
+    subtitle: "Description here",
+  },
+  "/app/customer-feedbacks": {
+    title: "Customer Feedbacks Overview",
+    subtitle: "Description here",
+  },
+  "/app/training-records": {
+    title: "Training Records",
+    subtitle: "Description here",
+  },
+  "/app/technical-reports": {
+    title: "Technical & Design Reports",
+    subtitle: "Manage your technical and design documentation",
+  },
+  "/app/setting": { title: "Settings", subtitle: "" },
+  "/admin": { title: "Dashboard", subtitle: "Admin" },
+  "/admin/users": { title: "User Management", subtitle: "" },
+  "/admin/settings": { title: "Settings", subtitle: "" },
 };
 
 export default function Header() {
@@ -29,14 +50,15 @@ export default function Header() {
   const normalizedPath = pathname.endsWith("/") && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
   const isDashboard = normalizedPath === "/app" || normalizedPath === "/admin";
 
-  const homePath = useMemo(() => (user?.role?.toUpperCase?.() === "ADMIN" ? "/admin" : "/app"), [user]);
-
   const userId = user?.email || user?.username || user?.name || "User";
   const roleLabel = user?.role || "";
 
-  const pageTitle = pageTitles[normalizedPath] || "Dashboard";
-  const headerTitle = isDashboard ? "Welcome!" : pageTitle;
-  const subTitle = isDashboard ? userId : "";
+  const meta = useMemo(() => {
+    const base = pageMeta[normalizedPath] || { title: "Dashboard", subtitle: "" };
+    if (normalizedPath === "/app") return { ...base, subtitle: userId };
+    if (normalizedPath === "/admin") return { ...base, subtitle: roleLabel };
+    return base;
+  }, [normalizedPath, roleLabel, userId]);
 
   const handleLogout = () => {
     logout();
@@ -54,16 +76,10 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="app-shell__header">
-      <div>
-        <button className="header__home" type="button" onClick={() => navigate(homePath)}>
-          Dashboard
-        </button>
-      </div>
-
+    <header className={`app-shell__header ${isDashboard ? "app-shell__header--dashboard" : ""}`}>
       <div className="header__titles">
-        <h1 className="header__title">{headerTitle}</h1>
-        {subTitle ? <p className="header__subtitle">{subTitle}</p> : null}
+        <h1 className="header__title">{meta.title}</h1>
+        {meta.subtitle ? <p className="header__subtitle">{meta.subtitle}</p> : null}
       </div>
 
       <div className="header__actions" ref={menuRef}>

@@ -72,7 +72,7 @@ export default function InventoryRecords() {
   };
 
   return (
-    <div style={{ width: 1011 }}>
+    <div style={{ width: "100%", maxWidth: 1180, margin: "0 auto" }}>
       <h2
         style={{
           margin: 0,

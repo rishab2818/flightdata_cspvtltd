@@ -63,48 +63,63 @@ export default function ProjectsSectionImproved() {
       style={{
         width: '100%',
         minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: SPACING.lg,
       }}
     >
-      {/* Header row */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
+          background: COLORS.background,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: 10,
+          padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
+          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
         }}
       >
-        <h2
+        {/* Header row */}
+        <div
           style={{
-            fontSize: 18,
-            fontWeight: 600,
-            margin: 0,
-            color: COLORS.textPrimary,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginBottom: SPACING.md,
           }}
         >
-          Projects
-        </h2>
-        {canCreate && (
-          <Button onClick={() => setShowModal(true)} variant="primary" style={{ width: 188, height: 44, borderRadius: 4 }}>
-            + New Project
-          </Button>
-        )}
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              margin: 0,
+              color: COLORS.textPrimary,
+            }}
+          >
+            Projects
+          </h2>
+          {canCreate && (
+            <Button
+              onClick={() => setShowModal(true)}
+              variant="primary"
+              style={{ width: 188, height: 44, borderRadius: 6 }}
+            >
+              + New Project
+            </Button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.md }}>
+          {projects.map((p, i) => (
+            <ProjectCard
+              key={p._id || i}
+              name={p.project_name}
+              type="Aero Data"
+              date={formatDate(p.created_at)}
+              members={p.members?.length || 0}
+              desc={p.project_description}
+            />
+          ))}
+        </div>
       </div>
-      {/* Project cards */}
-      {projects.map((p, i) => (
-        <ProjectCard
-          key={p._id || i}
-          name={p.project_name}
-          type="Aero Data"
-          date={formatDate(p.created_at)}
-          members={p.members?.length || 0}
-          desc={p.project_description}
-        />
-      ))}
+
       {/* Modal */}
       <NewProjectModal
         open={showModal}

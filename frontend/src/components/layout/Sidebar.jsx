@@ -62,7 +62,9 @@ export default function Sidebar() {
                 className={({ isActive }) =>
                   [
                     "sidebar__link",
-                    isActive || pathname.startsWith(item.path) ? "sidebar__link--active" : "",
+                    isActive || (!item.end && pathname.startsWith(item.path))
+                      ? "sidebar__link--active"
+                      : "",
                   ]
                     .filter(Boolean)
                     .join(" ")
