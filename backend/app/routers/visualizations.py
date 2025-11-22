@@ -1,13 +1,19 @@
+import io
 import logging
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
-from app.models.visualization import VisualizationCreateRequest, VisualizationOut, VisualizationStatus
+from app.models.visualization import (
+    VisualizationCreateRequest,
+    VisualizationOut,
+    VisualizationStatus,
+)
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.visualizations import VisualizationRepository
@@ -33,6 +39,27 @@ def _inject_url(doc: dict | None):
             doc["html_url"] = minio.presigned_get_object(
                 bucket_name=bucket, object_name=doc["html_key"], expires=timedelta(hours=2)
             )
+    if doc.get("tiles"):
+        minio = get_minio_client()
+        bucket = settings.visualization_bucket
+        if minio.bucket_exists(bucket):
+            with_urls = []
+            for item in doc["tiles"]:
+                series = item.get("series") or {}
+                tiles = []
+                for tile in item.get("tiles", []):
+                    tiles.append(
+                        tile
+                        | {
+                            "url": minio.presigned_get_object(
+                                bucket_name=bucket,
+                                object_name=tile["object_name"],
+                                expires=timedelta(hours=2),
+                            )
+                        }
+                    )
+                with_urls.append({"series": series, "tiles": tiles})
+            doc["tiles"] = with_urls
     return doc
 
 
@@ -116,6 +143,55 @@ async def get_visualization(viz_id: str, user: CurrentUser = Depends(get_current
     await _ensure_member(doc["project_id"], user)
     doc = _inject_url(_with_series(doc))
     return VisualizationOut(**doc)
+
+
+@router.get("/{viz_id}/tiles")
+async def get_visualization_tile(
+    viz_id: str,
+    user: CurrentUser = Depends(get_current_user),
+    series: int = Query(default=0, ge=0, description="Series index to retrieve"),
+    level: int | None = Query(default=None, description="Tile level (bins) to read"),
+    x_min: float | None = Query(default=None, description="Lower x bound for filtering"),
+    x_max: float | None = Query(default=None, description="Upper x bound for filtering"),
+):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Visualization not found")
+    await _ensure_member(doc["project_id"], user)
+    hydrated = _inject_url(_with_series(doc))
+    if not hydrated.get("tiles"):
+        raise HTTPException(status_code=404, detail="No tiles materialized for this visualization")
+    if series >= len(hydrated["tiles"]):
+        raise HTTPException(status_code=400, detail="Series index out of range")
+
+    series_tiles = hydrated["tiles"][series]["tiles"]
+    chosen_level = level or min(tile["level"] for tile in series_tiles)
+    chosen = next((tile for tile in series_tiles if tile["level"] == chosen_level), None)
+    if not chosen:
+        raise HTTPException(status_code=404, detail="Requested tile not found")
+
+    minio = get_minio_client()
+    bucket = settings.visualization_bucket
+    if not minio.bucket_exists(bucket):
+        raise HTTPException(status_code=404, detail="Visualization store missing")
+
+    obj = minio.get_object(bucket, chosen["object_name"])
+    buffer = io.BytesIO(obj.read())
+    obj.close()
+    buffer.seek(0)
+    df = pd.read_parquet(buffer)
+    if x_min is not None:
+        df = df[df[doc["x_axis"]] >= x_min]
+    if x_max is not None:
+        df = df[df[doc["x_axis"]] <= x_max]
+
+    return {
+        "series": hydrated.get("series", [])[series] if hydrated.get("series") else None,
+        "level": chosen_level,
+        "rows": len(df),
+        "tile": chosen,
+        "data": df.to_dict(orient="records"),
+    }
 
 
 @router.get("/{viz_id}/status", response_model=VisualizationStatus)

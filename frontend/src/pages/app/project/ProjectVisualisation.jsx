@@ -23,6 +23,7 @@ export default function ProjectVisualisation() {
   const [plotHtml, setPlotHtml] = useState('')
   const [activeViz, setActiveViz] = useState(null)
   const [statusMessage, setStatusMessage] = useState('Select a dataset to begin')
+  const [tilePreview, setTilePreview] = useState(null)
   const pollTimer = useRef(null)
 
   const xJob = useMemo(() => jobs.find((job) => job.job_id === xJobId), [jobs, xJobId])
@@ -71,6 +72,7 @@ export default function ProjectVisualisation() {
       setActiveViz(detail)
       setPlotHtml(detail.html || '')
       setStatusMessage(detail.message || detail.status)
+      setTilePreview(null)
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)
     }
@@ -82,6 +84,7 @@ export default function ProjectVisualisation() {
       setActiveViz(detail)
       setPlotHtml(detail.html || '')
       setStatusMessage(detail.message || detail.status)
+      setTilePreview(null)
       if (detail.status !== 'SUCCESS' && detail.status !== 'FAILURE') {
         pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
       } else {
@@ -103,6 +106,7 @@ export default function ProjectVisualisation() {
     setLoading(true)
     setPlotHtml('')
     setStatusMessage('Starting visualization job…')
+    setTilePreview(null)
     if (pollTimer.current) clearTimeout(pollTimer.current)
     try {
       const res = await visualizationApi.create({
@@ -154,6 +158,27 @@ export default function ProjectVisualisation() {
   }
 
   const primaryFilename = (viz) => viz?.filename || viz?.series?.[0]?.filename || 'dataset'
+
+  const formatRangeValue = (val) => {
+    if (val === undefined || val === null) return '-'
+    if (Number.isFinite(Number(val))) return Number(val).toFixed(2)
+    return val
+  }
+
+  const loadTileData = async (seriesIndex = 0, level) => {
+    if (!activeViz?.viz_id) return
+    setStatusMessage('Fetching tile data…')
+    try {
+      const data = await visualizationApi.tileData(activeViz.viz_id, {
+        series: seriesIndex,
+        level,
+      })
+      setTilePreview({ ...data, fetchedAt: new Date().toISOString() })
+      setStatusMessage(`Loaded level ${data.level} tile for series ${seriesIndex + 1}`)
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message)
+    }
+  }
 
   return (
     <div className="project-card" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16 }}>
@@ -366,6 +391,94 @@ export default function ProjectVisualisation() {
             <div className="empty-state">Generate or open a visualization to preview it here.</div>
           )}
         </div>
+        {activeViz?.tiles?.length > 0 && (
+          <div className="project-card" style={{ marginTop: 10 }}>
+            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+              <div>
+                <p className="summary-label" style={{ margin: 0 }}>Materialized tiles</p>
+                <h4 style={{ margin: '4px 0 0 0' }}>Multi-resolution parquet outputs</h4>
+              </div>
+              <button
+                type="button"
+                className="project-shell__nav-link"
+                onClick={() => loadTileData(0)}
+                disabled={!activeViz?.viz_id}
+              >
+                Load overview tile
+              </button>
+            </div>
+            {activeViz.tiles.map((item, idx) => (
+              <div key={`series-tiles-${idx}`} style={{ marginTop: 8 }}>
+                <p className="summary-label" style={{ margin: 0 }}>
+                  Series {idx + 1}: {item?.series?.label || item?.series?.y_axis}
+                </p>
+                <div className="viz-list">
+                  {item.tiles.map((tile) => (
+                    <div key={`tile-${tile.level}`} className="viz-item">
+                      <div>
+                        <p className="data-card__name" style={{ margin: 0 }}>
+                          Level {tile.level} · {tile.rows} rows
+                        </p>
+                        <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
+                          Range {formatRangeValue(tile.x_min)} – {formatRangeValue(tile.x_max)}
+                        </p>
+                      </div>
+                      <div className="viz-actions">
+                        {tile.url && (
+                          <button
+                            className="project-shell__nav-link"
+                            type="button"
+                            onClick={() => window.open(tile.url, '_blank')}
+                          >
+                            Download tile
+                          </button>
+                        )}
+                        <button
+                          className="project-shell__nav-link"
+                          type="button"
+                          onClick={() => loadTileData(idx, tile.level)}
+                        >
+                          Load
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {tilePreview && (
+              <div style={{ marginTop: 12 }}>
+                <p className="summary-label" style={{ margin: 0 }}>
+                  Loaded tile level {tilePreview.level} ({tilePreview.rows} rows)
+                </p>
+                <div className="viz-preview" style={{ minHeight: 120, padding: 8, overflow: 'auto' }}>
+                  {tilePreview.data?.length ? (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          {Object.keys(tilePreview.data[0] || {}).map((key) => (
+                            <th key={key}>{key}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tilePreview.data.slice(0, 10).map((row, idx) => (
+                          <tr key={`tile-row-${idx}`}>
+                            {Object.keys(tilePreview.data[0] || {}).map((key) => (
+                              <td key={`${idx}-${key}`}>{row[key]}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="empty-state">No tile rows returned.</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
