@@ -24,6 +24,8 @@ repo = VisualizationRepository()
 ingestions = IngestionRepository()
 projects = ProjectRepository()
 
+REQUIRED_VIZ_FIELDS = {"job_id", "filename", "x_axis", "y_axis", "chart_type"}
+
 
 def _inject_url(doc: dict | None):
     if not doc:
@@ -129,6 +131,14 @@ async def list_project_visualizations(
     output = []
     for doc in docs:
         try:
+            missing_fields = REQUIRED_VIZ_FIELDS.difference(doc.keys())
+            if missing_fields:
+                logger.warning(
+                    "Skipping visualization %s due to missing fields: %s",
+                    doc.get("viz_id", "unknown"),
+                    ", ".join(sorted(missing_fields)),
+                )
+                continue
             output.append(VisualizationOut(**_inject_url(doc)))
         except ValidationError as exc:
             logger.warning(
