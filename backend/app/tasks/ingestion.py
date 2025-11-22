@@ -41,7 +41,9 @@ def _publish(job_id: str, status: str, progress: int, message: str = ""):
     _set_status(redis, job_id, status, progress, message or status)
 
 
-def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file"):
+def _summarise_dataframe(
+    chunks, provided_headers=None, header_mode: str = "file", *, header_only: bool = True
+):
     """Summarise columns without scanning the whole file.
 
     Only the first available chunk/frame is inspected so we can return headers
@@ -63,7 +65,7 @@ def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file
             chunk.columns = provided_headers
         if not columns:
             columns = list(chunk.columns)
-        if not sample_rows:
+        if not header_only and not sample_rows:
             sample_rows = chunk.head(5).to_dict(orient="records")
         rows_seen += len(chunk)
         break
@@ -83,13 +85,13 @@ def _parse_csv(
     read_kwargs = {"delimiter": delimiter}
     if header_mode == "none":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
 
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
@@ -100,13 +102,13 @@ def _parse_excel(
     read_kwargs = {"sheet_name": 0}
     if header_mode == "none":
         read_kwargs["header"] = None
-        df_iter = [pd.read_excel(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        df_iter = [pd.read_excel(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-        df_iter = [pd.read_excel(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=0, **read_kwargs)]
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
@@ -116,13 +118,13 @@ def _parse_dat(
     read_kwargs = {"delim_whitespace": True, "engine": "python"}
     if header_mode == "none":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-        df_iter = [pd.read_csv(path, nrows=20, **read_kwargs)]
+        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
@@ -173,16 +175,40 @@ def ingest_file(
     try:
         _publish(job_id, states.STARTED, 5, "Downloading object from MinIO")
         response = minio.get_object(bucket, storage_key)
-        with open(tmp_path, "wb") as f:
-            for data in response.stream(1 * 1024 * 1024):
-                f.write(data)
+        ext = os.path.splitext(filename.lower())[-1]
+        preview_exts = {".csv", ".txt", ".dat"}
+        max_header_bytes = 1 * 1024 * 1024
+        bytes_written = 0
+
+        try:
+            with open(tmp_path, "wb") as f:
+                for data in response.stream(256 * 1024):
+                    if ext in preview_exts:
+                        newline_index = data.find(b"\n")
+                        if newline_index != -1:
+                            f.write(data[: newline_index + 1])
+                            break
+                        f.write(data)
+                        bytes_written += len(data)
+                        if bytes_written >= max_header_bytes:
+                            break
+                        continue
+                    f.write(data)
+        finally:
+            try:
+                response.close()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                response.release_conn()
+            except Exception:  # noqa: BLE001
+                pass
 
         _publish(job_id, states.STARTED, 25, "Parsing file")
         db.ingestion_jobs.update_one(
             {"_id": ObjectId(job_id)},
             {"$set": {"status": states.STARTED, "progress": 25, "updated_at": datetime.utcnow()}},
         )
-        ext = os.path.splitext(filename.lower())[-1]
         if ext in [".csv"]:
             summary = _parse_csv(
                 tmp_path, header_mode=header_mode, custom_headers=custom_headers
