@@ -42,7 +42,13 @@ def _publish(job_id: str, status: str, progress: int, message: str = ""):
 
 
 def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file"):
-    sample_rows = []
+    """Summarise columns without scanning the whole file.
+
+    Only the first available chunk/frame is inspected so we can return headers
+    almost immediately. This avoids spending time parsing thousands of rows
+    when callers only need the column list for chart selection.
+    """
+
     columns: List[str] = []
     rows_seen = 0
     for chunk in chunks:
@@ -57,65 +63,64 @@ def _summarise_dataframe(chunks, provided_headers=None, header_mode: str = "file
         if not columns:
             columns = list(chunk.columns)
         rows_seen += len(chunk)
-        if len(sample_rows) < 10:
-            sample_rows.extend(chunk.head(10 - len(sample_rows)).to_dict(orient="records"))
-        if rows_seen >= 5000:
-            break
+        break
     return {
         "columns": columns,
-        "sample_rows": sample_rows,
+        "sample_rows": [],
         "rows_seen": rows_seen,
     }
+
+
 def _parse_csv(
     path: str,
     header_mode: str = "file",
     custom_headers: list[str] | None = None,
     delimiter: str = ",",
 ):
-    read_kwargs = {"chunksize": 2000, "delimiter": delimiter}
+    read_kwargs = {"delimiter": delimiter}
     if header_mode == "none":
         read_kwargs["header"] = None
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        if custom_headers:
-            read_kwargs["names"] = custom_headers
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
+        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
 
-    chunks = pd.read_csv(path, **read_kwargs)
-    return _summarise_dataframe(chunks, custom_headers, header_mode)
+    return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
 def _parse_excel(
     path: str, header_mode: str = "file", custom_headers: list[str] | None = None
 ):
-    read_kwargs = {"sheet_name": 0, "nrows": 5000}
+    read_kwargs = {"sheet_name": 0}
     if header_mode == "none":
         read_kwargs["header"] = None
+        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        if custom_headers:
-            read_kwargs["names"] = custom_headers
+        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-    df_iter = [pd.read_excel(path, **read_kwargs)]
+        df_iter = [pd.read_excel(path, nrows=0, **read_kwargs)]
     return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
 def _parse_dat(
     path: str, header_mode: str = "file", custom_headers: list[str] | None = None
 ):
-    read_kwargs = {"delim_whitespace": True, "chunksize": 2000, "engine": "python"}
+    read_kwargs = {"delim_whitespace": True, "engine": "python"}
     if header_mode == "none":
         read_kwargs["header"] = None
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     elif header_mode == "custom":
         read_kwargs["header"] = None
-        if custom_headers:
-            read_kwargs["names"] = custom_headers
+        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
     else:
         read_kwargs["header"] = 0
-    chunks = pd.read_csv(path, **read_kwargs)
-    return _summarise_dataframe(chunks, custom_headers, header_mode)
+        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
+    return _summarise_dataframe(df_iter, custom_headers, header_mode)
 
 
 def _parse_mat(path: str):
