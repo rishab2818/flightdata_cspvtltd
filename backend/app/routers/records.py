@@ -137,7 +137,7 @@ async def list_supply_orders(user: CurrentUser = Depends(get_current_user)):
                 owner_email=row["owner_email"],
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
-                **{k: row.get(k) for k in SupplyOrderCreate.__fields__.keys()},
+                **{k: row.get(k) for k in SupplyOrderCreate.model_fields.keys()},
             )
         )
     return results
@@ -169,7 +169,7 @@ async def list_divisional_records(user: CurrentUser = Depends(get_current_user))
             owner_email=row["owner_email"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
-            **{k: row.get(k) for k in DivisionalRecordCreate.__fields__.keys()},
+            **{k: row.get(k) for k in DivisionalRecordCreate.model_fields.keys()},
         )
         for row in rows
     ]
@@ -201,7 +201,7 @@ async def list_customer_feedbacks(user: CurrentUser = Depends(get_current_user))
             owner_email=row["owner_email"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
-            **{k: row.get(k) for k in CustomerFeedbackCreate.__fields__.keys()},
+            **{k: row.get(k) for k in CustomerFeedbackCreate.model_fields.keys()},
         )
         for row in rows
     ]
@@ -233,7 +233,7 @@ async def list_technical_reports(user: CurrentUser = Depends(get_current_user)):
             owner_email=row["owner_email"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
-            **{k: row.get(k) for k in TechnicalReportCreate.__fields__.keys()},
+            **{k: row.get(k) for k in TechnicalReportCreate.model_fields.keys()},
         )
         for row in rows
     ]
@@ -265,7 +265,7 @@ async def list_training_records(user: CurrentUser = Depends(get_current_user)):
             owner_email=row["owner_email"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
-            **{k: row.get(k) for k in TrainingRecordCreate.__fields__.keys()},
+            **{k: row.get(k) for k in TrainingRecordCreate.model_fields.keys()},
         )
         for row in rows
     ]
