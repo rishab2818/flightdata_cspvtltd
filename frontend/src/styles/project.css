@@ -307,6 +307,17 @@
   margin-top: 10px;
 }
 
+.viz-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(240px, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x mandatory;
+}
+
 .viz-item {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
@@ -316,6 +327,11 @@
   align-items: center;
   gap: 12px;
   background: #fff;
+}
+
+.viz-item--inline {
+  min-width: 240px;
+  scroll-snap-align: start;
 }
 
 .viz-actions {

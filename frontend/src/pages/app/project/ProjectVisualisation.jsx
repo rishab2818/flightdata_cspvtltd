@@ -1,7 +1,36 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
+
+function LazyTileCard({ tile, seriesIndex, onLoadTile, children }) {
+  const cardRef = useRef(null)
+  const hasTriggered = useRef(false)
+
+  useEffect(() => {
+    if (!cardRef.current || !onLoadTile) return undefined
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasTriggered.current) {
+            hasTriggered.current = true
+            onLoadTile(seriesIndex, tile.level, { silent: true })
+          }
+        })
+      },
+      { threshold: 0.6 }
+    )
+
+    observer.observe(cardRef.current)
+    return () => observer.disconnect()
+  }, [onLoadTile, seriesIndex, tile.level])
+
+  return (
+    <div ref={cardRef} className="viz-item viz-item--inline">
+      {children}
+    </div>
+  )
+}
 
 const chartTypes = [
   { value: 'scatter', label: 'Scatter' },
@@ -165,20 +194,28 @@ export default function ProjectVisualisation() {
     return val
   }
 
-  const loadTileData = async (seriesIndex = 0, level) => {
-    if (!activeViz?.viz_id) return
-    setStatusMessage('Fetching tile data…')
-    try {
-      const data = await visualizationApi.tileData(activeViz.viz_id, {
-        series: seriesIndex,
-        level,
-      })
-      setTilePreview({ ...data, fetchedAt: new Date().toISOString() })
-      setStatusMessage(`Loaded level ${data.level} tile for series ${seriesIndex + 1}`)
-    } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
-    }
-  }
+  const loadTileData = useCallback(
+    async (seriesIndex = 0, level, options = {}) => {
+      if (!activeViz?.viz_id) return
+      const { silent = false } = options
+      if (!silent) setStatusMessage('Fetching tile data…')
+      try {
+        const data = await visualizationApi.tileData(activeViz.viz_id, {
+          series: seriesIndex,
+          level,
+        })
+        setTilePreview({ ...data, fetchedAt: new Date().toISOString(), seriesIndex })
+        setStatusMessage(
+          silent
+            ? `Auto-loaded level ${data.level} tile while scrolling series ${seriesIndex + 1}`
+            : `Loaded level ${data.level} tile for series ${seriesIndex + 1}`
+        )
+      } catch (err) {
+        setError(err?.response?.data?.detail || err.message)
+      }
+    },
+    [activeViz?.viz_id]
+  )
 
   return (
     <div className="project-card" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16 }}>
@@ -412,15 +449,23 @@ export default function ProjectVisualisation() {
                 <p className="summary-label" style={{ margin: 0 }}>
                   Series {idx + 1}: {item?.series?.label || item?.series?.y_axis}
                 </p>
-                <div className="viz-list">
+                <div className="viz-scroll" role="list">
                   {item.tiles.map((tile) => (
-                    <div key={`tile-${tile.level}`} className="viz-item">
+                    <LazyTileCard
+                      key={`tile-${tile.level}`}
+                      tile={tile}
+                      seriesIndex={idx}
+                      onLoadTile={loadTileData}
+                    >
                       <div>
                         <p className="data-card__name" style={{ margin: 0 }}>
                           Level {tile.level} · {tile.rows} rows
                         </p>
                         <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
                           Range {formatRangeValue(tile.x_min)} – {formatRangeValue(tile.x_max)}
+                        </p>
+                        <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
+                          Scroll to auto-preview tile data in order of the X axis.
                         </p>
                       </div>
                       <div className="viz-actions">
@@ -441,7 +486,7 @@ export default function ProjectVisualisation() {
                           Load
                         </button>
                       </div>
-                    </div>
+                    </LazyTileCard>
                   ))}
                 </div>
               </div>
