@@ -135,6 +135,7 @@ async def create_visualization(
                 "y_axis": item.y_axis,
                 "label": item.label or item.y_axis,
                 "filename": job.get("filename", "dataset"),
+                "storage_key": job.get("storage_key"),
             }
         )
 
@@ -234,14 +235,23 @@ async def get_visualization_window(
 
     series_doc = hydrated["series"][series]
     job = await ingestions.get_job(series_doc.get("job_id"))
-    if not job or job.get("project_id") != hydrated.get("project_id"):
-        raise HTTPException(status_code=404, detail="Dataset not found for requested series")
+    if job and job.get("project_id") != hydrated.get("project_id"):
+        job = None
+
+    storage_key = series_doc.get("storage_key") or job.get("storage_key") if job else None
+    filename = series_doc.get("filename") or job.get("filename") if job else None
+
+    if not storage_key or not filename:
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset metadata missing for requested series",
+        )
 
     try:
         window = await run_in_threadpool(
             fetch_data_window,
-            job["storage_key"],
-            job.get("filename") or series_doc.get("filename") or "dataset",
+            storage_key,
+            filename or "dataset",
             hydrated["x_axis"],
             series_doc["y_axis"],
             start,

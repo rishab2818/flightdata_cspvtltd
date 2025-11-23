@@ -64,7 +64,7 @@ export default function ProjectVisualizationStream() {
         <div className="empty-state">Visualization not found for this project.</div>
       )}
 
-      {viz && <StreamingPlot viz={viz} autoStart={false} />}
+      {viz && <StreamingPlot viz={viz} autoStart />}
     </div>
   )
 }
