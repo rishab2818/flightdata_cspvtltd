@@ -1,9 +1,9 @@
 import io
 import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
+from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -14,6 +14,7 @@ from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_sync_redis
+from app.core.rust_bridge import RustNotInstalled, lod_bins
 from app.db.sync_mongo import get_sync_db
 from app.repositories.notifications import create_sync_notification
 
@@ -37,146 +38,90 @@ def _update_db_status(db, viz_id: str, **fields):
     )
 
 
-def _iter_parquet_batches(url: str, columns: list[str]):
-    try:
-        import pyarrow.parquet as pq
-
-        parquet_file = pq.ParquetFile(url)
-        for batch in parquet_file.iter_batches(columns=columns, batch_size=CHUNK_SIZE):
-            yield batch.to_pandas()
-    except Exception:
-        frame = pd.read_parquet(url, columns=columns)
-        yield frame
-
-
-def _iter_chunks(url: str, ext: str, x_axis: str, y_axis: str | None):
-    columns = [col for col in [x_axis, y_axis] if col]
-    read_kwargs = {"usecols": columns, "on_bad_lines": "skip"}
-
+def _file_type_and_delimiter(ext: str) -> tuple[str, str]:
     if ext in {".csv"}:
-        iterator = pd.read_csv(
-            url, chunksize=CHUNK_SIZE, low_memory=False, **read_kwargs
-        )
-    elif ext in {".txt", ".dat"}:
-        iterator = pd.read_csv(
-            url,
-            chunksize=CHUNK_SIZE,
-            low_memory=False,
-            delim_whitespace=True,
-            engine="python",
-            **read_kwargs,
-        )
-    elif ext in {".parquet", ".pq", ".feather", ".arrow"}:
-        iterator = _iter_parquet_batches(url, columns)
-    elif ext in {".xlsx", ".xls", ".xlsm"}:
-        # pandas does not support streaming Excel reads; fall back to a single frame.
-        frame = pd.read_excel(url, usecols=columns, engine="openpyxl")
-        yield frame
-        return
-    else:
-        raise ValueError("File type not supported for visualization")
-
-    yield from iterator
+        return "csv", ","
+    if ext in {".txt", ".dat"}:
+        return "txt", " "
+    if ext in {".xlsx", ".xls", ".xlsm"}:
+        return "excel", ","
+    if ext in {".parquet", ".pq", ".feather", ".arrow"}:
+        return "parquet", ","
+    if ext in {".mat"}:
+        return "mat", ","
+    raise ValueError(f"Unsupported extension {ext}")
 
 
-def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, int]:
-    x_min = np.inf
-    x_max = -np.inf
-    rows = 0
+def _download_object(minio, bucket: str, key: str) -> str:
+    tmp_fd, tmp_path = tempfile.mkstemp()
+    os.close(tmp_fd)
+    response = minio.get_object(bucket, key)
+    try:
+        with open(tmp_path, "wb") as handle:
+            for chunk in response.stream(256 * 1024):
+                handle.write(chunk)
+    finally:
+        try:
+            response.close()
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            response.release_conn()
+        except Exception:  # noqa: BLE001
+            pass
+    return tmp_path
 
-    for chunk in _iter_chunks(url, ext, x_axis, None):
-        series = chunk[x_axis].dropna()
-        if series.empty:
-            continue
-        chunk_min = series.min()
-        chunk_max = series.max()
-        x_min = min(x_min, chunk_min)
-        x_max = max(x_max, chunk_max)
-        rows += len(series)
 
-    if not np.isfinite(x_min) or not np.isfinite(x_max):
-        raise ValueError("Unable to detect range for x-axis")
-
-    return float(x_min), float(x_max), rows
-
-
-class LevelAccumulator:
-    def __init__(self, bins: int, x_min: float, x_max: float):
-        self.bins = bins
-        self.edges = np.linspace(x_min, x_max, num=bins + 1)
-        self.counts = np.zeros(bins, dtype=np.int64)
-        self.sums = np.zeros(bins, dtype=float)
-        self.mins = np.full(bins, np.inf)
-        self.maxs = np.full(bins, -np.inf)
-
-    def ingest(self, x: pd.Series, y: pd.Series):
-        bin_index = np.digitize(x.to_numpy(), self.edges) - 1
-        valid = (bin_index >= 0) & (bin_index < self.bins)
-        if not np.any(valid):
-            return
-        df = pd.DataFrame({"bin": bin_index[valid], "y": y.to_numpy()[valid]})
-        grouped = df.groupby("bin")["y"].agg(["count", "sum", "min", "max"])
-
-        bin_ids = grouped.index.to_numpy()
-        self.counts[bin_ids] += grouped["count"].to_numpy()
-        self.sums[bin_ids] += grouped["sum"].to_numpy()
-        self.mins[bin_ids] = np.minimum(self.mins[bin_ids], grouped["min"].to_numpy())
-        self.maxs[bin_ids] = np.maximum(self.maxs[bin_ids], grouped["max"].to_numpy())
-
-    def to_frame(self, x_axis: str, y_axis: str) -> pd.DataFrame:
-        centers = (self.edges[:-1] + self.edges[1:]) / 2
-        mean = np.divide(
-            self.sums,
-            self.counts,
-            out=np.zeros_like(self.sums),
-            where=self.counts > 0,
-        )
-        df = pd.DataFrame(
-            {
-                x_axis: centers,
-                "count": self.counts,
-                "y_mean": mean,
-                "y_min": self.mins,
-                "y_max": self.maxs,
-            }
-        )
-        df = df[df["count"] > 0].reset_index(drop=True)
-        return df
+def _frame_from_lod(level_data: dict, x_axis: str, y_axis: str) -> pd.DataFrame:
+    rows = level_data.get("rows", [])
+    if not rows:
+        return pd.DataFrame(columns=[x_axis, "count", f"{y_axis}_mean", f"{y_axis}_min", f"{y_axis}_max"])
+    df = pd.DataFrame(rows)
+    df = df.rename(
+        columns={
+            "x": x_axis,
+            "y_mean": y_axis,
+            "y_min": f"{y_axis}_min",
+            "y_max": f"{y_axis}_max",
+        }
+    )
+    return df
 
 
 def _materialize_tiles(
     minio,
     bucket: str,
     base_key: str,
-    url: str,
+    local_path: str,
     ext: str,
     x_axis: str,
     y_axis: str,
+    columns: list[str],
     levels: tuple[int, ...] = LOD_LEVELS,
 ):
-    x_min, x_max, rows = _scan_axis_bounds(url, ext, x_axis)
-    if x_min == x_max:
-        x_max = x_min + 1e-9
-    accumulators = {bins: LevelAccumulator(bins, x_min, x_max) for bins in levels}
+    file_type, delimiter = _file_type_and_delimiter(ext)
+    if x_axis not in columns or y_axis not in columns:
+        raise ValueError("Requested axes are not present in the dataset")
+    x_idx = columns.index(x_axis)
+    y_idx = columns.index(y_axis)
+
+    lod_result = lod_bins(
+        Path(local_path),
+        file_type=file_type,
+        x_axis_index=x_idx,
+        y_axis_index=y_idx,
+        levels=levels,
+        delimiter=delimiter,
+    )
 
     tiles = []
-    partitions = 0
-
-    for chunk in _iter_chunks(url, ext, x_axis, y_axis):
-        chunk = chunk.dropna(subset=[x_axis, y_axis])
-        if chunk.empty:
-            continue
-        partitions += 1
-        for acc in accumulators.values():
-            acc.ingest(chunk[x_axis], chunk[y_axis])
-
-    os.makedirs(tempfile.gettempdir(), exist_ok=True)
-    for level, acc in accumulators.items():
-        frame = acc.to_frame(x_axis, y_axis)
+    overview_frame = None
+    for level in lod_result.get("levels", []):
+        frame = _frame_from_lod(level, x_axis, y_axis)
         buffer = io.BytesIO()
         frame.to_parquet(buffer, index=False)
         buffer.seek(0)
-        object_name = f"{base_key}/level_{level}.parquet"
+        object_name = f"{base_key}/level_{level['level']}.parquet"
         minio.put_object(
             bucket_name=bucket,
             object_name=object_name,
@@ -184,20 +129,25 @@ def _materialize_tiles(
             length=len(buffer.getvalue()),
             content_type="application/octet-stream",
         )
+        if overview_frame is None or level.get("level", 0) == min(levels):
+            overview_frame = frame
         tiles.append(
             {
-                "level": level,
+                "level": level.get("level"),
                 "object_name": object_name,
                 "rows": len(frame),
-                "x_min": x_min,
-                "x_max": x_max,
+                "x_min": lod_result.get("x_min"),
+                "x_max": lod_result.get("x_max"),
             }
         )
 
-    overview_level = min(levels)
-    overview_frame = accumulators[overview_level].to_frame(x_axis, y_axis)
-
-    return overview_frame, tiles, {"x_min": x_min, "x_max": x_max, "rows": rows, "partitions": partitions}
+    overview_frame = overview_frame if overview_frame is not None else pd.DataFrame()
+    return overview_frame, tiles, {
+        "x_min": lod_result.get("x_min"),
+        "x_max": lod_result.get("x_max"),
+        "rows": lod_result.get("rows", 0),
+        "partitions": lod_result.get("partitions", 0),
+    }
 
 
 def _build_figure(series_frames: list[dict], x_axis: str, chart_type: str):
@@ -317,13 +267,13 @@ def generate_visualization(self, viz_id: str):
         tile_metadata = []
         stats_metadata = []
 
+        temp_paths: list[str] = []
+
         for idx, item in enumerate(series_jobs, start=1):
-            data_url = minio.presigned_get_object(
-                bucket_name=settings.ingestion_bucket,
-                object_name=item["job"]["storage_key"],
-                expires=timedelta(hours=6),
-            )
+            storage_key = item["job"]["storage_key"]
             ext = os.path.splitext(item["job"].get("filename", "").lower())[-1]
+            local_path = _download_object(minio, settings.ingestion_bucket, storage_key)
+            temp_paths.append(local_path)
 
             _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
             base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
@@ -331,10 +281,11 @@ def generate_visualization(self, viz_id: str):
                 minio,
                 bucket,
                 base_key,
-                data_url,
+                local_path,
                 ext,
                 doc["x_axis"],
                 item["series"]["y_axis"],
+                columns=item["job"].get("columns", []),
             )
 
             display_frame = overview.rename(
@@ -397,3 +348,7 @@ def generate_visualization(self, viz_id: str):
                 link=f"/app/projects/{doc.get('project_id')}/visualisation" if doc.get("project_id") else None,
             )
         raise
+    finally:
+        for path in temp_paths:
+            if os.path.exists(path):
+                os.remove(path)

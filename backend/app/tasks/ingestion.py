@@ -4,15 +4,14 @@ import tempfile
 from datetime import datetime
 from typing import List
 
-import pandas as pd
 from bson import ObjectId
 from celery import states
-from scipy.io import loadmat
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_sync_redis
+from app.core.rust_bridge import RustNotInstalled, summarize_file
 from app.db.sync_mongo import get_sync_db
 from app.repositories.notifications import create_sync_notification
 
@@ -40,120 +39,6 @@ def _publish(job_id: str, status: str, progress: int, message: str = ""):
     )
     redis.publish(f"ingestion:{job_id}:events", payload)
     _set_status(redis, job_id, status, progress, message or status)
-
-
-def _summarise_dataframe(
-    chunks, provided_headers=None, header_mode: str = "file", *, header_only: bool = True
-):
-    """Summarise columns without scanning the whole file.
-
-    Only the first available chunk/frame is inspected so we can return headers
-    almost immediately. This avoids spending time parsing thousands of rows
-    when callers only need the column list for chart selection.
-    """
-
-    columns: List[str] = []
-    rows_seen = 0
-    sample_rows: list[dict] = []
-    for chunk in chunks:
-        if header_mode == "none" and not provided_headers:
-            chunk.columns = [f"column_{i+1}" for i in range(len(chunk.columns))]
-        elif provided_headers:
-            if len(provided_headers) != len(chunk.columns):
-                raise ValueError(
-                    "Number of custom headers does not match detected columns"
-                )
-            chunk.columns = provided_headers
-        if not columns:
-            columns = list(chunk.columns)
-        if not header_only and not sample_rows:
-            sample_rows = chunk.head(5).to_dict(orient="records")
-        rows_seen += len(chunk)
-        break
-    return {
-        "columns": columns,
-        "sample_rows": sample_rows,
-        "rows_seen": rows_seen,
-    }
-
-
-def _parse_csv(
-    path: str,
-    header_mode: str = "file",
-    custom_headers: list[str] | None = None,
-    delimiter: str = ",",
-):
-    read_kwargs = {"delimiter": delimiter}
-    if header_mode == "none":
-        read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
-    elif header_mode == "custom":
-        read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
-    else:
-        read_kwargs["header"] = 0
-        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
-
-    return _summarise_dataframe(df_iter, custom_headers, header_mode)
-
-
-def _parse_excel(
-    path: str, header_mode: str = "file", custom_headers: list[str] | None = None
-):
-    read_kwargs = {"sheet_name": 0}
-    if header_mode == "none":
-        read_kwargs["header"] = None
-        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
-    elif header_mode == "custom":
-        read_kwargs["header"] = None
-        df_iter = [pd.read_excel(path, nrows=1, **read_kwargs)]
-    else:
-        read_kwargs["header"] = 0
-        df_iter = [pd.read_excel(path, nrows=0, **read_kwargs)]
-    return _summarise_dataframe(df_iter, custom_headers, header_mode)
-
-
-def _parse_dat(
-    path: str, header_mode: str = "file", custom_headers: list[str] | None = None
-):
-    read_kwargs = {"delim_whitespace": True, "engine": "python"}
-    if header_mode == "none":
-        read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
-    elif header_mode == "custom":
-        read_kwargs["header"] = None
-        df_iter = [pd.read_csv(path, nrows=1, **read_kwargs)]
-    else:
-        read_kwargs["header"] = 0
-        df_iter = [pd.read_csv(path, nrows=0, **read_kwargs)]
-    return _summarise_dataframe(df_iter, custom_headers, header_mode)
-
-
-def _parse_mat(path: str):
-    raw = loadmat(path)
-    filtered = {k: v for k, v in raw.items() if not k.startswith("__")}
-    rows = []
-    columns: List[str] = []
-    meta = {}
-    for name, arr in filtered.items():
-        meta[name] = {"shape": list(arr.shape), "dtype": str(arr.dtype)}
-        if arr.ndim == 2 and arr.size > 0:
-            columns = [f"{name}_{i}" for i in range(arr.shape[1])]
-            for idx in range(min(10, arr.shape[0])):
-                rows.append(
-                    {
-                        f"{name}_{i}": (
-                            arr[idx][i].item() if hasattr(arr[idx][i], "item") else arr[idx][i]
-                        )
-                        for i in range(min(arr.shape[1], 6))
-                    }
-                )
-    return {
-        "columns": columns,
-        "sample_rows": rows,
-        "rows_seen": len(rows),
-        "metadata": meta,
-    }
 
 
 @celery_app.task(bind=True, name=f"{settings.celery_task_prefix}.ingest_file")
@@ -214,24 +99,26 @@ def ingest_file(
             {"_id": ObjectId(job_id)},
             {"$set": {"status": states.STARTED, "progress": 25, "updated_at": datetime.utcnow()}},
         )
-        if ext in [".csv"]:
-            summary = _parse_csv(
-                tmp_path, header_mode=header_mode, custom_headers=custom_headers
-            )
-        elif ext in [".xlsx", ".xlsm", ".xls"]:
-            summary = _parse_excel(
-                tmp_path, header_mode=header_mode, custom_headers=custom_headers
-            )
+        file_type = "csv"
+        delimiter = ","
+        if ext in [".xlsx", ".xlsm", ".xls"]:
+            file_type = "excel"
         elif ext in [".dat", ".txt"]:
-            summary = _parse_dat(
-                tmp_path, header_mode=header_mode, custom_headers=custom_headers
-            )
+            file_type = "txt"
+            delimiter = " "
         elif ext in [".mat"]:
-            summary = _parse_mat(tmp_path)
-        else:
-            summary = _parse_csv(
-                tmp_path, header_mode=header_mode, custom_headers=custom_headers
+            file_type = "mat"
+
+        try:
+            summary = summarize_file(
+                tmp_path,
+                file_type=file_type,
+                header_mode=header_mode,
+                custom_headers=custom_headers,
+                delimiter=delimiter,
             )
+        except RustNotInstalled:
+            raise
 
         _publish(job_id, states.SUCCESS, 100, "Ingestion finished")
         db.ingestion_jobs.update_one(
