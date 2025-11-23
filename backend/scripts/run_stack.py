@@ -187,6 +187,8 @@ def main() -> None:
                 args.host,
                 "--port",
                 str(args.port),
+                "--workers",
+                "8",
             ],
         )
     )
