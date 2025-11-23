@@ -59,6 +59,18 @@ class NotificationRepository:
         )
         return res.modified_count
 
+    async def delete_for_user(self, notification_id: str, user_email: str) -> bool:
+        db = await get_db()
+        res = await db[self.collection].delete_one(
+            {"_id": ObjectId(notification_id), "user_email": user_email}
+        )
+        return res.deleted_count > 0
+
+    async def delete_all_for_user(self, user_email: str) -> int:
+        db = await get_db()
+        res = await db[self.collection].delete_many({"user_email": user_email})
+        return res.deleted_count
+
 
 def create_sync_notification(
     user_email: str,
