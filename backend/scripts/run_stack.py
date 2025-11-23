@@ -79,6 +79,13 @@ def ensure_rust_extension(build: bool) -> None:
     ``backend/rust/flightdata_rust``.
     """
 
+    def _has_python_env() -> bool:
+        return bool(
+            os.environ.get("VIRTUAL_ENV")
+            or os.environ.get("CONDA_PREFIX")
+            or getattr(sys, "real_prefix", sys.prefix) != getattr(sys, "base_prefix", sys.prefix)
+        )
+
     try:
         importlib.import_module("flightdata_rust")
         print("[rust] flightdata_rust already installed")
@@ -105,11 +112,30 @@ def ensure_rust_extension(build: bool) -> None:
     print(f"[rust] building flightdata_rust from {crate_dir}")
     try:
         run_command([sys.executable, "-m", "pip", "install", "maturin>=1.4,<2"], check=True)
-        run_command(
-            [sys.executable, "-m", "maturin", "develop", "--release"],
-            check=True,
-            cwd=crate_dir,
-        )
+        if _has_python_env():
+            run_command(
+                [sys.executable, "-m", "maturin", "develop", "--release"],
+                check=True,
+                cwd=crate_dir,
+            )
+        else:
+            print("[rust] no virtualenv or conda environment detected; building wheel instead")
+            run_command(
+                [sys.executable, "-m", "maturin", "build", "--release"],
+                check=True,
+                cwd=crate_dir,
+            )
+            wheels = sorted(
+                (crate_dir / "target" / "wheels").glob("flightdata_rust-*.whl"),
+                key=lambda path: path.stat().st_mtime,
+                reverse=True,
+            )
+            if not wheels:
+                raise RuntimeError("maturin build succeeded but no wheel was produced")
+            run_command(
+                [sys.executable, "-m", "pip", "install", str(wheels[0])],
+                check=True,
+            )
     except Exception as exc:  # noqa: BLE001 - show helpful guidance
         msg = f"flightdata_rust build failed: {exc}"
         if sys.platform.startswith("win"):
