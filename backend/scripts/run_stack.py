@@ -17,6 +17,7 @@ left running so they can be reused across runs.
 """
 
 import argparse
+import os
 import importlib
 import signal
 import shutil
