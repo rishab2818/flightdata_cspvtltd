@@ -68,17 +68,6 @@ def _windows_rust_help() -> str:
     )
 
 
-def _has_virtual_env() -> bool:
-    """Detect whether a virtualenv or conda env is active/available."""
-
-    if "VIRTUAL_ENV" in os.environ or "CONDA_PREFIX" in os.environ:
-        return True
-
-    # maturin also accepts a `.venv` folder in the current or parent dirs
-    sentinel = PROJECT_ROOT / ".venv"
-    return sentinel.exists()
-
-
 def ensure_rust_extension(build: bool) -> None:
     """Guarantee the compiled Rust wheel is importable.
 
@@ -116,56 +105,11 @@ def ensure_rust_extension(build: bool) -> None:
     print(f"[rust] building flightdata_rust from {crate_dir}")
     try:
         run_command([sys.executable, "-m", "pip", "install", "maturin>=1.4,<2"], check=True)
-
-        if _has_virtual_env():
-            try:
-                run_command(
-                    [sys.executable, "-m", "maturin", "develop", "--release"],
-                    check=True,
-                    cwd=crate_dir,
-                )
-            except RuntimeError:
-                # Fallback to wheel build/install when maturin refuses to
-                # operate without an activated venv/conda env.
-                run_command(
-                    [
-                        sys.executable,
-                        "-m",
-                        "maturin",
-                        "build",
-                        "--release",
-                        "--out",
-                        "target/wheels",
-                    ],
-                    check=True,
-                    cwd=crate_dir,
-                )
-                wheels = sorted((crate_dir / "target" / "wheels").glob("flightdata_rust-*.whl"))
-                if not wheels:
-                    raise RuntimeError("maturin build succeeded but no wheel was produced")
-                latest_wheel = wheels[-1]
-                run_command([sys.executable, "-m", "pip", "install", str(latest_wheel)], check=True)
-        else:
-            # No env detected; build a wheel and install it with pip so the
-            # system Python can import it.
-            run_command(
-                [
-                    sys.executable,
-                    "-m",
-                    "maturin",
-                    "build",
-                    "--release",
-                    "--out",
-                    "target/wheels",
-                ],
-                check=True,
-                cwd=crate_dir,
-            )
-            wheels = sorted((crate_dir / "target" / "wheels").glob("flightdata_rust-*.whl"))
-            if not wheels:
-                raise RuntimeError("maturin build succeeded but no wheel was produced")
-            latest_wheel = wheels[-1]
-            run_command([sys.executable, "-m", "pip", "install", str(latest_wheel)], check=True)
+        run_command(
+            [sys.executable, "-m", "maturin", "develop", "--release"],
+            check=True,
+            cwd=crate_dir,
+        )
     except Exception as exc:  # noqa: BLE001 - show helpful guidance
         msg = f"flightdata_rust build failed: {exc}"
         if sys.platform.startswith("win"):
