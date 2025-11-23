@@ -4,35 +4,6 @@ import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { LazyTileCard } from '../../../components/viz/LazyTileCard'
 
-function LazyTileCard({ tile, seriesIndex, onLoadTile, children }) {
-  const cardRef = useRef(null)
-  const hasTriggered = useRef(false)
-
-  useEffect(() => {
-    if (!cardRef.current || !onLoadTile) return undefined
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasTriggered.current) {
-            hasTriggered.current = true
-            onLoadTile(seriesIndex, tile.level, { silent: true })
-          }
-        })
-      },
-      { threshold: 0.6 }
-    )
-
-    observer.observe(cardRef.current)
-    return () => observer.disconnect()
-  }, [onLoadTile, seriesIndex, tile.level])
-
-  return (
-    <div ref={cardRef} className="viz-item viz-item--inline">
-      {children}
-    </div>
-  )
-}
-
 const chartTypes = [
   { value: 'scatter', label: 'Scatter' },
   { value: 'line', label: 'Line' },
