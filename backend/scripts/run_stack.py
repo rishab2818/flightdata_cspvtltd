@@ -7,11 +7,17 @@ folder:
 
     python scripts/run_stack.py --host 0.0.0.0 --port 8000
 
+By default the script will build and install the ``flightdata_rust`` extension
+on first use if it is missing. Pass ``--build-rust`` to force a rebuild of the
+wheel, or ``--no-build-rust`` to skip the automatic install and fail if the
+module is unavailable.
+
 Press ``Ctrl+C`` to stop the API and Celery processes. Docker containers are
 left running so they can be reused across runs.
 """
 
 import argparse
+import importlib
 import signal
 import shutil
 import subprocess
@@ -28,8 +34,16 @@ from app.core.system_info import describe_autoscale
 DATA_ROOT = PROJECT_ROOT / "data"
 
 
-def run_command(args: List[str], check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+def run_command(
+    args: List[str], check: bool = True, cwd: Optional[Path] = None
+) -> subprocess.CompletedProcess:
+    result = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        cwd=str(cwd) if cwd else None,
+    )
     if check and result.returncode != 0:
         raise RuntimeError(f"Command failed ({' '.join(args)}):\n{result.stdout}")
     return result
@@ -42,6 +56,40 @@ def ensure_docker_available() -> None:
         run_command(["docker", "info"], check=True)
     except RuntimeError as exc:
         raise RuntimeError("Docker is installed but not reachable. Is the daemon running?") from exc
+
+
+def ensure_rust_extension(*, auto_build: bool, force_rebuild: bool) -> None:
+    """Guarantee the compiled Rust wheel is importable.
+
+    If ``flightdata_rust`` is missing, build/install it with ``maturin`` in release
+    mode. ``auto_build`` controls whether the script should attempt to build when
+    the module is absent, and ``force_rebuild`` allows callers to rebuild even when
+    an installed wheel is already present.
+    """
+
+    crate_dir = PROJECT_ROOT / "rust" / "flightdata_rust"
+
+    try:
+        importlib.import_module("flightdata_rust")
+        if not force_rebuild:
+            print("[rust] flightdata_rust already installed")
+            return
+        print("[rust] rebuilding flightdata_rust (force requested)")
+    except ModuleNotFoundError:
+        if not auto_build:
+            raise RuntimeError(
+                "flightdata_rust extension is not installed. Rerun run_stack.py "
+                "with --build-rust to compile it, or install the wheel manually."
+            )
+        print("[rust] flightdata_rust not found; building automatically")
+
+    print(f"[rust] building flightdata_rust from {crate_dir}")
+    run_command([sys.executable, "-m", "pip", "install", "maturin>=1.4,<2"], check=True)
+    run_command(
+        [sys.executable, "-m", "maturin", "develop", "--release"],
+        check=True,
+        cwd=crate_dir,
+    )
 
 
 def container_exists(name: str) -> bool:
@@ -134,6 +182,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--minio-api-port", type=int, default=9000, help="MinIO API port (default: 9000)")
     parser.add_argument("--mongo-port", type=int, default=27017, help="MongoDB port (default: 27017)")
     parser.add_argument("--redis-port", type=int, default=6379, help="Redis port (default: 6379)")
+    parser.add_argument(
+        "--build-rust",
+        action="store_true",
+        help="Force a rebuild of the flightdata_rust extension even if it is already installed",
+    )
+    parser.add_argument(
+        "--no-build-rust",
+        action="store_true",
+        help="Disable automatic build/install of flightdata_rust when it is missing",
+    )
     return parser.parse_args()
 
 
@@ -141,6 +199,7 @@ def main() -> None:
     args = parse_args()
     ensure_data_dirs()
     ensure_docker_available()
+    ensure_rust_extension(auto_build=not args.no_build_rust, force_rebuild=args.build_rust)
 
     minio_env = {"MINIO_ROOT_USER": "minioadmin", "MINIO_ROOT_PASSWORD": "minioadmin"}
 
