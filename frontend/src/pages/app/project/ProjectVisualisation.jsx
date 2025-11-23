@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
+import { LazyTileCard } from '../../../components/viz/LazyTileCard'
 
 function LazyTileCard({ tile, seriesIndex, onLoadTile, children }) {
   const cardRef = useRef(null)
@@ -75,6 +76,21 @@ export default function ProjectVisualisation() {
     try {
       const list = await visualizationApi.listForProject(projectId)
       setVisualizations(list)
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message)
+    }
+  }
+
+  const deleteVisualization = async (vizId) => {
+    if (!window.confirm('Delete this visualization?')) return
+    try {
+      await visualizationApi.remove(vizId)
+      setVisualizations((prev) => prev.filter((item) => item.viz_id !== vizId))
+      if (activeViz?.viz_id === vizId) {
+        setActiveViz(null)
+        setPlotHtml('')
+        setTilePreview(null)
+      }
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)
     }
@@ -401,6 +417,14 @@ export default function ProjectVisualisation() {
                       Download
                     </button>
                   )}
+                  <button
+                    className="project-shell__nav-link"
+                    type="button"
+                    onClick={() => deleteVisualization(viz.viz_id)}
+                    style={{ background: '#fff1f2', color: '#b91c1c', borderColor: '#fecdd3' }}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}

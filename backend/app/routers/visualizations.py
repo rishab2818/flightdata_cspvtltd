@@ -3,7 +3,7 @@ import logging
 from datetime import timedelta
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 
 from app.core.auth import CurrentUser, get_current_user
@@ -133,6 +133,33 @@ async def create_visualization(
     generate_visualization.delay(viz_id)
     doc = _with_series(await repo.get(viz_id))
     return VisualizationOut(**doc)
+
+
+@router.delete("/{viz_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_visualization(viz_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visualization not found")
+    await _ensure_member(doc["project_id"], user)
+
+    minio = get_minio_client()
+    bucket = settings.visualization_bucket
+    if minio.bucket_exists(bucket):
+        if doc.get("html_key"):
+            try:
+                minio.remove_object(bucket_name=bucket, object_name=doc["html_key"])
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to delete visualization html: %s", exc)
+
+        for item in doc.get("tiles", []) or []:
+            for tile in item.get("tiles", []) or []:
+                try:
+                    minio.remove_object(bucket_name=bucket, object_name=tile.get("object_name"))
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Failed to delete tile object: %s", exc)
+
+    await repo.delete(viz_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{viz_id}", response_model=VisualizationOut)

@@ -37,8 +37,10 @@ async def mark_read(notification_id: str, user: CurrentUser = Depends(get_curren
     updated = await repo.mark_as_read(notification_id, user.email)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+    await repo.delete_for_user(notification_id, user.email)
 
 
 @router.post("/read-all", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_all_read(user: CurrentUser = Depends(get_current_user)):
     await repo.mark_all_as_read(user.email)
+    await repo.delete_all_for_user(user.email)

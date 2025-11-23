@@ -25,4 +25,7 @@ export const visualizationApi = {
     const { data } = await axiosClient.get(`/api/visualizations/${vizId}/tiles`, { params })
     return data
   },
+  remove: async (vizId) => {
+    await axiosClient.delete(`/api/visualizations/${vizId}`)
+  },
 }
