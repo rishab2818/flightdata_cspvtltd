@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
+import StreamingPlot from '../../../components/app/StreamingPlot'
 
 const chartTypes = [
   { value: 'scatter', label: 'Scatter' },
@@ -479,6 +480,7 @@ export default function ProjectVisualisation() {
             )}
           </div>
         )}
+        {activeViz?.viz_id && <StreamingPlot viz={activeViz} />}
       </div>
     </div>
   )
