@@ -36,7 +36,7 @@ export function NotificationProvider({ children }) {
     async (notificationId) => {
       try {
         await notificationsApi.markAsRead(notificationId)
-        setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, is_read: true, isRead: true } : n)))
+        setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
       } catch (err) {
         console.error('Failed to mark notification as read', err)
       }
@@ -47,7 +47,7 @@ export function NotificationProvider({ children }) {
   const markAllAsRead = useCallback(async () => {
     try {
       await notificationsApi.markAllAsRead()
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true, isRead: true })))
+      setNotifications([])
     } catch (err) {
       console.error('Failed to mark all notifications as read', err)
     }
