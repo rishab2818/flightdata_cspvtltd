@@ -58,13 +58,19 @@ export default function ProjectShell() {
               to={item.to}
               end={item.to === ''}
               className={({ isActive }) =>
-                ['project-shell__nav-link',
-                  isActive || location.pathname.endsWith(`/${item.to}`)
-                    ? 'project-shell__nav-link--active'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')
+                {
+                  const basePath = `/app/projects/${projectId}`
+                  const isSectionActive = item.to
+                    ? location.pathname.startsWith(`${basePath}/${item.to}`)
+                    : location.pathname === basePath
+
+                  return [
+                    'project-shell__nav-link',
+                    isActive || isSectionActive ? 'project-shell__nav-link--active' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                }
               }
             >
               {item.label}

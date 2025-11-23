@@ -47,11 +47,12 @@ const dedupeMerge = (current, incoming, xKey, yKey) => {
   return merged
 }
 
-export default function StreamingPlot({ viz }) {
+export default function StreamingPlot({ viz, autoStart = true }) {
   const [seriesData, setSeriesData] = useState([])
   const [fullRange, setFullRange] = useState(null)
   const [windowSize, setWindowSize] = useState(null)
   const [nextStart, setNextStart] = useState(null)
+  const [started, setStarted] = useState(autoStart)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState(null)
@@ -112,6 +113,8 @@ export default function StreamingPlot({ viz }) {
         setNextStart(end)
       } catch (err) {
         setError(err?.response?.data?.detail || err.message || 'Failed to load data window')
+        setHasMore(false)
+        setNextStart(null)
       } finally {
         pendingWindows.current.delete(key)
         setLoading(false)
@@ -130,6 +133,7 @@ export default function StreamingPlot({ viz }) {
       setHasMore(false)
       setError(null)
       pendingWindows.current.clear()
+      setStarted(autoStart)
       return
     }
 
@@ -146,15 +150,24 @@ export default function StreamingPlot({ viz }) {
     setHasMore(true)
     setError(null)
     pendingWindows.current.clear()
-    loadWindow(start, start + span)
-  }, [viz, loadWindow])
+    setStarted(autoStart)
+
+    if (autoStart) {
+      loadWindow(start, start + span)
+    }
+  }, [viz, loadWindow, autoStart])
+
+  useEffect(() => {
+    setStarted(autoStart)
+  }, [autoStart, viz?.viz_id])
 
   useEffect(() => () => {
     if (scrollThrottle.current) clearTimeout(scrollThrottle.current)
   }, [])
 
   const maybeLoadNext = useCallback(() => {
-    if (!viz?.viz_id || loading || !hasMore || !windowSize || nextStart === null) return
+    if (!started || !viz?.viz_id || loading || !hasMore || !windowSize || nextStart === null)
+      return
     const el = scrollRef.current
     if (!el) return
     const nearRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 80
@@ -164,11 +177,20 @@ export default function StreamingPlot({ viz }) {
   }, [viz, loading, hasMore, windowSize, nextStart, loadWindow])
 
   const handleScroll = () => {
+    if (!started) return
     if (scrollThrottle.current) return
     scrollThrottle.current = setTimeout(() => {
       scrollThrottle.current = null
       maybeLoadNext()
     }, 180)
+  }
+
+  const startStreaming = () => {
+    if (!viz?.viz_id || !windowSize || nextStart === null) return
+    setError(null)
+    setHasMore(true)
+    setStarted(true)
+    loadWindow(nextStart, nextStart + windowSize)
   }
 
   const chartWidth = useMemo(() => {
@@ -193,7 +215,24 @@ export default function StreamingPlot({ viz }) {
             </p>
           )}
         </div>
-        {loading && <span className="badge">Loading…</span>}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {!started && (
+            <button className="project-shell__nav-link" type="button" onClick={startStreaming}>
+              Start streaming
+            </button>
+          )}
+          {started && hasMore && (
+            <button
+              className="project-shell__nav-link"
+              type="button"
+              onClick={() => windowSize && nextStart !== null && loadWindow(nextStart, nextStart + windowSize)}
+              disabled={loading}
+            >
+              Load next window
+            </button>
+          )}
+          {loading && <span className="badge">Loading…</span>}
+        </div>
       </div>
 
       {error && <div className="project-shell__error">{error}</div>}
@@ -202,41 +241,51 @@ export default function StreamingPlot({ viz }) {
         ref={scrollRef}
         onScroll={handleScroll}
         onWheel={handleScroll}
-        style={{ overflowX: 'auto', border: '1px solid #e0e0e0', borderRadius: 8, padding: 8 }}
+        style={{
+          overflowX: 'auto',
+          border: '1px solid #e0e0e0',
+          borderRadius: 8,
+          padding: 8,
+          background: started ? 'white' : '#fafafa',
+        }}
       >
-        <div style={{ minWidth: chartWidth }}>
-          <ResponsiveContainer width="100%" height={320}>
-            <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                type="number"
-                dataKey={viz.x_axis}
-                name={viz.x_axis}
-                domain={fullRange ? [fullRange.x_min, fullRange.x_max] : ['auto', 'auto']}
-              />
-              <YAxis type="number" dataKey={yAxis} name={yAxis} />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-              <Legend />
-              {viz.series.map((serie, idx) => (
-                <Scatter
-                  key={`scatter-${idx}`}
-                  name={serie.label || serie.y_axis}
-                  data={seriesData[idx] || []}
-                  dataKey={serie.y_axis}
-                  fill={palette[idx % palette.length]}
-                  line
+        {started ? (
+          <div style={{ minWidth: chartWidth }}>
+            <ResponsiveContainer width="100%" height={320}>
+              <ScatterChart>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  dataKey={viz.x_axis}
+                  name={viz.x_axis}
+                  domain={fullRange ? [fullRange.x_min, fullRange.x_max] : ['auto', 'auto']}
                 />
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
+                <YAxis type="number" dataKey={yAxis} name={yAxis} />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                <Legend />
+                {viz.series.map((serie, idx) => (
+                  <Scatter
+                    key={`scatter-${idx}`}
+                    name={serie.label || serie.y_axis}
+                    data={seriesData[idx] || []}
+                    dataKey={serie.y_axis}
+                    fill={palette[idx % palette.length]}
+                    line
+                  />
+                ))}
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="empty-state" style={{ minHeight: 220 }}>Click “Start streaming” to load windowed data.</div>
+        )}
       </div>
 
       <div className="actions-row" style={{ justifyContent: 'space-between' }}>
         <span className="summary-label">
           Window size: {windowSize ? windowSize.toFixed(2) : '-'} · Loaded points: {seriesData[0]?.length || 0}
         </span>
-        {!hasMore && <span className="summary-label">End of plot reached</span>}
+        {!hasMore && started && <span className="summary-label">End of plot reached</span>}
       </div>
     </div>
   )
