@@ -7,10 +7,9 @@ folder:
 
     python scripts/run_stack.py --host 0.0.0.0 --port 8000
 
-By default the script will build and install the ``flightdata_rust`` extension
-on first use if it is missing. Pass ``--build-rust`` to force a rebuild of the
-wheel, or ``--no-build-rust`` to skip the automatic install and fail if the
-module is unavailable.
+Pass ``--build-rust`` to auto-compile and install the ``flightdata_rust``
+extension (via maturin) if it is not already available in the active Python
+environment.
 
 Press ``Ctrl+C`` to stop the API and Celery processes. Docker containers are
 left running so they can be reused across runs.
@@ -58,31 +57,26 @@ def ensure_docker_available() -> None:
         raise RuntimeError("Docker is installed but not reachable. Is the daemon running?") from exc
 
 
-def ensure_rust_extension(*, auto_build: bool, force_rebuild: bool) -> None:
+def ensure_rust_extension(build: bool) -> None:
     """Guarantee the compiled Rust wheel is importable.
 
-    If ``flightdata_rust`` is missing, build/install it with ``maturin`` in release
-    mode. ``auto_build`` controls whether the script should attempt to build when
-    the module is absent, and ``force_rebuild`` allows callers to rebuild even when
-    an installed wheel is already present.
+    If ``flightdata_rust`` is missing, optionally build/install it with ``maturin``
+    in release mode. This keeps the ingestion/visualization paths on the Rust fast
+    path without requiring a manual install step.
     """
-
-    crate_dir = PROJECT_ROOT / "rust" / "flightdata_rust"
 
     try:
         importlib.import_module("flightdata_rust")
-        if not force_rebuild:
-            print("[rust] flightdata_rust already installed")
-            return
-        print("[rust] rebuilding flightdata_rust (force requested)")
+        print("[rust] flightdata_rust already installed")
+        return
     except ModuleNotFoundError:
-        if not auto_build:
+        if not build:
             raise RuntimeError(
                 "flightdata_rust extension is not installed. Rerun run_stack.py "
                 "with --build-rust to compile it, or install the wheel manually."
             )
-        print("[rust] flightdata_rust not found; building automatically")
 
+    crate_dir = PROJECT_ROOT / "rust" / "flightdata_rust"
     print(f"[rust] building flightdata_rust from {crate_dir}")
     run_command([sys.executable, "-m", "pip", "install", "maturin>=1.4,<2"], check=True)
     run_command(
@@ -185,12 +179,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--build-rust",
         action="store_true",
-        help="Force a rebuild of the flightdata_rust extension even if it is already installed",
-    )
-    parser.add_argument(
-        "--no-build-rust",
-        action="store_true",
-        help="Disable automatic build/install of flightdata_rust when it is missing",
+        help="Build/install the flightdata_rust extension with maturin if it is missing",
     )
     return parser.parse_args()
 
@@ -199,7 +188,7 @@ def main() -> None:
     args = parse_args()
     ensure_data_dirs()
     ensure_docker_available()
-    ensure_rust_extension(auto_build=not args.no_build_rust, force_rebuild=args.build_rust)
+    ensure_rust_extension(build=args.build_rust)
 
     minio_env = {"MINIO_ROOT_USER": "minioadmin", "MINIO_ROOT_PASSWORD": "minioadmin"}
 
