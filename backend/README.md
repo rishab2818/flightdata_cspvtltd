@@ -4,7 +4,7 @@ This folder contains the FastAPI backend along with helper scripts for running
 its dependencies (MongoDB, Redis, and MinIO) locally.
 
 ## Quick start (one command)
-1. Install system requirements: Python 3.11+, Docker running and on your PATH.
+1. Install system requirements: Python 3.11+, Docker running and on your PATH. On Windows, install Rust (`cargo`) via https://rustup.rs/ plus the Visual Studio Build Tools "Desktop development with C++" workload so the Rust extension can compile.
 2. Install dependencies once:
    ```bash
    python -m pip install --upgrade pip
@@ -21,6 +21,16 @@ its dependencies (MongoDB, Redis, and MinIO) locally.
    - Launch a Celery worker with autoscale bounds derived from your CPU/RAM.
      On Windows, Celery falls back to the `solo` pool (autoscale disabled)
      because the prefork pool is unsupported.
+   - Build and install the `flightdata_rust` extension automatically with
+     [`maturin`](https://www.maturin.rs/) if it is not already available. This
+     Rust extension powers the fast file parsers used by Celery tasks and lives
+     under `backend/rust/flightdata_rust`. Pass `--no-build-rust` if you have
+     preinstalled the wheel and want to skip the build step.
+
+Windows users: see `WINDOWS.md` for a PowerShell-first walk-through, including the Visual Studio Build Tools download link.
+
+Rust (cargo) must be on your PATH for the automatic build. Install it from
+https://rustup.rs/ if you do not already have it.
 
 Access the API at `http://<host>:<port>/docs` and the MinIO console at
 `http://<host>:9090`. Press `Ctrl+C` to stop uvicorn and Celery; the Docker

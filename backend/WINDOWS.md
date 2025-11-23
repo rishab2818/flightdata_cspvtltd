@@ -4,9 +4,15 @@ These steps assume Windows 10/11 with PowerShell 7+. They keep the Option 2 stac
 
 ## 1. Prerequisites
 - **Python 3.11+** installed and on your `PATH`.
+- **Rust toolchain (cargo) on `PATH`** so the `flightdata_rust` extension can be built automatically.
+  - Install via <https://rustup.rs/> and restart PowerShell after installation so `cargo` is available.
+- **Build tools for Python/Rust extensions on Windows**. If you do not have Visual Studio installed, the lightest option is
+  [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload.
 - **PowerShell 7+** (preferred for consistent scripting).
 - **Docker Desktop** running (used to start MongoDB, Redis, and an optional MinIO container).
 - **Git** to clone the repository.
+
+> Why Rust? The backend ships a small Rust extension named `flightdata_rust` (in `backend/rust/flightdata_rust`) that speeds up file parsing for the Celery tasks. The helper scripts will build and install it for you on first run; you just need `cargo` and the C++ build tools available.
 
 ## 2. Clone and create a virtual environment
 ```pwsh
@@ -18,7 +24,21 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## 3. Configure environment (optional)
+## 3. One-command run (Python helper)
+This path uses the cross-platform `scripts/run_stack.py` helper so you only run one command. It will:
+- Verify Docker is reachable.
+- Build and install `flightdata_rust` automatically if it is missing (requires `cargo` + build tools).
+- Start MongoDB, Redis, and MinIO in Docker.
+- Launch uvicorn and a Celery worker.
+
+From `backend/` with your virtual environment active:
+```pwsh
+python scripts/run_stack.py --host 127.0.0.1 --port 8000
+```
+
+The first run may take a couple of minutes while `maturin` compiles the Rust wheel. Subsequent runs will reuse the installed wheel and already-created Docker containers. API docs will be at `http://127.0.0.1:8000/docs`; MinIO console at `http://127.0.0.1:9090`.
+
+## 4. Configure environment (optional)
 Defaults in `app/core/config.py` already point to `localhost` for MongoDB, Redis, and MinIO. If you need to override anything (e.g., changing JWT secret or MinIO credentials), create a `.env` file in `backend/`:
 ```env
 MONGO_URI=mongodb://127.0.0.1:27017
@@ -32,7 +52,7 @@ MINIO_INGESTION_BUCKET=ingestion
 JWT_SECRET=change-me
 ```
 
-## 4. Start backing services (MongoDB, MinIO, Redis)
+## 5. Start backing services (MongoDB, MinIO, Redis)
 Run these in PowerShell with Docker Desktop running. Redis is auto-started by the stack script, but starting it yourself is harmless.
 ```pwsh
 # MongoDB (data persisted to a local folder)
@@ -48,7 +68,7 @@ docker run -d --name flightdata-redis -p 6379:6379 redis:7
 ```
 > If you already have a native MinIO install, you can instead run `../start-minio.ps1` after adjusting its `MINIO_EXE` and data directory paths.
 
-## 5. Launch the API and Celery
+## 6. Launch the API and Celery
 The helper script computes autoscale bounds from your CPU/RAM and then launches uvicorn and Celery workers. Because Celery's prefork pool is not supported on Windows, the script uses the `solo` pool (single worker) to avoid spawn/unpack errors you may see in the logs. Run it from `backend/` with your virtual environment active:
 ```pwsh
 ./scripts/run-stack.ps1 -PythonPath "./.venv/Scripts/python.exe" -Host "127.0.0.1" -ApiPort 8000
@@ -57,12 +77,12 @@ The helper script computes autoscale bounds from your CPU/RAM and then launches 
 - Celery runs with the `solo` pool on Windows; autoscale is disabled because it depends on the prefork pool.
 - If Redis is not running, the script will start a `flightdata-redis` Docker container automatically.
 
-## 6. Verifying and interacting
+## 7. Verifying and interacting
 - Open `http://127.0.0.1:8000/docs` for the FastAPI Swagger UI.
 - Upload files via the ingestion endpoints; MinIO buckets `ingestion` and `user-docs` will be created on demand by the tasks.
 - Logs from uvicorn and Celery appear in the PowerShell windows started by the script. Stop them with `Ctrl+C` or by closing the processes.
 
-## 7. Stopping services
+## 8. Stopping services
 ```pwsh
 # Stop API/Celery: close the PowerShell sessions or end the processes.
 # Stop Docker containers (if you started them):

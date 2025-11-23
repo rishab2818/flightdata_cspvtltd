@@ -7,15 +7,17 @@ folder:
 
     python scripts/run_stack.py --host 0.0.0.0 --port 8000
 
-Pass ``--build-rust`` to auto-compile and install the ``flightdata_rust``
+By default this script will auto-compile and install the ``flightdata_rust``
 extension (via maturin) if it is not already available in the active Python
-environment.
+environment. Pass ``--no-build-rust`` to skip this step if you have already
+installed the wheel elsewhere.
 
 Press ``Ctrl+C`` to stop the API and Celery processes. Docker containers are
 left running so they can be reused across runs.
 """
 
 import argparse
+import os
 import importlib
 import signal
 import shutil
@@ -57,12 +59,35 @@ def ensure_docker_available() -> None:
         raise RuntimeError("Docker is installed but not reachable. Is the daemon running?") from exc
 
 
+def _windows_rust_help() -> str:
+    return (
+        "Windows quick help: ensure Docker Desktop is running, install the "
+        "Visual Studio Build Tools with C++ workload, and confirm `cargo` is "
+        "on PATH (install from https://rustup.rs/). Then re-run this script; it "
+        "will compile flightdata_rust automatically."
+    )
+
+
+def _has_virtual_env() -> bool:
+    """Detect whether a virtualenv or conda env is active/available."""
+
+    if "VIRTUAL_ENV" in os.environ or "CONDA_PREFIX" in os.environ:
+        return True
+
+    # maturin also accepts a `.venv` folder in the current or parent dirs
+    sentinel = PROJECT_ROOT / ".venv"
+    return sentinel.exists()
+
+
 def ensure_rust_extension(build: bool) -> None:
     """Guarantee the compiled Rust wheel is importable.
 
-    If ``flightdata_rust`` is missing, optionally build/install it with ``maturin``
-    in release mode. This keeps the ingestion/visualization paths on the Rust fast
-    path without requiring a manual install step.
+    If ``flightdata_rust`` is missing, build/install it with ``maturin`` in
+    release mode unless the user explicitly disables the build. This keeps the
+    ingestion/visualization paths on the Rust fast path without requiring a
+    manual install step. ``flightdata_rust`` is the Rust extension that powers
+    the faster parsers used by Celery tasks; it is built from
+    ``backend/rust/flightdata_rust``.
     """
 
     try:
@@ -72,18 +97,83 @@ def ensure_rust_extension(build: bool) -> None:
     except ModuleNotFoundError:
         if not build:
             raise RuntimeError(
-                "flightdata_rust extension is not installed. Rerun run_stack.py "
-                "with --build-rust to compile it, or install the wheel manually."
+                "flightdata_rust extension is not installed and auto-build is "
+                "disabled. Rerun without --no-build-rust (or install the "
+                "wheel manually)."
             )
+
+    if shutil.which("cargo") is None:
+        msg = (
+            "Rust toolchain (cargo) is not available. Install Rust from "
+            "https://rustup.rs/ and re-run this script to compile the "
+            "flightdata_rust extension automatically."
+        )
+        if sys.platform.startswith("win"):
+            msg = f"{msg}\n\n{_windows_rust_help()}"
+        raise RuntimeError(msg)
 
     crate_dir = PROJECT_ROOT / "rust" / "flightdata_rust"
     print(f"[rust] building flightdata_rust from {crate_dir}")
-    run_command([sys.executable, "-m", "pip", "install", "maturin>=1.4,<2"], check=True)
-    run_command(
-        [sys.executable, "-m", "maturin", "develop", "--release"],
-        check=True,
-        cwd=crate_dir,
-    )
+    try:
+        run_command([sys.executable, "-m", "pip", "install", "maturin>=1.4,<2"], check=True)
+
+        if _has_virtual_env():
+            try:
+                run_command(
+                    [sys.executable, "-m", "maturin", "develop", "--release"],
+                    check=True,
+                    cwd=crate_dir,
+                )
+            except RuntimeError:
+                # Fallback to wheel build/install when maturin refuses to
+                # operate without an activated venv/conda env.
+                run_command(
+                    [
+                        sys.executable,
+                        "-m",
+                        "maturin",
+                        "build",
+                        "--release",
+                        "--out",
+                        "target/wheels",
+                    ],
+                    check=True,
+                    cwd=crate_dir,
+                )
+                wheels = sorted((crate_dir / "target" / "wheels").glob("flightdata_rust-*.whl"))
+                if not wheels:
+                    raise RuntimeError("maturin build succeeded but no wheel was produced")
+                latest_wheel = wheels[-1]
+                run_command([sys.executable, "-m", "pip", "install", str(latest_wheel)], check=True)
+        else:
+            # No env detected; build a wheel and install it with pip so the
+            # system Python can import it.
+            run_command(
+                [
+                    sys.executable,
+                    "-m",
+                    "maturin",
+                    "build",
+                    "--release",
+                    "--out",
+                    "target/wheels",
+                ],
+                check=True,
+                cwd=crate_dir,
+            )
+            wheels = sorted((crate_dir / "target" / "wheels").glob("flightdata_rust-*.whl"))
+            if not wheels:
+                raise RuntimeError("maturin build succeeded but no wheel was produced")
+            latest_wheel = wheels[-1]
+            run_command([sys.executable, "-m", "pip", "install", str(latest_wheel)], check=True)
+    except Exception as exc:  # noqa: BLE001 - show helpful guidance
+        msg = f"flightdata_rust build failed: {exc}"
+        if sys.platform.startswith("win"):
+            msg = f"{msg}\n\n{_windows_rust_help()}"
+        raise RuntimeError(msg) from exc
+
+    importlib.import_module("flightdata_rust")
+    print("[rust] flightdata_rust built and installed")
 
 
 def container_exists(name: str) -> bool:
@@ -178,8 +268,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--redis-port", type=int, default=6379, help="Redis port (default: 6379)")
     parser.add_argument(
         "--build-rust",
-        action="store_true",
-        help="Build/install the flightdata_rust extension with maturin if it is missing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Build/install the flightdata_rust extension with maturin if it is "
+            "missing (default: enabled). Use --no-build-rust to skip."
+        ),
     )
     return parser.parse_args()
 
