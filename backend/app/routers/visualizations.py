@@ -3,11 +3,13 @@ import logging
 from datetime import timedelta
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
+from app.core.data_window import fetch_data_window
 from app.core.minio_client import get_minio_client
 from app.models.visualization import (
     VisualizationCreateRequest,
@@ -78,6 +80,22 @@ def _with_series(doc: dict | None):
     for item in doc.get("series", []):
         item.setdefault("label", item.get("y_axis"))
     return doc
+
+
+def _series_stats_for_index(doc: dict, index: int) -> dict | None:
+    stats_list = doc.get("series_stats") or []
+    if not stats_list:
+        return None
+
+    series = (doc.get("series") or [])[index]
+    for item in stats_list:
+        meta = item.get("series") or {}
+        if (
+            meta.get("job_id") == series.get("job_id")
+            and meta.get("y_axis") == series.get("y_axis")
+        ):
+            return item.get("stats") or item
+    return None
 
 
 async def _ensure_member(project_id: str, user: CurrentUser):
@@ -191,6 +209,66 @@ async def get_visualization_tile(
         "rows": len(df),
         "tile": chosen,
         "data": df.to_dict(orient="records"),
+    }
+
+
+@router.get("/{viz_id}/window")
+async def get_visualization_window(
+    viz_id: str,
+    start: float = Query(..., description="Lower bound for x range (inclusive)"),
+    end: float = Query(..., description="Upper bound for x range (inclusive)"),
+    series: int = Query(default=0, ge=0, description="Series index to retrieve"),
+    offset: int = Query(default=0, ge=0, description="Offset within the filtered window"),
+    limit: int = Query(default=2000, ge=1, le=20000, description="Max rows to return"),
+    user: CurrentUser = Depends(get_current_user),
+    response: Response | None = None,
+):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Visualization not found")
+    await _ensure_member(doc["project_id"], user)
+    hydrated = _with_series(doc)
+
+    if not hydrated.get("series") or series >= len(hydrated["series"]):
+        raise HTTPException(status_code=400, detail="Series index out of range")
+
+    series_doc = hydrated["series"][series]
+    job = await ingestions.get_job(series_doc.get("job_id"))
+    if not job or job.get("project_id") != hydrated.get("project_id"):
+        raise HTTPException(status_code=404, detail="Dataset not found for requested series")
+
+    try:
+        window = await run_in_threadpool(
+            fetch_data_window,
+            job["storage_key"],
+            job.get("filename") or series_doc.get("filename") or "dataset",
+            hydrated["x_axis"],
+            series_doc["y_axis"],
+            start,
+            end,
+            offset,
+            limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    stats = _series_stats_for_index(hydrated, series)
+    if stats and response is not None:
+        headers = {
+            "X-Range-Min": stats.get("x_min"),
+            "X-Range-Max": stats.get("x_max"),
+            "X-Total-Rows": stats.get("rows"),
+        }
+        for key, value in headers.items():
+            if value is not None:
+                response.headers[key] = str(value)
+
+    return {
+        "series": series_doc,
+        "x_axis": hydrated.get("x_axis"),
+        "y_axis": series_doc.get("y_axis"),
+        "range": stats,
+        **window,
     }
 
 
