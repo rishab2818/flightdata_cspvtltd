@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
-import StreamingPlot from '../../../components/app/StreamingPlot'
 
 const chartTypes = [
   { value: 'scatter', label: 'Scatter' },
@@ -179,6 +178,15 @@ export default function ProjectVisualisation() {
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)
     }
+  }
+
+  const openStreamingTab = () => {
+    if (!activeViz?.viz_id) return
+    window.open(
+      `/app/projects/${projectId}/visualisation/stream/${activeViz.viz_id}`,
+      '_blank',
+      'noopener,noreferrer'
+    )
   }
 
   return (
@@ -480,7 +488,30 @@ export default function ProjectVisualisation() {
             )}
           </div>
         )}
-        {activeViz?.viz_id && <StreamingPlot viz={activeViz} />}
+        <div className="project-card" style={{ marginTop: 12 }}>
+          <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+            <div>
+              <p className="summary-label" style={{ margin: 0 }}>Data window streaming</p>
+              <h4 style={{ margin: '4px 0 0 0' }}>Open in a dedicated tab</h4>
+              <p className="summary-label" style={{ margin: 0 }}>
+                Streaming runs separately to avoid extra load on this page.
+              </p>
+            </div>
+            <button
+              className="project-shell__nav-link"
+              type="button"
+              onClick={openStreamingTab}
+              disabled={!activeViz?.viz_id}
+            >
+              Open streaming view
+            </button>
+          </div>
+          {!activeViz?.viz_id && (
+            <p className="summary-label" style={{ margin: '6px 0 0 0' }}>
+              Select a visualization above to enable streaming.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
