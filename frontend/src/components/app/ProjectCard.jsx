@@ -9,17 +9,17 @@ import { FiCalendar, FiUser, FiEye } from 'react-icons/fi';
 import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
 
-export default function ProjectCardImproved({ name, type, date, members, desc }) {
+export default function ProjectCardImproved({ name, type, date, members, desc, onView }) {
   return (
     <div
       style={{
-        width: 573,
-        height: 215,
+        width: '100%',
+        minHeight: 215,
         gap: SPACING.md,
         borderRadius: 8,
         background: COLORS.background,
         border: `1px solid ${COLORS.border}`,
-        padding: `${SPACING.lg + SPACING.md}px ${SPACING.lg}px`,
+        padding: `${SPACING.lg + SPACING.sm}px ${SPACING.lg}px`,
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -108,7 +108,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc })
           </div>
         </div>
         {/* view project button */}
-        <Button variant="secondary" style={{ padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 999 }}>
+        <Button variant="secondary" style={{ padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 999 }} onClick={onView}>
           <FiEye size={16} /> <span>View Project</span>
         </Button>
       </div>

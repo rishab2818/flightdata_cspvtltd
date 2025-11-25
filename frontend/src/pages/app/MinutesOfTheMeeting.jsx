@@ -119,7 +119,7 @@ export default function MinutesOfTheMeeting() {
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
 
   return (
-    <div style={{ width: 1026 }}>
+    <div style={{ width: "100%", maxWidth: 1180, margin: "0 auto" }}>
       {/* page title */}
       <h1
         style={{
