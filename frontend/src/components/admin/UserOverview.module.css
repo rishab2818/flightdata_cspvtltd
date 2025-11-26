@@ -5,6 +5,7 @@
   box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
   display: flex;
   flex-direction: column;
+  gap: 36px;
 }
 
 .body {
@@ -25,6 +26,7 @@
   font-weight: 500;
   color:#333333;
   font-size: 24px;
+  font-family: 'Inter';
 }
 
 .totalWrap {
@@ -38,27 +40,23 @@
 }
 
 .totalNum {
-font-family: Inter;
-font-weight: 500;
-font-style: Medium;
-font-size: 48px;
-leading-trim: NONE;
-line-height: 100%;
-letter-spacing: 0%;
-text-align: center;
-
+  font-family: 'Inter';
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 48px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  text-align: center;
   color: #1976D2;
 }
 
 .totalLabel {
   color: #000000;
-font-weight: 400;
-font-style: Regular;
-font-size: 16px;
-leading-trim: NONE;
-line-height: 100%;
-letter-spacing: 0%;
-
+  font-weight: 400;
+  font-style: Regular;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
 }
 
 .scroll {
@@ -95,9 +93,7 @@ text-align: center;
 width: 120;
 height: 19;
 gap: 4px;
-angle: 0 deg;
 opacity: 1;
-
 }
 
 /* thin divider like your mock */

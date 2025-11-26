@@ -1,43 +1,103 @@
-.stats.container{
-    display: flex;
-    gap: 40px;
-    flex-wrap: warp;
+/* ------------------------------ */
+/* Responsive Grid                */
+/* ------------------------------ */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
 }
+
+/* Large screens (default) → 6 cards */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Tablets → 3 cards */
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile landscape → 2 cards */
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Small phones → 1 card */
+@media (max-width: 400px) {
+  .stats-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+/* ------------------------------ */
+/* Card Responsiveness            */
+/* ------------------------------ */
+
 .frame-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.icon-box {
-  width: 24px;
-  height: 24px;
-  position: relative;
-}
-
-.icon {
-  width: 87.5%;
-  height: 65.62%;
-  position: absolute;
-  top: 18.75%;
-  left: 9.38%;
-}
-
-.texts {
+  min-height: 150px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 67px;
+  border-radius: 8px;
+  padding: 24px;
 }
 
-.label {
-  font-size: 15px;
-  color: #727272;
-  font-family: "SF Pro-Medium", Helvetica;
+/* On smaller screens: smaller padding */
+@media (max-width: 600px) {
+  .frame-item {
+    padding: 18px;
+  }
+
+  .value {
+    font-size: 20px !important;
+  }
 }
 
+/* Extra small: adjust icon + text */
+@media (max-width: 400px) {
+  .frame-item {
+    padding: 14px;
+  }
+
+  .icon {
+    height: 25px;
+    width: 25px;
+  }
+
+  .label {
+    font-size: 12px !important;
+  }
+
+  .value {
+    font-size: 15px !important;
+  }
+}
+
+/* Icon container */
+.icon-box {
+  aspect-ratio: 1;
+  height: 30px;
+  position: relative;
+  width: 30px;
+}
+
+/* Title text */
+.texts .label {
+  font-weight: 500;
+}
+
+/* Value text */
 .value {
-  font-size: 24px;
-  color: #000;
-  font-family: "SF Pro-Heavy", Helvetica;
+  margin-top: 8px;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  font-weight: bold;
 }

@@ -1,5 +1,6 @@
 // src/components/admin/Sidebar.jsx
 import React from "react";
+import "./Sidebar.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -39,7 +40,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <Box
+    <Box className="sidebar"
       component="aside"
       sx={{
         width: 300,
@@ -53,19 +54,19 @@ export default function Sidebar() {
       }}
     >
       {/* Brand */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+      <Box  className="sidebar-brand" sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
         <img
           src={brandIcon}
           alt="Brand"
           style={{ width: 40, height: 40, borderRadius: 16, objectFit: "cover" }}
         />
-        <Typography sx={{ fontWeight: 700, color: "#0F172A" }}>
+        <Typography className="sidebar-title" sx={{ fontWeight: 500, color: "#333333"}}>
           Data Visualisation
         </Typography>
       </Box>
 
       {/* Navigation */}
-      <List sx={{ mt: 1 }}>
+      <List className="sidebar-menu" sx={{ mt: 1 }}>
         {menu.map(({ label, path, icon }) => {
           const active = isActive(path);
 
@@ -86,7 +87,7 @@ export default function Sidebar() {
                 transition: "all 0.2s ease",
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+              <ListItemIcon className="sidebar-item-icon">
                 <img
                   src={icon}
                   alt={label}
@@ -96,7 +97,7 @@ export default function Sidebar() {
                   }}
                 />
               </ListItemIcon>
-              <ListItemText
+              <ListItemText className="sidebar-item-text"
                 primary={label}
                 primaryTypographyProps={{
                   fontWeight: active ? 600 : 400,

@@ -123,16 +123,8 @@ export default function InventoryRecords() {
   }, [orders]);
 
   return (
+   
     <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 22 }}>Inventory Records</h2>
-          <p style={{ margin: "6px 0 0", color: "#475569" }}>
-            Upload supply orders, track deliveries, and keep supporting files together.
-          </p>
-        </div>
-      </div>
-
       <div
         style={{
           marginTop: 18,
