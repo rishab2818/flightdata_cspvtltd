@@ -25,8 +25,8 @@
 }
 
 .statIcon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   background: #FFF;
   display: flex;
@@ -66,8 +66,9 @@
 
 .filterGroup {
   display: flex;
-  gap: 16px;
+  padding: 20px 0px 20px 10px;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
 .filterLabel {
@@ -78,7 +79,7 @@
 
 .filterText {
   font-size: 14px;
-  color: #0A0A0A;
+  color: #0a0a0a;
   font-family: "Inter-medium", Helvetica;
   font-weight: 500;
 }
@@ -86,18 +87,18 @@
 .select {
   height: 36px;
   min-width: 270px;
-  padding: 0 12px;
+  padding: 0px 12px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  font-family: "Inter-regular, Helvetica";
+  font-family: "Inter-regular", Helvetica;
   font-size: 14PX;
   font-weight: 400;
   background-color: #F3F3F5;
 }
 
-.addBtn {
+.addBtn { 
+  align-items: center;   
   background:#1976D2; 
-  align-items: center;    
   color: white;
   border: none;
   border-radius: 10px;
@@ -105,13 +106,18 @@
   font-size: 16px;
   font-weight: 400;
   cursor: pointer;
-  font-family: "Inter-regular, Helvetica"; 
+  font-family: "Inter-regular", Helvetica; 
   justify-content: space-between;
   position: relative;
   width: 200px; 
-  height: 40px;
+  height: 50px;
   gap: 10px;   
-  margin-top: 10px;   
+  margin-top: 10px; 
+   
+}
+
+.addBtn:hover {
+  background: #1d4ed8;
 }
 
 /* ---------- Table ---------- */
@@ -119,7 +125,8 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 24px 24px 24px 24px;
+  padding: 0px 24px 24px 24px;
+  height:100%;
 }
 
 .tableWrapper {
@@ -127,7 +134,7 @@
 }
 
 .h3{
-  font-family: "Inter-semiBold" Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
   font-size: 16px;
   font-weight: 600;
   color: #0a0a0a;
@@ -148,7 +155,7 @@
   cursor: pointer;
   font-size: 16px;
   color: #0a0a0a;
-  font-family: "Inter-semiBold" Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
 }
 
 .activeTab {
@@ -171,10 +178,8 @@
   text-align: left;
   font-size: 12px;
   font-weight: 400;
-  font-family: "Inter-regular" Helvetica;
+  font-family: "Inter-regular", Helvetica;
 }
-
-
 
 .statusBadge {
   padding: 6px 12px;
@@ -208,7 +213,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 18px;
-  font-family: "Inter-semiBold" Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
   font-weight: 600;
   color: #0a0a0a;
 }
@@ -236,7 +241,7 @@
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
-  font-family: "Inter-medium" Helvetica;
+  font-family: "Inter-medium", Helvetica;
   font-weight: 500;
   color: #0a0a0a;
 }
@@ -247,7 +252,7 @@
   color: #717182;
   font-size: 14px;
   font-weight: 400;
-  font-family: "Inter-regular" Helvetica;
+  font-family: "Inter-regular", Helvetica;
   height: 36px;
   border-radius: 8px;
   padding: 4px 12px;

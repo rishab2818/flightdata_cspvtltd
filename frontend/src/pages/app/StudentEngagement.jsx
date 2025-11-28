@@ -264,8 +264,7 @@ export default function StudentEngagement() {
             ]}
           />
         </div>
-
-        <button className={styles.addBtn} onClick={() => setShowModal(true)}>
+           <button className={styles.addBtn} onClick={() => setShowModal(true)}>
           + Add Student
         </button>
       </section>
