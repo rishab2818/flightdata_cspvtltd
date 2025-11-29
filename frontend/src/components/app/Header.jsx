@@ -34,7 +34,7 @@ export default function Header() {
           style={{
             fontSize: 28,
             fontWeight: 600,
-            color: "#0f172a",
+            color: "#1976D2",
             margin: 0,
           }}
         >

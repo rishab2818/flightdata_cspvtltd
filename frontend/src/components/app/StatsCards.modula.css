@@ -1,0 +1,103 @@
+/* ------------------------------ */
+/* Responsive Grid                */
+/* ------------------------------ */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* Large screens (default) → 6 cards */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Tablets → 3 cards */
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile landscape → 2 cards */
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Small phones → 1 card */
+@media (max-width: 400px) {
+  .stats-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+/* ------------------------------ */
+/* Card Responsiveness            */
+/* ------------------------------ */
+
+.frame-item {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+/* On smaller screens: smaller padding */
+@media (max-width: 600px) {
+  .frame-item {
+    padding: 18px;
+  }
+
+  .value {
+    font-size: 20px !important;
+  }
+}
+
+/* Extra small: adjust icon + text */
+@media (max-width: 400px) {
+  .frame-item {
+    padding: 14px;
+  }
+
+  .icon {
+    height: 25px;
+    width: 25px;
+  }
+
+  .label {
+    font-size: 12px !important;
+  }
+
+  .value {
+    font-size: 15px !important;
+  }
+}
+
+/* Icon container */
+.icon-box {
+  aspect-ratio: 1;
+  height: 30px;
+  position: relative;
+  width: 30px;
+}
+
+/* Title text */
+.texts .label {
+  font-weight: 500;
+}
+
+/* Value text */
+.value {
+  margin-top: 8px;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  font-weight: bold;
+}

@@ -3,7 +3,7 @@ import { usersApi } from '../../api/usersApi';
 import { Card, CardContent } from '@mui/material';
 import SpeedometerIcon from '../../assets/Speedometer.svg';
 import RocketIcon from '../../assets/RocketLaunch.svg';
-import Userthreeicon from '../../assets/UsersThree.svg';
+import Usersthreeicon from '../../assets/UsersThree.svg';
 import medalicon from '../../assets/MedalMilitary.svg';
 import bookicon from '../../assets/Book.svg';
 import styles from './UserOverview.module.css';
@@ -19,7 +19,7 @@ import styles from './UserOverview.module.css';
  * Top 'Total Users' is all users length.
  */
 const Rocket = () => <img src={RocketIcon} alt="RocketIcon" style={{ width: 22.5, height: 16.53 }} />;
-const User3 = () => <img src={Userthreeicon} alt="Userthreeicon" style={{ width: 22.5, height: 16.53 }}/>;
+const User3 = () => <img src={Usersthreeicon} alt="Usersthreeicon" style={{ width: 22.5, height: 16.53 }}/>;
 const Medal = () => <img src={medalicon} alt="medalicon" style={{ width: 22.5, height: 16.53 }} />;
 const Book = () => <img src={bookicon} alt="bookicon" style={{ width: 22.5, height: 16.53 }}/>;
 const ROWS = [
@@ -78,8 +78,14 @@ export default function UserOverview() {
           <div className={styles.totalRow}>
             <div className={styles.totalNum}>{pad2(totals.total)}</div>
             <div className={styles.totalLabel}>Total Users</div>
+        {/* Icon */}
+        <img 
+        src={Usersthreeicon} 
+        alt="users icon"
+        className={styles.totalIcon}
+        />
           </div>
-        </div>
+      </div>
         <hr className={styles.hr} />
 
         {/* Rows */}

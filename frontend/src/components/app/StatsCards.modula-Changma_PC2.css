@@ -1,0 +1,43 @@
+.stats.container{
+    display: flex;
+    gap: 40px;
+    flex-wrap: warp;
+}
+.frame-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.icon-box {
+  width: 24px;
+  height: 24px;
+  position: relative;
+}
+
+.icon {
+  width: 87.5%;
+  height: 65.62%;
+  position: absolute;
+  top: 18.75%;
+  left: 9.38%;
+}
+
+.texts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 67px;
+}
+
+.label {
+  font-size: 15px;
+  color: #727272;
+  font-family: "SF Pro-Medium", Helvetica;
+}
+
+.value {
+  font-size: 24px;
+  color: #000;
+  font-family: "SF Pro-Heavy", Helvetica;
+}

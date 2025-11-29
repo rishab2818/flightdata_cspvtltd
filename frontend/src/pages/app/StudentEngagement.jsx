@@ -3,49 +3,33 @@ import { FiUploadCloud } from "react-icons/fi";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
 
-const PRIMARY = "#1D6FE6";
-const BORDER = "#E2E8F0";
+import Users from "../../assets/Users.svg";
+import Book1 from "../../assets/Book1.svg";
+import Ongoing from "../../assets/Ongoing.svg";
+import Cap from "../../assets/Cap.svg";
+import styles from "./StudentEngagement.module.css";
+
+
 const BADGE_COLORS = {
-  Ongoing: { bg: "#E0F2FE", text: "#0369A1" },
+  Ongoing: { bg: "#FEF3C7", text: "#B45309" },
   Completed: { bg: "#DCFCE7", text: "#15803D" },
+  Cancelled: { bg: "#FEE2E2", text: "#B91C1C" },
   Upcoming: { bg: "#EEF2FF", text: "#4F46E5" },
 };
 
-function StatCard({ title, value, icon, accent }) {
+/* -------------------- Components ---------------------- */
+
+function StatCard({ title, value, icon, bgColor }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
-        padding: 16,
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-        minWidth: 180,
-        flex: 1,
-      }}
-    >
-      <div
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 8,
-          background: accent || "#EFF6FF",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: 700,
-          color: PRIMARY,
-        }}
-      >
-        {icon}
+    <div className={styles.statCard}>
+      <div className={styles.statIcon}
+      style={{backgroundColor: bgColor}}>
+        <img src={icon} alt={title} />
       </div>
+
       <div>
-        <div style={{ color: "#6B7280", fontSize: 12 }}>{title}</div>
-        <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 20 }}>
-          {value}
-        </div>
+        <div className={styles.statLabel}>{title}</div>
+        <div className={styles.statValue}>{value}</div>
       </div>
     </div>
   );
@@ -53,16 +37,11 @@ function StatCard({ title, value, icon, accent }) {
 
 function Badge({ value }) {
   const palette = BADGE_COLORS[value] || { bg: "#E5E7EB", text: "#111827" };
+
   return (
     <span
-      style={{
-        padding: "6px 12px",
-        background: palette.bg,
-        color: palette.text,
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 600,
-      }}
+      className={styles.statusBadge}
+      style={{ background: palette.bg, color: palette.text }}
     >
       {value}
     </span>
@@ -71,20 +50,13 @@ function Badge({ value }) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
+    <label className={styles.filterLabel}>
+      <span className={styles.filterText}>{label}</span>
+
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{
-          minWidth: 180,
-          height: 38,
-          borderRadius: 8,
-          border: `1px solid ${BORDER}`,
-          padding: "0 12px",
-          background: "#fff",
-          color: "#0F172A",
-        }}
+        className={styles.select}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -96,6 +68,25 @@ function FilterSelect({ label, value, onChange, options }) {
   );
 }
 
+function Modal({ title, onClose, children }) {
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h3>{title}</h3>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------- Main Component -------------------- */
+
 export default function StudentEngagement() {
   const [tab, setTab] = useState("approved");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -103,6 +94,7 @@ export default function StudentEngagement() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [form, setForm] = useState({
     student: "",
     program_name: "",
@@ -113,16 +105,20 @@ export default function StudentEngagement() {
     status: "Ongoing",
     approval_status: "waiting",
     notes: "",
+    mentor: "",
   });
+
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
+  /* -------------------- Fetch -------------------- */
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const data = await studentEngagementApi.list();
-        setRecords(data);
+        setRecords(data || []);
       } catch (err) {
         setError("Failed to load student engagement records");
       } finally {
@@ -132,7 +128,8 @@ export default function StudentEngagement() {
     fetchData();
   }, []);
 
-  const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const onChange = (key, value) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
   const filtered = useMemo(() => {
     return records
@@ -143,7 +140,9 @@ export default function StudentEngagement() {
       )
       .filter((r) => {
         const matchesType = typeFilter === "all" || r.program_type === typeFilter;
-        const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "all" || r.status === statusFilter;
+
         return matchesType && matchesStatus;
       });
   }, [records, statusFilter, tab, typeFilter]);
@@ -153,17 +152,21 @@ export default function StudentEngagement() {
     const internships = records.filter((p) => p.program_type === "Internship").length;
     const ongoing = records.filter((p) => p.status === "Ongoing").length;
     const completed = records.filter((p) => p.status === "Completed").length;
+
     return [
-      { title: "Total Students", value: totalStudents, icon: "👥" },
-      { title: "Internships", value: internships, icon: "🎓" },
-      { title: "Ongoing Programs", value: ongoing, icon: "🌀" },
-      { title: "Completed", value: completed, icon: "✅" },
+      { title: "Total Students", value: totalStudents, icon: Users, bgColor: "#DBEAFE" },
+      { title: "Internships", value: internships, icon: Book1, bgColor: "#FFEDD4"},
+      { title: "Ongoing Programs", value: ongoing, icon: Ongoing,bgColor:"#DCFCE7" },
+      { title: "Completed", value: completed, icon: Cap, bgColor:"#F3E8FF"},
     ];
   }, [records]);
+
+  /* -------------------- Submit -------------------- */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     if (!form.student.trim() || !form.program_name.trim()) {
       setError("Student and program name are required");
       return;
@@ -171,29 +174,30 @@ export default function StudentEngagement() {
 
     try {
       setSubmitting(true);
-      let storage_key;
-      let original_name;
-      let content_type;
-      let size_bytes;
+
+      let storage_key, original_name, content_type, size_bytes;
 
       if (file) {
-        const content_hash = await computeSha256(file);
-        const initRes = await studentEngagementApi.initUpload({
+        const hash = await computeSha256(file);
+
+        const res = await studentEngagementApi.initUpload({
           filename: file.name,
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,
-          content_hash,
+          content_hash: hash,
         });
-        await fetch(initRes.upload_url, { method: "PUT", body: file });
-        storage_key = initRes.storage_key;
+
+        await fetch(res.upload_url, { method: "PUT", body: file });
+
+        storage_key = res.storage_key;
         original_name = file.name;
-        content_type = file.type || "application/octet-stream";
+        content_type = file.type;
         size_bytes = file.size;
       }
 
       const payload = {
         ...form,
-        duration_months: Number(form.duration_months || 0),
+        duration_months: Number(form.duration_months),
         storage_key,
         original_name,
         content_type,
@@ -202,6 +206,8 @@ export default function StudentEngagement() {
 
       const created = await studentEngagementApi.create(payload);
       setRecords((prev) => [created, ...prev]);
+
+      setShowModal(false);
       setForm({
         student: "",
         program_name: "",
@@ -212,6 +218,7 @@ export default function StudentEngagement() {
         status: "Ongoing",
         approval_status: "waiting",
         notes: "",
+        mentor: "",
       });
       setFile(null);
     } catch (err) {
@@ -222,331 +229,104 @@ export default function StudentEngagement() {
   };
 
   return (
-    <div style={{ width: "100%", maxWidth: 1220, margin: "0 auto" }}>
-      <header style={{ marginBottom: 16 }}>
-        <p style={{ color: "#6B7280", margin: 0 }}>Operations · Student Engagement</p>
-        <h1 style={{ margin: 0, color: "#0F172A" }}>Student Engagement</h1>
-        <p style={{ color: "#475569", marginTop: 8 }}>
-          Track student programs, internships, and approvals in one place.
-        </p>
-      </header>
-
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
+    <div className={styles.wrapper}>
+      {/* Stats */}
+      <section className={styles.statsGrid}>
+        {stats.map((s) => (
+          <StatCard key={s.title} {...s} /> // passes value,icons,title,bgColor
         ))}
       </section>
 
-      <section
-        style={{
-          background: "#fff",
-          border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 20,
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Add Student Engagement</h3>
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}
-        >
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Student Name</span>
-            <input
-              type="text"
-              value={form.student}
-              onChange={(e) => onChange("student", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-              required
-            />
-          </label>
+      {/* Filters */}
+      <section className={styles.filterBar}>
+        <div className={styles.filterGroup}>
+          <FilterSelect
+            label="Filter by Type"
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              { value: "all", label: "All Types" },
+              { value: "Internship", label: "Internship" },
+              { value: "Project", label: "Project" },
+              { value: "Research", label: "Research" },
+            ]}
+          />
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Program Name</span>
-            <input
-              type="text"
-              value={form.program_name}
-              onChange={(e) => onChange("program_name", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-              required
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Program Type</span>
-            <select
-              value={form.program_type}
-              onChange={(e) => onChange("program_type", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-            >
-              <option value="Internship">Internship</option>
-              <option value="Project">Project</option>
-              <option value="Research">Research</option>
-            </select>
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Duration (months)</span>
-            <input
-              type="number"
-              min={1}
-              value={form.duration_months}
-              onChange={(e) => onChange("duration_months", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Start Date</span>
-            <input
-              type="date"
-              value={form.start_date}
-              onChange={(e) => onChange("start_date", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-              required
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>End Date</span>
-            <input
-              type="date"
-              value={form.end_date}
-              onChange={(e) => onChange("end_date", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-              required
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Status</span>
-            <select
-              value={form.status}
-              onChange={(e) => onChange("status", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-            >
-              <option value="Ongoing">Ongoing</option>
-              <option value="Completed">Completed</option>
-              <option value="Upcoming">Upcoming</option>
-            </select>
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Approval</span>
-            <select
-              value={form.approval_status}
-              onChange={(e) => onChange("approval_status", e.target.value)}
-              style={{
-                height: 36,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 10px",
-              }}
-            >
-              <option value="approved">Approved</option>
-              <option value="waiting">Waiting</option>
-            </select>
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Notes</span>
-            <textarea
-              value={form.notes}
-              onChange={(e) => onChange("notes", e.target.value)}
-              rows={3}
-              style={{
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "8px 10px",
-                resize: "vertical",
-              }}
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document</span>
-            <div
-              style={{
-                border: `1px dashed ${BORDER}`,
-                borderRadius: 10,
-                padding: "10px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <FiUploadCloud />
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                style={{ flex: 1 }}
-              />
-            </div>
-          </label>
-
-          <div style={{ gridColumn: "span 2", display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                border: "none",
-                background: PRIMARY,
-                color: "#fff",
-                padding: "10px 16px",
-                borderRadius: 10,
-                cursor: "pointer",
-              }}
-            >
-              {submitting ? "Saving..." : "Save Engagement"}
-            </button>
-          </div>
-        </form>
-        {error && <p style={{ color: "#b91c1c", marginTop: 10 }}>{error}</p>}
+          <FilterSelect
+            label="Filter by Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: "all", label: "All Status" },
+              { value: "Ongoing", label: "Ongoing" },
+              { value: "Completed", label: "Completed" },
+              { value: "Upcoming", label: "Upcoming" },
+            ]}
+          />
+        </div>
+           <button className={styles.addBtn} onClick={() => setShowModal(true)}>
+          + Add Student
+        </button>
       </section>
 
-      <section
-        style={{
-          background: "#fff",
-          border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 16,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16,
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <div style={{ display: "flex", gap: 12 }}>
-            {["approved", "waiting"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${t === tab ? PRIMARY : BORDER}`,
-                  background: t === tab ? PRIMARY : "#fff",
-                  color: t === tab ? "#fff" : "#0F172A",
-                  cursor: "pointer",
-                }}
-              >
-                {t === "approved" ? "Approved" : "Waiting"}
-              </button>
-            ))}
-          </div>
+      {/* Table */}
+      <section className={styles.tableContainer}>
+        <h3>Student Programs</h3>
+        <div className={styles.tabRow}>
+          <button
+            className={`${styles.tabBtn} ${
+              tab === "approved" ? styles.activeTab : ""
+            }`}
+            onClick={() => setTab("approved")}
+          >
+            Approved
+          </button>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <FilterSelect
-              label="Program Type"
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={[
-                { value: "all", label: "All" },
-                { value: "Internship", label: "Internship" },
-                { value: "Project", label: "Project" },
-                { value: "Research", label: "Research" },
-              ]}
-            />
-            <FilterSelect
-              label="Status"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: "all", label: "All" },
-                { value: "Ongoing", label: "Ongoing" },
-                { value: "Completed", label: "Completed" },
-                { value: "Upcoming", label: "Upcoming" },
-              ]}
-            />
-          </div>
+          <button
+            className={`${styles.tabBtn} ${
+              tab === "waiting" ? styles.activeTab : ""
+            }`}
+            onClick={() => setTab("waiting")}
+          >
+            Waiting approval
+          </button>
         </div>
 
         {loading ? (
-          <p style={{ margin: 0 }}>Loading records...</p>
+          <p>Loading records...</p>
         ) : filtered.length === 0 ? (
-          <p style={{ margin: 0 }}>No student engagements found.</p>
+          <p>No student engagements found.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
               <thead>
-                <tr style={{ background: "#F8FAFC", textAlign: "left" }}>
+                <tr>
                   {[
-                    "Student",
-                    "Program Name",
+                    "Name",
+                    "Project Name",
                     "Type",
                     "Duration",
-                    "Start",
-                    "End",
+                    "Start Date",
+                    "End Date",
+                    "Mentor",
                     "Status",
                   ].map((col) => (
-                    <th key={col} style={{ padding: "12px 10px", fontWeight: 600 }}>
-                      {col}
-                    </th>
+                    <th key={col}>{col}</th>
                   ))}
                 </tr>
               </thead>
+
               <tbody>
                 {filtered.map((row) => (
-                  <tr key={`${row.record_id}`} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    <td style={{ padding: "12px 10px" }}>
-                      <div style={{ fontWeight: 600 }}>{row.student}</div>
-                      <div style={{ color: "#6B7280", fontSize: 12 }}>{row.notes || "—"}</div>
-                    </td>
-                    <td style={{ padding: "12px 10px" }}>{row.program_name}</td>
-                    <td style={{ padding: "12px 10px" }}>{row.program_type}</td>
-                    <td style={{ padding: "12px 10px" }}>{`${row.duration_months} months`}</td>
-                    <td style={{ padding: "12px 10px" }}>{row.start_date}</td>
-                    <td style={{ padding: "12px 10px" }}>{row.end_date}</td>
-                    <td style={{ padding: "12px 10px" }}>
+                  <tr key={row.record_id}>
+                    <td className={styles.bold}>{row.student}</td>
+                    <td>{row.program_name}</td>
+                    <td>{row.program_type}</td>
+                    <td>{row.duration_months} Months</td>
+                    <td>{row.start_date}</td>
+                    <td>{row.end_date}</td>
+                    <td>{row.mentor || "—"}</td>
+                    <td>
                       <Badge value={row.status} />
                     </td>
                   </tr>
@@ -556,6 +336,145 @@ export default function StudentEngagement() {
           </div>
         )}
       </section>
+
+      {/* Modal */}
+      {showModal && (
+        <Modal title="Add Student Program" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleSubmit} className={styles.formGrid}>
+            {/* Repeat input format */}
+            <label className={styles.inputLabel}>
+              <span>Student Name</span>
+              <input placeholder="Enter Student Name"
+                required
+                value={form.student}
+                onChange={(e) => onChange("student", e.target.value)}
+              />
+            </label>
+
+            <label className={styles.inputLabel}>
+              <span>Project Title</span>
+              <input placeholder="Enter Project Title"
+                required
+                value={form.project_title}
+                onChange={(e) => onChange("project_title", e.target.value)}
+              />
+            </label>
+
+            <label className={styles.inputLabel}>
+              <span>Program Type</span>
+              <select
+                value={form.program_type}
+                onChange={(e) => onChange("program_type", e.target.value)}
+              >
+                <option value="Internship">Internship</option>
+                <option value="Project">Project</option>
+                <option value="Research">Research</option>
+              </select>
+            </label>
+
+            <label className={styles.inputLabel}>
+              <span>Duration (months)</span>
+              <input
+                type="number"
+                min="1"
+                value={form.duration_months}
+                onChange={(e) => onChange("duration_months", e.target.value)}
+              />
+            </label>
+
+           <label className={styles.inputLabel}>
+            <div className={styles.daterow}>
+               <div className={styles.field}>
+              <span>Start Date</span>
+              <input
+                type="date"
+                required
+                value={form.start_date}
+                onChange={(e) => onChange("start_date", e.target.value)}
+              />
+              </div>
+
+              <div className={styles.field}>
+              <span>End Date</span>
+              <input
+                type="date"
+                required
+                value={form.end_date}
+                onChange={(e) => onChange("end_date", e.target.value)}
+              />
+              </div>
+            </div>
+           </label>
+           
+            <label className={styles.inputLabel}>
+              <span>Mentor</span>
+              <input placeholder="Enter Mentor Name"
+                value={form.mentor}
+                onChange={(e) => onChange("mentor", e.target.value)}
+              />
+            </label>
+
+            <label className={styles.inputLabel}>
+              <span>Status</span>
+              <select
+                value={form.status}
+                onChange={(e) => onChange("status", e.target.value)}
+              >
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
+                <option value="Upcoming">Upcoming</option>
+              </select>
+            </label>
+
+            <label className={styles.inputLabel}>
+              <span>Approval Status</span>
+              <select
+                value={form.approval_status}
+                onChange={(e) => onChange("approval_status", e.target.value)}
+              >
+                <option value="approved">Approved</option>
+                <option value="waiting">Waiting</option>
+              </select>
+            </label>
+
+            <label className={styles.textAreaLabel}>
+              <span>Notes</span>
+              <textarea
+                value={form.notes}
+                onChange={(e) => onChange("notes", e.target.value)}
+              />
+            </label>
+
+            <label className={styles.uploadLabel}>
+              <span>Upload Document</span>
+
+              <div className={styles.uploadBox}>
+                <FiUploadCloud />
+                <input
+                  type="file"
+                  onChange={(e) => setFile(e.target.files[0])}
+                />
+              </div>
+            </label>
+
+            <div className={styles.formActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+
+              <button type="submit" className={styles.saveBtn} disabled={submitting}>
+                {submitting ? "Saving..." : "+ Add Program"}
+              </button>
+            </div>
+
+            {error && <div className={styles.errorMsg}>{error}</div>}
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
