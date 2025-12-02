@@ -180,7 +180,7 @@
 }
 
 .table td {
-  text-align: center;
+  text-align: left;
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
   font-size: 12px;
@@ -198,27 +198,26 @@
   font-weight: 600;
 }
 
-/* ----------- Modal ----------- */
+ /*-----------------model styles-------------------------*/
 .modalOverlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
   align-items: center;
+  display: flex;
   justify-content: center;
+  padding: 20px;
   z-index: 50;
 }
 
 .modalBox {
-  width: 820px;
+  display: flex;
   max-width: 95%;
+  flex-direction: column;
+  gap: 20px;
+  width:820px;
   background: #fff;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.08);
   animation: pop 0.2s ease-out;
 }
   
@@ -229,8 +228,9 @@
 
 .modalHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
   font-size: 18px;
   font-family: "Inter-semiBold", Helvetica;
   font-weight: 600;
@@ -239,18 +239,20 @@
 
 .modalTitle {
   margin: 0;
+  font-size: 18px;
+  font-weight: 600;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 18px;
   font-family: "Inter-semiBold", Helvetica;
   font-weight: 600;
   color: #0a0a0a;
+
 }
 
 .modalSubtitle {
-  color: #0a0a0a;
   font-size: 12px;
+  color: #0a0a0a;
   margin-top: 4px;
   font-family: "Inter-regular", Helvetica;
 }
@@ -274,71 +276,80 @@
   margin-top: -20px;
 }
 
+.UploadGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+margin-top: 10px;
+}
+
+.input{
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+   border-radius: 6px;
+  font-size: 14px;
+  font-family: "Inter-medium", Helvetica;
+  font-weight: 500;
+  color: #0a0a0a;
+  background:#F3F3F5;
+
+}
+
+.inputBox {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: "Inter-medium", Helvetica;
+  font-weight: 500;
+  color: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .inputLabel {
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
-  font-family: "Inter-medium", Helvetica;
   font-weight: 500;
   color: #0a0a0a;
-}
-
-.inputBox {
-  padding: 10px;
-  background-color: #F3F3F5;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
   font-family: "Inter-medium", Helvetica;
-  font-weight: 500;
-  color: #0a0a0a;
 }
 
-.uploadGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 10px;
+textarea {
+width: 100%;
+padding: 8px;
+border: 1px solid #ccc;
+border-radius: 6px;
+font-size: 14px;
+
 }
 
-.uploadLabel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.uploadBox {
-  border: 1px dashed #94a3b8;
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-  cursor: pointer;
-  background: #F3F3F5;
-  width: 210px;
-}
-
-.fileInput {
-  margin-top: 8px;
-}
-
-.uploadText {
-  font-size: 14px;
-  color: #475569;
+.uploadBoxFile {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 16px;
+border: 1px dashed #999;
+border-radius: px;
+cursor: pointer;
+text-align: center;
+background:#F3F3F5;
 }
 
 .errorText {
-  color: #dc2626;
-  font-size: 14px;
+grid-column: span 2;
+color: #d00;
 }
 
-.modalFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+.modelFooter {
+grid-column: span 2;
+display: flex;
+justify-content: flex-end;
+gap: 10px;
 }
 
 .cancelBtn {
@@ -363,23 +374,8 @@
   cursor: not-allowed;
 }
 
-/* Responsive */
-@media (max-width: 640px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
 
-  .modalBox {
-    width: 90%;
-  }
 
-  .uploadGrid {
-    grid-template-columns: 1fr;
-  }
 
-  .filterBar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 14px;
-  }
-}
+
+

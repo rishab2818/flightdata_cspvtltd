@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { FiUploadCloud, FiPlus, FiCalendar, FiX } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
+import "./UploadMinutesModal.css";
 
 const BORDER = "#E5E7EB";
 const PRIMARY = "#1976D2";
@@ -212,412 +213,141 @@ export default function UploadMinutesModal({
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(15,23,42,0.35)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 100,
-      }}
-    >
-      <div
-        style={{
-          width: 720,
-          maxWidth: "95vw",
-          background: "#ffffff",
-          borderRadius: 12,
-          boxShadow: "0 24px 60px rgba(15,23,42,0.25)",
-          padding: "28px 32px 24px",
-        }}
-      >
-        <h2
-          style={{
-            margin: 0,
-            marginBottom: 24,
-            fontSize: 20,
-            fontWeight: 600,
-            color: "#0f172a",
-          }}
-        >
-          Upload Meeting Minutes
-        </h2>
+  <div className="modalOverlay">
+    <div className="modalBox">
+      <h2 className="modalTitle">Upload Meeting Minutes</h2>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 18 }}
-        >
-          {/* Action Points (multiple) */}
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: 13,
-                color: "#4b5563",
-                marginBottom: 6,
-              }}
-            >
-              Action Points
-            </label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <form onSubmit={handleSubmit} className="form">
+        {/* Action Points */}
+        <div>
+          <label className="label">Action Points</label>
+          <div className="row">
+            <input
+              type="text"
+              placeholder="CFD analysis to be conducted for Airbus 320"
+              value={actionPointInput}
+              onChange={(e) => setActionPointInput(e.target.value)}
+              onKeyDown={handleActionPointKeyDown}
+              className="textInput"
+            />
+            <button type="button" onClick={handleAddActionPoint} className="iconButton">
+              <FiPlus size={18} />
+            </button>
+          </div>
+
+          {actionPoints.length > 0 && (
+            <div className="chipContainer">
+              {actionPoints.map((pt, idx) => (
+                <span key={`${pt}-${idx}`} className="chip">
+                  {pt}
+                  <FiX size={12} onClick={() => handleRemoveActionPoint(idx)} className="chipRemove" />
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Meeting Date */}
+        <div className="dateWrap">
+          <label className="label">Meeting Date</label>
+          <div className="dateBox">
+            <FiCalendar size={16} className="dateIcon" />
+            <input
+              type="date"
+              value={meetingDate}
+              onChange={(e) => setMeetingDate(e.target.value)}
+              className="dateInput"
+            />
+          </div>
+        </div>
+
+        {/* Tag + Action On */}
+        <div className="row gap16">
+          <div className="flex1">
+            <label className="label">Tag Name</label>
+            <input
+              type="text"
+              placeholder="e.g., Strategy Planning, Team Sync"
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              className="textInput"
+            />
+          </div>
+
+          <div className="flex1">
+            <label className="label">Action on (Person / Role / Team)</label>
+            <div className="row">
               <input
                 type="text"
-                placeholder="CFD analysis to be conducted for Airbus 320"
-                value={actionPointInput}
-                onChange={(e) => setActionPointInput(e.target.value)}
-                onKeyDown={handleActionPointKeyDown}
-                style={{
-                  flex: 1,
-                  height: 40,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F9FAFB",
-                  padding: "0 12px",
-                  fontSize: 14,
-                }}
+                placeholder="e.g., CFD Team, Rishab, WT Group"
+                value={actionOnInput}
+                onChange={(e) => setActionOnInput(e.target.value)}
+                onKeyDown={handleActionOnKeyDown}
+                className="textInput"
               />
-              <button
-                type="button"
-                onClick={handleAddActionPoint}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  border: `1px solid ${BORDER}`,
-                  background: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
+              <button type="button" onClick={handleAddActionOn} className="iconButton">
                 <FiPlus size={18} />
               </button>
             </div>
-            {actionPoints.length > 0 && (
-              <div
-                style={{
-                  marginTop: 8,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 6,
-                }}
-              >
-                {actionPoints.map((pt, idx) => (
-                  <span
-                    key={`${pt}-${idx}`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      borderRadius: 999,
-                      border: `1px solid ${BORDER}`,
-                      background: "#F1F5F9",
-                      padding: "4px 8px",
-                      fontSize: 11,
-                      color: "#111827",
-                    }}
-                  >
-                    {pt}
-                    <FiX
-                      size={12}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleRemoveActionPoint(idx)}
-                    />
+
+            {actionOnList.length > 0 && (
+              <div className="chipContainer">
+                {actionOnList.map((ao, idx) => (
+                  <span key={`${ao}-${idx}`} className="chip">
+                    {ao}
+                    <FiX size={12} onClick={() => handleRemoveActionOn(idx)} className="chipRemove" />
                   </span>
                 ))}
               </div>
             )}
           </div>
+        </div>
 
-          {/* Meeting Date */}
-          <div style={{ maxWidth: 260 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: 13,
-                color: "#4b5563",
-                marginBottom: 6,
-              }}
-            >
-              Meeting Date
+        {/* Upload Box */}
+        <div className="uploadRoot">
+          <div className="uploadBox">
+            <FiUploadCloud size={32} className="uploadIcon" />
+            <h3 className="uploadTitle">Upload Data files</h3>
+            <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
+
+            <label className="browseBtn">
+              <span className="plusIcon">+</span>
+              <span>{file ? file.name : "Browse File"}</span>
+              <input type="file" className="hiddenInput" onChange={handleFileChange} />
             </label>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                height: 40,
-                borderRadius: 6,
-                border: `1px solid ${BORDER}`,
-                background: "#ffffff",
-                padding: "0 10px",
-              }}
-            >
-              <FiCalendar size={16} style={{ color: "#6b7280" }} />
-              <input
-                type="date"
-                value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-                style={{
-                  border: "none",
-                  outline: "none",
-                  flex: 1,
-                  fontSize: 14,
-                  color: "#4b5563",
-                  background: "transparent",
-                }}
-              />
-            </div>
-          </div>
 
-          {/* Tag + Action on (multiple) */}
-          <div style={{ display: "flex", gap: 16 }}>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  color: "#4b5563",
-                  marginBottom: 6,
-                }}
-              >
-                Tag Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Strategy Planning, Team Sync"
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 40,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F9FAFB",
-                  padding: "0 12px",
-                  fontSize: 14,
-                }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  color: "#4b5563",
-                  marginBottom: 6,
-                }}
-              >
-                Action on (Person / Role / Team)
-              </label>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input
-                  type="text"
-                  placeholder="e.g., CFD Team, Rishab, WT Group"
-                  value={actionOnInput}
-                  onChange={(e) => setActionOnInput(e.target.value)}
-                  onKeyDown={handleActionOnKeyDown}
-                  style={{
-                    flex: 1,
-                    height: 40,
-                    borderRadius: 6,
-                    border: `1px solid ${BORDER}`,
-                    background: "#F9FAFB",
-                    padding: "0 12px",
-                    fontSize: 14,
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddActionOn}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    border: `1px solid ${BORDER}`,
-                    background: "#ffffff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                  }}
-                >
-                  <FiPlus size={18} />
-                </button>
-              </div>
-              {actionOnList.length > 0 && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 6,
-                  }}
-                >
-                  {actionOnList.map((ao, idx) => (
-                    <span
-                      key={`${ao}-${idx}`}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        borderRadius: 999,
-                        border: `1px solid ${BORDER}`,
-                        background: "#F1F5F9",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        color: "#111827",
-                      }}
-                    >
-                      {ao}
-                      <FiX
-                        size={12}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => handleRemoveActionOn(idx)}
-                      />
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <p className="uploadHint">Supported formats: PDF/Word/any (up to backend limits)</p>
           </div>
+        </div>
 
-          {/* Upload box */}
-          <div
-            style={{
-              marginTop: 4,
-              borderRadius: 8,
-              border: `1px solid ${BORDER}`,
-              background: "#ffffff",
-              padding: "28px 20px 24px",
-            }}
+        {error && <p className="errorText">{error}</p>}
+
+        {/* Footer Buttons */}
+        <div className="footerButtons">
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+            className="cancelBtn"
           >
-            <div
-              style={{
-                borderRadius: 8,
-                border: `1px dashed ${BORDER}`,
-                padding: "32px 16px 28px",
-                textAlign: "center",
-              }}
-            >
-              <FiUploadCloud size={32} style={{ color: "#6b7280" }} />
-              <h3
-                style={{
-                  margin: "16px 0 6px",
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: "#111827",
-                }}
-              >
-                Upload Data files
-              </h3>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: "#6b7280",
-                }}
-              >
-                Drag and drop your PDF/Word files here, or click to browse
-              </p>
+            Cancel
+          </button>
 
-              <label
-                style={{
-                  marginTop: 18,
-                  padding: "10px 26px",
-                  borderRadius: 6,
-                  background: PRIMARY,
-                  border: "none",
-                  color: "#ffffff",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
-                <span>{file ? file.name : "Browse File"}</span>
-                <input
-                  type="file"
-                  style={{ display: "none" }}
-                  onChange={handleFileChange}
-                />
-              </label>
-
-              <p
-                style={{
-                  marginTop: 10,
-                  marginBottom: 0,
-                  fontSize: 11,
-                  color: "#9ca3af",
-                }}
-              >
-                Supported formats: PDF/Word/any (up to backend limits)
-              </p>
-            </div>
-          </div>
-
-          {error && (
-            <p style={{ color: "red", fontSize: 12, marginTop: -4 }}>
-              {error}
-            </p>
-          )}
-
-          {/* footer buttons */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 12,
-              marginTop: 18,
-            }}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`submitBtn ${isSubmitting ? "loading" : ""}`}
           >
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={isSubmitting}
-              style={{
-                padding: "8px 24px",
-                borderRadius: 6,
-                border: `1px solid ${BORDER}`,
-                background: "#ffffff",
-                color: "#111827",
-                fontSize: 14,
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              style={{
-                padding: "8px 24px",
-                borderRadius: 6,
-                border: "none",
-                background: PRIMARY,
-                color: "#ffffff",
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                opacity: isSubmitting ? 0.7 : 1,
-              }}
-            >
-              <FiUploadCloud size={16} />
-              <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
-            </button>
-          </div>
-        </form>
-      </div>
+            <FiUploadCloud size={16} />
+            <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
   );
 }
+
+
+  
+ 
