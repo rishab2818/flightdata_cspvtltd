@@ -4,13 +4,13 @@ import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import Users from "../../assets/Users.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
-import SpinnerGap from  "../../assets/SpinnerGap.svg";
+import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
 import styles from "./InventoryRecords.module.css";
 
 const BORDER = "#E2E8F0";
 
-/*-------------------------components-------------------------*/
+/*------------------------- Stat Card --------------------------*/
 
 function StatCard({ title, value, icon, bg }) {
   return (
@@ -18,32 +18,16 @@ function StatCard({ title, value, icon, bg }) {
       <div className={styles.iconWrap} style={{ background: bg }}>
         <img src={icon} alt="" className={styles.iconImg} />
       </div>
+
       <div className={styles.StatText}>
         <div className={styles.StatTitle}>{title}</div>
-      <div className={styles.StatValue}>{value}</div>
+        <div className={styles.StatValue}>{value}</div>
       </div>
     </div>
   );
 }
 
-function FilterSelect({ label, value, onChange, options }) {
-  return (
-    <label className={styles.filterLabel}>
-      <span className={styles.filterTitle}>{label}</span>
-      <select
-        className={styles.Select}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
+/*------------------------- Status Badge ------------------------*/
 
 function StatusBadge({ status }) {
   const palette =
@@ -61,7 +45,7 @@ function StatusBadge({ status }) {
   );
 }
 
-/*--------------------------Main component--------------------*/
+/*-------------------------- Main Component ----------------------*/
 
 export default function InventoryRecords() {
   const [orders, setOrders] = useState([]);
@@ -69,6 +53,8 @@ export default function InventoryRecords() {
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
+
+  const openModal = () => setShowModal(true);
 
   const loadOrders = async () => {
     try {
@@ -87,11 +73,12 @@ export default function InventoryRecords() {
     loadOrders();
   }, []);
 
+  /*---------------------- Filtering ------------------------*/
   const filtered = useMemo(() => {
     return orders.filter((row) => {
       const matchesType =
         filters.type === "all" ||
-        row.particular.toLowerCase().includes(filters.type.toLowerCase());
+        row.particular?.toLowerCase().includes(filters.type.toLowerCase());
 
       const matchesStatus =
         filters.status === "all" || row.status === filters.status;
@@ -99,6 +86,8 @@ export default function InventoryRecords() {
       return matchesType && matchesStatus;
     });
   }, [orders, filters]);
+
+  /*------------------------ Stats ---------------------------*/
 
   const stats = useMemo(() => {
     const total = orders.length;
@@ -112,131 +101,155 @@ export default function InventoryRecords() {
     return { total, totalCost, ongoing, completed };
   }, [orders]);
 
-  /*----------------------UI------------------------*/
+  /*-------------------------- UI ----------------------------*/
 
   return (
     <div className={styles.wrapper}>
       {/* Stats */}
       <div className={styles.StatGrid}>
-        <StatCard title="Total SO" value={stats.total} icon={Users} bg="#DBEAFE"/>
-        <StatCard title="Total Cost" value={`${stats.totalCost.toFixed(2)} Cr`} icon={CurrencyInr} bg="#FFEDD4"/>
-        <StatCard title="Ongoing Programs" value={stats.ongoing} icon={SpinnerGap} bg="#DCFCE7"/>
-        <StatCard title="Completed" value={stats.completed} icon={CheckSquareOffset} bg="#F3E8FF"/>
+        <StatCard title="Total SO" value={stats.total} icon={Users} bg="#DBEAFE" />
+        <StatCard
+          title="Total Cost"
+          value={`${stats.totalCost.toFixed(2)} Cr`}
+          icon={CurrencyInr}
+          bg="#FFEDD4"
+        />
+        <StatCard
+          title="Ongoing Programs"
+          value={stats.ongoing}
+          icon={SpinnerGap}
+          bg="#DCFCE7"
+        />
+        <StatCard
+          title="Completed"
+          value={stats.completed}
+          icon={CheckSquareOffset}
+          bg="#F3E8FF"
+        />
       </div>
 
       {/* Filters */}
-      <div>
-        <div className={styles.filterBar}>
-          <div className={styles.filterGroup}>
-            <FilterSelect
-              label="Filter by Type"
+      <div className={styles.filtersContainer}>
+        <div className={styles.leftFilters}>
+          {/* Filter by Type */}
+          <label className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Filter by Type</span>
+            <select
+              className={styles.select}
               value={filters.type}
-              onChange={(val) => setFilters((p) => ({ ...p, type: val }))}
-              options={[
-                { label: "All Types", value: "all" },
-                { label: "Laptop", value: "laptop" },
-                { label: "Printer", value: "printer" },
-                { label: "Monitor", value: "monitor" },
-              ]}
-            />
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, type: e.target.value }))
+              }
+            >
+              <option value="all">All Types</option>
+              <option value="Budget">Budget</option>
+              <option value="AMC">AMC</option>
+              <option value="Cyber Security">Cyber Security</option>
+            </select>
+          </label>
 
-            <FilterSelect
-              label="Sort by"
+          {/* Filter by Status */}
+          <label className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Filter by Status</span>
+            <select
+              className={styles.select}
               value={filters.status}
-              onChange={(val) => setFilters((p) => ({ ...p, status: val }))}
-              options={[
-                {label: "None", value: "None"},
-                { label: "All Status", value: "all" },
-                { label: "Ongoing", value: "Ongoing" },
-                { label: "Completed", value: "Completed" },
-              ]}
-            />
-          </div>
-
-          <button className={styles.addBtn} onClick={() => setShowModal(true)}>
-            <FiPlus /> Add Supply Order
-          </button>
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, status: e.target.value }))
+              }
+            >
+              <option value="all">All Status</option>
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </label>
         </div>
 
-        {/* Table */}
-        <div className={styles.tableWrapper}>
-          <h3>Supply Order</h3>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                {[
-                  "#SO",
-                  "Particular",
-                  "Supplier Name",
-                  "QTY",
-                  "Duration",
-                  "Start Date",
-                  "Delivery Date",
-                  "D. Officer",
-                  "Holder",
-                  "Amount",
-                  "Status",
-                ].map((col) => (
-                  <th key={col}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={11}>Loading...</td>
-                </tr>
-              )}
-
-              {!loading && error && (
-                <tr>
-                  <td colSpan={11}>{error}</td>
-                </tr>
-              )}
-
-              {!loading && !error && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={11}>No supply orders found.</td>
-                </tr>
-              )}
-
-              {!loading &&
-                !error &&
-                filtered.map((row) => (
-                  <tr key={row.record_id}>
-                    <td>{row.so_number}</td>
-                    <td>{row.particular}</td>
-                    <td>{row.supplier_name}</td>
-                    <td>{row.quantity}</td>
-                    <td>{row.duration_months} Months</td>
-                    <td>
-                      {new Date(row.start_date).toLocaleDateString("en-GB")}
-                    </td>
-                    <td>
-                      {new Date(row.delivery_date).toLocaleDateString("en-GB")}
-                    </td>
-                    <td>{row.duty_officer}</td>
-                    <td>{row.holder}</td>
-                    <td>₹ {Number(row.amount).toLocaleString()}</td>
-                    <td>
-                      <StatusBadge status={row.status || "Ongoing"} />
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        {/* Upload Button */}
+        <button className={styles.uploadBtn} onClick={openModal}>
+          <FiPlus size={16} /> Upload Record
+        </button>
       </div>
 
+      {/* Table */}
+      <div className={styles.tableWrapper}>
+        <h3>Supply Order</h3>
+
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              {[
+                "#SO",
+                "Particular",
+                "Supplier Name",
+                "QTY",
+                "Duration",
+                "Start Date",
+                "Delivery Date",
+                "D. Officer",
+                "Holder",
+                "Amount",
+                "Status",
+              ].map((col) => (
+                <th key={col}>{col}</th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={11}>Loading...</td>
+              </tr>
+            )}
+
+            {!loading && error && (
+              <tr>
+                <td colSpan={11}>{error}</td>
+              </tr>
+            )}
+
+            {!loading && !error && filtered.length === 0 && (
+              <tr>
+                <td colSpan={11}>No supply orders found.</td>
+              </tr>
+            )}
+
+            {!loading &&
+              !error &&
+              filtered.map((row) => (
+                <tr key={row.record_id}>
+                  <td>{row.so_number}</td>
+                  <td>{row.particular}</td>
+                  <td>{row.supplier_name}</td>
+                  <td>{row.quantity}</td>
+                  <td>{row.duration_months} Months</td>
+                  <td>{new Date(row.start_date).toLocaleDateString("en-GB")}</td>
+                  <td>{new Date(row.delivery_date).toLocaleDateString("en-GB")}</td>
+                  <td>{row.duty_officer}</td>
+                  <td>{row.holder}</td>
+                  <td>₹ {Number(row.amount).toLocaleString()}</td>
+                  <td>
+                    <StatusBadge status={row.status || "Ongoing"} />
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal */}
       {showModal && (
-        <SupplyOrderModal onClose={() => setShowModal(false)} onCreated={loadOrders} />
+        <SupplyOrderModal
+          onClose={() => setShowModal(false)}
+          onCreated={loadOrders}
+        />
       )}
     </div>
   );
 }
 
-/*-------------------- Inputs -----------------------*/
+/*-------------------- Input Component -----------------------*/
 
 function Input({ label, ...rest }) {
   return (
@@ -298,7 +311,10 @@ function SupplyOrderModal({ onClose, onCreated }) {
     try {
       setSubmitting(true);
 
-      let storage_key, original_name, content_type, size_bytes;
+      let storage_key,
+        original_name,
+        content_type,
+        size_bytes;
 
       if (file) {
         const content_hash = await computeSha256(file);
@@ -350,26 +366,90 @@ function SupplyOrderModal({ onClose, onCreated }) {
           </div>
 
           <button className={styles.closeBtn} onClick={onClose}>
-          X
+            X
           </button>
         </div>
 
         <form className={styles.modalForm} onSubmit={handleSubmit}>
           <div className={styles.grid}>
-            <Input label="#SO" value={form.so_number} onChange={(e) => onChange("so_number", e.target.value)} required />
-            <Input label="Particular" value={form.particular} onChange={(e) => onChange("particular", e.target.value)} required />
-            <Input label="Supplier Name" value={form.supplier_name} onChange={(e) => onChange("supplier_name", e.target.value)} required />
-            <Input label="QTY" type="number" min={1} value={form.quantity} onChange={(e) => onChange("quantity", e.target.value)} />
-            <Input label="Duration(Months)" type="number" min={1} value={form.duration_months} onChange={(e) => onChange("duration_months", e.target.value)} />
-            <Input label="Start Date" type="date" value={form.start_date} onChange={(e) => onChange("start_date", e.target.value)} />
-            <Input label="Delivery Date" type="date" value={form.delivery_date} onChange={(e) => onChange("delivery_date", e.target.value)} />
-            <Input label="D.Officer" value={form.duty_officer} onChange={(e) => onChange("duty_officer", e.target.value)} />
-            <Input label="Holder" value={form.holder} onChange={(e) => onChange("holder", e.target.value)} />
-            <Input label="Status" value={form.status} onChange={(e) => onChange("status", e.target.value)} />
+            <Input
+              label="#SO"
+              value={form.so_number}
+              onChange={(e) => onChange("so_number", e.target.value)}
+              required
+            />
+
+            <Input
+              label="Particular"
+              value={form.particular}
+              onChange={(e) => onChange("particular", e.target.value)}
+              required
+            />
+
+            <Input
+              label="Supplier Name"
+              value={form.supplier_name}
+              onChange={(e) => onChange("supplier_name", e.target.value)}
+              required
+            />
+
+            <Input
+              label="QTY"
+              type="number"
+              min={1}
+              value={form.quantity}
+              onChange={(e) => onChange("quantity", e.target.value)}
+            />
+
+            <Input
+              label="Duration(Months)"
+              type="number"
+              min={1}
+              value={form.duration_months}
+              onChange={(e) => onChange("duration_months", e.target.value)}
+            />
+
+            <Input
+              label="Start Date"
+              type="date"
+              value={form.start_date}
+              onChange={(e) => onChange("start_date", e.target.value)}
+            />
+
+            <Input
+              label="Delivery Date"
+              type="date"
+              value={form.delivery_date}
+              onChange={(e) => onChange("delivery_date", e.target.value)}
+            />
+
+            <Input
+              label="D.Officer"
+              value={form.duty_officer}
+              onChange={(e) => onChange("duty_officer", e.target.value)}
+            />
+
+            <Input
+              label="Holder"
+              value={form.holder}
+              onChange={(e) => onChange("holder", e.target.value)}
+            />
+
+            <Input
+              label="Status"
+              value={form.status}
+              onChange={(e) => onChange("status", e.target.value)}
+            />
           </div>
 
           <div className={styles.uploadGrid}>
-            <Input label="Amount" type="number" min={0} value={form.amount} onChange={(e) => onChange("amount", e.target.value)} />
+            <Input
+              label="Amount"
+              type="number"
+              min={0}
+              value={form.amount}
+              onChange={(e) => onChange("amount", e.target.value)}
+            />
 
             <label className={styles.uploadLabel}>
               <span className={styles.uploadText}>Upload Document</span>
@@ -390,6 +470,7 @@ function SupplyOrderModal({ onClose, onCreated }) {
             <button className={styles.cancelBtn} type="button" onClick={onClose}>
               Cancel
             </button>
+
             <button className={styles.saveBtn} type="submit" disabled={submitting}>
               {submitting ? "Saving..." : "Save Order"}
             </button>
