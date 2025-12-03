@@ -2,28 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
+import totalTrainingIcon from "../../assets/reports.svg"
+import noOfParticipantsIcon from "../../assets/UsersThree_green.svg"
+import ongoingIcon from "../../assets/SpinnerGap.svg"
+
+import CommonStatCard from "../../components/common/common_card/common_card";
+import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
 
-function StatCard({ title, value }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-      }}
-    >
-      <span style={{ color: "#475569", fontSize: 13 }}>{title}</span>
-      <strong style={{ fontSize: 20 }}>{value}</strong>
-    </div>
-  );
-}
+
 
 function StatusBadge({ status }) {
   const palette =
@@ -81,12 +70,7 @@ export default function TrainingRecords() {
 
   return (
     <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
-      <div>
-        <h2 style={{ margin: 0, fontSize: 22 }}>Training Records</h2>
-        <p style={{ margin: "6px 0 0", color: "#475569" }}>
-          Track training cohorts, types, completion and supporting files.
-        </p>
-      </div>
+
 
       <div
         style={{
@@ -96,27 +80,36 @@ export default function TrainingRecords() {
           gap: 12,
         }}
       >
-        <StatCard title="Total Training" value={records.length} />
-        <StatCard title="No. of Participants" value={records.length} />
-        <StatCard title="Ongoing" value={records.filter((r) => r.status === "Ongoing").length} />
-      </div>
 
+        <CommonStatCard title="Total Training" value={records.length} icon={totalTrainingIcon} bg="#DBEAFE" />
+        <CommonStatCard title="No of Participants" value={records.length} icon={noOfParticipantsIcon} bg="#DCFCE7" />
+
+        <CommonStatCard title="Ongoing" value={records.filter((r) => r.status === "Ongoing").length} icon={ongoingIcon} bg="#FFEDD4" />
+      </div>
+      {/* Filter section  */}
       <div
         style={{
-          marginTop: 18,
+          marginTop: 22,
           background: "#fff",
           border: `1px solid ${BORDER}`,
           borderRadius: 12,
-          padding: 20,
+          padding: 18,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12
         }}
       >
+        {/* Left: filters */}
         <div
           style={{
             display: "flex",
+
             gap: 12,
             alignItems: "center",
-            justifyContent: "space-between",
             flexWrap: "wrap",
+            minWidth: 0,
           }}
         >
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -126,11 +119,13 @@ export default function TrainingRecords() {
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                 style={{
-                  minWidth: 200,
-                  height: 38,
+                  minWidth: 284,
+                  height: 36,
+                  background: "#F3F3F5",
                   borderRadius: 8,
-                  border: `1px solid ${BORDER}`,
+                  // border: `1px solid ${BORDER}`,
                   padding: "0 12px",
+                  border: "none",
                 }}
               >
                 <option value="all">All Types</option>
@@ -145,11 +140,13 @@ export default function TrainingRecords() {
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 style={{
-                  minWidth: 200,
-                  height: 38,
+                  minWidth: 284,
+                  height: 36,
+                  background: "#F3F3F5",
                   borderRadius: 8,
-                  border: `1px solid ${BORDER}`,
+                  // border: `1px solid ${BORDER}`,
                   padding: "0 12px",
+                  border: "none",
                 }}
               >
                 <option value="all">All Status</option>
@@ -159,6 +156,10 @@ export default function TrainingRecords() {
               </select>
             </label>
           </div>
+        </div>
+
+        {/* Right: upload button */}
+        <div style={{ display: "flex", alignItems: "center" }}>
           <button
             type="button"
             onClick={() => setShowModal(true)}
@@ -175,71 +176,155 @@ export default function TrainingRecords() {
               cursor: "pointer",
             }}
           >
-            <FiPlus /> Upload Records
+            <FiPlus /> Upload Training
           </button>
         </div>
+      </div>
 
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
+      <div
+        style={{
+          marginTop: 18,
+          background: "#fff",
+          border: `1px solid ${BORDER}`, // Outer Card Border
+          borderRadius: 12,
+          padding: 20,
+        }}
+      >
+        <div style={{ marginTop: 10, overflowX: "auto" }}>
+          <div
+            style={{
+              marginBottom: 10,
+              marginLeft: 5,
+              color: "#0A0A0A",
+              fontSize: 16,
+              fontWeight: "600",
+            }}
+          >
+            Training Records
+          </div>
+
           <table
-            style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              // The Table's own border (The "Outside" border you wanted)
+              border: `1px solid ${BORDER}`,
+              borderRadius: 8,
+              // Vital for rounded corners to clip the content
+              overflow: "hidden",
+              minWidth: 900,
+            }}
           >
             <thead>
               <tr
                 style={{
-                  color: "#64748B",
+                  color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
                   textAlign: "left",
+                  fontWeight: 400,
+                  fontSize: 12,
+                  background: "#EFF7FF"
+
                 }}
               >
-                {["Trainee Name", "Training Name", "Type", "Start Date", "End Date", "Status", "Remarks"].map(
-                  (col) => (
-                    <th key={col} style={{ padding: "12px 8px", fontWeight: 600 }}>
-                      {col}
-                    </th>
-                  )
-                )}
+                {[
+                  "Name",
+                  "Training Name",
+                  "Type",
+                  "Start Date",
+                  "End Date",
+                  "Status",
+                  "Remarks",
+                ].map((col) => (
+                  <th
+                    key={col}
+                    style={{
+                      padding: "12px 16px", // Increased padding slightly for look
+                      fontWeight: 600,
+                      // color: "#64748B",
+                      // Header always has a bottom border to separate from body
+                      borderBottom: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
+
             <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={7} style={{ padding: 16, textAlign: "center" }}>
-                    Loading...
-                  </td>
-                </tr>
-              )}
-              {!loading && error && (
-                <tr>
-                  <td colSpan={7} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {!loading && !error && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
-                    No training records found.
-                  </td>
-                </tr>
-              )}
-              {!loading && !error &&
-                filtered.map((row) => (
-                  <tr key={row.record_id} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>{row.trainee_name}</td>
-                    <td style={{ padding: "12px 8px" }}>{row.training_name}</td>
-                    <td style={{ padding: "12px 8px" }}>{row.training_type}</td>
-                    <td style={{ padding: "12px 8px" }}>
-                      {new Date(row.start_date).toLocaleDateString("en-GB")}
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>
-                      {new Date(row.end_date).toLocaleDateString("en-GB")}
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td style={{ padding: "12px 8px", color: "#475569" }}>{row.remarks}</td>
-                  </tr>
-                ))}
+              {!loading &&
+                !error &&
+                filtered.map((row, index) => {
+                  // Check if this is the last row
+                  const isLast = index === filtered.length - 1;
+
+                  return (
+                    <tr key={row.record_id}>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          // Remove border if it's the last row, otherwise add divider
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.trainee_name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.training_name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.training_type}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {new Date(row.start_date).toLocaleDateString("en-GB")}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {new Date(row.end_date).toLocaleDateString("en-GB")}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <StatusBadge status={row.status} />
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          color: "#475569",
+                          // The last cell also needs no bottom border
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.remarks}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
@@ -268,6 +353,8 @@ function Input({ label, ...rest }) {
   );
 }
 
+
+
 function TrainingModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
     trainee_name: "",
@@ -278,6 +365,7 @@ function TrainingModal({ onClose, onCreated }) {
     status: "Ongoing",
     remarks: "",
   });
+
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -287,6 +375,7 @@ function TrainingModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     const requiredFields = [
       "trainee_name",
       "training_name",
@@ -299,12 +388,14 @@ function TrainingModal({ onClose, onCreated }) {
       setError("Please complete all required training fields.");
       return;
     }
+
     try {
       setSubmitting(true);
       let storage_key;
       let original_name;
       let content_type;
       let size_bytes;
+
       if (file) {
         const content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("training-records", {
@@ -313,7 +404,9 @@ function TrainingModal({ onClose, onCreated }) {
           size_bytes: file.size,
           content_hash,
         });
+
         await fetch(initRes.upload_url, { method: "PUT", body: file });
+
         storage_key = initRes.storage_key;
         original_name = file.name;
         content_type = file.type || "application/octet-stream";
@@ -327,6 +420,7 @@ function TrainingModal({ onClose, onCreated }) {
         content_type,
         size_bytes,
       });
+
       onClose();
       if (onCreated) onCreated();
     } catch (err) {
@@ -361,24 +455,40 @@ function TrainingModal({ onClose, onCreated }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <div>
-            <h3 style={{ margin: 0 }}>Upload Training Record</h3>
-            <p style={{ margin: "6px 0 0", color: "#64748B" }}>
-              Store training milestones and attach artifacts.
-            </p>
+            <h3 style={{ margin: 0 }}>Upload Files </h3>
+
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
               border: `1px solid ${BORDER}`,
               background: "#fff",
               borderRadius: 10,
-              padding: "8px 12px",
+              padding: 8,
+              width: 36,
+              height: 36,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               cursor: "pointer",
+              fontSize: 18,
+              lineHeight: 1,
+
             }}
           >
-            Close
+            ×
           </button>
         </div>
+
+        {/* 👇 Upload box moved to TOP */}
+        <FileUploadBox
+          label="Upload Document"
+          description="Attach training related file here"
+          supported="PDF/Word"
+          file={file}
+          onFileSelected={(f) => setFile(f)}
+        />
 
         <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
@@ -422,27 +532,6 @@ function TrainingModal({ onClose, onCreated }) {
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document</span>
-            <div
-              style={{
-                border: `1px dashed ${BORDER}`,
-                borderRadius: 10,
-                padding: "10px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <FiUploadCloud />
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                style={{ flex: 1 }}
-              />
-            </div>
-          </label>
-
           {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
@@ -459,6 +548,7 @@ function TrainingModal({ onClose, onCreated }) {
             >
               Cancel
             </button>
+
             <button
               type="submit"
               disabled={submitting}
@@ -477,6 +567,7 @@ function TrainingModal({ onClose, onCreated }) {
             </button>
           </div>
         </form>
+
       </div>
     </div>
   );

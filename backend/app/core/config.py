@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     mongo_uri: str = Field(default="mongodb://127.0.0.1:27017", alias="MONGO_URI")
     mongo_db: str = Field(default="flightdv", alias="MONGO_DB")
     cors_origins: List[str] = Field(
-        default=["http://127.0.0.1:5173", "http://localhost:5173"],
+        default=["http://127.0.0.1:5173", "http://localhost:5173" , ],
         alias="CORS_ORIGINS",
     )
     jwt_secret: str = Field(default="change-me", alias="JWT_SECRET")
