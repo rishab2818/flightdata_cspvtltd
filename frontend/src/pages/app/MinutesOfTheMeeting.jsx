@@ -16,7 +16,8 @@ const BORDER = "#0000001A";
 const PRIMARY = "#1976D2";
 
 // Back-end subsection codes:
-const MOM_TABS = [
+
+  const MOM_TABS = [
   { key: "tcm", label: "Technology Council(TCM)" },
   { key: "pmrc", label: "PMRC" },
   { key: "ebm", label: "Executive Board meeting" },
@@ -162,9 +163,10 @@ function TabsRow({ activeKey, onChange }) {
       {MOM_TABS.map((tab) => {
         const active = tab.key === activeKey;
         return (
-          <button className="TabButton"
+          <button 
             key={tab.key}
             type="button"
+            className={`TabButton ${active ? "activeTab" : ""}`}
             onClick={() => onChange(tab.key)}
           >
             {tab.label}

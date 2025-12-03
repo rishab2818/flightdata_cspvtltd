@@ -92,14 +92,12 @@
 }
 
 .project-shell__back {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
   padding: 10px 14px;
-  border-radius: 12px;
   cursor: pointer;
+  font-size: 12px;
   font-weight: 600;
   color: #1f2937;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  
 }
 
 .project-shell__header-label {

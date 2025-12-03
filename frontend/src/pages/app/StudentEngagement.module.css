@@ -92,7 +92,15 @@
   font-family: "Inter-regular", Helvetica;
   font-size: 14PX;
   font-weight: 400;
-  background-color: #F3F3F5;
+  background: #F3F3F5;
+  color: #374151;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+
 }
 
 .addBtn { 
@@ -120,16 +128,14 @@
 }
 
 /* ---------- Table ---------- */
-.tableContainer {
+.TableWrapper {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 0px 24px 24px 24px;
-  height:100%;
-}
-
-.tableWrapper {
-  overflow-x: auto;
+  width: 100%;
+  overflow-x: auto;     /* enables horizontal scroll */
+  overflow-y: hidden;
 }
 
 .h3{
@@ -139,46 +145,63 @@
   color: #0a0a0a;
 }
 
-.tabRow {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+.Table {
+  width: 1440px;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 1px solid #00000026;
+  border-radius: 8px;
+  border-color: #0000001A;
 }
 
-.tabBtn {
-  padding: 8px 14px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 16px;
-  color: #0a0a0a;
-  font-family: "Inter-semiBold", Helvetica;
-}
-
-.activeTab {
-  border-color: #1976D2;
-  font-weight: 700;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table thead {
+.Table th {
+  margin-top: -10px;
+  padding: 12px;
   background: #EFF7FF;
+  text-align: left;
+  font-size: 14px;
+  font-family: "Inter-regular", Helvetica;
+  font-weight: 400;
+  color:#000000;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.table th,
-.table td {
-  padding: 12px 10px;
-  text-align: left;
+.Table td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
   font-size: 12px;
-  font-weight: 400;
+  color: #000000CC;
   font-family: "Inter-regular", Helvetica;
+  font-weight: 600;
 }
+
+
+/* Status Badge */
+.statusBadge {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.TableEmpty {
+    padding: 18px 4px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 13px;
+    color: #000000cc;
+}
+
+.TableLoading {
+    padding: 18px 4px;
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+
 
 .statusBadge {
   padding: 6px 12px;
@@ -201,21 +224,39 @@
 .modal {
   width: 820px;
   max-width: 95%;
+  max-height: 90vh;
   background: #fff;
   border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; 
   padding: 0px 25px 25px;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
 }
 
 .modalHeader {
   display: flex;
+  height: 80px;
+  flex-shrink: 0;
+  padding: 20px 0 ;
   justify-content: space-between;
   align-items: center;
   font-size: 18px;
   font-family: "Inter-semiBold", Helvetica;
   font-weight: 600;
   color: #0a0a0a;
+  z-index: 10; 
 }
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;            /* scroll only here */
+  padding-top: 18px;
+
+  /* limit body height */
+  max-height: calc(90vh - 80px);
+}
+
 
 .closeBtn {
   width: 16px;

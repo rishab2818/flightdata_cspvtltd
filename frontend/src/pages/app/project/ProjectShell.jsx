@@ -5,6 +5,7 @@ import brandIcon from '../../../assets/Database.svg'
 import TopBarActions from '../../../components/layout/TopBarActions'
 import '../../../styles/project.css'
 
+
 const navItems = [
   { key: 'upload', to: '', label: 'Upload File' },
   { key: 'data', to: 'data', label: 'Data Management' },
@@ -76,7 +77,7 @@ export default function ProjectShell() {
         <header className="project-shell__header">
           <div className="project-shell__header-main">
             <button type="button" className="project-shell__back" onClick={() => navigate('/app')}>
-              Back to projects
+              ← Back
             </button>
             <div>
               <p className="project-shell__header-label">Project Overview</p>

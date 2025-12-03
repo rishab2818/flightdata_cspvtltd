@@ -69,7 +69,7 @@ export default function TrainingRecords() {
   }, [records, filters]);
 
   return (
-    <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
 
 
       <div

@@ -100,16 +100,14 @@
 .select {
     height: 36px;
   min-width: 270px;
-
   padding: 10px 14px;
-  background: #f9fafb;
+  background: #F3F3F5;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
   color: #374151;
   outline: none;
   cursor: pointer;
-
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -162,10 +160,16 @@
 }
 
 .table {
-  width: 100%;
-  border-collapse: collapse;
-  height: 100%;
+  width: 1440px;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 1px solid #00000026;
+  border-radius: 8px;
+  border-color: #0000001A;
 }
+
 
 .table th {
   margin-top: -10px;

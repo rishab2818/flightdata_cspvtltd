@@ -1,0 +1,135 @@
+/* --- PAGE LAYOUT --- */
+.project-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Typography */
+.summary-label {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* --- BADGES --- */
+.badge {
+  background: #e1f5ff;
+  color: #0284c7;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 20px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* --- DATASET TABS --- */
+.tablist {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.tablist button {
+  background: transparent;
+  border: none;
+  padding: 8px 18px;
+  font-size: 14px;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tablist button.active {
+  color: #0284c7;
+  background: #e0f2fe;
+  font-weight: 600;
+}
+
+/* --- HEADER OPTIONS --- */
+.header-options {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.header-options__inputs {
+  margin-top: 14px;
+}
+
+.input-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* --- UPLOAD TILE --- */
+.upload-tile {
+  margin-top: 20px;
+  border: 2px dashed #94a3b8;
+  background: #f8fafc;
+  border-radius: 12px;
+  text-align: center;
+  padding: 38px 16px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.upload-tile:hover {
+  background: #f1f5f9;
+  border-color: #0284c7;
+}
+
+.project-shell__nav-link {
+  background: #1976d2;
+  border: none;
+  color: #ffffff;
+  padding: 10px 18px;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.project-shell__nav-link:hover {
+  background: #0e60b2;
+}
+
+/* --- PROGRESS BARS --- */
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar__value {
+  background: #1976d2;
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+/* Error box */
+.project-shell__error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+}

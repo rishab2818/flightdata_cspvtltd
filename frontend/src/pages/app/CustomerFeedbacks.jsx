@@ -56,7 +56,7 @@ export default function CustomerFeedbacks() {
   return (
     /* Card UI */
 
-    <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
 
 
       <div
@@ -101,11 +101,12 @@ export default function CustomerFeedbacks() {
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
             style={{
-              minWidth: 200,
+              minWidth: 280,
               height: 38,
               borderRadius: 8,
               border: `1px solid ${BORDER}`,
               padding: "0 12px",
+              background:"#F3F3F5",
             }}
           >
             <option value="all">All Divisions</option>
