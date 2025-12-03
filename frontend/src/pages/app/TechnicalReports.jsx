@@ -2,6 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
+import totalRecordsIcon from "../../assets/bule_message.svg";
+import technicalIcon from "../../assets/setting_black.svg";
+import designicon from "../../assets/design_black.svg";
+
+import CommonStatCard from "../../components/common/common_card/common_card";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
@@ -58,12 +63,7 @@ export default function TechnicalReports() {
 
   return (
     <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
-      <div>
-        <h2 style={{ margin: 0, fontSize: 22 }}>Technical & Design Reports</h2>
-        <p style={{ margin: "6px 0 0", color: "#475569" }}>
-          Manage reports, tags, and attached artifacts from one place.
-        </p>
-      </div>
+
 
       <div
         style={{
@@ -73,12 +73,70 @@ export default function TechnicalReports() {
           gap: 12,
         }}
       >
-        <StatCard title="Total Records" value={records.length} />
-        <StatCard title="Technical" value={records.filter((r) => r.report_type === "Technical").length} />
-        <StatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} />
-      </div>
+        {/* <StatCard title="Total Records" value={records.length} /> */}
+        <CommonStatCard title="Total Records" value={records.length} icon={totalRecordsIcon} bg="#DBEAFE" />
+        <CommonStatCard title="Technical" value={records.filter((r) => r.report_type === "Technical").length} icon={technicalIcon} bg="#F3E8FF" />
+        <CommonStatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} icon={designicon} bg="#DCFCE7" />
+        {/* <StatCard title="Technical" value={records.filter((r) => r.report_type === "Technical").length} /> */}
 
+        {/* <StatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} /> */}
+      </div>
+      {/* Filter section  */}
       <div
+        style={{
+          marginTop: 22,
+          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 12,
+          padding: 18,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12
+        }}
+      >
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ color: "#475569", fontSize: 13 }}>Filter by Type</span>
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters({ type: e.target.value })}
+            style={{
+              minWidth: 284,
+              background: "#F3F3F5",
+              height: 36,
+              borderRadius: 8,
+              border: "none",
+              padding: "0 12px",
+            }}
+          >
+            <option value="all">All Types</option>
+            <option value="Technical">Technical</option>
+            <option value="Design">Design</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          style={{
+            padding: "10px 16px",
+            background: PRIMARY,
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          <FiPlus /> Upload Document
+        </button>
+      </div>
+      {/* Table Section  */}
+      {/* <div
         style={{
           marginTop: 18,
           background: "#fff",
@@ -87,55 +145,20 @@ export default function TechnicalReports() {
           padding: 20,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-          }}
-        >
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Filter by Type</span>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters({ type: e.target.value })}
-              style={{
-                minWidth: 200,
-                height: 38,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 12px",
-              }}
-            >
-              <option value="all">All Types</option>
-              <option value="Technical">Technical</option>
-              <option value="Design">Design</option>
-              <option value="Other">Other</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
+
+
+        <div style={{ marginTop: 10, overflowX: "auto" }}>
+          <div
             style={{
-              padding: "10px 16px",
-              background: PRIMARY,
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontWeight: 600,
-              cursor: "pointer",
+              marginBottom: 10,
+              marginLeft: 5,
+              color: "#0A0A0A",
+              fontSize: 16,
+              fontWeight: "600",
             }}
           >
-            <FiPlus /> Upload Document
-          </button>
-        </div>
-
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
+            Technical Reports
+          </div>
           <table
             style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}
           >
@@ -190,6 +213,147 @@ export default function TechnicalReports() {
                     <td style={{ padding: "12px 8px" }}>{Number(row.rating || 0).toFixed(1)}</td>
                   </tr>
                 ))}
+            </tbody>
+          </table>
+        </div>
+      </div> */}
+      <div
+        style={{
+          marginTop: 18,
+          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 12,
+          padding: 20,
+        }}
+      >
+        <div style={{ marginTop: 10, overflowX: "auto" }}>
+          <div
+            style={{
+              marginBottom: 10,
+              marginLeft: 5,
+              color: "#0A0A0A",
+              fontSize: 16,
+              fontWeight: "600",
+            }}
+          >
+            Technical Reports
+          </div>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "separate", // Required for rounded corners
+              borderSpacing: 0,           // Removes gaps between cells
+              border: `1px solid ${BORDER}`, // The outer border
+              borderRadius: 8,            // The rounded corners
+              overflow: "hidden",         // Clips content within corners
+              minWidth: 900,
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  color: "#000000",
+                  borderBottom: `1px solid ${BORDER}`,
+                  textAlign: "left",
+                  fontWeight: 400,
+                  fontSize: 12,
+                  background: "#EFF7FF"
+
+                }}
+              >
+                {["Report Name", "Description", "Type", "Created Date", "Ratings"].map(
+                  (col) => (
+                    <th
+                      key={col}
+                      style={{
+                        padding: "12px 16px",
+                        fontWeight: 600,
+
+                        borderBottom: `1px solid ${BORDER}`, // Bottom border for header
+                      }}
+                    >
+                      {col}
+                    </th>
+                  )
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 16, textAlign: "center" }}>
+                    Loading...
+                  </td>
+                </tr>
+              )}
+              {!loading && error && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
+                    {error}
+                  </td>
+                </tr>
+              )}
+              {!loading && !error && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
+                    No reports found.
+                  </td>
+                </tr>
+              )}
+              {!loading &&
+                !error &&
+                filtered.map((row, index) => {
+                  // 1. Check if this is the last row
+                  const isLast = index === filtered.length - 1;
+
+                  return (
+                    <tr key={row.record_id}>
+                      {/* 2. Apply border logic to cells instead of row */}
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          color: "#475569",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.description}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.report_type}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {new Date(row.created_date).toLocaleDateString("en-GB")}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {Number(row.rating || 0).toFixed(1)}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
