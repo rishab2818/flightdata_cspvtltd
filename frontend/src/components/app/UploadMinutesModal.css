@@ -1,0 +1,242 @@
+
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modalBox {
+  width: 720px;
+  max-width: 95vw;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  padding: 28px 32px 24px;
+}
+
+.modalTitle {
+  margin: 0 0 24px;
+  font-size: 20px;
+  font-weight: 400;
+  color: #0A0A0A;
+  font-family: "inter-Regular", Helvetica;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Labels */
+.label {
+  display: block;
+  font-size: 13px;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+/* Inputs */
+.textInput {
+  width: 100%;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #F3F3F5;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.gap16 {
+  gap: 16px;
+}
+
+.flex1 {
+  flex: 1;
+}
+
+/* Chips */
+.chipContainer {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #111827;
+}
+
+.chipRemove {
+  cursor: pointer;
+}
+
+/* Date */
+.dateWrap {
+  max-width: 260px;
+}
+
+.dateBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 0 10px;
+}
+
+.dateInput {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+  color: #4b5563;
+  background: transparent;
+}
+
+.dateIcon {
+  color: #6b7280;
+}
+
+/* Upload Box */
+.uploadRoot {
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 28px 20px 24px;
+}
+
+.uploadBox {
+  border-radius: 8px;
+  border: 1px dashed #e2e8f0;
+  padding: 32px 16px 28px;
+  text-align: center;
+}
+
+.uploadIcon {
+  color: #6b7280;
+}
+
+.uploadTitle {
+  margin: 16px 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.uploadText {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.browseBtn {
+  margin-top: 18px;
+  padding: 10px 26px;
+  border-radius: 6px;
+  background: #1976d2;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.plusIcon {
+  font-size: 18px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.uploadHint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Buttons */
+.footerButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.cancelBtn {
+  padding: 8px 24px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #111827;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.submitBtn {
+  padding: 8px 24px;
+  border-radius: 6px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.submitBtn.loading {
+  opacity: 0.7;
+}
+
+.errorText {
+  color: red;
+  font-size: 12px;
+  margin-top: -4px;
+}
+
+/* Plus Button */
+.iconButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+
+          
+          

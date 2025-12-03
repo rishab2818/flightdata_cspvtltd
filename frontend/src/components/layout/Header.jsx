@@ -19,7 +19,7 @@ const pageMeta = {
   },
   "/app/divisional-records": {
     title: "Divisional Records",
-    subtitle: "Description here",
+    subtitle: "Keep budgets, AMC, and cyber updates aligned with documentation.",
   },
   "/app/customer-feedbacks": {
     title: "Customer Feedbacks Overview",
