@@ -5,13 +5,14 @@ import brandIcon from "../../assets/Database.svg";
 import dashboardIcon from "../../assets/Dashboard.svg";
 import minutesIcon from "../../assets/PresentationChart.svg";
 import studentIcon from "../../assets/UsersThree.svg";
-import inventoryIcon from "../../assets/inventory.svg";
+import inventoryIcon from "../../assets/Truck.svg";
 import divisionalIcon from "../../assets/divisonal.svg";
 import customerIcon from "../../assets/customer.svg";
 import trainingIcon from "../../assets/reports.svg";
 import technicalIcon from "../../assets/reports.svg";
 import settingsIcon from "../../assets/GearFine.svg";
 import usersIcon from "../../assets/UsersThree.svg";
+import digitalLib from "../../assets/digital.svg";
 import "../../styles/layout.css";
 
 const adminMenu = [
@@ -24,12 +25,14 @@ const gdDhMenu = [
   { path: "/app", label: "Dashboard Overview", icon: dashboardIcon, end: true },
   { path: "/app/minutes", label: "Minutes of meeting", icon: minutesIcon },
   { path: "/app/student-engagement", label: "Student Engagement", icon: studentIcon },
-  { path: "/app/inventory-records", label: "Inventory records", icon: inventoryIcon },
+  { path: "/app/inventory-records", label: "Procurement Records", icon: inventoryIcon },
   { path: "/app/divisional-records", label: "Divisional Records", icon: divisionalIcon },
   { path: "/app/customer-feedbacks", label: "Customer Feedbacks", icon: customerIcon },
   { path: "/app/training-records", label: "Training Records", icon: trainingIcon },
   { path: "/app/technical-reports", label: "Technical Reports", icon: technicalIcon },
+  { path: "/app/DigitalLibrary", label: "Digital Library", icon: digitalLib },
   { path: "/app/setting", label: "Settings", icon: settingsIcon },
+
 ];
 
 export default function Sidebar() {

@@ -3,27 +3,15 @@ import { FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 
+import totalRecord from "../../assets/customer.svg"
+import CommonStatCard from "../../components/common/common_card/common_card";
+import avergaeRating from "../../assets/Star.svg"
+import pending_review from "../../assets/SpinnerGap.svg"
+
+
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
 
-function StatCard({ title, value }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-      }}
-    >
-      <span style={{ color: "#475569", fontSize: 13 }}>{title}</span>
-      <strong style={{ fontSize: 20 }}>{value}</strong>
-    </div>
-  );
-}
 
 function Rating({ value }) {
   return (
@@ -66,13 +54,10 @@ export default function CustomerFeedbacks() {
   }, [records, filters]);
 
   return (
+    /* Card UI */
+
     <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
-      <div>
-        <h2 style={{ margin: 0, fontSize: 22 }}>Customer Feedbacks Overview</h2>
-        <p style={{ margin: "6px 0 0", color: "#475569" }}>
-          Centralised feedback with ratings and attached evidence.
-        </p>
-      </div>
+
 
       <div
         style={{
@@ -82,13 +67,78 @@ export default function CustomerFeedbacks() {
           gap: 12,
         }}
       >
-        <StatCard title="Total Feedbacks" value={records.length} />
-        <StatCard title="Average Rating" value={(
+
+        <CommonStatCard title="Total Feedbacks" value={records.length} icon={totalRecord} bg="#DBEAFE" />
+
+
+        <CommonStatCard title="Average Rating" value={(
           records.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) /
-            (records.length || 1)
-        ).toFixed(1)} />
-        <StatCard title="Pending Review" value={records.length} />
+          (records.length || 1)
+        ).toFixed(1)} icon={avergaeRating} bg="#DCFCE7" />
+
+        <CommonStatCard title="Pending Review" value={records.length} icon={pending_review} bg="#FFEDD4" />
       </div>
+
+      {/* FILTER SECTION CARD */}
+      <div
+        style={{
+          marginTop: 22,
+          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 12,
+          padding: 18,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12
+        }}
+      >
+        {/* Filter By Division */}
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ color: "#475569", fontSize: 13 }}>Filter by Division</span>
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+            style={{
+              minWidth: 200,
+              height: 38,
+              borderRadius: 8,
+              border: `1px solid ${BORDER}`,
+              padding: "0 12px",
+            }}
+          >
+            <option value="all">All Divisions</option>
+            {[...new Set(records.map((r) => r.division))].filter(Boolean)
+              .map((div) => (
+                <option value={div} key={div}>{div}</option>
+              ))}
+          </select>
+        </label>
+
+        {/* Upload Button */}
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            padding: "10px 16px",
+            background: PRIMARY,
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          <FiPlus /> Upload Feedback
+        </button>
+      </div>
+
+      {/* TABLE SECTION CARD */}
+
+
 
       <div
         style={{
@@ -99,73 +149,52 @@ export default function CustomerFeedbacks() {
           padding: 20,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-          }}
-        >
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Filter by Division</span>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              style={{
-                minWidth: 200,
-                height: 38,
-                borderRadius: 8,
-                border: `1px solid ${BORDER}`,
-                padding: "0 12px",
-              }}
-            >
-              <option value="all">All Divisions</option>
-              {[...new Set(records.map((r) => r.division))]
-                .filter(Boolean)
-                .map((div) => (
-                  <option value={div} key={div}>
-                    {div}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
+        <div style={{ marginTop: 10, overflowX: "auto" }}>
+          <div
             style={{
-              padding: "10px 16px",
-              background: PRIMARY,
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontWeight: 600,
-              cursor: "pointer",
+              marginBottom: 10,
+              marginLeft: 5,
+              color: "#0A0A0A",
+              fontSize: 16,
+              fontWeight: "600",
             }}
           >
-            <FiPlus /> Upload Feedback
-          </button>
-        </div>
-
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
+            Feedbacks Records
+          </div>
           <table
-            style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              border: `1px solid ${BORDER}`, // Outer border
+              borderRadius: 8,
+              overflow: "hidden", // Clips corners
+              minWidth: 900,
+            }}
           >
             <thead>
               <tr
                 style={{
-                  color: "#64748B",
+                  color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
                   textAlign: "left",
+                  fontWeight: 400,
+                  fontSize: 12,
+                  background: "#EFF7FF"
+
                 }}
               >
-                {["Project Name", "Division", "Feedback", "Feedback Received", "Ratings", "Feedback Date"].map(
+                {["Project Name", "Division", "Feedback", "Ratings", "Feedback Date"].map(
                   (col) => (
-                    <th key={col} style={{ padding: "12px 8px", fontWeight: 600 }}>
+                    <th
+                      key={col}
+                      style={{
+                        padding: "12px 16px",
+                        fontWeight: 600,
+
+                        borderBottom: `1px solid ${BORDER}`, // Header separator
+                      }}
+                    >
                       {col}
                     </th>
                   )
@@ -175,40 +204,79 @@ export default function CustomerFeedbacks() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
+                  <td colSpan={5} style={{ padding: 16, textAlign: "center" }}>
                     Loading...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
+                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
+                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
                     No feedback records found.
                   </td>
                 </tr>
               )}
-              {!loading && !error &&
-                filtered.map((row) => (
-                  <tr key={row.record_id} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>{row.project_name}</td>
-                    <td style={{ padding: "12px 8px" }}>{row.division}</td>
-                    <td style={{ padding: "12px 8px", color: "#475569" }}>{row.feedback_text}</td>
-                    <td style={{ padding: "12px 8px" }}>{row.feedback_from}</td>
-                    <td style={{ padding: "12px 8px" }}>
-                      <Rating value={row.rating} />
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>
-                      {new Date(row.feedback_date).toLocaleDateString("en-GB")}
-                    </td>
-                  </tr>
-                ))}
+              {!loading &&
+                !error &&
+                filtered.map((row, index) => {
+                  // 1. Calculate if this is the last row
+                  const isLast = index === filtered.length - 1;
+
+                  return (
+                    <tr key={row.record_id}>
+                      {/* 2. Apply border logic to every cell */}
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          fontWeight: 600,
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.project_name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.division}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          color: "#475569",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {row.feedback_text}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <Rating value={row.rating} />
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        {new Date(row.feedback_date).toLocaleDateString("en-GB")}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
@@ -260,7 +328,7 @@ function FeedbackModal({ onClose, onCreated }) {
     const requiredFields = [
       "project_name",
       "division",
-      "feedback_from",
+      // "feedback_from",
       "rating",
       "feedback_date",
       "feedback_text",
@@ -355,7 +423,7 @@ function FeedbackModal({ onClose, onCreated }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <Input label="Project Name" value={form.project_name} onChange={(e) => onChange("project_name", e.target.value)} />
             <Input label="Division" value={form.division} onChange={(e) => onChange("division", e.target.value)} />
-            <Input label="Feedback Received" value={form.feedback_from} onChange={(e) => onChange("feedback_from", e.target.value)} />
+            {/* <Input label="Feedback Received" value={form.feedback_from} onChange={(e) => onChange("feedback_from", e.target.value)} /> */}
             <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
             <Input label="Feedback Date" type="date" value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} />
           </div>
