@@ -7,6 +7,8 @@ import totalRecord from "../../assets/customer.svg"
 import CommonStatCard from "../../components/common/common_card/common_card";
 import avergaeRating from "../../assets/Star.svg"
 import pending_review from "../../assets/SpinnerGap.svg"
+import FileUploadBox from "../../components/common/FileUploadBox";
+
 
 
 const BORDER = "#E2E8F0";
@@ -185,7 +187,7 @@ export default function CustomerFeedbacks() {
 
                 }}
               >
-                {["Project Name", "Division", "Feedback", "Ratings", "Feedback Date"].map(
+                {["Project Name", "Division", "Feedback By", "Ratings", "Feedback Date"].map(
                   (col) => (
                     <th
                       key={col}
@@ -315,7 +317,7 @@ function FeedbackModal({ onClose, onCreated }) {
     feedback_from: "",
     rating: "",
     feedback_date: "",
-    feedback_text: "",
+    feedback_by: "",
   });
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -332,7 +334,7 @@ function FeedbackModal({ onClose, onCreated }) {
       // "feedback_from",
       "rating",
       "feedback_date",
-      "feedback_text",
+      "feedback_by",
     ];
     if (requiredFields.some((key) => !`${form[key]}`.trim())) {
       setError("Please complete all feedback fields.");
@@ -399,7 +401,7 @@ function FeedbackModal({ onClose, onCreated }) {
           boxShadow: "0 30px 70px rgba(15,23,42,0.25)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between" ,height:50, alignItems:"center",flexShrink:0, marginTop:0 }}>
           <div>
             <h3 style={{ margin: 0 }}>Upload Feedback</h3>
             <p style={{ margin: "6px 0 0", color: "#64748B" }}>
@@ -414,13 +416,22 @@ function FeedbackModal({ onClose, onCreated }) {
               borderRadius: 10,
               padding: "8px 12px",
               cursor: "pointer",
-            }}
+              width:32,
+              height:32,
+              }}
           >
-            Close
+           X
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14,overflowY: "auto", maxHeight: "70vh" }}>
+          <FileUploadBox
+                     label="Upload Document"
+                     description="Attach training related file here"
+                     supported="PDF/Word"
+                     file={file}
+                     onFileSelected={(f) => setFile(f)}
+                   />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <Input label="Project Name" value={form.project_name} onChange={(e) => onChange("project_name", e.target.value)} />
             <Input label="Division" value={form.division} onChange={(e) => onChange("division", e.target.value)} />
@@ -429,10 +440,10 @@ function FeedbackModal({ onClose, onCreated }) {
             <Input label="Feedback Date" type="date" value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Feedback Text</span>
+            <span style={{ color: "#475569", fontSize: 13 }}>Feedback By</span>
             <textarea
-              value={form.feedback_text}
-              onChange={(e) => onChange("feedback_text", e.target.value)}
+              value={form.feedback_by}
+              onChange={(e) => onChange("feedback_by", e.target.value)}
               rows={3}
               style={{
                 borderRadius: 8,
@@ -444,28 +455,6 @@ function FeedbackModal({ onClose, onCreated }) {
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document</span>
-            <div
-              style={{
-                border: `1px dashed ${BORDER}`,
-                borderRadius: 10,
-                padding: "10px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <FiUploadCloud />
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                style={{ flex: 1 }}
-              />
-            </div>
-          </label>
-
-          {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <button

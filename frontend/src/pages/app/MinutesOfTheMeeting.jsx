@@ -219,8 +219,8 @@ function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
       <table className="Table">
         <thead>
         
-            <th >File Name</th>
-            <th >Tag</th>
+            <th >Title</th>
+            <th >Tag Name</th>
             <th >Meeting Date</th>
             <th >Action On</th>
             <th >View Action</th>

@@ -14,6 +14,7 @@ import { projectApi } from '../../api/projectapi';
 import { AuthContext } from '../../context/AuthContext';
 import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
+import folderOpen from '../../assets/folderOpen.svg';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -84,24 +85,32 @@ export default function ProjectsSectionImproved() {
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: 12,
-            marginBottom: SPACING.md,
+            marginBottom: 20,
           }}
         >
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 600,
-              margin: 0,
-              color: COLORS.textPrimary,
-            }}
-          >
-            Projects
-          </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+  <img
+    src={folderOpen}
+    alt="Projects"
+    style={{ width: 30, height: 30, objectFit: 'contain'}}
+  />
+  <span
+    style={{
+      fontSize: 28,
+      fontWeight: 600,
+      color: "#000000",
+      fontFamily: "inter-semi-bold, Helvetica",
+    }}
+  >
+    Projects
+  </span>
+</div>
+
           {canCreate && (
             <Button
               onClick={() => setShowModal(true)}
               variant="primary"
-              style={{ width: 188, height: 44, borderRadius: 6 }}
+              style={{ width: 200, height: 44, borderRadius: 6 ,fontFamily: "inter-regular, Helvetica", fontSize: 16}}
             >
               + New Project
             </Button>

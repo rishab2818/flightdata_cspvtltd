@@ -117,7 +117,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
             color: COLORS.textPrimary,
           }}
         >
-          Create New Project
+          Add Project
         </h3>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <label style={{ fontSize: 14, color: COLORS.textSecondary }}>
@@ -134,6 +134,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
                 borderRadius: 6,
                 border: `1px solid ${BORDER}`,
                 fontSize: 14,
+                background:"#F3F3F5",
               }}
             />
           </label>
@@ -152,6 +153,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
                 fontSize: 14,
                 minHeight: 80,
                 resize: 'none',
+                background:"#F3F3F5",
               }}
             />
           </label>
@@ -170,6 +172,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
                 borderRadius: 6,
                 border: `1px solid ${BORDER}`,
                 fontSize: 14,
+                background:"#F3F3F5",
               }}
             />
             {/* search dropdown */}

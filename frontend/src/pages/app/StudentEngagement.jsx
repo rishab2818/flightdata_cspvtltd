@@ -414,8 +414,8 @@ export default function StudentEngagement() {
            </label>
            
             <label className={styles.inputLabel}>
-              <span>Mentor</span>
-              <input placeholder="Enter Mentor Name"
+              <span>Guide</span>
+              <input placeholder="Enter Guide Name"
                 value={form.mentor}
                 onChange={(e) => onChange("mentor", e.target.value)}
               />
