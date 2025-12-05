@@ -39,6 +39,16 @@ class StudentEngagementCreate(BaseModel):
 
 
 class StudentEngagementOut(StudentEngagementCreate):
+    # Relax optionality for responses to support legacy records that may have
+    # missing fields. Required fields for creation remain enforced by
+    # StudentEngagementCreate.
+    college_name: Optional[str] = None
+    project_name: Optional[str] = None
+    program_type: Optional[str] = None
+    duration_months: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = None
     record_id: str
     owner_email: str
     created_at: datetime

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
+import { FiDownload, FiEdit2, FiEye, FiTrash2 } from "react-icons/fi";
 
 import Users from "../../assets/Users.svg";
 import Book1 from "../../assets/Book1.svg";
@@ -96,8 +97,10 @@ export default function StudentEngagement() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [existingFileMeta, setExistingFileMeta] = useState(null);
 
-  const [form, setForm] = useState({
+  const initialForm = {
     student: "",
     college_name: "",
     project_name: "",
@@ -109,7 +112,9 @@ export default function StudentEngagement() {
     approval_status: "waiting",
     notes: "",
     mentor: "",
-  });
+  };
+
+  const [form, setForm] = useState(initialForm);
 
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -162,6 +167,50 @@ export default function StudentEngagement() {
     ];
   }, [records]);
 
+  const resetFormState = () => {
+    setForm(initialForm);
+    setFile(null);
+    setExistingFileMeta(null);
+    setEditingRecord(null);
+    setError("");
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    resetFormState();
+  };
+
+  const openCreateModal = () => {
+    resetFormState();
+    setShowModal(true);
+  };
+
+  const openEditModal = (record) => {
+    setEditingRecord(record);
+    setForm({
+      student: record.student || "",
+      college_name: record.college_name || "",
+      project_name: record.project_name || "",
+      program_type: record.program_type || "Internship",
+      duration_months: String(record.duration_months ?? ""),
+      start_date: record.start_date ? record.start_date.slice(0, 10) : "",
+      end_date: record.end_date ? record.end_date.slice(0, 10) : "",
+      status: record.status || "Ongoing",
+      approval_status: record.approval_status || "waiting",
+      notes: record.notes || "",
+      mentor: record.mentor || "",
+    });
+    setExistingFileMeta({
+      storage_key: record.storage_key,
+      original_name: record.original_name,
+      content_type: record.content_type,
+      size_bytes: record.size_bytes,
+      content_hash: record.content_hash,
+    });
+    setFile(null);
+    setShowModal(true);
+  };
+
   /* -------------------- Submit -------------------- */
 
   const handleSubmit = async (e) => {
@@ -176,7 +225,11 @@ export default function StudentEngagement() {
     try {
       setSubmitting(true);
 
-      let storage_key, original_name, content_type, size_bytes, content_hash;
+      let storage_key = existingFileMeta?.storage_key;
+      let original_name = existingFileMeta?.original_name;
+      let content_type = existingFileMeta?.content_type;
+      let size_bytes = existingFileMeta?.size_bytes;
+      let content_hash = existingFileMeta?.content_hash;
 
       if (file) {
         const hash = await computeSha256(file);
@@ -207,30 +260,61 @@ export default function StudentEngagement() {
         content_hash,
       };
 
-      const created = await studentEngagementApi.create(payload);
-      setRecords((prev) => [created, ...prev]);
+      if (editingRecord) {
+        const updated = await studentEngagementApi.update(editingRecord.record_id, payload);
+        setRecords((prev) =>
+          prev.map((r) => (r.record_id === editingRecord.record_id ? updated : r))
+        );
+      } else {
+        const created = await studentEngagementApi.create(payload);
+        setRecords((prev) => [created, ...prev]);
+      }
 
       setShowModal(false);
-      setForm({
-        student: "",
-        college_name: "",
-        project_name: "",
-        program_type: "Internship",
-        duration_months: "6",
-        start_date: "",
-        end_date: "",
-        status: "Ongoing",
-        approval_status: "waiting",
-        notes: "",
-        mentor: "",
-      });
-      setFile(null);
+      resetFormState();
     } catch (err) {
       setError("Unable to save student engagement record");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleViewDocument = async (record) => {
+    try {
+      const res = await studentEngagementApi.downloadUrl(record.record_id);
+      if (!res?.download_url) throw new Error("Missing URL");
+      window.open(res.download_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      alert("Unable to view document.");
+    }
+  };
+
+  const handleDownloadDocument = async (record) => {
+    try {
+      const res = await studentEngagementApi.downloadUrl(record.record_id);
+      if (!res?.download_url) throw new Error("Missing URL");
+      const link = document.createElement("a");
+      link.href = res.download_url;
+      link.download = record.original_name || "document";
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert("Unable to download document.");
+    }
+  };
+
+  const handleDeleteRecord = async (record) => {
+    if (!window.confirm("Are you sure you want to delete this record?")) return;
+    try {
+      await studentEngagementApi.remove(record.record_id);
+      setRecords((prev) => prev.filter((r) => r.record_id !== record.record_id));
+    } catch (err) {
+      alert("Unable to delete record.");
+    }
+  };
+
+  const uploadDisplayFile =
+    file || (existingFileMeta?.original_name ? { name: existingFileMeta.original_name } : null);
 
   return (
     <div className={styles.wrapper}>
@@ -279,7 +363,7 @@ export default function StudentEngagement() {
             ]}
           />
         </div>
-           <button className={styles.addBtn} onClick={() => setShowModal(true)}>
+        <button className={styles.addBtn} onClick={openCreateModal}>
           + Add Student
         </button>
       </section>
@@ -300,6 +384,7 @@ export default function StudentEngagement() {
             "Guide",
             "Status",
             "Approval",
+            "Actions",
           ];
 
           const formatDate = (value) =>
@@ -356,6 +441,42 @@ export default function StudentEngagement() {
                         <Badge value={row.status} />
                       </td>
                       <td>{row.approval_status === "approved" ? "Approved" : "Waiting"}</td>
+                      <td>
+                        <div className="doc-actions">
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => openEditModal(row)}
+                            title="Edit"
+                          >
+                            <FiEdit2 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => handleViewDocument(row)}
+                            title="View"
+                          >
+                            <FiEye size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => handleDownloadDocument(row)}
+                            title="Download"
+                          >
+                            <FiDownload size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => handleDeleteRecord(row)}
+                            title="Delete"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
               </tbody>
@@ -366,7 +487,10 @@ export default function StudentEngagement() {
 
       {/* Modal */}
       {showModal && (
-        <Modal title="Add Student Program" onClose={() => setShowModal(false)}>
+        <Modal
+          title={editingRecord ? "Edit Student Program" : "Add Student Program"}
+          onClose={handleCloseModal}
+        >
           <form onSubmit={handleSubmit} className={styles.formGrid}>
 
              {/* 👇 Upload box moved to TOP */}
@@ -374,7 +498,7 @@ export default function StudentEngagement() {
               label="Upload Document"
               description="Attach training related file here"
               supported="PDF/Word"
-              file={file}
+              file={uploadDisplayFile}
               onFileSelected={(f) => setFile(f)}
             />
             
@@ -497,13 +621,17 @@ export default function StudentEngagement() {
               <button
                 type="button"
                 className={styles.cancelBtn}
-                onClick={() => setShowModal(false)}
+                onClick={handleCloseModal}
               >
                 Cancel
               </button>
 
               <button type="submit" className={styles.saveBtn} disabled={submitting}>
-                {submitting ? "Saving..." : "+ Add Program"}
+                {submitting
+                  ? "Saving..."
+                  : editingRecord
+                  ? "Save Changes"
+                  : "+ Add Program"}
               </button>
             </div>
 
