@@ -77,10 +77,16 @@ async def init_document_upload(
         minio_client.make_bucket(bucket)
 
     upload_url = minio_client.presigned_put_object(
-        bucket_name=bucket,
-        object_name=object_key,
-        expires=timedelta(hours=1),
+    bucket_name=bucket,
+    object_name=object_key,
+    expires=timedelta(hours=1),
     )
+
+    lan_ip = settings.minio_endpoint.split(":")[0]  # Extract IP from "192.168.1.4:9000"
+    upload_url = upload_url.replace("127.0.0.1", lan_ip)
+    upload_url = upload_url.replace("localhost", lan_ip)
+
+
 
     return {
         "upload_url": upload_url,
@@ -88,6 +94,8 @@ async def init_document_upload(
         "bucket": bucket,
         "expires_in": 3600,
     }
+
+
 
 
 # ---------- 2) Confirm upload: register metadata (UPLOAD API) ----------

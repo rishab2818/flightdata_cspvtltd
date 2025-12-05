@@ -399,6 +399,7 @@ function TrainingModal({ onClose, onCreated }) {
       if (file) {
         const content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("training-records", {
+          section: "training-records",
           filename: file.name,
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,

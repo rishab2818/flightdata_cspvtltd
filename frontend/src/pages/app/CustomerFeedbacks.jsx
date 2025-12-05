@@ -349,6 +349,8 @@ function FeedbackModal({ onClose, onCreated }) {
       if (file) {
         const content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("customer-feedbacks", {
+
+          section: "customer-feedbacks",
           filename: file.name,
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,

@@ -414,6 +414,7 @@ function ReportModal({ onClose, onCreated }) {
       if (file) {
         const content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("technical-reports", {
+          section: "technical-reports",
           filename: file.name,
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,
