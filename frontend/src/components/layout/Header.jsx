@@ -14,7 +14,7 @@ const pageMeta = {
     subtitle: "Description here",
   },
   "/app/inventory-records": {
-    title: "Inventory Records",
+    title: "Procurement Records",
     subtitle: "Description here",
   },
   "/app/divisional-records": {

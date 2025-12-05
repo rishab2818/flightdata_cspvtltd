@@ -8,6 +8,7 @@ import CurrencyInr from "../../assets/CurrencyInr.svg";
 import Calculator from "../../assets/Calculator.svg";
 import DotsThreeOutline from "../../assets/DotsThreeOutline.svg";
 import styles from "./DivisionalRecords.module.css";
+import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -85,6 +86,91 @@ function FiltersBar({ filters, setFilters, openModal }) {
       <button className={styles.uploadBtn} onClick={openModal}>
         <FiPlus size={16} /> Upload Record
       </button>
+    </div>
+  );
+}
+
+/* --------------------- Main Component --------------------- */
+export default function DivisionalRecords() {
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [filters, setFilters] = useState({ type: "all" });
+  const [showModal, setShowModal] = useState(false);
+
+  const openModal = () => setShowModal(true);
+
+  const loadRecords = async () => {
+    try {
+      setLoading(true);
+      const data = await recordsApi.listDivisional();
+      setRecords(data);
+    } catch {
+      setError("Failed to load divisional records.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRecords();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return records.filter((r) => (filters.type === "all" ? true : r.record_type === filters.type));
+  }, [records, filters]);
+
+  return (
+    <div className={styles.wrapper}>
+      {/* Stats */}
+      <div className={styles.StatGrid}>
+        <StatCard title="Total Records" value={records.length} icon={Folder} bg="#DBEAFE" />
+        <StatCard title="Budget" value={records.filter((r) => r.record_type === "Budget").length} icon={CurrencyInr} bg="#FFEDD4" />
+        <StatCard title="AMC" value={records.filter((r) => r.record_type === "AMC").length} icon={Calculator} bg="#F3E8FF" />
+        <StatCard title="Others" value={records.filter((r) => r.record_type === "Others").length} icon={DotsThreeOutline} bg="#FFEDD4" />
+      </div>
+
+      {/* Filters */}
+      <FiltersBar filters={filters} setFilters={setFilters} openModal={() => setShowModal(true)} />
+
+      {/* Table */}
+      <div className={styles.tableWrapper}>
+        <h3>Divisional Records</h3>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              {["Record Name", "Type", "Created Date", "Remarks", "Action"].map((col) => (
+                <th key={col}>{col}</th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {loading && (
+              <tr><td colSpan={5} className={styles.centerText}>Loading...</td></tr>
+            )}
+
+            {!loading && error && (
+              <tr><td colSpan={5} className={styles.errorText}>{error}</td></tr>
+            )}
+
+            {!loading && !error && filtered.length === 0 && (
+              <tr><td colSpan={5} className={styles.centerText}>No divisional records found.</td></tr>
+            )}
+
+            {!loading && !error && filtered.map((row) => (
+              <tr key={row.record_id}>
+                <td>{row.division_name}</td>
+                <td><TypeBadge value={row.record_type} /></td>
+                <td>{new Date(row.created_date).toLocaleDateString("en-GB")}</td>
+                <td>{row.remarks}</td>
+                <td className={styles.actionCol}>-</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {showModal && <DivisionalModal onClose={() => setShowModal(false)} onCreated={loadRecords} />}
     </div>
   );
 }
@@ -222,88 +308,3 @@ function DivisionalModal({ onClose, onCreated }) {
   );
 }
 
-/* --------------------- Main Component --------------------- */
-export default function DivisionalRecords() {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [filters, setFilters] = useState({ type: "all" });
-  const [showModal, setShowModal] = useState(false);
-
-  const openModal = () => setShowModal(true);
-
-  const loadRecords = async () => {
-    try {
-      setLoading(true);
-      const data = await recordsApi.listDivisional();
-      setRecords(data);
-    } catch {
-      setError("Failed to load divisional records.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadRecords();
-  }, []);
-
-  const filtered = useMemo(() => {
-    return records.filter((r) => (filters.type === "all" ? true : r.record_type === filters.type));
-  }, [records, filters]);
-
-  return (
-    <div className={styles.wrapper}>
-      {/* Stats */}
-      <div className={styles.StatGrid}>
-        <StatCard title="Total Records" value={records.length} icon={Folder} bg="#DBEAFE" />
-        <StatCard title="Budget" value={records.filter((r) => r.record_type === "Budget").length} icon={CurrencyInr} bg="#FFEDD4" />
-        <StatCard title="AMC" value={records.filter((r) => r.record_type === "AMC").length} icon={Calculator} bg="#F3E8FF" />
-        <StatCard title="Others" value={records.filter((r) => r.record_type === "Others").length} icon={DotsThreeOutline} bg="#FFEDD4" />
-      </div>
-
-      {/* Filters */}
-      <FiltersBar filters={filters} setFilters={setFilters} openModal={() => setShowModal(true)} />
-
-      {/* Table */}
-      <div className={styles.tableWrapper}>
-        <h3>Divisional</h3>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              {["Record Name", "Type", "Created Date", "Remarks", "Action"].map((col) => (
-                <th key={col}>{col}</th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading && (
-              <tr><td colSpan={5} className={styles.centerText}>Loading...</td></tr>
-            )}
-
-            {!loading && error && (
-              <tr><td colSpan={5} className={styles.errorText}>{error}</td></tr>
-            )}
-
-            {!loading && !error && filtered.length === 0 && (
-              <tr><td colSpan={5} className={styles.centerText}>No divisional records found.</td></tr>
-            )}
-
-            {!loading && !error && filtered.map((row) => (
-              <tr key={row.record_id}>
-                <td>{row.division_name}</td>
-                <td><TypeBadge value={row.record_type} /></td>
-                <td>{new Date(row.created_date).toLocaleDateString("en-GB")}</td>
-                <td>{row.remarks}</td>
-                <td className={styles.actionCol}>-</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {showModal && <DivisionalModal onClose={() => setShowModal(false)} onCreated={loadRecords} />}
-    </div>
-  );
-}

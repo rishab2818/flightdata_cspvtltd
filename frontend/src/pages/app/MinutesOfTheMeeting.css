@@ -1,8 +1,10 @@
-.Container {
-  width: 100%;
-  max-width: 1480px;
-  margin: 0 auto;
+.Container{
+    width: 100%; 
+    max-width: 1440px;
+    margin:0 auto;
+    border: 1px solid #FFF1DB;
 }
+    
 
 .Cardcontainer {
   width: 100%;
@@ -12,11 +14,13 @@
 }
 
 .TabsRow {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 18px;
-  padding-bottom: 4px;
-}
+    display: flex;
+    gap: 24px;
+    margin-bottom: 18px;
+    padding-bottom: 4px;
+    font-weight: 700;
+}   
+
 
 .TabButton {
   border: none;
@@ -27,34 +31,35 @@
   cursor: pointer;
 }
 
-.TabButton.active {
-  border-bottom: 2px solid #007bff;
+.activeTab {
+  border-bottom: 1px solid #1976d2;
+  font-weight: 700;
 }
 
 .Banner {
-  width: 1480px;
-  max-width: 100%;
-  height: 44px;
-  border-radius: 2px;
-  padding: 10px;
-  background: #FFF1DB;
-  border: 1px solid #FFF1DB;
-  display: flex;
-  box-sizing: border-box;
+    width: 1440px;
+    max-width: 100%;
+    height: 44px;
+    border-radius: 2px;
+    padding: 10px;
+    background: #FFF1DB;
+    border: 1px solid #FFF1DB;
+    display: flex;
+    box-sizing: border-box;
 }
 
-.BannerText {
-  width: 100%;
-  font-size: 18px;
-  font-weight: 400;
-  color: #0a0a0a;
-  font-family: inter-regular, Helvetica;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  justify-content: center;
+.BannerText{
+    width: 100%;
+    font-size:16px;
+    font-weight: 400;
+    color: #0a0a0a;
+    font-family: inter-regular, Helvetica;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    justify-content: center;
 }
-
+ 
 .Header {
   margin-top: 24px;
   margin-bottom: 12px;
@@ -74,56 +79,60 @@
 }
 
 .UploadButton {
-  width: 157px;
-  height: 36px;
-  border-radius: 2px;
-  background: #1976d2;
-  border: none;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-family: inter-regular, Helvetica;
+    width: 157px;
+    height: 36px;
+    border-radius: 4px;
+    background: #1976d2;
+    border: none;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: inter-regular, Helvetica;
 }
 
+
 .TableGrid {
-  margin-top: 8px;
-  overflow: auto;
+    width: 100%;
+    overflow-x: auto;     /* enables horizontal scroll */
+    overflow-y: hidden;
 }
 
 .Table {
-  width: 1480px;
-  max-width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  border: 1px solid #00000026;
+    width: 1440px;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    border: 1px solid #00000026;
+    border-radius: 8px;
+    border-color: #0000001A;
 }
 
 .Table th {
-  width: 1480px;
-  max-width: 100%;
-  padding: 12px 16px;
-  text-align: center;
-  border-radius: 2px;
-  color: #0a0a0a;
-  font-family: inter-semi-bold, Helvetica;
-  border-bottom: 1px solid #e5e7eb;
-  font-weight: 600;
-  background: #EFF7FF;
-
+    width: 1440px;
+    font-size: 14px;
+    max-width: 100%;
+    padding: 12px 16px;
+    text-align: left;
+    color: #0a0a0a;
+    font-family: "inter-regular", Helvetica;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 400;
+    background: #EFF7FF;
 }
 
 .Table tr {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #000000cc;
-  font-family: inter-semi-bold, Helvetica;
-  border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 400;
+    color: #000000cc;
+    font-family: "inter-regular", Helvetica;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .TableEmpty {
@@ -149,11 +158,10 @@
 }
 
 .ActionButton {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  margin: 0 4px;
-
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    margin: 0 4px;
 }
 
 /* Row */

@@ -101,7 +101,7 @@
     height: 36px;
   min-width: 270px;
   padding: 10px 14px;
-  background: #f9fafb;
+  background:  #F3F3F5;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
@@ -150,6 +150,9 @@
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 0px 24px 24px 24px;
+  width: 100%;
+  overflow-x: auto;     /* enables horizontal scroll */
+  overflow-y: hidden;
 }
 
 .h3{
@@ -160,8 +163,14 @@
 }
 
 .table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 1440px;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 1px solid #00000026;
+  border-radius: 8px;
+  border-color: #0000001A;
 }
 
 .table th {
@@ -208,12 +217,14 @@
 .modalBox {
   width: 820px;
   max-width: 95%;
+   max-height: 90vh;
   background: #fff;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
   display: flex;
   flex-direction: column;
+  overflow-y: auto; 
   gap: 20px;
   animation: pop 0.2s ease-out;
 }
@@ -225,12 +236,16 @@
 
 .modalHeader {
   display: flex;
+  height: 80px;
+  flex-shrink: 0;
+  padding: 20px 0 ;
   justify-content: space-between;
   align-items: center;
   font-size: 18px;
   font-family: "Inter-semiBold", Helvetica;
   font-weight: 600;
   color: #0a0a0a;
+  z-index: 10;
 }
 
 .modalTitle {
@@ -268,6 +283,12 @@
   width: 100%;
   position: relative;
   margin-top: -20px;
+  flex: 1;
+  overflow-y: auto;            /* scroll only here */
+  padding-top: 18px;
+
+  /* limit body height */
+  max-height: calc(90vh - 80px);
 }
 
 .inputLabel {

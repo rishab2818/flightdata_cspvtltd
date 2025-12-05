@@ -69,7 +69,7 @@ export default function TrainingRecords() {
   }, [records, filters]);
 
   return (
-    <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
 
 
       <div
@@ -454,7 +454,7 @@ function TrainingModal({ onClose, onCreated }) {
           boxShadow: "0 30px 70px rgba(15,23,42,0.25)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between",height:50, alignItems:"center",flexShrink:0, marginTop:0 }}>
           <div>
             <h3 style={{ margin: 0 }}>Upload Files </h3>
 
@@ -482,6 +482,8 @@ function TrainingModal({ onClose, onCreated }) {
           </button>
         </div>
 
+        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "70vh" }}>
+
         {/* 👇 Upload box moved to TOP */}
         <FileUploadBox
           label="Upload Document"
@@ -491,7 +493,6 @@ function TrainingModal({ onClose, onCreated }) {
           onFileSelected={(f) => setFile(f)}
         />
 
-        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <Input label="Trainee Name" value={form.trainee_name} onChange={(e) => onChange("trainee_name", e.target.value)} />
             <Input label="Training Name" value={form.training_name} onChange={(e) => onChange("training_name", e.target.value)} />

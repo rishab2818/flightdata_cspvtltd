@@ -62,6 +62,7 @@ export default function UploadMinutesModal({
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [notes, setNotes] = useState("");
 
   // For multi action points
   const [actionPointInput, setActionPointInput] = useState("");
@@ -78,6 +79,7 @@ export default function UploadMinutesModal({
     setTag("");
     setFile(null);
     setError("");
+    setNotes("");
     setActionPointInput("");
     setActionPoints([]);
     setActionOnInput("");
@@ -210,6 +212,7 @@ export default function UploadMinutesModal({
       onClose();
     } catch (err) {
       console.error(err);
+
       if (err?.response?.status === 409) {
         setError("This document already exists (duplicate detected).");
       } else if (err?.response?.data?.detail) {
@@ -245,7 +248,7 @@ export default function UploadMinutesModal({
       e.preventDefault();
       handleAddActionOn();
     }
-  };
+  };  
 
   return (
     <div className="modalOverlay">
