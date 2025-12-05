@@ -12,8 +12,6 @@ __pycache__/
 .DS_Store
 *.log
 
-# Local config / secrets
-*.env
 
 # Temporary artifacts
 *.xlsx
