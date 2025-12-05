@@ -73,15 +73,21 @@ async def init_document_upload(
     object_prefix = "/".join(key_parts)
     object_key = f"{object_prefix}/{uuid4()}_{payload.filename}"
 
-    # Ensure bucket exists (idempotent)
-    if not minio_client.bucket_exists(bucket):
-        minio_client.make_bucket(bucket)
+    try:
+        # Ensure bucket exists (idempotent)
+        if not minio_client.bucket_exists(bucket):
+            minio_client.make_bucket(bucket)
 
-    upload_url = minio_client.presigned_put_object(
-    bucket_name=bucket,
-    object_name=object_key,
-    expires=timedelta(hours=1),
-    )
+        upload_url = minio_client.presigned_put_object(
+            bucket_name=bucket,
+            object_name=object_key,
+            expires=timedelta(hours=1),
+        )
+    except Exception as exc:  # pragma: no cover - network dependent
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage backend is unavailable. Please try again later.",
+        ) from exc
 
     lan_ip = settings.minio_endpoint.split(":")[0]  # Extract IP from "192.168.1.4:9000"
     upload_url = upload_url.replace("127.0.0.1", lan_ip)
