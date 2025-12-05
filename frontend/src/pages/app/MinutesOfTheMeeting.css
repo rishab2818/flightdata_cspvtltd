@@ -1,163 +1,165 @@
-.Container{
-    width: 100%; 
-    max-width: 1480px;
-    margin:0 auto;
+.Container {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
 }
 
 .Cardcontainer {
-   width: 100%;
-   background: #fff;
-   border-radius: 4;  
-   padding:35px 25px;
+  width: 100%;
+  background: #fff;
+  border-radius: 4;
+  padding: 35px 25px;
 }
 
 .TabsRow {
-    display: flex;
-    gap: 24px;
-    margin-bottom: 18px;
-    padding-bottom: 4px;
-}    
-
-.TabButton{
-    border: none;
-    background: transparent;
-    padding: 0;
-    padding-bottom: 8px;
-    font-size: 16px;
-    cursor: pointer;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding-bottom: 4px;
 }
 
-.TabButton.active{
-    border-bottom: 2px solid #007bff; 
+.TabButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  padding-bottom: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.TabButton.active {
+  border-bottom: 2px solid #007bff;
 }
 
 .Banner {
-    width: 1480px;
-    max-width: 100%;
-    height: 44px;
-    border-radius: 2px;
-    padding: 10px;
-    background: #FFF1DB;
-    border: 1px solid #FFF1DB;
-    display: flex;
-    box-sizing: border-box;
+  width: 1480px;
+  max-width: 100%;
+  height: 44px;
+  border-radius: 2px;
+  padding: 10px;
+  background: #FFF1DB;
+  border: 1px solid #FFF1DB;
+  display: flex;
+  box-sizing: border-box;
 }
 
-.BannerText{
-    width: 100%;
-    font-size:18px;
-    font-weight: 400;
-    color: #0a0a0a;
-    font-family: inter-regular, Helvetica;
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    justify-content: center;
+.BannerText {
+  width: 100%;
+  font-size: 18px;
+  font-weight: 400;
+  color: #0a0a0a;
+  font-family: inter-regular, Helvetica;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-content: center;
 }
- 
+
 .Header {
-    margin-top: 24px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 1480px;
-    max-width: 100%;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 1480px;
+  max-width: 100%;
 }
 
 .Header h3 {
-    font-size: 20px;
-    font-weight: 600;
-    color: #0a0a0a;
-    font-family: inter-semi-bold, Helvetica;
-    margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0a0a0a;
+  font-family: inter-semi-bold, Helvetica;
+  margin: 0;
 }
 
 .UploadButton {
-    width: 157px;
-    height: 36px;
-    border-radius: 2px;
-    background: #1976d2;
-    border: none;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 400;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-family: inter-regular, Helvetica;
+  width: 157px;
+  height: 36px;
+  border-radius: 2px;
+  background: #1976d2;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inter-regular, Helvetica;
 }
 
 .TableGrid {
-    margin-top: 8px;
-    overflow: auto;
+  margin-top: 8px;
+  overflow: auto;
 }
 
 .Table {
-    width: 1480px;
-    max-width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    border: 1px solid #00000026;
+  width: 1480px;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid #00000026;
 }
 
 .Table th {
-    width: 1480px;
-    max-width: 100%;
-    padding: 12px 16px;
-    text-align: center;
-    border-radius: 2px;
-    color: #0a0a0a;
-    font-family: inter-semi-bold, Helvetica;
-    border-bottom: 1px solid #e5e7eb;
-    font-weight: 600;
-    background: #EFF7FF;
-  
+  width: 1480px;
+  max-width: 100%;
+  padding: 12px 16px;
+  text-align: center;
+  border-radius: 2px;
+  color: #0a0a0a;
+  font-family: inter-semi-bold, Helvetica;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  background: #EFF7FF;
+
 }
 
 .Table tr {
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: #000000cc;
-    font-family: inter-semi-bold, Helvetica;
-    border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #000000cc;
+  font-family: inter-semi-bold, Helvetica;
+  border-bottom: 1px solid #e5e7eb;
 }
+
 .TableEmpty {
-    padding: 18px 4px;
-    border-bottom: 1px solid #e5e7eb;
-    text-align: center;
-    font-size: 13px;
-    color: #000000cc;
+  padding: 18px 4px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 13px;
+  color: #000000cc;
 }
 
 .TableLoading {
-    padding: 18px 4px;
-    text-align: center;
-    font-size: 13px;
-    color: #6b7280;
+  padding: 18px 4px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .TableError {
-    padding: 18px 4px;
-    text-align: center;
-    font-size: 13px;
-    color: #b91c1c;
+  padding: 18px 4px;
+  text-align: center;
+  font-size: 13px;
+  color: #b91c1c;
 }
 
 .ActionButton {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    margin: 0 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin: 0 4px;
 
 }
 
 /* Row */
 .minutes-row {
-  border-bottom: 1px solid #E2E8F0; /* BORDER */
+  border-bottom: 1px solid #E2E8F0;
+  /* BORDER */
 }
 
 /* Table cell padding */
@@ -185,9 +187,9 @@
 
 /*cell with text */
 .cell-text {
-    padding: 10px 4px;
-    font-size: 13px;
-    color: #717182;
+  padding: 10px 4px;
+  font-size: 13px;
+  color: #717182;
 }
 
 /* Tag pill */
@@ -212,7 +214,8 @@
   width: 37.33px;
   height: 32px;
   border-radius: 8px;
-  border: 0.67px solid #E2E8F0; /* BORDER */
+  border: 0.67px solid #E2E8F0;
+  /* BORDER */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -224,5 +227,21 @@
 .icon-badge.clickable {
   cursor: pointer;
 }
-  
 
+/* Align center for View Action and Actions columns */
+.cell.center {
+  text-align: center;
+  justify-content: center;
+}
+
+/* Ensure vertical alignment is consistent */
+.minutes-row td {
+  vertical-align: middle;
+}
+
+/* Make icon badges aligned properly */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -53,12 +53,12 @@ The helper script computes autoscale bounds from your CPU/RAM and then launches 
 ```pwsh
 ./scripts/run-stack.ps1 -PythonPath "./.venv/Scripts/python.exe" -Host "127.0.0.1" -ApiPort 8000
 ```
-- API will be available at `http://127.0.0.1:8000`.
+- API will be available at `${import.meta.env.VITE_API_BASE_URL}`.
 - Celery runs with the `solo` pool on Windows; autoscale is disabled because it depends on the prefork pool.
 - If Redis is not running, the script will start a `flightdata-redis` Docker container automatically.
 
 ## 6. Verifying and interacting
-- Open `http://127.0.0.1:8000/docs` for the FastAPI Swagger UI.
+- Open `${import.meta.env.VITE_API_BASE_URL}/docs` for the FastAPI Swagger UI.
 - Upload files via the ingestion endpoints; MinIO buckets `ingestion` and `user-docs` will be created on demand by the tasks.
 - Logs from uvicorn and Celery appear in the PowerShell windows started by the script. Stop them with `Ctrl+C` or by closing the processes.
 

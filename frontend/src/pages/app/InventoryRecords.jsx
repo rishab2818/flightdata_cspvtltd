@@ -7,6 +7,8 @@ import CurrencyInr from "../../assets/CurrencyInr.svg";
 import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
 import styles from "./InventoryRecords.module.css";
+import DocumentActions from "../../components/common/DocumentActions";
+
 
 const BORDER = "#E2E8F0";
 
@@ -190,6 +192,7 @@ export default function InventoryRecords() {
                 "Holder",
                 "Amount",
                 "Status",
+                "Actions"
               ].map((col) => (
                 <th key={col}>{col}</th>
               ))}
@@ -231,6 +234,18 @@ export default function InventoryRecords() {
                   <td>₹ {Number(row.amount).toLocaleString()}</td>
                   <td>
                     <StatusBadge status={row.status || "Ongoing"} />
+                  </td>
+                  {/* 👉 New Actions Column */}
+                  <td className="cell cell-center">
+                    <DocumentActions
+                      doc={{
+                        id: row.record_id,
+                        fileName: row.original_name,
+                        onDeleted: (id) =>
+                          setOrders(prev => prev.filter(r => r.record_id !== id)),
+                      }}
+                    />
+
                   </td>
                 </tr>
               ))}
@@ -320,7 +335,9 @@ function SupplyOrderModal({ onClose, onCreated }) {
         const content_hash = await computeSha256(file);
 
         const initRes = await recordsApi.initUpload("inventory-records", {
+          section: "inventory-records",
           filename: file.name,
+
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,
           content_hash,

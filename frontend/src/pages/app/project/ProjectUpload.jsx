@@ -26,8 +26,9 @@ export default function ProjectUpload() {
     if (!activeJob) return undefined
     const token = storage.getToken()
     const es = new EventSource(
-      `${import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'}/api/ingestion/jobs/${activeJob.job_id}/stream?token=${token}`
-    )
+      `${import.meta.env.VITE_API_BASE_URL}/api/ingestion/jobs/${activeJob.job_id}/stream?token=${token}`
+    );
+
     const handler = (ev) => {
       try {
         const payload = JSON.parse(ev.data)
@@ -62,9 +63,9 @@ export default function ProjectUpload() {
       const headersList =
         headerMode === 'custom'
           ? customHeadersText
-              .split(',')
-              .map((h) => h.trim())
-              .filter(Boolean)
+            .split(',')
+            .map((h) => h.trim())
+            .filter(Boolean)
           : null
       const job = await ingestionApi.start(projectId, file, {
         datasetType,

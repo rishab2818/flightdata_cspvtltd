@@ -11,9 +11,8 @@ import {
 import UploadMinutesModal from "../../components/app/UploadMinutesModal";
 import { documentsApi } from "../../api/documentsApi";
 import "./MinutesOfTheMeeting.css";
+import DocumentActions from "../../components/common/DocumentActions";
 
-const BORDER = "#0000001A";
-const PRIMARY = "#1976D2";
 
 // Back-end subsection codes:
 const MOM_TABS = [
@@ -35,7 +34,7 @@ function formatDate(isoDateString) {
 }
 
 export default function MinutesOfTheMeeting() {
-  const [activeSubsection, setActiveSubsection] = useState("tcm"); // "tcm" | "pmrc" | "ebm" | "gdm"
+  const [activeSubsection, setActiveSubsection] = useState("tcm"); // "tcm" | "pmrc" | "ebm" | "gdm" (TCM is default Tab)
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -121,10 +120,10 @@ export default function MinutesOfTheMeeting() {
 
   return (
     <div className="Container">
-  
+
       {/* main card */}
       <div className="Cardcontainer">
-      
+
         <TabsRow
           activeKey={activeSubsection}
           onChange={(key) => setActiveSubsection(key)}
@@ -140,6 +139,7 @@ export default function MinutesOfTheMeeting() {
           error={error}
           onDownload={handleDownload}
           onDelete={handleDelete}
+          setRows={setRows}
         />
       </div>
 
@@ -179,15 +179,15 @@ function NextMeetingBanner({ sectionLabel }) {
   return (
     <div className="Banner">
       <div className="BannerText">
-      <span >
-        Next {sectionLabel} 
-      </span>
+        <span >
+          Next {sectionLabel}
+        </span>
         <span>Aug 11, 2025</span>
         <span>Monday</span>
         <span>9:00pm</span>
         <FiEdit2 size={16} />
-        </div>
       </div>
+    </div>
   );
 }
 
@@ -211,25 +211,25 @@ function UploadHeader({ onUploadClick }) {
   );
 }
 
-function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
+function MinutesTable({ rows, loading, error, onDownload, onDelete, setRows }) {
   return (
     <div className="TableGrid">
       <table className="Table">
         <thead>
-        
-            <th >File Name</th>
-            <th >Tag</th>
-            <th >Meeting Date</th>
-            <th >Action On</th>
-            <th >View Action</th>
-            <th >Actions</th>
-         
+
+          <th >File Name</th>
+          <th >Tag</th>
+          <th >Meeting Date</th>
+          <th >Action On</th>
+          <th >View Action</th>
+          <th >Actions</th>
+
         </thead>
         <tbody>
           {loading && (
             <tr>
               <td
-                colSpan={7}
+                colSpan={6}
                 className="tableLoad"
               >
                 Loading documents...
@@ -240,7 +240,7 @@ function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
           {!loading && error && (
             <tr>
               <td
-                colSpan={7}
+                colSpan={6}
                 className="tableError"
               >
                 {error}
@@ -251,7 +251,7 @@ function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
           {!loading && !error && rows.length === 0 && (
             <tr>
               <td
-                colSpan={7}
+                colSpan={6}
                 className="TableEmpty"
               >
                 No minutes uploaded yet.
@@ -262,12 +262,15 @@ function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
           {!loading &&
             !error &&
             rows.map((row) => (
+
               <MinutesRow
                 key={row.id}
                 row={row}
+                setRows={setRows}
                 onDownload={onDownload}
                 onDelete={onDelete}
               />
+
             ))}
         </tbody>
       </table>
@@ -275,62 +278,49 @@ function MinutesTable({ rows, loading, error, onDownload, onDelete }) {
   );
 }
 
-function MinutesRow({ row, onDownload, onDelete }) {
+
+function MinutesRow({ row, onDownload, onDelete, setRows }) {
   return (
     <tr className="minutes-row">
-      {/* icon + file name */}
-      <td className="cell">
-        <div className="file-wrapper">
-          <IconBadge>
-            <FiFileText size={16} />
-          </IconBadge>
-          <span className="file-name">
-            {row.fileName}
-          </span>
-        </div>
-      </td>
 
+      {/* 1️⃣ File Name (no icon now) */}
       <td className="cell-text">{row.fileName}</td>
 
-      {/* tag pill */}
+      {/* 2️⃣ Tag */}
       <td className="cell">
         <span className="tag-pill">{row.tag}</span>
       </td>
 
-      {/* action on */}
-      <td className="cell-text">
-        {row.actionOn}
-      </td>
+      {/* 3️⃣ Meeting Date */}
+      <td className="cell-text">{row.meetingDate}</td>
 
-      {/* meeting date */}
-      <td className="cell-text">
-        {row.meetingDate}
-      </td>
+      {/* 4️⃣ Action On */}
+      <td className="cell-text">{row.actionOn}</td>
 
-      {/* my action (calendar icon) */}
-      <td className="cell">
-        <IconBadge>
+      {/* 5️⃣ View Action */}
+      <td className="cell cell-center">
+        <IconBadge clickable>
           <FiCalendar size={16} />
         </IconBadge>
       </td>
 
-      {/* actions icons */}
-      <td className="cell">
-        <div className="actions">
-          <IconBadge clickable onClick={() => onDownload(row)}>
-            <FiEye size={16} />
-          </IconBadge>
-          <IconBadge clickable onClick={() => onDownload(row)}>
-            <FiDownload size={16} />
-          </IconBadge>
-          <IconBadge clickable onClick={() => onDelete(row)}>
-            <FiTrash2 size={16} />
-          </IconBadge>
-        </div>
+      {/* 6️⃣ Actions */}
+      <td className="cell cell-center cell-actions">
+        <DocumentActions
+          doc={{
+            id: row.id,
+            fileName: row.fileName,
+            onDeleted: (id) =>
+              setRows((prev) => prev.filter((r) => r.id !== id)),
+          }}
+        />
       </td>
     </tr>
   );
 }
+
+
+
 
 function IconBadge({ children, clickable, onClick }) {
   return (

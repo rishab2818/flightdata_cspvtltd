@@ -5,6 +5,8 @@ import Login from './pages/Login'
 import ProtectedAdmin from './routes/ProtectedAdmin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import UserManagement from './pages/admin/UserManagement'
+import "./styles/common.css";
+
 
 // User app
 import AppShell from './pages/app/AppShell'
@@ -25,7 +27,7 @@ import ProjectUpload from './pages/app/project/ProjectUpload'
 import ProjectDataManagement from './pages/app/project/ProjectDataManagement'
 import ProjectVisualisation from './pages/app/project/ProjectVisualisation'
 import ProjectSettings from './pages/app/project/ProjectSettings'
-export default function App(){
+export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -41,15 +43,15 @@ export default function App(){
       {/* USER APP (Sidebar + Header persist via AppShell) */}
       <Route path="/app" element={<AppShell />}>
         <Route index element={<Dashboard />} />
-        <Route element={<ProtectedGDorDH />}> 
-        <Route path="minutes" element={<MinutesOfTheMeeting />} />
-        <Route path="student-engagement" element={<StudentEngagement />} />
-        <Route path="inventory-records" element={<InventoryRecords />} />
-        <Route path="divisional-records" element={<DivisionalRecords />} />
-        <Route path="customer-feedbacks" element={<CustomerFeedbacks />} />
-        <Route path="training-records" element={<TrainingRecords />} />
-        <Route path="technical-reports" element={<TechnicalReports />} />
-        <Route path="setting" element={<Setting />} />
+        <Route element={<ProtectedGDorDH />}>
+          <Route path="minutes" element={<MinutesOfTheMeeting />} />
+          <Route path="student-engagement" element={<StudentEngagement />} />
+          <Route path="inventory-records" element={<InventoryRecords />} />
+          <Route path="divisional-records" element={<DivisionalRecords />} />
+          <Route path="customer-feedbacks" element={<CustomerFeedbacks />} />
+          <Route path="training-records" element={<TrainingRecords />} />
+          <Route path="technical-reports" element={<TechnicalReports />} />
+          <Route path="setting" element={<Setting />} />
         </Route>
       </Route>
 
