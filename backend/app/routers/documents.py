@@ -12,6 +12,7 @@ from app.db.mongo import get_db
 from app.models.documents import (
     ActionPoint,
     DocumentSection,
+    DocumentUpdate,
     MoMSubsection,
     DocumentInitUpload,
     DocumentConfirm,
@@ -34,6 +35,28 @@ def _validate_section_and_subsection(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="subsection is only allowed for minutes_of_meeting section",
         )
+
+
+def _serialize_user_document(row: dict) -> UserDocumentOut:
+    return UserDocumentOut(
+        doc_id=str(row["_id"]),
+        owner_email=row["owner_email"],
+        section=row["section"],
+        subsection=row.get("subsection"),
+        tag=row["tag"],
+        doc_date=row["doc_date"].date(),
+        original_name=row["original_name"],
+        storage_key=row["storage_key"],
+        size_bytes=row.get("size_bytes"),
+        content_type=row.get("content_type"),
+        uploaded_at=row["uploaded_at"],
+        action_points=[
+            ActionPoint(**ap)
+            for ap in row.get("action_points", [])
+            if ap
+        ],
+        action_on=row.get("action_on", []),
+    )
 
 
 # ---------- 1) Init upload: get presigned URL, dedupe check ----------
@@ -210,27 +233,7 @@ async def list_user_documents(
 
     results: List[UserDocumentOut] = []
     for row in rows:
-        results.append(
-            UserDocumentOut(
-                doc_id=str(row["_id"]),
-                owner_email=row["owner_email"],
-                section=row["section"],
-                subsection=row.get("subsection"),
-                tag=row["tag"],
-                doc_date=row["doc_date"].date(),
-                original_name=row["original_name"],
-                storage_key=row["storage_key"],
-                size_bytes=row.get("size_bytes"),
-                content_type=row.get("content_type"),
-                uploaded_at=row["uploaded_at"],
-                action_points=[
-                    ActionPoint(**ap)
-                    for ap in row.get("action_points", [])
-                    if ap
-                ],
-                action_on=row.get("action_on", []),
-            )
-        )
+        results.append(_serialize_user_document(row))
     return results
 
 
@@ -313,6 +316,46 @@ async def get_document_download_url(
         "content_type": row.get("content_type"),
         "expires_in": 3600,
     }
+
+
+# ---------- 4b) Update document metadata (MoM editing) ----------
+@router.put("/{doc_id}", response_model=UserDocumentOut)
+async def update_document(
+    doc_id: str,
+    payload: DocumentUpdate,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Update tag, meeting date, action owners, and action points for a document."""
+
+    db = await get_db()
+    row = await db.user_documents.find_one(
+        {"_id": ObjectId(doc_id), "owner_email": user.email}
+    )
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
+        )
+
+    updates: dict = {}
+    if payload.tag is not None:
+        updates["tag"] = payload.tag
+    if payload.doc_date is not None:
+        updates["doc_date"] = datetime(
+            payload.doc_date.year, payload.doc_date.month, payload.doc_date.day
+        )
+    if payload.action_on is not None:
+        updates["action_on"] = payload.action_on
+    if payload.action_points is not None:
+        updates["action_points"] = [
+            ap.model_dump() for ap in payload.action_points
+        ]
+
+    if updates:
+        await db.user_documents.update_one({"_id": row["_id"]}, {"$set": updates})
+
+    updated = await db.user_documents.find_one({"_id": row["_id"]})
+    return _serialize_user_document(updated)
 
 
 # ---------- 5) Delete (hard delete) ----------

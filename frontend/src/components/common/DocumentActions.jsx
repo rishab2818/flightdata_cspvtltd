@@ -1,12 +1,21 @@
 
 // src/components/common/DocumentActions.jsx
 import React from "react";
-import { FiEye, FiDownload, FiTrash2 } from "react-icons/fi";
+import { FiEye, FiDownload, FiTrash2, FiEdit2 } from "react-icons/fi";
 import { viewDocument, downloadDocument, deleteDocument } from "../../utils/documentActions";
 
-export default function DocumentActions({ doc }) {
+export default function DocumentActions({ doc, onEdit }) {
     return (
         <div className="doc-actions">
+            {onEdit && (
+                <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={onEdit}
+                >
+                    <FiEdit2 size={16} />
+                </button>
+            )}
             <button
                 type="button"
                 className="icon-btn"

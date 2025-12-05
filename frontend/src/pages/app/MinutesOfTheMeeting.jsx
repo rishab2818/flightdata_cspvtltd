@@ -4,6 +4,9 @@ import {
   FiCalendar,
   FiEdit2,
   FiClock,
+  FiPlus,
+  FiX,
+  FiTrash2,
 } from "react-icons/fi";
 import UploadMinutesModal from "../../components/app/UploadMinutesModal";
 import { documentsApi } from "../../api/documentsApi";
@@ -49,6 +52,35 @@ function formatTimeLabel(timeString) {
   });
 }
 
+function convertDocToRow(doc) {
+  const actionOnList = doc.action_on || [];
+  const actionPointsList = (doc.action_points || []).map((ap) => ({
+    description: ap?.description || "",
+    assigned_to: ap?.assigned_to || "",
+    completed: Boolean(ap?.completed),
+  }));
+  const assigneesFromPoints = actionPointsList
+    .map((ap) => ap?.assigned_to)
+    .filter((name) => Boolean(name));
+  const combinedActionOn = [
+    ...new Set([...(actionOnList || []), ...assigneesFromPoints]),
+  ];
+
+  return {
+    id: doc.doc_id,
+    fileName: doc.original_name,
+    tag: doc.tag,
+    actionOn:
+      Array.isArray(combinedActionOn) && combinedActionOn.length > 0
+        ? combinedActionOn.join(", ")
+        : "—",
+    rawActionOn: actionOnList,
+    meetingDate: formatDate(doc.doc_date),
+    meetingDateRaw: doc.doc_date,
+    actionPoints: actionPointsList,
+  };
+}
+
 export default function MinutesOfTheMeeting() {
   const [activeSubsection, setActiveSubsection] = useState("tcm"); // "tcm" | "pmrc" | "ebm" | "gdm" (TCM is default Tab)
   const [rows, setRows] = useState([]);
@@ -61,6 +93,9 @@ export default function MinutesOfTheMeeting() {
   const [showMeetingModal, setShowMeetingModal] = useState(false);
   const [selectedActions, setSelectedActions] = useState([]);
   const [showActionsModal, setShowActionsModal] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const loadData = useCallback(
     async (subsection) => {
@@ -69,27 +104,7 @@ export default function MinutesOfTheMeeting() {
         setError("");
         const data = await documentsApi.listMinutes(subsection);
         // data is an array of UserDocumentOut from backend
-        const mapped = data.map((doc) => {
-          const actionOnList = doc.action_on || [];
-          const actionPointsList = doc.action_points || [];
-          const assigneesFromPoints = actionPointsList
-            .map((ap) => ap?.assigned_to)
-            .filter((name) => Boolean(name));
-          const combinedActionOn = [
-            ...new Set([...(actionOnList || []), ...assigneesFromPoints]),
-          ];
-          return {
-            id: doc.doc_id,
-            fileName: doc.original_name,
-            tag: doc.tag,
-            actionOn:
-              Array.isArray(combinedActionOn) && combinedActionOn.length > 0
-                ? combinedActionOn.join(", ")
-                : "—",
-            meetingDate: formatDate(doc.doc_date),
-            actionPoints: actionPointsList,
-          };
-        });
+        const mapped = data.map(convertDocToRow);
         setRows(mapped);
       } catch (e) {
         console.error("Failed to load minutes:", e);
@@ -165,6 +180,34 @@ export default function MinutesOfTheMeeting() {
     setShowActionsModal(true);
   };
 
+  const handleEditDocument = (row) => {
+    setEditingDoc(row);
+    setEditError("");
+  };
+
+  const handleSaveEdit = async (payload) => {
+    if (!editingDoc) return;
+    try {
+      setSavingEdit(true);
+      setEditError("");
+      const updated = await documentsApi.update(editingDoc.id, payload);
+      const mapped = convertDocToRow(updated);
+      setRows((prev) => prev.map((r) => (r.id === mapped.id ? mapped : r)));
+      setEditingDoc(mapped);
+      return { ok: true };
+    } catch (err) {
+      console.error("Failed to update document:", err);
+      const detail = err?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d?.msg || d).join(", ")
+        : detail || "Unable to update the document.";
+      setEditError(message);
+      return { ok: false, error: message };
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const activeTab =
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
 
@@ -194,6 +237,7 @@ export default function MinutesOfTheMeeting() {
           loading={loading}
           error={error}
           onViewAction={handleViewActions}
+          onEdit={handleEditDocument}
           setRows={setRows}
         />
       </div>
@@ -217,6 +261,15 @@ export default function MinutesOfTheMeeting() {
         }}
         onSave={handleMeetingSave}
         saving={meetingLoading}
+      />
+
+      <ActionDetailsModal
+        open={Boolean(editingDoc)}
+        doc={editingDoc}
+        onClose={() => setEditingDoc(null)}
+        onSave={handleSaveEdit}
+        saving={savingEdit}
+        error={editError}
       />
 
       <ActionPointsModal
@@ -317,7 +370,7 @@ function UploadHeader({ onUploadClick }) {
   );
 }
 
-function MinutesTable({ rows, loading, error, onViewAction, setRows }) {
+function MinutesTable({ rows, loading, error, onViewAction, onEdit, setRows }) {
   return (
     <div className="TableGrid">
       <table className="Table">
@@ -374,6 +427,7 @@ function MinutesTable({ rows, loading, error, onViewAction, setRows }) {
                 row={row}
                 setRows={setRows}
                 onViewAction={onViewAction}
+                onEdit={onEdit}
               />
 
             ))}
@@ -384,7 +438,7 @@ function MinutesTable({ rows, loading, error, onViewAction, setRows }) {
 }
 
 
-function MinutesRow({ row, onViewAction, setRows }) {
+function MinutesRow({ row, onViewAction, onEdit, setRows }) {
   return (
     <tr className="minutes-row">
 
@@ -418,9 +472,314 @@ function MinutesRow({ row, onViewAction, setRows }) {
             onDeleted: (id) =>
               setRows((prev) => prev.filter((r) => r.id !== id)),
           }}
+          onEdit={() => onEdit(row)}
         />
       </td>
     </tr>
+  );
+}
+
+function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
+  const [activeTab, setActiveTab] = useState("view");
+  const [tag, setTag] = useState(doc?.tag || "");
+  const [meetingDate, setMeetingDate] = useState(
+    normalizeDate(doc?.meetingDateRaw)
+  );
+  const [actionOnInput, setActionOnInput] = useState("");
+  const [actionOnList, setActionOnList] = useState(doc?.rawActionOn || []);
+  const [apDescription, setApDescription] = useState("");
+  const [apAssignee, setApAssignee] = useState("");
+  const [actionPoints, setActionPoints] = useState(doc?.actionPoints || []);
+  const [localError, setLocalError] = useState("");
+
+  useEffect(() => {
+    if (doc) {
+      setActiveTab("view");
+      setTag(doc.tag || "");
+      setMeetingDate(normalizeDate(doc.meetingDateRaw));
+      setActionOnList(doc.rawActionOn || []);
+      setActionOnInput("");
+      setApDescription("");
+      setApAssignee("");
+      setActionPoints(doc.actionPoints || []);
+      setLocalError("");
+    }
+  }, [doc, open]);
+
+  if (!open || !doc) return null;
+
+  const handleAddActionOn = () => {
+    if (!actionOnInput.trim()) return;
+    setActionOnList((prev) => [...prev, actionOnInput.trim()]);
+    setActionOnInput("");
+  };
+
+  const handleRemoveActionOn = (idx) => {
+    setActionOnList((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleAddActionPoint = () => {
+    if (!apDescription.trim()) return;
+    setActionPoints((prev) => [
+      ...prev,
+      { description: apDescription.trim(), assigned_to: apAssignee.trim(), completed: false },
+    ]);
+    setApDescription("");
+    setApAssignee("");
+  };
+
+  const handleRemoveActionPoint = (idx) => {
+    setActionPoints((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleUpdateActionPoint = (idx, field, value) => {
+    setActionPoints((prev) =>
+      prev.map((ap, i) => (i === idx ? { ...ap, [field]: value } : ap))
+    );
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLocalError("");
+    if (!meetingDate || !tag.trim()) {
+      setLocalError("Tag and meeting date are required.");
+      return;
+    }
+
+    const payload = {
+      tag: tag.trim(),
+      doc_date: meetingDate,
+      action_on: actionOnList,
+      action_points: actionPoints,
+    };
+
+    const result = await onSave(payload);
+    if (result?.ok) {
+      setActiveTab("view");
+      onClose();
+    } else if (result?.error) {
+      setLocalError(result.error);
+    }
+  };
+
+  return (
+    <div className="LightModalOverlay">
+      <div className="ActionModalCard">
+        <div className="ModalHeader">
+          <h3>My Action</h3>
+          <button type="button" className="CloseButton" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="ActionTabs">
+          <button
+            type="button"
+            className={`tabBtn ${activeTab === "view" ? "active" : ""}`}
+            onClick={() => setActiveTab("view")}
+          >
+            View Action
+          </button>
+          <button
+            type="button"
+            className={`tabBtn ${activeTab === "edit" ? "active" : ""}`}
+            onClick={() => setActiveTab("edit")}
+          >
+            Edit Action
+          </button>
+        </div>
+
+        {activeTab === "view" && (
+          <div className="ActionView">
+            <div className="detailRow">
+              <span className="detailLabel">Tag</span>
+              <span className="detailValue">{doc.tag || "—"}</span>
+            </div>
+            <div className="detailRow">
+              <span className="detailLabel">Meeting Date</span>
+              <span className="detailValue">{doc.meetingDate}</span>
+            </div>
+            <div className="detailRow">
+              <span className="detailLabel">Action On</span>
+              <span className="detailValue">
+                {(doc.rawActionOn || []).length > 0
+                  ? doc.rawActionOn.join(", ")
+                  : "—"}
+              </span>
+            </div>
+
+            <div className="ActionList">
+              {(actionPoints || []).map((pt, idx) => (
+                <div key={`${pt.description}-${idx}`} className="ActionListItem">
+                  <div className="actionContent">
+                    <div className="ActionDescription">{pt.description}</div>
+                    {pt.assigned_to && (
+                      <span className="assigneeTag">Assigned: {pt.assigned_to}</span>
+                    )}
+                  </div>
+                  <label className="toggleWrap">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(pt.completed)}
+                      readOnly
+                    />
+                    <span>Marked done</span>
+                  </label>
+                </div>
+              ))}
+              {(actionPoints || []).length === 0 && (
+                <p className="EmptyText">No action points recorded for this file.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "edit" && (
+          <form className="ActionEditForm" onSubmit={handleSubmit}>
+            <div className="row gap16">
+              <div className="flex1">
+                <label className="label">Tag Name</label>
+                <input
+                  type="text"
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value)}
+                  className="textInput"
+                  required
+                />
+              </div>
+              <div className="flex1">
+                <label className="label">Meeting Date</label>
+                <input
+                  type="date"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                  className="textInput"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="row gap16">
+              <div className="flex1">
+                <label className="label">Action on (Person / Role / Team)</label>
+                <div className="row">
+                  <input
+                    type="text"
+                    value={actionOnInput}
+                    onChange={(e) => setActionOnInput(e.target.value)}
+                    className="textInput"
+                    placeholder="Add new action owner"
+                  />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={handleAddActionOn}
+                  >
+                    <FiPlus size={16} />
+                  </button>
+                </div>
+                {actionOnList.length > 0 && (
+                  <div className="chipContainer">
+                    {actionOnList.map((ao, idx) => (
+                      <span key={`${ao}-${idx}`} className="chip">
+                        {ao}
+                        <FiX
+                          size={12}
+                          onClick={() => handleRemoveActionOn(idx)}
+                          className="chipRemove"
+                        />
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="ActionEditList">
+              <div className="ActionEditHeader">Action Points</div>
+
+              {(actionPoints || []).map((pt, idx) => (
+                <div key={`${pt.description}-${idx}`} className="ActionEditItem">
+                  <div className="flex1">
+                    <label className="label">Description</label>
+                    <input
+                      type="text"
+                      value={pt.description}
+                      onChange={(e) =>
+                        handleUpdateActionPoint(idx, "description", e.target.value)
+                      }
+                      className="textInput"
+                    />
+                  </div>
+                  <div className="flex1">
+                    <label className="label">Assign to</label>
+                    <input
+                      type="text"
+                      value={pt.assigned_to}
+                      onChange={(e) =>
+                        handleUpdateActionPoint(idx, "assigned_to", e.target.value)
+                      }
+                      className="textInput"
+                    />
+                  </div>
+                  <label className="toggleWrap">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(pt.completed)}
+                      onChange={(e) =>
+                        handleUpdateActionPoint(idx, "completed", e.target.checked)
+                      }
+                    />
+                    <span>Marked done</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => handleRemoveActionPoint(idx)}
+                    aria-label="Remove action point"
+                  >
+                    <FiTrash2 size={16} />
+                  </button>
+                </div>
+              ))}
+
+              <div className="ActionAddRow">
+                <input
+                  type="text"
+                  value={apDescription}
+                  onChange={(e) => setApDescription(e.target.value)}
+                  placeholder="New action point"
+                  className="textInput"
+                />
+                <input
+                  type="text"
+                  value={apAssignee}
+                  onChange={(e) => setApAssignee(e.target.value)}
+                  placeholder="Assign to"
+                  className="textInput"
+                />
+                <button type="button" className="icon-btn" onClick={handleAddActionPoint}>
+                  <FiPlus size={16} />
+                </button>
+              </div>
+            </div>
+
+            {(localError || error) && (
+              <p className="errorText">{localError || error}</p>
+            )}
+
+            <div className="ModalActions">
+              <button type="button" className="cancelBtn" onClick={onClose}>
+                Cancel
+              </button>
+              <button type="submit" className="submitBtn" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 
