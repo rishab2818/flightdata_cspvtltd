@@ -18,6 +18,9 @@ class BaseRecordFile(BaseModel):
     original_name: Optional[str] = None
     content_type: Optional[str] = None
     size_bytes: Optional[int] = None
+    content_hash: Optional[str] = Field(
+        None, description="Hash of the uploaded file to prevent duplicates"
+    )
 
 
 class SupplyOrderCreate(BaseRecordFile):

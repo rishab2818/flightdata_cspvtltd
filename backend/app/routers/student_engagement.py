@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 from typing import List, Optional
+from bson import ObjectId
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
@@ -31,6 +32,17 @@ async def init_engagement_upload(
 ):
     bucket = settings.minio_docs_bucket
     await _ensure_bucket(bucket)
+
+    # prevent duplicate uploads for the same user
+    db = await get_db()
+    existing = await db.student_engagements.find_one(
+        {"owner_email": user.email, "content_hash": payload.content_hash}
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Duplicate upload detected for this user.",
+        )
 
     object_key = (
         f"users/{user.email}/student-engagements/{uuid4()}_{payload.filename}"
@@ -124,3 +136,85 @@ async def list_student_engagements(
         )
 
     return results
+
+
+async def _get_engagement(record_id: str, user: CurrentUser):
+    db = await get_db()
+    row = await db.student_engagements.find_one(
+        {"_id": ObjectId(record_id), "owner_email": user.email}
+    )
+    return row
+
+
+@router.put("/{record_id}", response_model=StudentEngagementOut)
+async def update_student_engagement(
+    record_id: str,
+    payload: StudentEngagementCreate,
+    user: CurrentUser = Depends(get_current_user),
+):
+    db = await get_db()
+    oid = ObjectId(record_id)
+    row = await db.student_engagements.find_one({"_id": oid, "owner_email": user.email})
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    now = datetime.utcnow()
+    update_doc = {"updated_at": now}
+    for key, value in payload.dict().items():
+        if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
+            update_doc[key] = datetime(value.year, value.month, value.day)
+        else:
+            update_doc[key] = value
+
+    await db.student_engagements.update_one({"_id": oid}, {"$set": update_doc})
+
+    return StudentEngagementOut(
+        record_id=record_id,
+        owner_email=user.email,
+        created_at=row["created_at"],
+        updated_at=now,
+        **payload.dict(),
+    )
+
+
+@router.delete("/{record_id}")
+async def delete_student_engagement(
+    record_id: str, user: CurrentUser = Depends(get_current_user)
+):
+    db = await get_db()
+    oid = ObjectId(record_id)
+    row = await db.student_engagements.find_one({"_id": oid, "owner_email": user.email})
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    # best-effort delete of file
+    if row.get("storage_key"):
+        try:
+            get_minio_client().remove_object(
+                bucket_name=settings.minio_docs_bucket, object_name=row["storage_key"]
+            )
+        except Exception:
+            pass
+
+    await db.student_engagements.delete_one({"_id": oid})
+    return {"ok": True}
+
+
+@router.get("/{record_id}/download-url")
+async def get_engagement_download_url(
+    record_id: str, user: CurrentUser = Depends(get_current_user)
+):
+    db = await get_db()
+    oid = ObjectId(record_id)
+    row = await db.student_engagements.find_one({"_id": oid, "owner_email": user.email})
+    if not row or not row.get("storage_key"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found for this record"
+        )
+
+    download_url = get_minio_client().presigned_get_object(
+        bucket_name=settings.minio_docs_bucket,
+        object_name=row["storage_key"],
+        expires=timedelta(hours=1),
+    )
+    return {"download_url": download_url, "original_name": row.get("original_name")}

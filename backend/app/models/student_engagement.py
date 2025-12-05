@@ -12,11 +12,13 @@ class ApprovalStatus(str, Enum):
 
 class StudentEngagementCreate(BaseModel):
     student: str
-    program_name: str
+    college_name: str
+    project_name: str
     program_type: str
     duration_months: int = Field(..., ge=1)
     start_date: date
     end_date: date
+    mentor: Optional[str] = None
     status: str
     approval_status: ApprovalStatus = ApprovalStatus.WAITING
     notes: Optional[str] = None
@@ -24,6 +26,9 @@ class StudentEngagementCreate(BaseModel):
     original_name: Optional[str] = None
     content_type: Optional[str] = None
     size_bytes: Optional[int] = None
+    content_hash: Optional[str] = Field(
+        None, description="Hash of the uploaded file to avoid duplicate uploads"
+    )
 
     @validator("end_date")
     def validate_end_date(cls, v, values):
