@@ -23,5 +23,11 @@ export const usersApi = {
     const { data } = await axiosClient.delete(`/api/users/${encodeURIComponent(email)}`);
     return data;
   },
+  changePassword: async (payload) => {
+    const { data } = await axiosClient.post('/api/users/change-password', payload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return data;
+  },
 
 };

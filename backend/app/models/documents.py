@@ -12,6 +12,7 @@ class DocumentSection(str, Enum):
     TRAINING_RECORDS = "training_records"
     TECHNICAL_REPORTS = "technical_reports"
     MINUTES_OF_MEETING = "minutes_of_meeting"
+    DIGITAL_LIBRARY = "digital_library"
 
 
 class MoMSubsection(str, Enum):
