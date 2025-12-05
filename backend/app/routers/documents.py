@@ -50,13 +50,16 @@ async def init_document_upload(
 
     db = await get_db()
 
-    # Dedupe: same user + same content hash => reject
-    existing = await db.user_documents.find_one(
-        {
-            "owner_email": user.email,
-            "content_hash": payload.content_hash,
-        }
-    )
+    # Dedupe: same user + same content hash within the same section/subsection => reject
+    dedupe_query = {
+        "owner_email": user.email,
+        "content_hash": payload.content_hash,
+        "section": payload.section.value,
+    }
+    if payload.subsection is not None:
+        dedupe_query["subsection"] = payload.subsection.value
+
+    existing = await db.user_documents.find_one(dedupe_query)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -73,15 +76,21 @@ async def init_document_upload(
     object_prefix = "/".join(key_parts)
     object_key = f"{object_prefix}/{uuid4()}_{payload.filename}"
 
-    # Ensure bucket exists (idempotent)
-    if not minio_client.bucket_exists(bucket):
-        minio_client.make_bucket(bucket)
+    try:
+        # Ensure bucket exists (idempotent)
+        if not minio_client.bucket_exists(bucket):
+            minio_client.make_bucket(bucket)
 
-    upload_url = minio_client.presigned_put_object(
-    bucket_name=bucket,
-    object_name=object_key,
-    expires=timedelta(hours=1),
-    )
+        upload_url = minio_client.presigned_put_object(
+            bucket_name=bucket,
+            object_name=object_key,
+            expires=timedelta(hours=1),
+        )
+    except Exception as exc:  # pragma: no cover - network dependent
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage backend is unavailable. Please try again later.",
+        ) from exc
 
     lan_ip = settings.minio_endpoint.split(":")[0]  # Extract IP from "192.168.1.4:9000"
     upload_url = upload_url.replace("127.0.0.1", lan_ip)
@@ -114,12 +123,15 @@ async def confirm_document_upload(
     db = await get_db()
 
     # Dedupe again to be safe in case init-upload was skipped
-    existing = await db.user_documents.find_one(
-        {
-            "owner_email": user.email,
-            "content_hash": payload.content_hash,
-        }
-    )
+    dedupe_query = {
+        "owner_email": user.email,
+        "content_hash": payload.content_hash,
+        "section": payload.section.value,
+    }
+    if payload.subsection is not None:
+        dedupe_query["subsection"] = payload.subsection.value
+
+    existing = await db.user_documents.find_one(dedupe_query)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
