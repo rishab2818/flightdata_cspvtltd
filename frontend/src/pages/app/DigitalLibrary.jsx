@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { FiDownload, FiEye, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiEdit2, FiEye, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUploadModal";
 import { documentsApi } from "../../api/documentsApi";
 import styles from "./DigitalLibrary.module.css";
@@ -36,6 +36,12 @@ const formatDate = (value) => {
   });
 };
 
+const toIsoInput = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
 export default function DigitalLibrary() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,6 +50,11 @@ export default function DigitalLibrary() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("newest");
   const [showUpload, setShowUpload] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [editTag, setEditTag] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const mapDocument = useCallback((doc) => ({
     id: doc.doc_id,
@@ -52,6 +63,7 @@ export default function DigitalLibrary() {
     type: typeLabelFromName(doc.original_name, doc.content_type),
     size: doc.size_bytes,
     createdAt: doc.uploaded_at || doc.doc_date,
+    docDate: doc.doc_date,
   }), []);
 
   const loadDocuments = useCallback(async () => {
@@ -105,6 +117,43 @@ export default function DigitalLibrary() {
       window.open(res.download_url, "_blank", "noopener,noreferrer");
     } catch (err) {
       alert("Preview unavailable. Try downloading instead.");
+    }
+  };
+
+  const openEdit = (doc) => {
+    setEditingDoc(doc);
+    setEditTag(doc.tag || doc.name || "");
+    setEditDate(toIsoInput(doc.docDate || doc.createdAt));
+    setEditError("");
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingDoc) return;
+    if (!editTag.trim()) {
+      setEditError("Document name is required.");
+      return;
+    }
+    if (!editDate) {
+      setEditError("Please choose a date.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      const updated = await documentsApi.update(editingDoc.id, {
+        tag: editTag.trim(),
+        doc_date: editDate,
+      });
+      const mapped = mapDocument(updated);
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === mapped.id ? mapped : d))
+      );
+      setEditingDoc(null);
+    } catch (err) {
+      setEditError("Update failed. Please try again.");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -220,6 +269,14 @@ export default function DigitalLibrary() {
                         <button
                           type="button"
                           className="icon-btn"
+                          onClick={() => openEdit(doc)}
+                          aria-label="Edit"
+                        >
+                          <FiEdit2 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn"
                           onClick={() => handleView(doc.id)}
                           aria-label="View"
                         >
@@ -255,6 +312,56 @@ export default function DigitalLibrary() {
         onClose={() => setShowUpload(false)}
         onUploaded={handleUploaded}
       />
+
+      {editingDoc && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <h3 className={styles.modalTitle}>Edit document</h3>
+            <form onSubmit={handleEditSubmit}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Document name</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={editTag}
+                  onChange={(e) => setEditTag(e.target.value)}
+                  disabled={savingEdit}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Date</label>
+                <input
+                  type="date"
+                  className={styles.input}
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  disabled={savingEdit}
+                />
+              </div>
+
+              {editError && <div className={styles.error}>{editError}</div>}
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => {
+                    setEditingDoc(null);
+                    setEditError("");
+                  }}
+                  disabled={savingEdit}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className={styles.primaryBtn} disabled={savingEdit}>
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
