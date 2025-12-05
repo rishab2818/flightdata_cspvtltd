@@ -25,6 +25,7 @@ class MoMSubsection(str, Enum):
 class ActionPoint(BaseModel):
     description: str = Field(..., min_length=1)
     assigned_to: Optional[str] = Field(None, description="Person / role responsible")
+    completed: bool = Field(default=False, description="Whether the action point is done")
 
 
 class DocumentInitUpload(BaseModel):
@@ -97,3 +98,12 @@ class UserDocumentOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DocumentUpdate(BaseModel):
+    """Payload for updating an existing document."""
+
+    tag: Optional[str] = None
+    doc_date: Optional[date] = None
+    action_points: Optional[List[ActionPoint]] = None
+    action_on: Optional[List[str]] = None

@@ -289,6 +289,16 @@
   box-shadow: 0px 20px 50px rgba(15, 23, 42, 0.12);
 }
 
+.ActionModalCard {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  width: 720px;
+  max-width: 95vw;
+  box-shadow: 0px 20px 50px rgba(15, 23, 42, 0.14);
+  border: 2px solid #d7e9ff;
+}
+
 .ModalHeader {
   display: flex;
   align-items: center;
@@ -315,6 +325,103 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: 8px;
+}
+
+.ActionTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tabBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.tabBtn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.ActionView {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.detailLabel {
+  color: #6b7280;
+}
+
+.detailValue {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.actionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toggleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.ActionEditForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ActionEditList {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ActionEditHeader {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ActionEditItem {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.ActionAddRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
 }
 
 .EmptyText {

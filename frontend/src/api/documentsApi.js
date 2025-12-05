@@ -59,6 +59,11 @@ export const documentsApi = {
     return data; // string[]
   },
 
+  update: async (docId, payload) => {
+    const { data } = await axiosClient.put(`/api/documents/${docId}`, payload);
+    return data; // updated UserDocumentOut
+  },
+
   // Hard delete document
   remove: async (docId) => {
     const { data } = await axiosClient.delete(`/api/documents/${docId}`);
