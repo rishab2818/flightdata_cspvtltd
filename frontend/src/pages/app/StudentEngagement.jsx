@@ -360,10 +360,11 @@ export default function StudentEngagement() {
 
             <label className={styles.inputLabel}>
               <span>Project Title</span>
-              <input placeholder="Enter Project Title"
+              <input
+                placeholder="Enter Project Title"
                 required
-                value={form.project_title}
-                onChange={(e) => onChange("project_title", e.target.value)}
+                value={form.program_name}
+                onChange={(e) => onChange("program_name", e.target.value)}
               />
             </label>
 
