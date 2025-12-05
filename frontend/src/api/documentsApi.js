@@ -51,6 +51,14 @@ export const documentsApi = {
     return data; // { download_url, original_name, content_type, expires_in }
   },
 
+  searchAssignees: async (query) => {
+    const params = { q: query };
+    const { data } = await axiosClient.get("/api/documents/assignees", {
+      params,
+    });
+    return data; // string[]
+  },
+
   // Hard delete document
   remove: async (docId) => {
     const { data } = await axiosClient.delete(`/api/documents/${docId}`);
