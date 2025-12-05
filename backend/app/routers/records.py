@@ -137,6 +137,20 @@ async def _update_record(
     return row, now
 
 
+def _merge_record_payload(existing: dict, payload, create_model) -> dict:
+    """Merge the persisted record with the incoming payload.
+
+    - Start from the stored values for model fields to avoid leaking metadata
+      such as ``owner_email`` into the response construction.
+    - Overlay only the provided (non-null) updates so unchanged values remain
+      intact in the response body.
+    """
+
+    base_fields = {key: existing.get(key) for key in create_model.model_fields.keys()}
+    base_fields.update(payload.model_dump(exclude_none=True))
+    return base_fields
+
+
 async def _delete_record(section: RecordSection, record_id: str, user: CurrentUser):
     db = await get_db()
     oid = ObjectId(record_id)
@@ -234,12 +248,13 @@ async def update_supply_order(
         payload.model_dump(exclude_none=True),
         user,
     )
+    merged_payload = _merge_record_payload(existing, payload, SupplyOrderCreate)
     return SupplyOrderOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **{**existing, **payload.model_dump()},
+        **merged_payload,
     )
 
 
@@ -300,12 +315,13 @@ async def update_divisional_record(
         payload.model_dump(exclude_none=True),
         user,
     )
+    merged_payload = _merge_record_payload(existing, payload, DivisionalRecordCreate)
     return DivisionalRecordOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **{**existing, **payload.model_dump()},
+        **merged_payload,
     )
 
 
@@ -366,12 +382,13 @@ async def update_customer_feedback(
         payload.model_dump(exclude_none=True),
         user,
     )
+    merged_payload = _merge_record_payload(existing, payload, CustomerFeedbackCreate)
     return CustomerFeedbackOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **{**existing, **payload.model_dump()},
+        **merged_payload,
     )
 
 
@@ -432,12 +449,13 @@ async def update_technical_report(
         payload.model_dump(exclude_none=True),
         user,
     )
+    merged_payload = _merge_record_payload(existing, payload, TechnicalReportCreate)
     return TechnicalReportOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **{**existing, **payload.model_dump()},
+        **merged_payload,
     )
 
 
@@ -498,12 +516,13 @@ async def update_training_record(
         payload.model_dump(exclude_none=True),
         user,
     )
+    merged_payload = _merge_record_payload(existing, payload, TrainingRecordCreate)
     return TrainingRecordOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **{**existing, **payload.model_dump()},
+        **merged_payload,
     )
 
 
