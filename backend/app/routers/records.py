@@ -191,7 +191,10 @@ async def create_supply_order(
     user: CurrentUser = Depends(get_current_user),
 ):
     record_id, doc = await _insert_record(
-        RecordSection.INVENTORY_RECORDS, SupplyOrderCreate, payload.dict(), user
+        RecordSection.INVENTORY_RECORDS,
+        SupplyOrderCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
 
     return SupplyOrderOut(
@@ -199,7 +202,7 @@ async def create_supply_order(
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.dict(),
+        **payload.model_dump(),
     )
 
 
@@ -225,14 +228,18 @@ async def update_supply_order(
     record_id: str, payload: SupplyOrderCreate, user: CurrentUser = Depends(get_current_user)
 ):
     existing, updated_at = await _update_record(
-        RecordSection.INVENTORY_RECORDS, record_id, SupplyOrderCreate, payload.dict(), user
+        RecordSection.INVENTORY_RECORDS,
+        record_id,
+        SupplyOrderCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return SupplyOrderOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **payload.dict(),
+        **{**existing, **payload.model_dump()},
     )
 
 
@@ -253,14 +260,17 @@ async def create_divisional_record(
     user: CurrentUser = Depends(get_current_user),
 ):
     record_id, doc = await _insert_record(
-        RecordSection.DIVISIONAL_RECORDS, DivisionalRecordCreate, payload.dict(), user
+        RecordSection.DIVISIONAL_RECORDS,
+        DivisionalRecordCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return DivisionalRecordOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.dict(),
+        **payload.model_dump(),
     )
 
 
@@ -284,14 +294,18 @@ async def update_divisional_record(
     record_id: str, payload: DivisionalRecordCreate, user: CurrentUser = Depends(get_current_user)
 ):
     existing, updated_at = await _update_record(
-        RecordSection.DIVISIONAL_RECORDS, record_id, DivisionalRecordCreate, payload.dict(), user
+        RecordSection.DIVISIONAL_RECORDS,
+        record_id,
+        DivisionalRecordCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return DivisionalRecordOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **payload.dict(),
+        **{**existing, **payload.model_dump()},
     )
 
 
@@ -312,14 +326,17 @@ async def create_customer_feedback(
     user: CurrentUser = Depends(get_current_user),
 ):
     record_id, doc = await _insert_record(
-        RecordSection.CUSTOMER_FEEDBACKS, CustomerFeedbackCreate, payload.dict(), user
+        RecordSection.CUSTOMER_FEEDBACKS,
+        CustomerFeedbackCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return CustomerFeedbackOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.dict(),
+        **payload.model_dump(),
     )
 
 
@@ -343,14 +360,18 @@ async def update_customer_feedback(
     record_id: str, payload: CustomerFeedbackCreate, user: CurrentUser = Depends(get_current_user)
 ):
     existing, updated_at = await _update_record(
-        RecordSection.CUSTOMER_FEEDBACKS, record_id, CustomerFeedbackCreate, payload.dict(), user
+        RecordSection.CUSTOMER_FEEDBACKS,
+        record_id,
+        CustomerFeedbackCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return CustomerFeedbackOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **payload.dict(),
+        **{**existing, **payload.model_dump()},
     )
 
 
@@ -371,14 +392,17 @@ async def create_technical_report(
     user: CurrentUser = Depends(get_current_user),
 ):
     record_id, doc = await _insert_record(
-        RecordSection.TECHNICAL_REPORTS, TechnicalReportCreate, payload.dict(), user
+        RecordSection.TECHNICAL_REPORTS,
+        TechnicalReportCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return TechnicalReportOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.dict(),
+        **payload.model_dump(),
     )
 
 
@@ -402,14 +426,18 @@ async def update_technical_report(
     record_id: str, payload: TechnicalReportCreate, user: CurrentUser = Depends(get_current_user)
 ):
     existing, updated_at = await _update_record(
-        RecordSection.TECHNICAL_REPORTS, record_id, TechnicalReportCreate, payload.dict(), user
+        RecordSection.TECHNICAL_REPORTS,
+        record_id,
+        TechnicalReportCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return TechnicalReportOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **payload.dict(),
+        **{**existing, **payload.model_dump()},
     )
 
 
@@ -430,14 +458,17 @@ async def create_training_record(
     user: CurrentUser = Depends(get_current_user),
 ):
     record_id, doc = await _insert_record(
-        RecordSection.TRAINING_RECORDS, TrainingRecordCreate, payload.dict(), user
+        RecordSection.TRAINING_RECORDS,
+        TrainingRecordCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return TrainingRecordOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.dict(),
+        **payload.model_dump(),
     )
 
 
@@ -461,14 +492,18 @@ async def update_training_record(
     record_id: str, payload: TrainingRecordCreate, user: CurrentUser = Depends(get_current_user)
 ):
     existing, updated_at = await _update_record(
-        RecordSection.TRAINING_RECORDS, record_id, TrainingRecordCreate, payload.dict(), user
+        RecordSection.TRAINING_RECORDS,
+        record_id,
+        TrainingRecordCreate,
+        payload.model_dump(exclude_none=True),
+        user,
     )
     return TrainingRecordOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=existing["created_at"],
         updated_at=updated_at,
-        **payload.dict(),
+        **{**existing, **payload.model_dump()},
     )
 
 

@@ -24,17 +24,17 @@ class BaseRecordFile(BaseModel):
 
 
 class SupplyOrderCreate(BaseRecordFile):
-    so_number: str = Field(..., description="Supply order number")
-    particular: str
-    supplier_name: str
-    quantity: int = Field(..., ge=1)
-    duration_months: int = Field(..., ge=1)
-    start_date: date
-    delivery_date: date
-    duty_officer: str
-    holder: str
-    amount: float = Field(..., ge=0)
-    status: str = Field("Ongoing", description="Program status")
+    so_number: Optional[str] = Field(None, description="Supply order number")
+    particular: Optional[str] = None
+    supplier_name: Optional[str] = None
+    quantity: Optional[int] = Field(None, ge=1)
+    duration_months: Optional[int] = Field(None, ge=1)
+    start_date: Optional[date] = None
+    delivery_date: Optional[date] = None
+    duty_officer: Optional[str] = None
+    holder: Optional[str] = None
+    amount: Optional[float] = Field(None, ge=0)
+    status: Optional[str] = Field("Ongoing", description="Program status")
 
     @validator("delivery_date")
     def validate_delivery(cls, v, values):
@@ -53,11 +53,11 @@ class SupplyOrderOut(SupplyOrderCreate):
 
 
 class DivisionalRecordCreate(BaseRecordFile):
-    division_name: str
-    record_type: str
-    created_date: date
-    rating: float = Field(..., ge=0)
-    remarks: str
+    division_name: Optional[str] = None
+    record_type: Optional[str] = None
+    created_date: Optional[date] = None
+    rating: Optional[float] = Field(None, ge=0)
+    remarks: Optional[str] = None
 
 
 class DivisionalRecordOut(DivisionalRecordCreate):
@@ -69,12 +69,12 @@ class DivisionalRecordOut(DivisionalRecordCreate):
 
 
 class CustomerFeedbackCreate(BaseRecordFile):
-    project_name: str
-    division: str
-    feedback_from: str
-    rating: float = Field(..., ge=0)
-    feedback_date: date
-    feedback_text: str
+    project_name: Optional[str] = None
+    division: Optional[str] = None
+    feedback_from: Optional[str] = None
+    rating: Optional[float] = Field(None, ge=0)
+    feedback_date: Optional[date] = None
+    feedback_text: Optional[str] = None
 
 
 class CustomerFeedbackOut(CustomerFeedbackCreate):
@@ -86,11 +86,11 @@ class CustomerFeedbackOut(CustomerFeedbackCreate):
 
 
 class TechnicalReportCreate(BaseRecordFile):
-    name: str
-    description: str
-    report_type: str
-    created_date: date
-    rating: float = Field(0, ge=0)
+    name: Optional[str] = None
+    description: Optional[str] = None
+    report_type: Optional[str] = None
+    created_date: Optional[date] = None
+    rating: Optional[float] = Field(0, ge=0)
 
 
 class TechnicalReportOut(TechnicalReportCreate):
@@ -102,18 +102,18 @@ class TechnicalReportOut(TechnicalReportCreate):
 
 
 class TrainingRecordCreate(BaseRecordFile):
-    trainee_name: str
-    training_name: str
-    training_type: str
-    start_date: date
-    end_date: date
-    status: str
+    trainee_name: Optional[str] = None
+    training_name: Optional[str] = None
+    training_type: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = None
     remarks: Optional[str] = None
 
     @validator("end_date")
     def validate_end_date(cls, v, values):
         start_date = values.get("start_date")
-        if start_date and v < start_date:
+        if start_date and v and v < start_date:
             raise ValueError("end_date cannot be before start_date")
         return v
 

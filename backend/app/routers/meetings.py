@@ -9,21 +9,24 @@ from app.models.meeting import NextMeetingOut, NextMeetingPayload
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
 
 
-def _ensure_mom_section(section: DocumentSection) -> None:
-    if section != DocumentSection.MINUTES_OF_MEETING:
+def _normalize_section(section: DocumentSection | None) -> DocumentSection:
+    normalized = section or DocumentSection.MINUTES_OF_MEETING
+    if normalized != DocumentSection.MINUTES_OF_MEETING:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only minutes_of_meeting supports meeting scheduling",
         )
+    return normalized
 
 
 @router.get("/next", response_model=NextMeetingOut)
 async def get_next_meeting(
-    section: DocumentSection = Query(...),
-    subsection: MoMSubsection = Query(...),
+    section: DocumentSection | None = Query(None),
+    subsection: MoMSubsection | None = Query(None),
     user: CurrentUser = Depends(get_current_user),
 ):
-    _ensure_mom_section(section)
+    section = _normalize_section(section)
+    subsection = subsection or MoMSubsection.TCM
     db = await get_db()
     doc = await db.meeting_schedules.find_one(
         {
@@ -38,10 +41,12 @@ async def get_next_meeting(
     return NextMeetingOut(
         section=section,
         subsection=subsection,
-        title=doc["title"],
-        meeting_date=doc["meeting_date"].date(),
-        meeting_time=doc["meeting_time"],
-        updated_at=doc["updated_at"],
+        title=doc.get("title"),
+        meeting_date=doc.get("meeting_date").date()
+        if doc.get("meeting_date")
+        else None,
+        meeting_time=doc.get("meeting_time"),
+        updated_at=doc.get("updated_at"),
         owner_email=user.email,
     )
 
@@ -50,37 +55,44 @@ async def get_next_meeting(
 async def upsert_next_meeting(
     payload: NextMeetingPayload, user: CurrentUser = Depends(get_current_user)
 ):
-    _ensure_mom_section(payload.section)
+    section = _normalize_section(payload.section)
+    subsection = payload.subsection or MoMSubsection.TCM
 
-    normalized_title = payload.title.strip()
+    normalized_title = (payload.title or "").strip() or None
     now = datetime.utcnow()
 
     doc = {
         "owner_email": user.email,
-        "section": payload.section.value,
-        "subsection": payload.subsection.value,
+        "section": section.value,
+        "subsection": subsection.value,
         "title": normalized_title,
-        "meeting_date": datetime(
-            payload.meeting_date.year, payload.meeting_date.month, payload.meeting_date.day
-        ),
-        "meeting_time": payload.meeting_time,
         "updated_at": now,
     }
+
+    if payload.meeting_date:
+        doc["meeting_date"] = datetime(
+            payload.meeting_date.year,
+            payload.meeting_date.month,
+            payload.meeting_date.day,
+        )
+
+    if payload.meeting_time:
+        doc["meeting_time"] = payload.meeting_time
 
     db = await get_db()
     await db.meeting_schedules.update_one(
         {
             "owner_email": user.email,
-            "section": payload.section.value,
-            "subsection": payload.subsection.value,
+            "section": section.value,
+            "subsection": subsection.value,
         },
         {"$set": doc},
         upsert=True,
     )
 
     return NextMeetingOut(
-        section=payload.section,
-        subsection=payload.subsection,
+        section=section,
+        subsection=subsection,
         title=normalized_title,
         meeting_date=payload.meeting_date,
         meeting_time=payload.meeting_time,

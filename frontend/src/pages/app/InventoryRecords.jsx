@@ -12,6 +12,11 @@ import DocumentActions from "../../components/common/DocumentActions";
 import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
+const formatAmount = (value) =>
+  value === undefined || value === null || value === ""
+    ? "—"
+    : `₹ ${Number(value).toLocaleString()}`;
 
 /*------------------------- Stat Card --------------------------*/
 
@@ -223,16 +228,18 @@ export default function InventoryRecords() {
               !error &&
               filtered.map((row) => (
                 <tr key={row.record_id}>
-                  <td>{row.so_number}</td>
-                  <td>{row.particular}</td>
-                  <td>{row.supplier_name}</td>
-                  <td>{row.quantity}</td>
-                  <td>{row.duration_months} Months</td>
-                  <td>{new Date(row.start_date).toLocaleDateString("en-GB")}</td>
-                  <td>{new Date(row.delivery_date).toLocaleDateString("en-GB")}</td>
-                  <td>{row.duty_officer}</td>
-                  <td>{row.holder}</td>
-                  <td>₹ {Number(row.amount).toLocaleString()}</td>
+                  <td>{row.so_number || "—"}</td>
+                  <td>{row.particular || "—"}</td>
+                  <td>{row.supplier_name || "—"}</td>
+                  <td>{row.quantity ?? "—"}</td>
+                  <td>
+                    {row.duration_months ? `${row.duration_months} Months` : "—"}
+                  </td>
+                  <td>{formatDate(row.start_date)}</td>
+                  <td>{formatDate(row.delivery_date)}</td>
+                  <td>{row.duty_officer || "—"}</td>
+                  <td>{row.holder || "—"}</td>
+                  <td>{formatAmount(row.amount)}</td>
                   <td>
                     <StatusBadge status={row.status || "Ongoing"} />
                   </td>
@@ -303,27 +310,6 @@ function SupplyOrderModal({ onClose, onCreated }) {
     e.preventDefault();
     setError("");
 
-    const required = [
-      "so_number",
-      "particular",
-      "supplier_name",
-      "start_date",
-      "delivery_date",
-      "duty_officer",
-      "holder",
-      "amount",
-    ];
-
-    if (required.some((k) => !`${form[k]}`.trim())) {
-      setError("Please fill all required fields.");
-      return;
-    }
-
-    if (Number(form.quantity) <= 0 || Number(form.duration_months) <= 0) {
-      setError("Quantity and duration must be greater than zero.");
-      return;
-    }
-
     try {
       setSubmitting(true);
 
@@ -354,9 +340,11 @@ function SupplyOrderModal({ onClose, onCreated }) {
 
       await recordsApi.createInventory({
         ...form,
-        quantity: Number(form.quantity),
-        duration_months: Number(form.duration_months),
-        amount: Number(form.amount),
+        quantity: form.quantity ? Number(form.quantity) : undefined,
+        duration_months: form.duration_months ? Number(form.duration_months) : undefined,
+        amount: form.amount === "" ? undefined : Number(form.amount),
+        start_date: form.start_date || undefined,
+        delivery_date: form.delivery_date || undefined,
         storage_key,
         original_name,
         content_type,
@@ -403,21 +391,18 @@ function SupplyOrderModal({ onClose, onCreated }) {
               label="#SO"
               value={form.so_number}
               onChange={(e) => onChange("so_number", e.target.value)}
-              required
             />
 
             <Input
               label="Particular"
               value={form.particular}
               onChange={(e) => onChange("particular", e.target.value)}
-              required
             />
 
             <Input
               label="Supplier Name"
               value={form.supplier_name}
               onChange={(e) => onChange("supplier_name", e.target.value)}
-              required
             />
 
             <Input

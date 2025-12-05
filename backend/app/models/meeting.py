@@ -1,21 +1,26 @@
 from datetime import date, datetime
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from app.models.documents import DocumentSection, MoMSubsection
 
 
 class NextMeetingPayload(BaseModel):
-    section: DocumentSection = Field(..., description="Only minutes_of_meeting is currently supported")
-    subsection: MoMSubsection
-    title: str = Field(..., min_length=1, max_length=200)
-    meeting_date: date
-    meeting_time: str = Field(
-        ...,
+    section: Optional[DocumentSection] = Field(
+        DocumentSection.MINUTES_OF_MEETING,
+        description="Only minutes_of_meeting is currently supported",
+    )
+    subsection: Optional[MoMSubsection] = Field(MoMSubsection.TCM)
+    title: Optional[str] = Field(None, min_length=0, max_length=200)
+    meeting_date: Optional[date] = None
+    meeting_time: Optional[str] = Field(
+        None,
         pattern=r"^\d{2}:\d{2}$",
         description="24-hour time in HH:MM format",
     )
 
 
 class NextMeetingOut(NextMeetingPayload):
-    updated_at: datetime
-    owner_email: str
+    updated_at: Optional[datetime] = None
+    owner_email: Optional[str] = None

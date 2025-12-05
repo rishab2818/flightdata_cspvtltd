@@ -75,7 +75,7 @@ async def create_student_engagement(
         "updated_at": now,
     }
 
-    for key, value in payload.dict().items():
+    for key, value in payload.model_dump(exclude_none=True).items():
         if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
             doc[key] = datetime(value.year, value.month, value.day)
         else:
@@ -88,7 +88,7 @@ async def create_student_engagement(
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.dict(),
+        **payload.model_dump(),
     )
 
 
@@ -163,7 +163,9 @@ async def update_student_engagement(
 
     now = datetime.utcnow()
     update_doc = {"updated_at": now}
-    for key, value in payload.dict().items():
+    payload_data = payload.model_dump(exclude_none=True)
+
+    for key, value in payload_data.items():
         if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
             update_doc[key] = datetime(value.year, value.month, value.day)
         else:
@@ -176,7 +178,7 @@ async def update_student_engagement(
         owner_email=user.email,
         created_at=row["created_at"],
         updated_at=now,
-        **payload.dict(),
+        **{**row, **payload_data},
     )
 
 

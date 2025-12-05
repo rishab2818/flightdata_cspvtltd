@@ -11,6 +11,7 @@ import CommonStatCard from "../../components/common/common_card/common_card";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
 
 function StatCard({ title, value }) {
   return (
@@ -209,7 +210,7 @@ export default function TechnicalReports() {
                     <td style={{ padding: "12px 8px", color: "#475569" }}>{row.description}</td>
                     <td style={{ padding: "12px 8px" }}>{row.report_type}</td>
                     <td style={{ padding: "12px 8px" }}>
-                      {new Date(row.created_date).toLocaleDateString("en-GB")}
+                      {formatDate(row.created_date)}
                     </td>
                     <td style={{ padding: "12px 8px" }}>{Number(row.rating || 0).toFixed(1)}</td>
                   </tr>
@@ -342,7 +343,7 @@ export default function TechnicalReports() {
                           borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
                         }}
                       >
-                        {new Date(row.created_date).toLocaleDateString("en-GB")}
+                        {formatDate(row.created_date)}
                       </td>
                       <td
                         style={{
@@ -400,11 +401,6 @@ function ReportModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    const requiredFields = ["name", "description", "report_type", "created_date"];
-    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
-      setError("Please enter report name, type, description, and date.");
-      return;
-    }
     try {
       setSubmitting(true);
       let storage_key;
@@ -429,7 +425,8 @@ function ReportModal({ onClose, onCreated }) {
 
       await recordsApi.createTechnical({
         ...form,
-        rating: Number(form.rating || 0),
+        rating: form.rating === "" ? undefined : Number(form.rating || 0),
+        created_date: form.created_date || undefined,
         storage_key,
         original_name,
         content_type,
