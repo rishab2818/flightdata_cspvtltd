@@ -228,6 +228,59 @@
   cursor: pointer;
 }
 
+.action-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-width: 320px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0px 10px 38px rgba(15, 23, 42, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 5;
+  text-align: left;
+}
+
+.action-tooltip-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.action-tooltip-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.action-tooltip-empty {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.action-tooltip-wrapper:hover .action-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Align center for View Action and Actions columns */
 .cell.center {
   text-align: center;

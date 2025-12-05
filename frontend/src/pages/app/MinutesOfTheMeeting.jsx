@@ -637,9 +637,23 @@ function MinutesRow({ row, onDownload, onDelete, setRows }) {
 
       {/* 5️⃣ View Action */}
       <td className="cell cell-center">
-        <IconBadge clickable>
-          <FiCalendar size={16} />
-        </IconBadge>
+        <div className="action-tooltip-wrapper">
+          <IconBadge clickable title={row.actionPoints?.join("\n") || "No action points"}>
+            <FiCalendar size={16} />
+          </IconBadge>
+          <div className="action-tooltip">
+            <div className="action-tooltip-header">Action Points</div>
+            {row.actionPoints && row.actionPoints.length > 0 ? (
+              <ul className="action-tooltip-list">
+                {row.actionPoints.map((point, idx) => (
+                  <li key={idx}>{point}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="action-tooltip-empty">No action points</p>
+            )}
+          </div>
+        </div>
       </td>
 
       {/* 6️⃣ Actions */}
