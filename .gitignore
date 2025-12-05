@@ -15,3 +15,9 @@ __pycache__/
 
 # Temporary artifacts
 *.xlsx
+
+# Local development artifacts
+saturdayv1/
+**/backend/data/
+**/data/mongo/
+**/data/minio/

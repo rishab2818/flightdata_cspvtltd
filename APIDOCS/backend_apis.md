@@ -52,6 +52,8 @@ All user management endpoints require an **ADMIN** token. Emails are immutable i
 | GET | `/api/users/{email}` | Fetch a single user by email. |
 | PATCH | `/api/users/{email}` | Update mutable fields of a user. |
 | DELETE | `/api/users/{email}` | Remove a user account. |
+| GET | `/api/users/search` | (GD/DH) Fuzzy search users by email; returns `email`, `user_id`, and `name`. |
+| POST | `/api/users/change-password` | Authenticated user updates their password by providing the current password. |
 
 **Create / Update payload fields**
 - `first_name` (string, required for create)
@@ -76,6 +78,14 @@ All user management endpoints require an **ADMIN** token. Emails are immutable i
 ```
 
 List filtering supports `?page=1&limit=50&q=search&role=GD`.
+
+**User search (`/api/users/search`)**
+- Query params: `q` (required, substring match against email), `limit` (default 10).
+- Authorization: GD or DH token required; returns an array of `{ email, user_id, name }`.
+
+**Change password (`/api/users/change-password`)**
+- Body: `{ "current_password": "old", "new_password": "new" }`
+- Authorization: Any authenticated user; responds with `{ "ok": true }` or 400 if the current password is wrong.
 
 ---
 
