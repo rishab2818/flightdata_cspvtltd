@@ -11,6 +11,7 @@ import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
 
 
 
@@ -294,7 +295,7 @@ export default function TrainingRecords() {
                           borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
                         }}
                       >
-                        {new Date(row.start_date).toLocaleDateString("en-GB")}
+                        {formatDate(row.start_date)}
                       </td>
                       <td
                         style={{
@@ -302,7 +303,7 @@ export default function TrainingRecords() {
                           borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
                         }}
                       >
-                        {new Date(row.end_date).toLocaleDateString("en-GB")}
+                        {formatDate(row.end_date)}
                       </td>
                       <td
                         style={{
@@ -376,19 +377,6 @@ function TrainingModal({ onClose, onCreated }) {
     e.preventDefault();
     setError("");
 
-    const requiredFields = [
-      "trainee_name",
-      "training_name",
-      "training_type",
-      "start_date",
-      "end_date",
-      "status",
-    ];
-    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
-      setError("Please complete all required training fields.");
-      return;
-    }
-
     try {
       setSubmitting(true);
       let storage_key;
@@ -416,6 +404,8 @@ function TrainingModal({ onClose, onCreated }) {
 
       await recordsApi.createTraining({
         ...form,
+        start_date: form.start_date || undefined,
+        end_date: form.end_date || undefined,
         storage_key,
         original_name,
         content_type,

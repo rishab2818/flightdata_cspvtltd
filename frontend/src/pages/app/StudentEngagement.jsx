@@ -217,11 +217,6 @@ export default function StudentEngagement() {
     e.preventDefault();
     setError("");
 
-    if (!form.student.trim() || !form.college_name.trim() || !form.project_name.trim()) {
-      setError("Student, college name and project name are required");
-      return;
-    }
-
     try {
       setSubmitting(true);
 
@@ -252,7 +247,9 @@ export default function StudentEngagement() {
 
       const payload = {
         ...form,
-        duration_months: Number(form.duration_months),
+        duration_months: form.duration_months ? Number(form.duration_months) : undefined,
+        start_date: form.start_date || undefined,
+        end_date: form.end_date || undefined,
         storage_key,
         original_name,
         content_type,
@@ -429,11 +426,13 @@ export default function StudentEngagement() {
                   !error &&
                   filtered.map((row) => (
                     <tr key={row.record_id}>
-                      <td className={styles.bold}>{row.student}</td>
-                      <td>{row.college_name}</td>
-                      <td>{row.project_name}</td>
-                      <td>{row.program_type}</td>
-                      <td>{row.duration_months} Months</td>
+                      <td className={styles.bold}>{row.student || "—"}</td>
+                      <td>{row.college_name || "—"}</td>
+                      <td>{row.project_name || "—"}</td>
+                      <td>{row.program_type || "—"}</td>
+                      <td>
+                        {row.duration_months ? `${row.duration_months} Months` : "—"}
+                      </td>
                       <td>{formatDate(row.start_date)}</td>
                       <td>{formatDate(row.end_date)}</td>
                       <td>{row.mentor || "—"}</td>
@@ -505,8 +504,8 @@ export default function StudentEngagement() {
             {/* Repeat input format */}
             <label className={styles.inputLabel}>
               <span>Student Name</span>
-              <input placeholder="Enter Student Name"
-                required
+              <input
+                placeholder="Enter Student Name"
                 value={form.student}
                 onChange={(e) => onChange("student", e.target.value)}
               />
@@ -516,7 +515,6 @@ export default function StudentEngagement() {
               <span>College Name</span>
               <input
                 placeholder="Enter College Name"
-                required
                 value={form.college_name}
                 onChange={(e) => onChange("college_name", e.target.value)}
               />
@@ -526,7 +524,6 @@ export default function StudentEngagement() {
               <span>Project Title</span>
               <input
                 placeholder="Enter Project Title"
-                required
                 value={form.project_name}
                 onChange={(e) => onChange("project_name", e.target.value)}
               />
@@ -560,7 +557,6 @@ export default function StudentEngagement() {
               <span>Start Date</span>
               <input
                 type="date"
-                required
                 value={form.start_date}
                 onChange={(e) => onChange("start_date", e.target.value)}
               />
@@ -570,7 +566,6 @@ export default function StudentEngagement() {
               <span>End Date</span>
               <input
                 type="date"
-                required
                 value={form.end_date}
                 onChange={(e) => onChange("end_date", e.target.value)}
               />

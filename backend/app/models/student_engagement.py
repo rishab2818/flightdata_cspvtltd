@@ -11,16 +11,16 @@ class ApprovalStatus(str, Enum):
 
 
 class StudentEngagementCreate(BaseModel):
-    student: str
-    college_name: str
-    project_name: str
-    program_type: str
-    duration_months: int = Field(..., ge=1)
-    start_date: date
-    end_date: date
+    student: Optional[str] = None
+    college_name: Optional[str] = None
+    project_name: Optional[str] = None
+    program_type: Optional[str] = None
+    duration_months: Optional[int] = Field(None, ge=1)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     mentor: Optional[str] = None
-    status: str
-    approval_status: ApprovalStatus = ApprovalStatus.WAITING
+    status: Optional[str] = None
+    approval_status: Optional[ApprovalStatus] = ApprovalStatus.WAITING
     notes: Optional[str] = None
     storage_key: Optional[str] = None
     original_name: Optional[str] = None
@@ -33,7 +33,7 @@ class StudentEngagementCreate(BaseModel):
     @validator("end_date")
     def validate_end_date(cls, v, values):
         start_date = values.get("start_date")
-        if start_date and v < start_date:
+        if start_date and v and v < start_date:
             raise ValueError("end_date cannot be before start_date")
         return v
 

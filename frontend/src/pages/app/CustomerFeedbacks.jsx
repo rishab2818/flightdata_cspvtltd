@@ -13,6 +13,7 @@ import pending_review from "../../assets/SpinnerGap.svg"
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
 
 
 function Rating({ value }) {
@@ -274,7 +275,7 @@ export default function CustomerFeedbacks() {
                           borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
                         }}
                       >
-                        {new Date(row.feedback_date).toLocaleDateString("en-GB")}
+                        {formatDate(row.feedback_date)}
                       </td>
                     </tr>
                   );
@@ -327,18 +328,6 @@ function FeedbackModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    const requiredFields = [
-      "project_name",
-      "division",
-      // "feedback_from",
-      "rating",
-      "feedback_date",
-      "feedback_text",
-    ];
-    if (requiredFields.some((key) => !`${form[key]}`.trim())) {
-      setError("Please complete all feedback fields.");
-      return;
-    }
     try {
       setSubmitting(true);
       let storage_key;
@@ -364,7 +353,8 @@ function FeedbackModal({ onClose, onCreated }) {
 
       await recordsApi.createFeedback({
         ...form,
-        rating: Number(form.rating || 0),
+        rating: form.rating === "" ? undefined : Number(form.rating || 0),
+        feedback_date: form.feedback_date || undefined,
         storage_key,
         original_name,
         content_type,

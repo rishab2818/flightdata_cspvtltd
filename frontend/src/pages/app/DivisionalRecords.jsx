@@ -160,10 +160,14 @@ export default function DivisionalRecords() {
 
             {!loading && !error && filtered.map((row) => (
               <tr key={row.record_id}>
-                <td>{row.division_name}</td>
-                <td><TypeBadge value={row.record_type} /></td>
-                <td>{new Date(row.created_date).toLocaleDateString("en-GB")}</td>
-                <td>{row.remarks}</td>
+                <td>{row.division_name || "—"}</td>
+                <td><TypeBadge value={row.record_type || ""} /></td>
+                <td>
+                  {row.created_date
+                    ? new Date(row.created_date).toLocaleDateString("en-GB")
+                    : "—"}
+                </td>
+                <td>{row.remarks || "—"}</td>
                 <td className={styles.actionCol}>-</td>
               </tr>
             ))}
@@ -205,12 +209,6 @@ function DivisionalModal({ onClose, onCreated }) {
     e.preventDefault();
     setError("");
 
-    const required = ["division_name", "record_type", "created_date", "rating", "remarks"];
-    if (required.some((k) => !`${form[k]}`.trim())) {
-      setError("Please complete required fields.");
-      return;
-    }
-
     try {
       setSubmitting(true);
       let storage_key, original_name, content_type, size_bytes;
@@ -235,7 +233,8 @@ function DivisionalModal({ onClose, onCreated }) {
 
       await recordsApi.createDivisional({
         ...form,
-        rating: Number(form.rating || 0),
+        rating: form.rating === "" ? undefined : Number(form.rating || 0),
+        created_date: form.created_date || undefined,
         storage_key,
         original_name,
         content_type,
