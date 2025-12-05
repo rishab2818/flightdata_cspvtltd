@@ -25,4 +25,24 @@ export const studentEngagementApi = {
     );
     return data;
   },
+
+  update: async (recordId, payload) => {
+    const { data } = await axiosClient.put(
+      `/api/student-engagements/${recordId}`,
+      payload,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return data;
+  },
+
+  remove: async (recordId) => {
+    await axiosClient.delete(`/api/student-engagements/${recordId}`);
+  },
+
+  downloadUrl: async (recordId) => {
+    const { data } = await axiosClient.get(
+      `/api/student-engagements/${recordId}/download-url`
+    );
+    return data;
+  },
 };

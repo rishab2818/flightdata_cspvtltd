@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List
 from uuid import uuid4
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.core.auth import CurrentUser, get_current_user
@@ -49,6 +50,21 @@ async def init_record_upload(
 ):
     bucket = settings.minio_docs_bucket
     await _ensure_bucket(bucket)
+
+    # prevent duplicate uploads for the same section and user
+    db = await get_db()
+    existing = await db.records.find_one(
+        {
+            "section": section.value,
+            "owner_email": user.email,
+            "content_hash": payload.content_hash,
+        }
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Duplicate upload detected for this section.",
+        )
 
     object_key = (
         f"users/{user.email}/records/{section.value}/{uuid4()}_{payload.filename}"
@@ -98,6 +114,67 @@ async def _insert_record(
     return str(res.inserted_id), doc
 
 
+async def _update_record(
+    section: RecordSection, record_id: str, payload_model, payload_data, user: CurrentUser
+):
+    db = await get_db()
+    oid = ObjectId(record_id)
+    row = await db.records.find_one(
+        {"_id": oid, "owner_email": user.email, "section": section.value}
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    now = datetime.utcnow()
+    normalized_payload = {}
+    for key, value in payload_data.items():
+        if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
+            normalized_payload[key] = datetime(value.year, value.month, value.day)
+        else:
+            normalized_payload[key] = value
+
+    await db.records.update_one({"_id": oid}, {"$set": {**normalized_payload, "updated_at": now}})
+    return row, now
+
+
+async def _delete_record(section: RecordSection, record_id: str, user: CurrentUser):
+    db = await get_db()
+    oid = ObjectId(record_id)
+    row = await db.records.find_one(
+        {"_id": oid, "owner_email": user.email, "section": section.value}
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    if row.get("storage_key"):
+        try:
+            get_minio_client().remove_object(
+                bucket_name=settings.minio_docs_bucket, object_name=row["storage_key"]
+            )
+        except Exception:
+            pass
+
+    await db.records.delete_one({"_id": oid})
+    return True
+
+
+async def _download_url(section: RecordSection, record_id: str, user: CurrentUser):
+    db = await get_db()
+    oid = ObjectId(record_id)
+    row = await db.records.find_one(
+        {"_id": oid, "owner_email": user.email, "section": section.value}
+    )
+    if not row or not row.get("storage_key"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    url = get_minio_client().presigned_get_object(
+        bucket_name=settings.minio_docs_bucket,
+        object_name=row["storage_key"],
+        expires=timedelta(hours=1),
+    )
+    return {"download_url": url, "original_name": row.get("original_name")}
+
+
 async def _list_records(section: RecordSection, user: CurrentUser):
     db = await get_db()
     cursor = (
@@ -143,6 +220,33 @@ async def list_supply_orders(user: CurrentUser = Depends(get_current_user)):
     return results
 
 
+@router.put("/inventory-records/{record_id}", response_model=SupplyOrderOut)
+async def update_supply_order(
+    record_id: str, payload: SupplyOrderCreate, user: CurrentUser = Depends(get_current_user)
+):
+    existing, updated_at = await _update_record(
+        RecordSection.INVENTORY_RECORDS, record_id, SupplyOrderCreate, payload.dict(), user
+    )
+    return SupplyOrderOut(
+        record_id=record_id,
+        owner_email=user.email,
+        created_at=existing["created_at"],
+        updated_at=updated_at,
+        **payload.dict(),
+    )
+
+
+@router.delete("/inventory-records/{record_id}")
+async def delete_supply_order(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    await _delete_record(RecordSection.INVENTORY_RECORDS, record_id, user)
+    return {"ok": True}
+
+
+@router.get("/inventory-records/{record_id}/download-url")
+async def download_supply_order(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await _download_url(RecordSection.INVENTORY_RECORDS, record_id, user)
+
+
 @router.post("/divisional-records", response_model=DivisionalRecordOut)
 async def create_divisional_record(
     payload: DivisionalRecordCreate,
@@ -173,6 +277,33 @@ async def list_divisional_records(user: CurrentUser = Depends(get_current_user))
         )
         for row in rows
     ]
+
+
+@router.put("/divisional-records/{record_id}", response_model=DivisionalRecordOut)
+async def update_divisional_record(
+    record_id: str, payload: DivisionalRecordCreate, user: CurrentUser = Depends(get_current_user)
+):
+    existing, updated_at = await _update_record(
+        RecordSection.DIVISIONAL_RECORDS, record_id, DivisionalRecordCreate, payload.dict(), user
+    )
+    return DivisionalRecordOut(
+        record_id=record_id,
+        owner_email=user.email,
+        created_at=existing["created_at"],
+        updated_at=updated_at,
+        **payload.dict(),
+    )
+
+
+@router.delete("/divisional-records/{record_id}")
+async def delete_divisional_record(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    await _delete_record(RecordSection.DIVISIONAL_RECORDS, record_id, user)
+    return {"ok": True}
+
+
+@router.get("/divisional-records/{record_id}/download-url")
+async def download_divisional_record(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await _download_url(RecordSection.DIVISIONAL_RECORDS, record_id, user)
 
 
 @router.post("/customer-feedbacks", response_model=CustomerFeedbackOut)
@@ -207,6 +338,33 @@ async def list_customer_feedbacks(user: CurrentUser = Depends(get_current_user))
     ]
 
 
+@router.put("/customer-feedbacks/{record_id}", response_model=CustomerFeedbackOut)
+async def update_customer_feedback(
+    record_id: str, payload: CustomerFeedbackCreate, user: CurrentUser = Depends(get_current_user)
+):
+    existing, updated_at = await _update_record(
+        RecordSection.CUSTOMER_FEEDBACKS, record_id, CustomerFeedbackCreate, payload.dict(), user
+    )
+    return CustomerFeedbackOut(
+        record_id=record_id,
+        owner_email=user.email,
+        created_at=existing["created_at"],
+        updated_at=updated_at,
+        **payload.dict(),
+    )
+
+
+@router.delete("/customer-feedbacks/{record_id}")
+async def delete_customer_feedback(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    await _delete_record(RecordSection.CUSTOMER_FEEDBACKS, record_id, user)
+    return {"ok": True}
+
+
+@router.get("/customer-feedbacks/{record_id}/download-url")
+async def download_customer_feedback(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await _download_url(RecordSection.CUSTOMER_FEEDBACKS, record_id, user)
+
+
 @router.post("/technical-reports", response_model=TechnicalReportOut)
 async def create_technical_report(
     payload: TechnicalReportCreate,
@@ -239,6 +397,33 @@ async def list_technical_reports(user: CurrentUser = Depends(get_current_user)):
     ]
 
 
+@router.put("/technical-reports/{record_id}", response_model=TechnicalReportOut)
+async def update_technical_report(
+    record_id: str, payload: TechnicalReportCreate, user: CurrentUser = Depends(get_current_user)
+):
+    existing, updated_at = await _update_record(
+        RecordSection.TECHNICAL_REPORTS, record_id, TechnicalReportCreate, payload.dict(), user
+    )
+    return TechnicalReportOut(
+        record_id=record_id,
+        owner_email=user.email,
+        created_at=existing["created_at"],
+        updated_at=updated_at,
+        **payload.dict(),
+    )
+
+
+@router.delete("/technical-reports/{record_id}")
+async def delete_technical_report(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    await _delete_record(RecordSection.TECHNICAL_REPORTS, record_id, user)
+    return {"ok": True}
+
+
+@router.get("/technical-reports/{record_id}/download-url")
+async def download_technical_report(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await _download_url(RecordSection.TECHNICAL_REPORTS, record_id, user)
+
+
 @router.post("/training-records", response_model=TrainingRecordOut)
 async def create_training_record(
     payload: TrainingRecordCreate,
@@ -269,3 +454,30 @@ async def list_training_records(user: CurrentUser = Depends(get_current_user)):
         )
         for row in rows
     ]
+
+
+@router.put("/training-records/{record_id}", response_model=TrainingRecordOut)
+async def update_training_record(
+    record_id: str, payload: TrainingRecordCreate, user: CurrentUser = Depends(get_current_user)
+):
+    existing, updated_at = await _update_record(
+        RecordSection.TRAINING_RECORDS, record_id, TrainingRecordCreate, payload.dict(), user
+    )
+    return TrainingRecordOut(
+        record_id=record_id,
+        owner_email=user.email,
+        created_at=existing["created_at"],
+        updated_at=updated_at,
+        **payload.dict(),
+    )
+
+
+@router.delete("/training-records/{record_id}")
+async def delete_training_record(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    await _delete_record(RecordSection.TRAINING_RECORDS, record_id, user)
+    return {"ok": True}
+
+
+@router.get("/training-records/{record_id}/download-url")
+async def download_training_record(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await _download_url(RecordSection.TRAINING_RECORDS, record_id, user)
