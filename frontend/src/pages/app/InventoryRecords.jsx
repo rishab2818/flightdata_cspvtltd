@@ -61,8 +61,12 @@ export default function InventoryRecords() {
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
 
-  const openModal = () => setShowModal(true);
+  const openModal = () => {
+    setEditingOrder(null);
+    setShowModal(true);
+  };
 
   const loadOrders = async () => {
     try {
@@ -80,6 +84,38 @@ export default function InventoryRecords() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  const handleView = async (row) => {
+    try {
+      const res = await recordsApi.downloadInventory(row.record_id);
+      window.open(res.download_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      alert("Unable to open this record. Try downloading instead.");
+    }
+  };
+
+  const handleDownload = async (row) => {
+    try {
+      const res = await recordsApi.downloadInventory(row.record_id);
+      const link = document.createElement("a");
+      link.href = res.download_url;
+      link.download = row.original_name || "inventory-record";
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const handleDelete = async (row) => {
+    if (!window.confirm("Delete this supply order?")) return;
+    try {
+      await recordsApi.removeInventory(row.record_id);
+      setOrders((prev) => prev.filter((o) => o.record_id !== row.record_id));
+    } catch (err) {
+      alert("Delete failed. Please try again.");
+    }
+  };
 
   /*---------------------- Filtering ------------------------*/
   const filtered = useMemo(() => {
@@ -252,6 +288,13 @@ export default function InventoryRecords() {
                         onDeleted: (id) =>
                           setOrders(prev => prev.filter(r => r.record_id !== id)),
                       }}
+                      onEdit={() => {
+                        setEditingOrder(row);
+                        setShowModal(true);
+                      }}
+                      onView={() => handleView(row)}
+                      onDownload={() => handleDownload(row)}
+                      onDelete={() => handleDelete(row)}
                     />
 
                   </td>
@@ -266,6 +309,12 @@ export default function InventoryRecords() {
         <SupplyOrderModal
           onClose={() => setShowModal(false)}
           onCreated={loadOrders}
+          onUpdated={(updated) => {
+            setOrders((prev) =>
+              prev.map((o) => (o.record_id === updated.record_id ? updated : o))
+            );
+          }}
+          editingOrder={editingOrder}
         />
       )}
     </div>
@@ -285,7 +334,7 @@ function Input({ label, ...rest }) {
 
 /*-------------------- Modal -----------------------*/
 
-function SupplyOrderModal({ onClose, onCreated }) {
+function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
   const [form, setForm] = useState({
     so_number: "",
     particular: "",
@@ -298,6 +347,11 @@ function SupplyOrderModal({ onClose, onCreated }) {
     holder: "",
     amount: "",
     status: "Ongoing",
+    storage_key: null,
+    original_name: "",
+    content_type: "",
+    size_bytes: null,
+    content_hash: "",
   });
 
   const [file, setFile] = useState(null);
@@ -305,6 +359,31 @@ function SupplyOrderModal({ onClose, onCreated }) {
   const [error, setError] = useState("");
 
   const onChange = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    if (!editingOrder) return;
+
+    setForm({
+      so_number: editingOrder.so_number || "",
+      particular: editingOrder.particular || "",
+      supplier_name: editingOrder.supplier_name || "",
+      quantity: editingOrder.quantity ?? 1,
+      duration_months: editingOrder.duration_months ?? 1,
+      start_date: editingOrder.start_date || "",
+      delivery_date: editingOrder.delivery_date || "",
+      duty_officer: editingOrder.duty_officer || "",
+      holder: editingOrder.holder || "",
+      amount: editingOrder.amount ?? "",
+      status: editingOrder.status || "Ongoing",
+      storage_key: editingOrder.storage_key || null,
+      original_name: editingOrder.original_name || "",
+      content_type: editingOrder.content_type || "",
+      size_bytes: editingOrder.size_bytes ?? null,
+      content_hash: editingOrder.content_hash || "",
+    });
+    setFile(null);
+    setError("");
+  }, [editingOrder]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -316,10 +395,11 @@ function SupplyOrderModal({ onClose, onCreated }) {
       let storage_key,
         original_name,
         content_type,
-        size_bytes;
+        size_bytes,
+        content_hash;
 
       if (file) {
-        const content_hash = await computeSha256(file);
+        const hash = await computeSha256(file);
 
         const initRes = await recordsApi.initUpload("inventory-records", {
           section: "inventory-records",
@@ -327,7 +407,7 @@ function SupplyOrderModal({ onClose, onCreated }) {
 
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,
-          content_hash,
+          content_hash: hash,
         });
 
         await fetch(initRes.upload_url, { method: "PUT", body: file });
@@ -336,25 +416,34 @@ function SupplyOrderModal({ onClose, onCreated }) {
         original_name = file.name;
         content_type = file.type || "application/octet-stream";
         size_bytes = file.size;
+        content_hash = hash;
       }
 
-      await recordsApi.createInventory({
+      const payload = {
         ...form,
         quantity: form.quantity ? Number(form.quantity) : undefined,
         duration_months: form.duration_months ? Number(form.duration_months) : undefined,
         amount: form.amount === "" ? undefined : Number(form.amount),
         start_date: form.start_date || undefined,
         delivery_date: form.delivery_date || undefined,
-        storage_key,
-        original_name,
-        content_type,
-        size_bytes,
-      });
+        storage_key: storage_key ?? form.storage_key,
+        original_name: original_name ?? form.original_name,
+        content_type: content_type ?? form.content_type,
+        size_bytes: size_bytes ?? form.size_bytes,
+        content_hash: content_hash ?? form.content_hash,
+      };
+
+      if (editingOrder) {
+        const updated = await recordsApi.updateInventory(editingOrder.record_id, payload);
+        onUpdated?.(updated);
+      } else {
+        const created = await recordsApi.createInventory(payload);
+        onCreated?.(created);
+      }
 
       onClose();
-      onCreated && onCreated();
     } catch (err) {
-      setError("Failed to create supply order.");
+      setError("Failed to save supply order.");
     } finally {
       setSubmitting(false);
     }
@@ -365,7 +454,9 @@ function SupplyOrderModal({ onClose, onCreated }) {
       <div className={styles.modalBox}>
         <div className={styles.modalHeader}>
           <div>
-            <h3 className={styles.modalTitle}>Add Supply Order</h3>
+            <h3 className={styles.modalTitle}>
+              {editingOrder ? "Edit Supply Order" : "Add Supply Order"}
+            </h3>
             <p className={styles.modalSubtitle}>
               Capture supply details, dates, and attach proof for auditing.
             </p>
@@ -377,15 +468,14 @@ function SupplyOrderModal({ onClose, onCreated }) {
         </div>
 
         <form className={styles.modalForm} onSubmit={handleSubmit}>
-          {/* 👇 Upload box moved to TOP */}
-                      <FileUploadBox
-                        label="Upload Document"
-                        description="Attach training related file here"
-                        supported="PDF/Word"
-                        file={file}
-                        onFileSelected={(f) => setFile(f)}
-                      />
-        
+          <FileUploadBox
+            label="Upload Document"
+            description="Attach supply record"
+            supported="PDF/Word"
+            file={file}
+            onFileSelected={(f) => setFile(f)}
+          />
+
           <div className={styles.grid}>
             <Input
               label="#SO"
@@ -462,7 +552,7 @@ function SupplyOrderModal({ onClose, onCreated }) {
               value={form.amount}
               onChange={(e) => onChange("amount", e.target.value)}
             />
-            </div>
+          </div>
 
           {error && <p className={styles.errorText}>{error}</p>}
 
@@ -470,9 +560,14 @@ function SupplyOrderModal({ onClose, onCreated }) {
             <button className={styles.cancelBtn} type="button" onClick={onClose}>
               Cancel
             </button>
-
             <button className={styles.saveBtn} type="submit" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Order"}
+              {submitting
+                ? editingOrder
+                  ? "Saving..."
+                  : "Uploading..."
+                : editingOrder
+                ? "Save Changes"
+                : "Upload Record"}
             </button>
           </div>
         </form>

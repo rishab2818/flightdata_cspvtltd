@@ -9,6 +9,7 @@ import Calculator from "../../assets/Calculator.svg";
 import DotsThreeOutline from "../../assets/DotsThreeOutline.svg";
 import styles from "./DivisionalRecords.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
+import DocumentActions from "../../components/common/DocumentActions";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -97,8 +98,12 @@ export default function DivisionalRecords() {
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all" });
   const [showModal, setShowModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
 
-  const openModal = () => setShowModal(true);
+  const openModal = () => {
+    setEditingRecord(null);
+    setShowModal(true);
+  };
 
   const loadRecords = async () => {
     try {
@@ -115,6 +120,38 @@ export default function DivisionalRecords() {
   useEffect(() => {
     loadRecords();
   }, []);
+
+  const handleView = async (row) => {
+    try {
+      const res = await recordsApi.downloadDivisional(row.record_id);
+      window.open(res.download_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      alert("Unable to open this record.");
+    }
+  };
+
+  const handleDownload = async (row) => {
+    try {
+      const res = await recordsApi.downloadDivisional(row.record_id);
+      const link = document.createElement("a");
+      link.href = res.download_url;
+      link.download = row.original_name || "divisional-record";
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const handleDelete = async (row) => {
+    if (!window.confirm("Delete this divisional record?")) return;
+    try {
+      await recordsApi.removeDivisional(row.record_id);
+      setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
+    } catch (err) {
+      alert("Delete failed. Please try again.");
+    }
+  };
 
   const filtered = useMemo(() => {
     return records.filter((r) => (filters.type === "all" ? true : r.record_type === filters.type));
@@ -168,13 +205,35 @@ export default function DivisionalRecords() {
                     : "—"}
                 </td>
                 <td>{row.remarks || "—"}</td>
-                <td className={styles.actionCol}>-</td>
+                <td className={styles.actionCol}>
+                  <DocumentActions
+                    doc={{ id: row.record_id, fileName: row.original_name }}
+                    onEdit={() => {
+                      setEditingRecord(row);
+                      setShowModal(true);
+                    }}
+                    onView={() => handleView(row)}
+                    onDownload={() => handleDownload(row)}
+                    onDelete={() => handleDelete(row)}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {showModal && <DivisionalModal onClose={() => setShowModal(false)} onCreated={loadRecords} />}
+      {showModal && (
+        <DivisionalModal
+          onClose={() => setShowModal(false)}
+          onCreated={loadRecords}
+          editingRecord={editingRecord}
+          onUpdated={(updated) => {
+            setRecords((prev) =>
+              prev.map((r) => (r.record_id === updated.record_id ? updated : r))
+            );
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -191,13 +250,18 @@ function Input({ label, ...rest }) {
 
 /* --------------------- Modal --------------------- */
 
-function DivisionalModal({ onClose, onCreated }) {
+function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
   const [form, setForm] = useState({
     division_name: "",
     record_type: "Budget",
     created_date: "",
     rating: "",
     remarks: "",
+    storage_key: null,
+    original_name: "",
+    content_type: "",
+    size_bytes: null,
+    content_hash: "",
   });
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -205,33 +269,57 @@ function DivisionalModal({ onClose, onCreated }) {
 
   const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  useEffect(() => {
+    if (!editingRecord) return;
+
+    setForm({
+      division_name: editingRecord.division_name || "",
+      record_type: editingRecord.record_type || "Budget",
+      created_date: editingRecord.created_date || "",
+      rating: editingRecord.rating ?? "",
+      remarks: editingRecord.remarks || "",
+      storage_key: editingRecord.storage_key || null,
+      original_name: editingRecord.original_name || "",
+      content_type: editingRecord.content_type || "",
+      size_bytes: editingRecord.size_bytes ?? null,
+      content_hash: editingRecord.content_hash || "",
+    });
+    setFile(null);
+    setError("");
+  }, [editingRecord]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
       setSubmitting(true);
-      let storage_key, original_name, content_type, size_bytes;
+      let storage_key = form.storage_key,
+        original_name = form.original_name,
+        content_type = form.content_type,
+        size_bytes = form.size_bytes,
+        content_hash = form.content_hash;
 
       if (file) {
-        const content_hash = await computeSha256(file);
+        const hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("divisional-records", {
           section: "divisional-records",
           filename: file.name,
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,
-          content_hash,
+          content_hash: hash,
         });
 
         await fetch(initRes.upload_url, { method: "PUT", body: file });
 
         storage_key = initRes.storage_key;
         original_name = file.name;
-        content_type = file.type;
+        content_type = file.type || "application/octet-stream";
         size_bytes = file.size;
+        content_hash = hash;
       }
 
-      await recordsApi.createDivisional({
+      const payload = {
         ...form,
         rating: form.rating === "" ? undefined : Number(form.rating || 0),
         created_date: form.created_date || undefined,
@@ -239,13 +327,21 @@ function DivisionalModal({ onClose, onCreated }) {
         original_name,
         content_type,
         size_bytes,
-      });
+        content_hash,
+      };
+
+      if (editingRecord) {
+        const updated = await recordsApi.updateDivisional(editingRecord.record_id, payload);
+        onUpdated?.(updated);
+      } else {
+        const created = await recordsApi.createDivisional(payload);
+        onCreated?.(created);
+      }
 
       onClose();
-      onCreated && onCreated();
     } catch (err) {
       console.error(err);
-      setError("Failed to upload divisional record.");
+      setError("Failed to save divisional record.");
     } finally {
       setSubmitting(false);
     }
@@ -256,7 +352,9 @@ function DivisionalModal({ onClose, onCreated }) {
       <div className={styles.modalBox}>
         <div className={styles.modalHeader}>
           <div>
-            <h3 className={styles.modalTitle}>Upload Divisional Record</h3>
+            <h3 className={styles.modalTitle}>
+              {editingRecord ? "Edit Divisional Record" : "Upload Divisional Record"}
+            </h3>
             <p className={styles.modalSubtitle}>Upload tagged divisional entries.</p>
           </div>
           <button className={styles.closeBtn} onClick={onClose}>X</button>
@@ -266,7 +364,7 @@ function DivisionalModal({ onClose, onCreated }) {
           <div className={styles.UploadGrid}>
             <Input className={styles.input} label="Division Name" value={form.division_name} onChange={(e) => onChange("division_name", e.target.value)} />
 
-            <label >
+            <label>
               <span>Type</span>
               <select className={styles.input} value={form.record_type} onChange={(e) => onChange("record_type", e.target.value)}>
                 <option value="Budget">Budget</option>
@@ -297,7 +395,7 @@ function DivisionalModal({ onClose, onCreated }) {
             <div className={styles.modelFooter}>
               <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
               <button type="submit" className={styles.saveBtn} disabled={submitting}>
-                {submitting ? "Saving..." : "Save"}
+                {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
               </button>
             </div>
           </div>
@@ -306,4 +404,3 @@ function DivisionalModal({ onClose, onCreated }) {
     </div>
   );
 }
-
