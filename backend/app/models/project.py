@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # Your base persisted model (Mongo doc)
 class Project(BaseModel):
@@ -12,9 +12,10 @@ class Project(BaseModel):
     created_by: str = Field(..., description="Creator's email")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
 
 
 # --------- Schemas used by the router ---------
@@ -37,8 +38,7 @@ class ProjectOut(BaseModel):
     created_by: str
     created_at: datetime
 
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class ProjectUpdate(BaseModel):
     project_name: Optional[str] = None
