@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -42,6 +42,12 @@ class DocumentInitUpload(BaseModel):
         ),
         min_length=32,
     )
+    action_points: List[str] = Field(
+        default_factory=list, description="List of action points discussed"
+    )
+    action_on: List[str] = Field(
+        default_factory=list, description="List of owners responsible for actions"
+    )
 
 
 class DocumentConfirm(BaseModel):
@@ -60,6 +66,12 @@ class DocumentConfirm(BaseModel):
         description="Same hash used during init-upload to enforce dedupe.",
         min_length=32,
     )
+    action_points: List[str] = Field(
+        default_factory=list, description="List of action points discussed"
+    )
+    action_on: List[str] = Field(
+        default_factory=list, description="List of owners responsible for actions"
+    )
 
 
 class UserDocumentOut(BaseModel):
@@ -76,6 +88,8 @@ class UserDocumentOut(BaseModel):
     size_bytes: Optional[int] = None
     content_type: Optional[str] = None
     uploaded_at: datetime
+    action_points: List[str] = Field(default_factory=list)
+    action_on: List[str] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

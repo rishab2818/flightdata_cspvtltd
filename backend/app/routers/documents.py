@@ -141,6 +141,8 @@ async def confirm_document_upload(
         "size_bytes": payload.size_bytes,
         "content_hash": payload.content_hash,
         "uploaded_at": now,
+        "action_points": payload.action_points,
+        "action_on": payload.action_on,
     }
 
     res = await db.user_documents.insert_one(doc)
@@ -158,6 +160,8 @@ async def confirm_document_upload(
         size_bytes=doc["size_bytes"],
         content_type=doc["content_type"],
         uploaded_at=now,
+        action_points=doc["action_points"],
+        action_on=doc["action_on"],
     )
 
 
@@ -206,6 +210,8 @@ async def list_user_documents(
                 size_bytes=row.get("size_bytes"),
                 content_type=row.get("content_type"),
                 uploaded_at=row["uploaded_at"],
+                action_points=row.get("action_points", []),
+                action_on=row.get("action_on", []),
             )
         )
     return results
