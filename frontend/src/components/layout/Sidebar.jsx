@@ -30,7 +30,7 @@ const gdDhMenu = [
   { path: "/app/customer-feedbacks", label: "Customer Feedbacks", icon: customerIcon },
   { path: "/app/training-records", label: "Training Records", icon: trainingIcon },
   { path: "/app/technical-reports", label: "Technical Reports", icon: technicalIcon },
-  { path: "/app/DigitalLibrary", label: "Digital Library", icon: digitalLib },
+  { path: "/app/digital-library", label: "Digital Library", icon: digitalLib },
   { path: "/app/setting", label: "Settings", icon: settingsIcon },
 
 ];

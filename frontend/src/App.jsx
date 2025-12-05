@@ -19,6 +19,7 @@ import CustomerFeedbacks from './pages/app/CustomerFeedbacks'
 import TrainingRecords from './pages/app/TrainingRecords'
 import TechnicalReports from './pages/app/TechnicalReports'
 import Setting from './pages/app/Setting'
+import DigitalLibrary from './pages/app/DigitalLibrary'
 import ProtectedGDorDH from './routes/ProtectedGDorDH'
 import AdminShell from './pages/admin/AdminShell'
 import Settings from './pages/admin/Settings'
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="customer-feedbacks" element={<CustomerFeedbacks />} />
           <Route path="training-records" element={<TrainingRecords />} />
           <Route path="technical-reports" element={<TechnicalReports />} />
+          <Route path="digital-library" element={<DigitalLibrary />} />
           <Route path="setting" element={<Setting />} />
         </Route>
       </Route>

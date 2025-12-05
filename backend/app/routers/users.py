@@ -8,7 +8,11 @@ from pydantic import BaseModel, EmailStr
 from app.core.config import settings
 from app.db.mongo import get_db
 from app.models.user import Role, ACCESS_LEVEL
-from app.core.auth import get_current_user, require_head, CurrentUser
+from app.core.auth import (
+    get_current_user as get_authenticated_user,
+    require_head,
+    CurrentUser as AuthCurrentUser,
+)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -16,11 +20,11 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 # ---------------------------
 # Auth / Admin-only dependency
 # ---------------------------
-class CurrentUser(BaseModel):
+class AdminCurrentUser(BaseModel):
     email: EmailStr
     role: Role
 
-async def admin_required(request: Request) -> CurrentUser:
+async def admin_required(request: Request) -> AdminCurrentUser:
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.lower().startswith("bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -44,7 +48,7 @@ async def admin_required(request: Request) -> CurrentUser:
     if role != Role.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
 
-    return CurrentUser(email=sub, role=role)
+    return AdminCurrentUser(email=sub, role=role)
 
 
 # ---------------------------
@@ -65,6 +69,12 @@ class UserUpdate(BaseModel):
     role: Optional[Role] = None
     is_active: Optional[bool] = None
     # NOTE: email change is intentionally NOT allowed (email is the ID)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 
 class UserOut(BaseModel):
     first_name: str
@@ -98,7 +108,7 @@ def _normalize_user(doc: dict) -> UserOut:
 # ---------------------------
 
 @router.post("", response_model=UserOut)
-async def create_user(body: UserCreate, _: CurrentUser = Depends(admin_required)):
+async def create_user(body: UserCreate, _: AdminCurrentUser = Depends(admin_required)):
     db = await get_db()
     # Ensure unique email
     existing = await db.users.find_one({"email": body.email})
@@ -125,7 +135,7 @@ async def list_users(
     limit: int = Query(50, ge=1, le=200),
     q: Optional[str] = Query(None, description="Search by first_name/last_name/email"),
     role: Optional[Role] = None,
-    _: CurrentUser = Depends(admin_required),
+    _: AdminCurrentUser = Depends(admin_required),
 ):
     db = await get_db()
     qry: dict = {}
@@ -149,7 +159,7 @@ async def list_users(
 
 
 @router.get("/{email}", response_model=UserOut)
-async def get_user(email: EmailStr, _: CurrentUser = Depends(admin_required)):
+async def get_user(email: EmailStr, _: AdminCurrentUser = Depends(admin_required)):
     db = await get_db()
     doc = await db.users.find_one({"email": str(email)})
     if not doc:
@@ -158,7 +168,7 @@ async def get_user(email: EmailStr, _: CurrentUser = Depends(admin_required)):
 
 
 @router.patch("/{email}", response_model=UserOut)
-async def update_user(email: EmailStr, body: UserUpdate, _: CurrentUser = Depends(admin_required)):
+async def update_user(email: EmailStr, body: UserUpdate, _: AdminCurrentUser = Depends(admin_required)):
     db = await get_db()
     updates = {}
     if body.first_name is not None: updates["first_name"] = body.first_name
@@ -183,7 +193,7 @@ async def update_user(email: EmailStr, body: UserUpdate, _: CurrentUser = Depend
 
 
 @router.delete("/{email}")
-async def delete_user(email: EmailStr, _: CurrentUser = Depends(admin_required)):
+async def delete_user(email: EmailStr, _: AdminCurrentUser = Depends(admin_required)):
     db = await get_db()
     res = await db.users.delete_one({"email": str(email)})
     if res.deleted_count == 0:
@@ -191,19 +201,48 @@ async def delete_user(email: EmailStr, _: CurrentUser = Depends(admin_required))
     return {"ok": True}
 
 @router.get("/search")
-async def search_users(q: str = Query(..., min_length=1), limit: int = 10, user: CurrentUser = Depends(get_current_user)):
+async def search_users(
+    q: str = Query(..., min_length=1),
+    limit: int = 10,
+    user: AuthCurrentUser = Depends(get_authenticated_user),
+):
     # GD/DH only
     require_head(user)
     db = await get_db()
     cursor = (
-        db.users.find({"email": {"$regex": q, "$options": "i"}}, {"email": 1, "_id": 1, "first_name": 1, "last_name": 1})
-        .sort("email", 1).limit(limit)
+        db.users.find(
+            {"email": {"$regex": q, "$options": "i"}},
+            {"email": 1, "_id": 1, "first_name": 1, "last_name": 1},
+        )
+        .sort("email", 1)
+        .limit(limit)
     )
     docs = await cursor.to_list(length=limit)
     return [
         {
             "email": d["email"],
             "user_id": str(d["_id"]),
-            "name": f'{d.get("first_name","")}{(" " + d.get("last_name","")) if d.get("last_name") else ""}'.strip()
-        } for d in docs
+            "name": f'{d.get("first_name","")}{(" " + d.get("last_name","")) if d.get("last_name") else ""}'.strip(),
+        }
+        for d in docs
     ]
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    user: AuthCurrentUser = Depends(get_authenticated_user),
+):
+    db = await get_db()
+    current = await db.users.find_one({"email": user.email})
+    if not current:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current.get("password") != body.current_password:
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    await db.users.update_one(
+        {"email": user.email}, {"$set": {"password": body.new_password}}
+    )
+
+    return {"ok": True}
