@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FiUploadCloud } from "react-icons/fi";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
 
@@ -91,7 +90,7 @@ function Modal({ title, onClose, children }) {
 /* -------------------- Main Component -------------------- */
 
 export default function StudentEngagement() {
-  const [tab, setTab] = useState("approved");
+  const [approvalFilter, setApprovalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [records, setRecords] = useState([]);
@@ -100,7 +99,8 @@ export default function StudentEngagement() {
 
   const [form, setForm] = useState({
     student: "",
-    program_name: "",
+    college_name: "",
+    project_name: "",
     program_type: "Internship",
     duration_months: "6",
     start_date: "",
@@ -137,9 +137,7 @@ export default function StudentEngagement() {
   const filtered = useMemo(() => {
     return records
       .filter((r) =>
-        tab === "approved"
-          ? r.approval_status === "approved"
-          : r.approval_status === "waiting"
+        approvalFilter === "all" ? true : r.approval_status === approvalFilter
       )
       .filter((r) => {
         const matchesType = typeFilter === "all" || r.program_type === typeFilter;
@@ -148,7 +146,7 @@ export default function StudentEngagement() {
 
         return matchesType && matchesStatus;
       });
-  }, [records, statusFilter, tab, typeFilter]);
+  }, [approvalFilter, records, statusFilter, typeFilter]);
 
   const stats = useMemo(() => {
     const totalStudents = records.length;
@@ -170,15 +168,15 @@ export default function StudentEngagement() {
     e.preventDefault();
     setError("");
 
-    if (!form.student.trim() || !form.program_name.trim()) {
-      setError("Student and program name are required");
+    if (!form.student.trim() || !form.college_name.trim() || !form.project_name.trim()) {
+      setError("Student, college name and project name are required");
       return;
     }
 
     try {
       setSubmitting(true);
 
-      let storage_key, original_name, content_type, size_bytes;
+      let storage_key, original_name, content_type, size_bytes, content_hash;
 
       if (file) {
         const hash = await computeSha256(file);
@@ -196,6 +194,7 @@ export default function StudentEngagement() {
         original_name = file.name;
         content_type = file.type;
         size_bytes = file.size;
+        content_hash = hash;
       }
 
       const payload = {
@@ -205,6 +204,7 @@ export default function StudentEngagement() {
         original_name,
         content_type,
         size_bytes,
+        content_hash,
       };
 
       const created = await studentEngagementApi.create(payload);
@@ -213,7 +213,8 @@ export default function StudentEngagement() {
       setShowModal(false);
       setForm({
         student: "",
-        program_name: "",
+        college_name: "",
+        project_name: "",
         program_type: "Internship",
         duration_months: "6",
         start_date: "",
@@ -243,6 +244,17 @@ export default function StudentEngagement() {
       {/* Filters */}
       <section className={styles.filterBar}>
         <div className={styles.filterGroup}>
+          <FilterSelect
+            label="Filter by Approval"
+            value={approvalFilter}
+            onChange={setApprovalFilter}
+            options={[
+              { value: "all", label: "All Approvals" },
+              { value: "approved", label: "Approved" },
+              { value: "waiting", label: "Waiting" },
+            ]}
+          />
+
           <FilterSelect
             label="Filter by Type"
             value={typeFilter}
@@ -275,64 +287,82 @@ export default function StudentEngagement() {
       {/* Table */}
       <div className={styles.TableWrapper}>
         <h3>Student Programs</h3>
-          
+
+        {(() => {
+          const columns = [
+            "Name",
+            "College Name",
+            "Project Name",
+            "Type",
+            "Duration",
+            "Start Date",
+            "End Date",
+            "Guide",
+            "Status",
+            "Approval",
+          ];
+
+          const formatDate = (value) =>
+            value ? new Date(value).toLocaleDateString("en-GB") : "—";
+
+          return (
             <table className={styles.Table}>
               <thead>
                 <tr>
-                  {[
-                    "Name",
-                    "College Name",
-                    "Project Name",
-                    "Type",
-                    "Duration",
-                    "Start Date",
-                    "End Date",
-                    "Guide",
-                    "Status",
-                  ].map((col) => (
+                  {columns.map((col) => (
                     <th key={col}>{col}</th>
                   ))}
                 </tr>
               </thead>
 
               <tbody>
-                   {loading && (
-              <tr>
-                <td className="TableLoad" colSpan={11}>Loading...</td>
-              </tr>
-            )}
-
-            {!loading && error && (
-              <tr>
-                <td className="TableError" colSpan={11}>{error}</td>
-              </tr>
-            )}
-
-            {!loading && !error && filtered.length === 0 && (
-              <tr>
-                <td className="TableEmpty" colSpan={11}>No student engagement records found.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              !error &&
-                filtered.map((row) => (
-                  <tr key={row.record_id}>
-                    <td className={styles.bold}>{row.student}</td>
-                    <td>{row.program_name}</td>
-                    <td>{row.program_type}</td>
-                    <td>{row.duration_months} Months</td>
-                    <td>{row.start_date}</td>
-                    <td>{row.end_date}</td>
-                    <td>{row.mentor || "—"}</td>
-                    <td>
-                      <Badge value={row.status} />
+                {loading && (
+                  <tr>
+                    <td className="TableLoad" colSpan={columns.length}>
+                      Loading...
                     </td>
                   </tr>
-                ))}
+                )}
+
+                {!loading && error && (
+                  <tr>
+                    <td className="TableError" colSpan={columns.length}>
+                      {error}
+                    </td>
+                  </tr>
+                )}
+
+                {!loading && !error && filtered.length === 0 && (
+                  <tr>
+                    <td className="TableEmpty" colSpan={columns.length}>
+                      No student engagement records found.
+                    </td>
+                  </tr>
+                )}
+
+                {!loading &&
+                  !error &&
+                  filtered.map((row) => (
+                    <tr key={row.record_id}>
+                      <td className={styles.bold}>{row.student}</td>
+                      <td>{row.college_name}</td>
+                      <td>{row.project_name}</td>
+                      <td>{row.program_type}</td>
+                      <td>{row.duration_months} Months</td>
+                      <td>{formatDate(row.start_date)}</td>
+                      <td>{formatDate(row.end_date)}</td>
+                      <td>{row.mentor || "—"}</td>
+                      <td>
+                        <Badge value={row.status} />
+                      </td>
+                      <td>{row.approval_status === "approved" ? "Approved" : "Waiting"}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
-          </div>
+          );
+        })()}
+      </div>
 
       {/* Modal */}
       {showModal && (
@@ -359,12 +389,22 @@ export default function StudentEngagement() {
             </label>
 
             <label className={styles.inputLabel}>
+              <span>College Name</span>
+              <input
+                placeholder="Enter College Name"
+                required
+                value={form.college_name}
+                onChange={(e) => onChange("college_name", e.target.value)}
+              />
+            </label>
+
+            <label className={styles.inputLabel}>
               <span>Project Title</span>
               <input
                 placeholder="Enter Project Title"
                 required
-                value={form.program_name}
-                onChange={(e) => onChange("program_name", e.target.value)}
+                value={form.project_name}
+                onChange={(e) => onChange("project_name", e.target.value)}
               />
             </label>
 

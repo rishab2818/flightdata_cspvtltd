@@ -110,13 +110,15 @@ async def list_student_engagements(
         # Convert stored datetimes back to dates for response schema
         payload = {
             "student": row.get("student"),
-            "program_name": row.get("program_name"),
+            "college_name": row.get("college_name"),
+            "project_name": row.get("project_name"),
             "program_type": row.get("program_type"),
             "duration_months": row.get("duration_months"),
             "start_date": row.get("start_date").date()
             if row.get("start_date")
             else None,
             "end_date": row.get("end_date").date() if row.get("end_date") else None,
+            "mentor": row.get("mentor"),
             "status": row.get("status"),
             "approval_status": row.get("approval_status", ApprovalStatus.WAITING),
             "notes": row.get("notes"),
@@ -124,6 +126,7 @@ async def list_student_engagements(
             "original_name": row.get("original_name"),
             "content_type": row.get("content_type"),
             "size_bytes": row.get("size_bytes"),
+            "content_hash": row.get("content_hash"),
         }
         results.append(
             StudentEngagementOut(
