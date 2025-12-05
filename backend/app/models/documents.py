@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,6 +19,11 @@ class MoMSubsection(str, Enum):
     PMRC = "pmrc"
     EBM = "ebm"
     GDM = "gdm"
+
+
+class ActionPoint(BaseModel):
+    description: str = Field(..., min_length=1)
+    assigned_to: Optional[str] = Field(None, description="Person / role responsible")
 
 
 class DocumentInitUpload(BaseModel):
@@ -42,6 +47,11 @@ class DocumentInitUpload(BaseModel):
         ),
         min_length=32,
     )
+    action_points: List[ActionPoint] = Field(default_factory=list)
+    action_on: List[str] = Field(
+        default_factory=list,
+        description="Top-level owners for the action items in this MoM.",
+    )
 
 
 class DocumentConfirm(BaseModel):
@@ -60,6 +70,11 @@ class DocumentConfirm(BaseModel):
         description="Same hash used during init-upload to enforce dedupe.",
         min_length=32,
     )
+    action_points: List[ActionPoint] = Field(default_factory=list)
+    action_on: List[str] = Field(
+        default_factory=list,
+        description="Top-level owners for the action items in this MoM.",
+    )
 
 
 class UserDocumentOut(BaseModel):
@@ -76,6 +91,8 @@ class UserDocumentOut(BaseModel):
     size_bytes: Optional[int] = None
     content_type: Optional[str] = None
     uploaded_at: datetime
+    action_points: List[ActionPoint] = Field(default_factory=list)
+    action_on: List[str] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

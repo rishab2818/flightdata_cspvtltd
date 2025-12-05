@@ -1,5 +1,5 @@
 // src/components/app/UploadMinutesModal.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FiUploadCloud, FiPlus, FiCalendar, FiX } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
 import "./UploadMinutesModal.css";
@@ -62,15 +62,39 @@ export default function UploadMinutesModal({
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [notes, setNotes] = useState("");
-
-  // For multi action points
-  const [actionPointInput, setActionPointInput] = useState("");
+  const [actionPointDescription, setActionPointDescription] = useState("");
+  const [actionPointAssignee, setActionPointAssignee] = useState("");
   const [actionPoints, setActionPoints] = useState([]);
+  const [assigneeQuery, setAssigneeQuery] = useState("");
+  const [assigneeOptions, setAssigneeOptions] = useState([]);
 
   // For multi "Action on"
   const [actionOnInput, setActionOnInput] = useState("");
   const [actionOnList, setActionOnList] = useState([]);
+
+  useEffect(() => {
+    if (!assigneeQuery.trim()) {
+      setAssigneeOptions([]);
+      return;
+    }
+
+    const handle = setTimeout(async () => {
+      try {
+        const results = await documentsApi.searchAssignees(assigneeQuery.trim());
+        setAssigneeOptions(results || []);
+      } catch (err) {
+        console.error("Failed to search assignees", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(handle);
+  }, [assigneeQuery]);
+
+  const handleSelectAssignee = (name) => {
+    setActionPointAssignee(name);
+    setAssigneeQuery(name);
+    setAssigneeOptions([]);
+  };
 
   if (!open) return null;
 
@@ -79,9 +103,11 @@ export default function UploadMinutesModal({
     setTag("");
     setFile(null);
     setError("");
-    setNotes("");
-    setActionPointInput("");
+    setActionPointDescription("");
+    setActionPointAssignee("");
     setActionPoints([]);
+    setAssigneeOptions([]);
+    setAssigneeQuery("");
     setActionOnInput("");
     setActionOnList([]);
   };
@@ -93,10 +119,18 @@ export default function UploadMinutesModal({
   };
 
   const handleAddActionPoint = () => {
-    const v = actionPointInput.trim();
-    if (!v) return;
-    setActionPoints((prev) => [...prev, v]);
-    setActionPointInput("");
+    const description = actionPointDescription.trim();
+    const assignee = actionPointAssignee.trim();
+    if (!description) return;
+
+    setActionPoints((prev) => [
+      ...prev,
+      { description, assigned_to: assignee || "" },
+    ]);
+    setActionPointDescription("");
+    setActionPointAssignee("");
+    setAssigneeQuery("");
+    setAssigneeOptions([]);
   };
 
   const handleRemoveActionPoint = (index) => {
@@ -134,14 +168,26 @@ export default function UploadMinutesModal({
       setError("No subsection selected.");
       return;
     }
-    if (actionPoints.length === 0) {
+    const normalizedActionPoints = actionPoints
+      .map((ap) => ({
+        description: ap.description.trim(),
+        assigned_to: ap.assigned_to?.trim() || null,
+      }))
+      .filter((ap) => ap.description);
+
+    if (normalizedActionPoints.length === 0) {
       setError("Please add at least one action point.");
       return;
     }
-    if (actionOnList.length === 0) {
-      setError("Please add at least one 'Action on' entry.");
-      return;
-    }
+
+    const combinedActionOn = Array.from(
+      new Set([
+        ...actionOnList.map((name) => name.trim()).filter(Boolean),
+        ...normalizedActionPoints
+          .map((ap) => ap.assigned_to)
+          .filter((name) => Boolean(name)),
+      ])
+    );
 
     try {
       setIsSubmitting(true);
@@ -161,8 +207,8 @@ export default function UploadMinutesModal({
         content_hash,
 
         // NEW: Multi action fields
-        action_points: actionPoints,
-        action_on: actionOnList,
+        action_points: normalizedActionPoints,
+        action_on: combinedActionOn,
       };
       // const initPayload = {
       //   section: "minutes_of_meeting",
@@ -200,8 +246,8 @@ export default function UploadMinutesModal({
         content_hash,
 
         // NEW: same fields on confirm
-        action_points: actionPoints,
-        action_on: actionOnList,
+        action_points: normalizedActionPoints,
+        action_on: combinedActionOn,
       };
 
       await documentsApi.confirmUpload(confirmPayload);
@@ -259,27 +305,66 @@ export default function UploadMinutesModal({
           {/* Action Points */}
           <div>
             <label className="label">Action Points</label>
-            <div className="row">
-              <input
-                type="text"
-                placeholder="CFD analysis to be conducted for Airbus 320"
-                value={actionPointInput}
-                onChange={(e) => setActionPointInput(e.target.value)}
-                onKeyDown={handleActionPointKeyDown}
-                className="textInput"
-              />
-              <button type="button" onClick={handleAddActionPoint} className="iconButton">
-                <FiPlus size={18} />
-              </button>
+            <div className="actionPointSection">
+              <div className="row">
+                <input
+                  type="text"
+                  placeholder="CFD analysis to be conducted for Airbus 320"
+                  value={actionPointDescription}
+                  onChange={(e) => setActionPointDescription(e.target.value)}
+                  onKeyDown={handleActionPointKeyDown}
+                  className="textInput"
+                />
+                <button type="button" onClick={handleAddActionPoint} className="iconButton">
+                  <FiPlus size={18} />
+                </button>
+              </div>
+
+              <div className="assigneeWrap">
+                <span className="subLabel">Assign to (optional)</span>
+                <div className="assigneeInputBox">
+                  <input
+                    type="text"
+                    placeholder="Search people, roles or teams"
+                    value={actionPointAssignee}
+                    onChange={(e) => {
+                      setActionPointAssignee(e.target.value);
+                      setAssigneeQuery(e.target.value);
+                    }}
+                    className="textInput"
+                  />
+                  {assigneeOptions.length > 0 && (
+                    <div className="suggestionsBox">
+                      {assigneeOptions.map((name) => (
+                        <button
+                          type="button"
+                          key={name}
+                          className="suggestionItem"
+                          onClick={() => handleSelectAssignee(name)}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {actionPoints.length > 0 && (
-              <div className="chipContainer">
+              <div className="actionPointList">
                 {actionPoints.map((pt, idx) => (
-                  <span key={`${pt}-${idx}`} className="chip">
-                    {pt}
-                    <FiX size={12} onClick={() => handleRemoveActionPoint(idx)} className="chipRemove" />
-                  </span>
+                  <div key={`${pt.description}-${idx}`} className="actionPointCard">
+                    <div className="actionPointText">{pt.description}</div>
+                    {pt.assigned_to && (
+                      <div className="assigneeTag">{pt.assigned_to}</div>
+                    )}
+                    <FiX
+                      size={14}
+                      onClick={() => handleRemoveActionPoint(idx)}
+                      className="chipRemove"
+                    />
+                  </div>
                 ))}
               </div>
             )}

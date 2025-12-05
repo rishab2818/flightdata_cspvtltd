@@ -10,6 +10,7 @@ from app.core.minio_client import get_minio_client
 from app.core.config import settings
 from app.db.mongo import get_db
 from app.models.documents import (
+    ActionPoint,
     DocumentSection,
     MoMSubsection,
     DocumentInitUpload,
@@ -141,6 +142,8 @@ async def confirm_document_upload(
         "size_bytes": payload.size_bytes,
         "content_hash": payload.content_hash,
         "uploaded_at": now,
+        "action_points": [ap.model_dump() for ap in payload.action_points],
+        "action_on": payload.action_on or [],
     }
 
     res = await db.user_documents.insert_one(doc)
@@ -158,6 +161,8 @@ async def confirm_document_upload(
         size_bytes=doc["size_bytes"],
         content_type=doc["content_type"],
         uploaded_at=now,
+        action_points=payload.action_points,
+        action_on=payload.action_on or [],
     )
 
 
@@ -206,9 +211,58 @@ async def list_user_documents(
                 size_bytes=row.get("size_bytes"),
                 content_type=row.get("content_type"),
                 uploaded_at=row["uploaded_at"],
+                action_points=[
+                    ActionPoint(**ap)
+                    for ap in row.get("action_points", [])
+                    if ap
+                ],
+                action_on=row.get("action_on", []),
             )
         )
     return results
+
+
+# ---------- 3b) Suggest assignees from existing MoM docs ----------
+@router.get("/assignees")
+async def search_assignees(
+    q: str = Query(..., min_length=1, description="Name filter"),
+    limit: int = Query(10, ge=1, le=50),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Return distinct assignee names from the user's MoM documents."""
+
+    db = await get_db()
+    cursor = db.user_documents.find(
+        {"owner_email": user.email, "section": DocumentSection.MINUTES_OF_MEETING.value},
+        {"action_on": 1, "action_points": 1},
+    )
+    docs = await cursor.to_list(length=500)
+
+    q_lower = q.lower()
+    names: List[str] = []
+    seen = set()
+
+    for row in docs:
+        for name in row.get("action_on", []) or []:
+            if isinstance(name, str) and q_lower in name.lower() and name not in seen:
+                seen.add(name)
+                names.append(name)
+
+        for ap in row.get("action_points", []) or []:
+            assignee = ap.get("assigned_to") if isinstance(ap, dict) else None
+            if (
+                isinstance(assignee, str)
+                and assignee
+                and q_lower in assignee.lower()
+                and assignee not in seen
+            ):
+                seen.add(assignee)
+                names.append(assignee)
+
+        if len(names) >= limit:
+            break
+
+    return names[:limit]
 
 
 # ---------- 4) Download: get presigned GET URL ----------
