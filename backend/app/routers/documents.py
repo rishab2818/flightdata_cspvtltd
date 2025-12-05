@@ -50,13 +50,16 @@ async def init_document_upload(
 
     db = await get_db()
 
-    # Dedupe: same user + same content hash => reject
-    existing = await db.user_documents.find_one(
-        {
-            "owner_email": user.email,
-            "content_hash": payload.content_hash,
-        }
-    )
+    # Dedupe: same user + same content hash within the same section/subsection => reject
+    dedupe_query = {
+        "owner_email": user.email,
+        "content_hash": payload.content_hash,
+        "section": payload.section.value,
+    }
+    if payload.subsection is not None:
+        dedupe_query["subsection"] = payload.subsection.value
+
+    existing = await db.user_documents.find_one(dedupe_query)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -120,12 +123,15 @@ async def confirm_document_upload(
     db = await get_db()
 
     # Dedupe again to be safe in case init-upload was skipped
-    existing = await db.user_documents.find_one(
-        {
-            "owner_email": user.email,
-            "content_hash": payload.content_hash,
-        }
-    )
+    dedupe_query = {
+        "owner_email": user.email,
+        "content_hash": payload.content_hash,
+        "section": payload.section.value,
+    }
+    if payload.subsection is not None:
+        dedupe_query["subsection"] = payload.subsection.value
+
+    existing = await db.user_documents.find_one(dedupe_query)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
