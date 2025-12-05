@@ -5,6 +5,7 @@ import { computeSha256 } from "../../lib/fileUtils";
 import totalRecordsIcon from "../../assets/bule_message.svg";
 import technicalIcon from "../../assets/setting_black.svg";
 import designicon from "../../assets/design_black.svg";
+import FileUploadBox from "../../components/common/FileUploadBox";
 
 import CommonStatCard from "../../components/common/common_card/common_card";
 
@@ -62,7 +63,7 @@ export default function TechnicalReports() {
   }, [records, filters]);
 
   return (
-    <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
 
 
       <div
@@ -463,9 +464,10 @@ function ReportModal({ onClose, onCreated }) {
           borderRadius: 12,
           padding: "24px 28px",
           boxShadow: "0 30px 70px rgba(15,23,42,0.25)",
+
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between",height:50, alignItems:"center",flexShrink:0, marginTop:0}}>
           <div>
             <h3 style={{ margin: 0 }}>Upload Report</h3>
             <p style={{ margin: "6px 0 0", color: "#64748B" }}>
@@ -482,13 +484,21 @@ function ReportModal({ onClose, onCreated }) {
               cursor: "pointer",
             }}
           >
-            Close
+           X
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "70vh"  }}>
+         <FileUploadBox
+           label="Upload Document"
+           description="Attach training related file here"
+           supported="PDF/Word"
+           file={file}
+           onFileSelected={(f) => setFile(f)}
+         />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-            <Input label="Report Name" value={form.name} onChange={(e) => onChange("name", e.target.value)} />
+              <Input label="Report Name" value={form.name} onChange={(e) => onChange("name", e.target.value)} />
+
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ color: "#475569", fontSize: 13 }}>Type</span>
               <select
@@ -499,13 +509,14 @@ function ReportModal({ onClose, onCreated }) {
                   borderRadius: 8,
                   border: `1px solid ${BORDER}`,
                   padding: "0 12px",
+                  background: "#F3F3F5",
                 }}
               >
                 <option value="Technical">Technical</option>
                 <option value="Design">Design</option>
                 <option value="Other">Other</option>
               </select>
-            </label>
+            </label >
             <Input label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
             <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
           </div>
@@ -525,26 +536,7 @@ function ReportModal({ onClose, onCreated }) {
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document</span>
-            <div
-              style={{
-                border: `1px dashed ${BORDER}`,
-                borderRadius: 10,
-                padding: "10px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <FiUploadCloud />
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                style={{ flex: 1 }}
-              />
-            </div>
-          </label>
+         
 
           {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
 

@@ -4,6 +4,7 @@ import { projectApi } from '../../../api/projectapi'
 import brandIcon from '../../../assets/Database.svg'
 import TopBarActions from '../../../components/layout/TopBarActions'
 import '../../../styles/project.css'
+import ArrowLeft from "../../../assets/ArrowLeft.svg";
 
 const navItems = [
   { key: 'upload', to: '', label: 'Upload File' },
@@ -47,10 +48,7 @@ export default function ProjectShell() {
           <img src={brandIcon} alt="logo" />
           <div className="project-shell__brand-text">Data Visualisation</div>
         </div>
-        <div className="project-shell__project">
-          <div className="project-shell__project-title">{project?.project_name || 'Project'}</div>
-          <p className="project-shell__project-desc">{project?.project_description || 'Project workspace'}</p>
-        </div>
+        
         <nav className="project-shell__nav">
           {navItems.map((item) => (
             <NavLink
@@ -76,14 +74,12 @@ export default function ProjectShell() {
         <header className="project-shell__header">
           <div className="project-shell__header-main">
             <button type="button" className="project-shell__back" onClick={() => navigate('/app')}>
-              Back to projects
+               <img src={ArrowLeft} alt="Back" className="back-icon" />
+               
             </button>
+
             <div>
               <p className="project-shell__header-label">Project Overview</p>
-              <h1 className="project-shell__header-title">{project?.project_name || 'Project'}</h1>
-              {project?.project_description && (
-                <p className="project-shell__header-desc">{project.project_description}</p>
-              )}
             </div>
           </div>
           <TopBarActions />

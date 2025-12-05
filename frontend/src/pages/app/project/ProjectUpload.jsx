@@ -3,6 +3,8 @@ import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { storage } from '../../../lib/storage'
 
+
+
 const datasetOptions = [
   { key: 'cfd', label: 'CFD' },
   { key: 'wind', label: 'Wind Data' },
@@ -97,7 +99,7 @@ export default function ProjectUpload() {
   }
 
   return (
-    <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="project-card" style={{  }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <p className="summary-label" style={{ marginBottom: 4 }}>

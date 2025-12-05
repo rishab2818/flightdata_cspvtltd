@@ -7,6 +7,7 @@ import CurrencyInr from "../../assets/CurrencyInr.svg";
 import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
 import styles from "./InventoryRecords.module.css";
+import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
 
@@ -371,6 +372,15 @@ function SupplyOrderModal({ onClose, onCreated }) {
         </div>
 
         <form className={styles.modalForm} onSubmit={handleSubmit}>
+          {/* 👇 Upload box moved to TOP */}
+                      <FileUploadBox
+                        label="Upload Document"
+                        description="Attach training related file here"
+                        supported="PDF/Word"
+                        file={file}
+                        onFileSelected={(f) => setFile(f)}
+                      />
+        
           <div className={styles.grid}>
             <Input
               label="#SO"
@@ -450,19 +460,7 @@ function SupplyOrderModal({ onClose, onCreated }) {
               value={form.amount}
               onChange={(e) => onChange("amount", e.target.value)}
             />
-
-            <label className={styles.uploadLabel}>
-              <span className={styles.uploadText}>Upload Document</span>
-              <div className={styles.uploadBox}>
-                <FiUploadCloud />
-                <input
-                  className={styles.fileInput}
-                  type="file"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-              </div>
-            </label>
-          </div>
+            </div>
 
           {error && <p className={styles.errorText}>{error}</p>}
 

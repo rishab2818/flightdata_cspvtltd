@@ -86,12 +86,12 @@ export default function AddStudentCard() {
                 </div>
 
                 <div className="form-group">
-                    <label>Mentor</label>
+                    <label>Guide</label>
                     <input
                     type="text"
                     value={Mentor}
                     oNchange={(e) => setMentor(e.target.value)}
-                    placeholder="Enter Mentor Name"
+                    placeholder="Enter Guide Name"
                     />  
                 </div>
 

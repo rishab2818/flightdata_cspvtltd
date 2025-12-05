@@ -8,7 +8,7 @@ import Book1 from "../../assets/Book1.svg";
 import Ongoing from "../../assets/Ongoing.svg";
 import Cap from "../../assets/Cap.svg";
 import styles from "./StudentEngagement.module.css";
-
+import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BADGE_COLORS = {
   Ongoing: { bg: "#FEF3C7", text: "#B45309" },
@@ -78,8 +78,11 @@ function Modal({ title, onClose, children }) {
             ✕
           </button>
         </div>
+        <div className={styles.modalBody}>
+          {children}
+        </div>
 
-        {children}
+        
       </div>
     </div>
   );
@@ -270,45 +273,21 @@ export default function StudentEngagement() {
       </section>
 
       {/* Table */}
-      <section className={styles.tableContainer}>
+      <div className={styles.TableWrapper}>
         <h3>Student Programs</h3>
-        <div className={styles.tabRow}>
-          <button
-            className={`${styles.tabBtn} ${
-              tab === "approved" ? styles.activeTab : ""
-            }`}
-            onClick={() => setTab("approved")}
-          >
-            Approved
-          </button>
-
-          <button
-            className={`${styles.tabBtn} ${
-              tab === "waiting" ? styles.activeTab : ""
-            }`}
-            onClick={() => setTab("waiting")}
-          >
-            Waiting approval
-          </button>
-        </div>
-
-        {loading ? (
-          <p>Loading records...</p>
-        ) : filtered.length === 0 ? (
-          <p>No student engagements found.</p>
-        ) : (
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
+          
+            <table className={styles.Table}>
               <thead>
                 <tr>
                   {[
                     "Name",
+                    "College Name",
                     "Project Name",
                     "Type",
                     "Duration",
                     "Start Date",
                     "End Date",
-                    "Mentor",
+                    "Guide",
                     "Status",
                   ].map((col) => (
                     <th key={col}>{col}</th>
@@ -317,7 +296,27 @@ export default function StudentEngagement() {
               </thead>
 
               <tbody>
-                {filtered.map((row) => (
+                   {loading && (
+              <tr>
+                <td className="TableLoad" colSpan={11}>Loading...</td>
+              </tr>
+            )}
+
+            {!loading && error && (
+              <tr>
+                <td className="TableError" colSpan={11}>{error}</td>
+              </tr>
+            )}
+
+            {!loading && !error && filtered.length === 0 && (
+              <tr>
+                <td className="TableEmpty" colSpan={11}>No student engagement records found.</td>
+              </tr>
+            )}
+
+            {!loading &&
+              !error &&
+                filtered.map((row) => (
                   <tr key={row.record_id}>
                     <td className={styles.bold}>{row.student}</td>
                     <td>{row.program_name}</td>
@@ -334,13 +333,21 @@ export default function StudentEngagement() {
               </tbody>
             </table>
           </div>
-        )}
-      </section>
 
       {/* Modal */}
       {showModal && (
         <Modal title="Add Student Program" onClose={() => setShowModal(false)}>
           <form onSubmit={handleSubmit} className={styles.formGrid}>
+
+             {/* 👇 Upload box moved to TOP */}
+            <FileUploadBox
+              label="Upload Document"
+              description="Attach training related file here"
+              supported="PDF/Word"
+              file={file}
+              onFileSelected={(f) => setFile(f)}
+            />
+            
             {/* Repeat input format */}
             <label className={styles.inputLabel}>
               <span>Student Name</span>
@@ -407,8 +414,8 @@ export default function StudentEngagement() {
            </label>
            
             <label className={styles.inputLabel}>
-              <span>Mentor</span>
-              <input placeholder="Enter Mentor Name"
+              <span>Guide</span>
+              <input placeholder="Enter Guide Name"
                 value={form.mentor}
                 onChange={(e) => onChange("mentor", e.target.value)}
               />
@@ -443,18 +450,6 @@ export default function StudentEngagement() {
                 value={form.notes}
                 onChange={(e) => onChange("notes", e.target.value)}
               />
-            </label>
-
-            <label className={styles.uploadLabel}>
-              <span>Upload Document</span>
-
-              <div className={styles.uploadBox}>
-                <FiUploadCloud />
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                />
-              </div>
             </label>
 
             <div className={styles.formActions}>

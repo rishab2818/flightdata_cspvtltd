@@ -8,6 +8,16 @@ import React from 'react';
 import { FiCalendar, FiUser, FiEye } from 'react-icons/fi';
 import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
+import Airplane from '../../assets/Airplane.svg';
+import Windmill from '../../assets/Windmill.svg';
+import Wind from '../../assets/Wind.svg';
+
+
+const TYPE_ICONS = {
+  "Aero Data": Airplane,
+  "Wind Data": Windmill,
+  "CFD": Wind,
+};
 
 export default function ProjectCardImproved({ name, type, date, members, desc, onView }) {
   return (
@@ -16,10 +26,10 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
         width: '100%',
         minHeight: 215,
         gap: SPACING.md,
-        borderRadius: 8,
+        borderTop: `1px solid ${COLORS.border}`,
+        borderBottom: `1px solid ${COLORS.border}`,
         background: COLORS.background,
-        border: `1px solid ${COLORS.border}`,
-        padding: `${SPACING.lg + SPACING.sm}px ${SPACING.lg}px`,
+        padding: `25px 0px 25px 0px `,
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -28,29 +38,38 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
           <h3
-            style={{ fontSize: 16, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }}
+            style={{ fontSize: 16, fontWeight: 600, color: "#000000", margin: 0 ,fontFamily: "inter-semi-bold, Helvetica"}}
           >
             {name}
           </h3>
+          <div
+            style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: `${SPACING.sm}px ${SPACING.md}px`,
+            borderRadius: 999,
+            background: "#fff",
+            border: `1px solid ${COLORS.border}`,
+            fontSize: 14,
+            color: COLORS.textSecondary,
+  }}
+>
+  <img
+    src={TYPE_ICONS[type]}
+    alt={type}
+    style={{ width: 16, height: 16, objectFit: "contain" }}
+  />
+  {type}
+</div>
+
           <span
             style={{
               padding: `${SPACING.sm}px ${SPACING.md}px`,
               borderRadius: 999,
-              background: COLORS.mutedBackground,
-              color: COLORS.textSecondary,
-              fontSize: 12,
-              border: `1px solid ${COLORS.border}`,
-            }}
-          >
-            {type}
-          </span>
-          <span
-            style={{
-              padding: `${SPACING.sm}px ${SPACING.md}px`,
-              borderRadius: 999,
-              background: COLORS.successBackground,
+              background: "#DEFFF0",
               color: COLORS.successText,
-              fontSize: 12,
+              fontSize: 14,
               border: `1px solid ${COLORS.border}`,
             }}
           >
@@ -62,7 +81,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       <p
         style={{
           fontSize: 13,
-          color: COLORS.textSecondary,
+          color: "#514F4F",
           marginTop: SPACING.sm,
           marginRight: SPACING.lg,
           lineHeight: 1.5,
@@ -84,23 +103,23 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       >
         {/* created + members group */}
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.lg + SPACING.sm }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
-            <FiCalendar size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16,color: "#000000"}}>
+            <FiCalendar size={24} />
             <div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted }}>Created</div>
+              <div style={{ fontSize: 14, color: "#737373" }}>Created</div>
               <div
-                style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginTop: 2 }}
+                style={{ fontSize: 14, fontWeight: 600, color: "#000000", marginTop: 2, fontFamily: "inter-semi-bold, Helvetica" }}
               >
                 {date}
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
-            <FiUser size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16,color: "#000000"}}>
+            <FiUser size={24} />
             <div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted }}>Members</div>
+              <div style={{ fontSize: 14, color: "#737373" }}>Members</div>
               <div
-                style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginTop: 2 }}
+                style={{ fontSize: 14, fontWeight: 600, color: "#000000", marginTop: 2, fontFamily: "inter-semi-bold, Helvetica" }}
               >
                 {String(members).padStart(2, '0')}
               </div>
@@ -108,8 +127,8 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
           </div>
         </div>
         {/* view project button */}
-        <Button variant="secondary" style={{ padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 999 }} onClick={onView}>
-          <FiEye size={16} /> <span>View Project</span>
+        <Button variant="secondary" style={{ width:160, height:44, padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 8 , color:"#000000",fontFamily:"inter-semi-bold, Helvetica",fontSize:16}} onClick={onView}>
+          <FiEye size={24} /> <span>View Project</span>
         </Button>
       </div>
     </div>

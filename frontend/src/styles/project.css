@@ -29,18 +29,6 @@
   background: #edf2ff;
 }
 
-.project-shell__project-title {
-  font-weight: 700;
-  font-size: 18px;
-  margin: 0;
-}
-
-.project-shell__project-desc {
-  margin: 6px 0 0 0;
-  color: #475569;
-  font-size: 14px;
-  line-height: 1.4;
-}
 
 .project-shell__nav {
   display: flex;
@@ -91,36 +79,36 @@
   gap: 16px;
 }
 
+
+
 .project-shell__back {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  padding: 10px 14px;
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
   cursor: pointer;
-  font-weight: 600;
-  color: #1f2937;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  font-size: 14px;
+  color: #000000;
+  font-weight: 500;
+  width: 24px;
+  height: 24px;
 }
+
+.back-icon {
+  width: 18px;
+  height: 18px;
+}
+
 
 .project-shell__header-label {
   margin: 0;
-  font-size: 13px;
-  color: #64748b;
-  letter-spacing: 0.4px;
-}
-
-.project-shell__header-title {
-  margin: 2px 0 6px 0;
   font-size: 28px;
+  color: #1976D2;
+  letter-spacing: 0.4px;
+  font-family: "inter-regular" Helvetica;
+  font-weight: 600;
 }
-
-.project-shell__header-desc {
-  margin: 0;
-  max-width: 780px;
-  color: #475569;
-  line-height: 1.5;
-}
-
 
 .project-shell__error {
   background: #fef2f2;
