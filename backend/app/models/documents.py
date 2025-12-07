@@ -54,6 +54,10 @@ class DocumentInitUpload(BaseModel):
         default_factory=list,
         description="Top-level owners for the action items in this MoM.",
     )
+    project_id: Optional[str] = Field(
+        default=None,
+        description="Optional project ID to link PMRC minutes to a project",
+    )
 
 
 class DocumentConfirm(BaseModel):
@@ -77,6 +81,10 @@ class DocumentConfirm(BaseModel):
         default_factory=list,
         description="Top-level owners for the action items in this MoM.",
     )
+    project_id: Optional[str] = Field(
+        default=None,
+        description="Optional project ID to link PMRC minutes to a project",
+    )
 
 
 class UserDocumentOut(BaseModel):
@@ -95,6 +103,7 @@ class UserDocumentOut(BaseModel):
     uploaded_at: datetime
     action_points: List[ActionPoint] = Field(default_factory=list)
     action_on: List[str] = Field(default_factory=list)
+    project_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -107,3 +116,4 @@ class DocumentUpdate(BaseModel):
     doc_date: Optional[date] = None
     action_points: Optional[List[ActionPoint]] = None
     action_on: Optional[List[str]] = None
+    project_id: Optional[str] = None
