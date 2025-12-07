@@ -56,6 +56,10 @@ export default function UploadMinutesModal({
   onClose,
   subsection,
   onUploaded,
+  projectOptions = [],
+  selectedProjectId = "",
+  onProjectChange,
+  requireProject = false,
 }) {
   const [meetingDate, setMeetingDate] = useState("");
   const [tag, setTag] = useState("");
@@ -67,6 +71,7 @@ export default function UploadMinutesModal({
   const [actionPoints, setActionPoints] = useState([]);
   const [assigneeQuery, setAssigneeQuery] = useState("");
   const [assigneeOptions, setAssigneeOptions] = useState([]);
+  const [projectId, setProjectId] = useState(selectedProjectId || "");
 
   // For multi "Action on"
   const [actionOnInput, setActionOnInput] = useState("");
@@ -96,6 +101,10 @@ export default function UploadMinutesModal({
     setAssigneeOptions([]);
   };
 
+  useEffect(() => {
+    setProjectId(selectedProjectId || "");
+  }, [selectedProjectId, open]);
+
   if (!open) return null;
 
   const resetForm = () => {
@@ -110,6 +119,7 @@ export default function UploadMinutesModal({
     setAssigneeQuery("");
     setActionOnInput("");
     setActionOnList([]);
+    setProjectId(selectedProjectId || "");
   };
 
   const handleCancel = () => {
@@ -154,6 +164,10 @@ export default function UploadMinutesModal({
 
     if (!file) {
       setError("Please select a file to upload.");
+      return;
+    }
+    if (requireProject && !projectId) {
+      setError("Select a project to upload PMRC minutes.");
       return;
     }
     if (!meetingDate) {
@@ -209,6 +223,7 @@ export default function UploadMinutesModal({
         // NEW: Multi action fields
         action_points: normalizedActionPoints,
         action_on: combinedActionOn,
+        project_id: requireProject ? projectId : undefined,
       };
       // const initPayload = {
       //   section: "minutes_of_meeting",
@@ -248,6 +263,7 @@ export default function UploadMinutesModal({
         // NEW: same fields on confirm
         action_points: normalizedActionPoints,
         action_on: combinedActionOn,
+        project_id: requireProject ? projectId : undefined,
       };
 
       await documentsApi.confirmUpload(confirmPayload);
@@ -302,6 +318,35 @@ export default function UploadMinutesModal({
         <h2 className="modalTitle">Upload Meeting Minutes</h2>
 
         <form onSubmit={handleSubmit} className="form">
+          {requireProject && (
+            <div className="row gap16">
+              <div className="flex1">
+                <label className="label">Select Project</label>
+                <select
+                  className="textInput"
+                  value={projectId}
+                  onChange={(e) => {
+                    setProjectId(e.target.value);
+                    if (onProjectChange) onProjectChange(e.target.value);
+                  }}
+                  disabled={!projectOptions?.length}
+                >
+                  <option value="">
+                    {projectOptions?.length ? "Choose a project" : "No projects available"}
+                  </option>
+                  {projectOptions.map((project) => (
+                    <option key={project?._id || project?.id} value={project?._id || project?.id}>
+                      {project?.project_name || "Untitled Project"}
+                    </option>
+                  ))}
+                </select>
+                {!projectOptions?.length && (
+                  <p className="helperText">Join a project to upload PMRC minutes.</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action Points */}
           <div>
             <label className="label">Action Points</label>

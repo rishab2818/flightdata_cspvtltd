@@ -3,10 +3,13 @@ import { axiosClient } from "../lib/axiosClient";
 
 export const documentsApi = {
   // List only *my* Minutes of Meeting documents for a specific subsection
-  listMinutes: async (subsection) => {
+  listMinutes: async (subsection, projectId) => {
     const params = { section: "minutes_of_meeting" };
     if (subsection) {
       params.subsection = subsection; // "tcm" | "pmrc" | "ebm" | "gdm"
+    }
+    if (projectId) {
+      params.project_id = projectId;
     }
     const { data } = await axiosClient.get("/api/documents", { params });
     return data;
