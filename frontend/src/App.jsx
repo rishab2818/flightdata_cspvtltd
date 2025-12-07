@@ -11,7 +11,7 @@ import "./styles/common.css";
 // User app
 import AppShell from './pages/app/AppShell'
 import Dashboard from './pages/app/Dashboard'
-import MinutesOfTheMeeting from './pages/app/MinutesOfTheMeeting'
+import MinutesOfTheMeeting from './pages/app/minutes'
 import StudentEngagement from './pages/app/StudentEngagement'
 import InventoryRecords from './pages/app/InventoryRecords'
 import DivisionalRecords from './pages/app/divisional'
