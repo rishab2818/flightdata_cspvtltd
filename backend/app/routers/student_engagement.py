@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from uuid import uuid4
 from typing import List, Optional
 from bson import ObjectId
@@ -23,6 +23,13 @@ async def _ensure_bucket(bucket: str) -> None:
     minio_client = get_minio_client()
     if not minio_client.bucket_exists(bucket):
         minio_client.make_bucket(bucket)
+
+
+def _calculate_duration_months(start: date, end: date) -> int:
+    months = (end.year - start.year) * 12 + (end.month - start.month)
+    if end.day >= start.day:
+        months += 1
+    return max(months, 1)
 
 
 @router.post("/init-upload")
@@ -69,26 +76,44 @@ async def create_student_engagement(
     db = await get_db()
     now = datetime.utcnow()
 
+    payload_data = payload.model_dump(exclude_none=True)
+    computed_duration = None
+    if payload.start_date and payload.end_date:
+        computed_duration = _calculate_duration_months(
+            payload.start_date, payload.end_date
+        )
+
     doc = {
         "owner_email": user.email,
         "created_at": now,
         "updated_at": now,
     }
 
-    for key, value in payload.model_dump(exclude_none=True).items():
+    for key, value in payload_data.items():
+        if key == "duration_months":
+            continue
         if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
             doc[key] = datetime(value.year, value.month, value.day)
         else:
             doc[key] = value
 
+    if computed_duration is not None:
+        doc["duration_months"] = computed_duration
+    elif "duration_months" in payload_data:
+        doc["duration_months"] = payload_data["duration_months"]
+
     res = await db.student_engagements.insert_one(doc)
+
+    response_payload = payload.model_dump()
+    if computed_duration is not None:
+        response_payload["duration_months"] = computed_duration
 
     return StudentEngagementOut(
         record_id=str(res.inserted_id),
         owner_email=user.email,
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
-        **payload.model_dump(),
+        **response_payload,
     )
 
 
@@ -165,20 +190,56 @@ async def update_student_engagement(
     update_doc = {"updated_at": now}
     payload_data = payload.model_dump(exclude_none=True)
 
+    start_date: Optional[date] = payload_data.get("start_date") or (
+        row.get("start_date").date() if row.get("start_date") else None
+    )
+    end_date: Optional[date] = payload_data.get("end_date") or (
+        row.get("end_date").date() if row.get("end_date") else None
+    )
+    if start_date and end_date and start_date >= end_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="start_date must be before end_date",
+        )
+    computed_duration = None
+    if start_date and end_date:
+        computed_duration = _calculate_duration_months(start_date, end_date)
+
     for key, value in payload_data.items():
+        if key == "duration_months":
+            continue
         if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
             update_doc[key] = datetime(value.year, value.month, value.day)
         else:
             update_doc[key] = value
 
+    if computed_duration is not None:
+        update_doc["duration_months"] = computed_duration
+    elif "duration_months" in payload_data:
+        update_doc["duration_months"] = payload_data["duration_months"]
+
     await db.student_engagements.update_one({"_id": oid}, {"$set": update_doc})
+
+    response_payload = {**row, **payload_data}
+    if computed_duration is not None:
+        response_payload["duration_months"] = computed_duration
+
+    if start_date:
+        response_payload["start_date"] = start_date
+    elif row.get("start_date"):
+        response_payload["start_date"] = row["start_date"].date()
+
+    if end_date:
+        response_payload["end_date"] = end_date
+    elif row.get("end_date"):
+        response_payload["end_date"] = row["end_date"].date()
 
     return StudentEngagementOut(
         record_id=record_id,
         owner_email=user.email,
         created_at=row["created_at"],
         updated_at=now,
-        **{**row, **payload_data},
+        **response_payload,
     )
 
 

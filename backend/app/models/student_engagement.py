@@ -33,8 +33,8 @@ class StudentEngagementCreate(BaseModel):
     @validator("end_date")
     def validate_end_date(cls, v, values):
         start_date = values.get("start_date")
-        if start_date and v and v < start_date:
-            raise ValueError("end_date cannot be before start_date")
+        if start_date and v and v <= start_date:
+            raise ValueError("end_date must be after start_date")
         return v
 
 
