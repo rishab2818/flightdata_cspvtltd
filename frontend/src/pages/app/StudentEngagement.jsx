@@ -105,7 +105,7 @@ export default function StudentEngagement() {
     college_name: "",
     project_name: "",
     program_type: "Internship",
-    duration_months: "6",
+    duration_months: "",
     start_date: "",
     end_date: "",
     status: "Ongoing",
@@ -115,6 +115,7 @@ export default function StudentEngagement() {
   };
 
   const [form, setForm] = useState(initialForm);
+  const [dateError, setDateError] = useState("");
 
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -138,6 +139,44 @@ export default function StudentEngagement() {
 
   const onChange = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const calculateDurationMonths = (start, end) => {
+    const yearDiff = end.getFullYear() - start.getFullYear();
+    const monthDiff = end.getMonth() - start.getMonth();
+    let months = yearDiff * 12 + monthDiff;
+
+    if (end.getDate() >= start.getDate()) {
+      months += 1;
+    }
+
+    return Math.max(months, 1);
+  };
+
+  useEffect(() => {
+    if (form.start_date && form.end_date) {
+      const start = new Date(form.start_date);
+      const end = new Date(form.end_date);
+
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        setDateError("Please enter valid dates");
+        setForm((prev) => ({ ...prev, duration_months: "" }));
+        return;
+      }
+
+      if (start >= end) {
+        setDateError("Start date must be before end date");
+        setForm((prev) => ({ ...prev, duration_months: "" }));
+        return;
+      }
+
+      const months = calculateDurationMonths(start, end);
+      setDateError("");
+      setForm((prev) => ({ ...prev, duration_months: String(months) }));
+    } else {
+      setDateError("");
+      setForm((prev) => ({ ...prev, duration_months: "" }));
+    }
+  }, [form.start_date, form.end_date]);
 
   const filtered = useMemo(() => {
     return records
@@ -173,6 +212,7 @@ export default function StudentEngagement() {
     setExistingFileMeta(null);
     setEditingRecord(null);
     setError("");
+    setDateError("");
   };
 
   const handleCloseModal = () => {
@@ -216,6 +256,11 @@ export default function StudentEngagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (dateError) {
+      setError(dateError);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -547,7 +592,8 @@ export default function StudentEngagement() {
                 type="number"
                 min="1"
                 value={form.duration_months}
-                onChange={(e) => onChange("duration_months", e.target.value)}
+                readOnly
+                placeholder="Calculated from dates"
               />
             </label>
 
@@ -558,6 +604,7 @@ export default function StudentEngagement() {
               <input
                 type="date"
                 value={form.start_date}
+                max={form.end_date || undefined}
                 onChange={(e) => onChange("start_date", e.target.value)}
               />
               </div>
@@ -567,10 +614,12 @@ export default function StudentEngagement() {
               <input
                 type="date"
                 value={form.end_date}
+                min={form.start_date || undefined}
                 onChange={(e) => onChange("end_date", e.target.value)}
               />
               </div>
             </div>
+            {dateError && <div className={styles.errorMsg}>{dateError}</div>}
            </label>
            
             <label className={styles.inputLabel}>
@@ -621,7 +670,11 @@ export default function StudentEngagement() {
                 Cancel
               </button>
 
-              <button type="submit" className={styles.saveBtn} disabled={submitting}>
+              <button
+                type="submit"
+                className={styles.saveBtn}
+                disabled={submitting || Boolean(dateError)}
+              >
                 {submitting
                   ? "Saving..."
                   : editingRecord
