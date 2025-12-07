@@ -241,11 +241,20 @@ export default function UploadMinutesModal({
       // 3) Upload file directly to MinIO
       const putRes = await fetch(upload_url, {
         method: "PUT",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
         body: file,
       });
 
       if (!putRes.ok) {
-        throw new Error("File upload to storage failed");
+        const text = await putRes.text();
+        const statusText = putRes.statusText || "";
+        throw new Error(
+          `File upload to storage failed${
+            statusText ? ` (${statusText})` : ""
+          }: ${text || putRes.status}`
+        );
       }
 
       // 4) Confirm upload with backend
@@ -285,6 +294,8 @@ export default function UploadMinutesModal({
             ? detail.map((d) => d.msg || String(d)).join(", ")
             : String(detail)
         );
+      } else if (err?.message) {
+        setError(err.message);
       } else {
         setError("Upload failed. Please try again.");
       }
