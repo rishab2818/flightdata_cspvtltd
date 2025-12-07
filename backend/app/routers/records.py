@@ -225,13 +225,16 @@ async def list_supply_orders(user: CurrentUser = Depends(get_current_user)):
     rows = await _list_records(RecordSection.INVENTORY_RECORDS, user)
     results: List[SupplyOrderOut] = []
     for row in rows:
+        row_data = {k: row.get(k) for k in SupplyOrderCreate.model_fields.keys()}
+        if row_data.get("pl_holder") is None and row.get("holder"):
+            row_data["pl_holder"] = row.get("holder")
         results.append(
             SupplyOrderOut(
                 record_id=str(row["_id"]),
                 owner_email=row["owner_email"],
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
-                **{k: row.get(k) for k in SupplyOrderCreate.model_fields.keys()},
+                **row_data,
             )
         )
     return results
@@ -249,6 +252,8 @@ async def update_supply_order(
         user,
     )
     merged_payload = _merge_record_payload(existing, payload, SupplyOrderCreate)
+    if merged_payload.get("pl_holder") is None and existing.get("holder"):
+        merged_payload["pl_holder"] = existing.get("holder")
     return SupplyOrderOut(
         record_id=record_id,
         owner_email=user.email,
