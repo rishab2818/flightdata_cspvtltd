@@ -18,8 +18,10 @@ from app.models.documents import (
     DocumentConfirm,
     UserDocumentOut,
 )
+from app.repositories.projects import ProjectRepository
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
+project_repo = ProjectRepository()
 
 
 def _validate_section_and_subsection(
@@ -56,6 +58,7 @@ def _serialize_user_document(row: dict) -> UserDocumentOut:
             if ap
         ],
         action_on=row.get("action_on", []),
+        project_id=row.get("project_id"),
     )
 
 
@@ -71,6 +74,15 @@ async def init_document_upload(
     """
     _validate_section_and_subsection(payload.section, payload.subsection)
 
+    # Validate optional project context (only members can upload against a project)
+    if payload.project_id:
+        project = await project_repo.get_if_member(payload.project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
+
     db = await get_db()
 
     # Dedupe: same user + same content hash within the same section/subsection => reject
@@ -81,6 +93,8 @@ async def init_document_upload(
     }
     if payload.subsection is not None:
         dedupe_query["subsection"] = payload.subsection.value
+    if payload.project_id:
+        dedupe_query["project_id"] = payload.project_id
 
     existing = await db.user_documents.find_one(dedupe_query)
     if existing:
@@ -143,6 +157,14 @@ async def confirm_document_upload(
     """
     _validate_section_and_subsection(payload.section, payload.subsection)
 
+    if payload.project_id:
+        project = await project_repo.get_if_member(payload.project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
+
     db = await get_db()
 
     # Dedupe again to be safe in case init-upload was skipped
@@ -153,6 +175,8 @@ async def confirm_document_upload(
     }
     if payload.subsection is not None:
         dedupe_query["subsection"] = payload.subsection.value
+    if payload.project_id:
+        dedupe_query["project_id"] = payload.project_id
 
     existing = await db.user_documents.find_one(dedupe_query)
     if existing:
@@ -179,6 +203,7 @@ async def confirm_document_upload(
         "uploaded_at": now,
         "action_points": [ap.model_dump() for ap in payload.action_points],
         "action_on": payload.action_on or [],
+        "project_id": payload.project_id,
     }
 
     res = await db.user_documents.insert_one(doc)
@@ -198,6 +223,7 @@ async def confirm_document_upload(
         uploaded_at=now,
         action_points=payload.action_points,
         action_on=payload.action_on or [],
+        project_id=payload.project_id,
     )
 
 
@@ -208,6 +234,10 @@ async def list_user_documents(
     subsection: Optional[MoMSubsection] = Query(
         None,
         description="Optional; only valid for minutes_of_meeting. If omitted, returns all MoM subsections.",
+    ),
+    project_id: Optional[str] = Query(
+        None,
+        description="Optional project filter (only returns docs linked to the project)",
     ),
     user: CurrentUser = Depends(get_current_user),
 ):
@@ -227,6 +257,14 @@ async def list_user_documents(
     }
     if section == DocumentSection.MINUTES_OF_MEETING and subsection is not None:
         query["subsection"] = subsection.value
+    if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
+        query["project_id"] = project_id
 
     cursor = db.user_documents.find(query).sort("uploaded_at", -1)
     rows = await cursor.to_list(length=500)
@@ -350,6 +388,17 @@ async def update_document(
         updates["action_points"] = [
             ap.model_dump() for ap in payload.action_points
         ]
+    if payload.project_id is not None:
+        if payload.project_id == "":
+            updates["project_id"] = None
+        else:
+            project = await project_repo.get_if_member(payload.project_id, user.email)
+            if not project:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found or access denied",
+                )
+            updates["project_id"] = payload.project_id
 
     if updates:
         await db.user_documents.update_one({"_id": row["_id"]}, {"$set": updates})
