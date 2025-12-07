@@ -19,6 +19,10 @@ class NextMeetingPayload(BaseModel):
         pattern=r"^\d{2}:\d{2}$",
         description="24-hour time in HH:MM format",
     )
+    project_id: Optional[str] = Field(
+        default=None,
+        description="Optional project context for PMRC minutes",
+    )
 
 
 class NextMeetingOut(NextMeetingPayload):

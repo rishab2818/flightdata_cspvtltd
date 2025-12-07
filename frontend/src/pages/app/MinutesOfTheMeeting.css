@@ -95,6 +95,22 @@
   padding: 6px 10px;
   cursor: pointer;
 }
+
+.ProjectSelector {
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+
+.ProjectRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.helperText {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .Header {
