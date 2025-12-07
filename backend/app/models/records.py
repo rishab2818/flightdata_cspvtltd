@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -23,6 +23,11 @@ class BaseRecordFile(BaseModel):
     )
 
 
+class QuantityAssignee(BaseModel):
+    items: int = Field(..., ge=1, description="Number of items assigned")
+    assignee: str = Field(..., min_length=1, description="Assigned to")
+
+
 class SupplyOrderCreate(BaseRecordFile):
     so_number: Optional[str] = Field(None, description="Supply order number")
     particular: Optional[str] = None
@@ -32,7 +37,15 @@ class SupplyOrderCreate(BaseRecordFile):
     start_date: Optional[date] = None
     delivery_date: Optional[date] = None
     duty_officer: Optional[str] = None
-    holder: Optional[str] = None
+    pl_holder: Optional[str] = Field(
+        None, description="Project lead holder for the supply order"
+    )
+    pl_ppl_number: Optional[str] = Field(
+        None, description="PL or PPL number associated with the order"
+    )
+    quantity_assignees: Optional[List[QuantityAssignee]] = Field(
+        default=None, description="Breakdown of quantity by assignee"
+    )
     amount: Optional[float] = Field(None, ge=0)
     status: Optional[str] = Field("Ongoing", description="Program status")
 
@@ -41,6 +54,17 @@ class SupplyOrderCreate(BaseRecordFile):
         start_date = values.get("start_date")
         if start_date and v < start_date:
             raise ValueError("delivery_date cannot be before start_date")
+        return v
+
+    @validator("quantity_assignees")
+    def validate_assignees(cls, v, values):
+        if v is None:
+            return v
+
+        total_assigned = sum(item.items for item in v)
+        quantity = values.get("quantity")
+        if quantity is not None and total_assigned > quantity:
+            raise ValueError("Assigned quantity cannot exceed total quantity")
         return v
 
 

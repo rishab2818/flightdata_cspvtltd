@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FiPlus, FiUploadCloud } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUsers, FiX } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import Users from "../../assets/Users.svg";
@@ -17,6 +17,13 @@ const formatAmount = (value) =>
   value === undefined || value === null || value === ""
     ? "—"
     : `₹ ${Number(value).toLocaleString()}`;
+
+const toDateInputValue = (value) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+};
 
 /*------------------------- Stat Card --------------------------*/
 
@@ -53,6 +60,33 @@ function StatusBadge({ status }) {
   );
 }
 
+function QuantityDisplay({ quantity, assignees = [], onManage }) {
+  const assigned = assignees.reduce(
+    (sum, entry) => sum + (Number(entry.items) || 0),
+    0
+  );
+
+  return (
+    <div className={styles.quantityCell}>
+      <div className={styles.quantityValue}>{quantity ?? "—"}</div>
+      <div className={styles.quantityMeta}>
+        <span className={styles.quantityBadge}>
+          {assigned}/{quantity ?? 0}
+        </span>
+        <button
+          className={styles.quantityBtn}
+          onClick={onManage}
+          disabled={!quantity}
+          title="Assign quantity"
+          type="button"
+        >
+          <FiUsers size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /*-------------------------- Main Component ----------------------*/
 
 export default function InventoryRecords() {
@@ -62,6 +96,7 @@ export default function InventoryRecords() {
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [assigneeModalOrder, setAssigneeModalOrder] = useState(null);
 
   const openModal = () => {
     setEditingOrder(null);
@@ -73,12 +108,48 @@ export default function InventoryRecords() {
       setLoading(true);
       setError("");
       const data = await recordsApi.listInventory();
-      setOrders(data);
+      setOrders(
+        data.map((item) => ({
+          ...item,
+          quantity_assignees: item.quantity_assignees ?? [],
+        }))
+      );
     } catch (e) {
       setError("Failed to load inventory records.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const buildPayloadFromOrder = (order) => ({
+    so_number: order.so_number || "",
+    particular: order.particular || "",
+    supplier_name: order.supplier_name || "",
+    quantity: order.quantity ?? undefined,
+    duration_months: order.duration_months ?? undefined,
+    start_date: order.start_date ? toDateInputValue(order.start_date) : undefined,
+    delivery_date: order.delivery_date
+      ? toDateInputValue(order.delivery_date)
+      : undefined,
+    duty_officer: order.duty_officer || "",
+    pl_holder: order.pl_holder || "",
+    pl_ppl_number: order.pl_ppl_number || "",
+    quantity_assignees: order.quantity_assignees ?? [],
+    amount: order.amount ?? undefined,
+    status: order.status || "Ongoing",
+    storage_key: order.storage_key,
+    original_name: order.original_name,
+    content_type: order.content_type,
+    size_bytes: order.size_bytes,
+    content_hash: order.content_hash,
+  });
+
+  const handleSaveAssignees = async (order, assignees) => {
+    const payload = buildPayloadFromOrder({ ...order, quantity_assignees: assignees });
+    const updated = await recordsApi.updateInventory(order.record_id, payload);
+    setOrders((prev) =>
+      prev.map((o) => (o.record_id === order.record_id ? updated : o))
+    );
   };
 
   useEffect(() => {
@@ -231,7 +302,8 @@ export default function InventoryRecords() {
                 "Start Date",
                 "Delivery Date",
                 "D. Officer",
-                "Holder",
+                "PL Holder",
+                "PL/PPL Number",
                 "Amount",
                 "Status",
                 "Actions"
@@ -244,19 +316,19 @@ export default function InventoryRecords() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={11}>Loading...</td>
+                <td colSpan={13}>Loading...</td>
               </tr>
             )}
 
             {!loading && error && (
               <tr>
-                <td colSpan={11}>{error}</td>
+                <td colSpan={13}>{error}</td>
               </tr>
             )}
 
             {!loading && !error && filtered.length === 0 && (
               <tr>
-                <td colSpan={11}>No supply orders found.</td>
+                <td colSpan={13}>No supply orders found.</td>
               </tr>
             )}
 
@@ -267,14 +339,21 @@ export default function InventoryRecords() {
                   <td>{row.so_number || "—"}</td>
                   <td>{row.particular || "—"}</td>
                   <td>{row.supplier_name || "—"}</td>
-                  <td>{row.quantity ?? "—"}</td>
+                  <td>
+                    <QuantityDisplay
+                      quantity={row.quantity}
+                      assignees={row.quantity_assignees}
+                      onManage={() => setAssigneeModalOrder(row)}
+                    />
+                  </td>
                   <td>
                     {row.duration_months ? `${row.duration_months} Months` : "—"}
                   </td>
                   <td>{formatDate(row.start_date)}</td>
                   <td>{formatDate(row.delivery_date)}</td>
                   <td>{row.duty_officer || "—"}</td>
-                  <td>{row.holder || "—"}</td>
+                  <td>{row.pl_holder || "—"}</td>
+                  <td>{row.pl_ppl_number || "—"}</td>
                   <td>{formatAmount(row.amount)}</td>
                   <td>
                     <StatusBadge status={row.status || "Ongoing"} />
@@ -317,6 +396,15 @@ export default function InventoryRecords() {
           editingOrder={editingOrder}
         />
       )}
+
+      {assigneeModalOrder && (
+        <QuantityAssigneesModal
+          quantity={assigneeModalOrder.quantity}
+          initialAssignees={assigneeModalOrder.quantity_assignees}
+          onClose={() => setAssigneeModalOrder(null)}
+          onSave={(assignees) => handleSaveAssignees(assigneeModalOrder, assignees)}
+        />
+      )}
     </div>
   );
 }
@@ -344,7 +432,8 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
     start_date: "",
     delivery_date: "",
     duty_officer: "",
-    holder: "",
+    pl_holder: "",
+    pl_ppl_number: "",
     amount: "",
     status: "Ongoing",
     storage_key: null,
@@ -357,8 +446,14 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [assignees, setAssignees] = useState([]);
+  const [showAssigneeModal, setShowAssigneeModal] = useState(false);
 
   const onChange = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const totalAssigned = assignees.reduce(
+    (sum, entry) => sum + (Number(entry.items) || 0),
+    0
+  );
 
   useEffect(() => {
     if (!editingOrder) return;
@@ -369,10 +464,11 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
       supplier_name: editingOrder.supplier_name || "",
       quantity: editingOrder.quantity ?? 1,
       duration_months: editingOrder.duration_months ?? 1,
-      start_date: editingOrder.start_date || "",
-      delivery_date: editingOrder.delivery_date || "",
+      start_date: toDateInputValue(editingOrder.start_date) || "",
+      delivery_date: toDateInputValue(editingOrder.delivery_date) || "",
       duty_officer: editingOrder.duty_officer || "",
-      holder: editingOrder.holder || "",
+      pl_holder: editingOrder.pl_holder || "",
+      pl_ppl_number: editingOrder.pl_ppl_number || "",
       amount: editingOrder.amount ?? "",
       status: editingOrder.status || "Ongoing",
       storage_key: editingOrder.storage_key || null,
@@ -381,6 +477,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
       size_bytes: editingOrder.size_bytes ?? null,
       content_hash: editingOrder.content_hash || "",
     });
+    setAssignees(editingOrder.quantity_assignees || []);
     setFile(null);
     setError("");
   }, [editingOrder]);
@@ -388,6 +485,21 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (form.start_date && form.delivery_date) {
+      const start = new Date(form.start_date);
+      const end = new Date(form.delivery_date);
+
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end < start) {
+        setError("Delivery date cannot be before start date.");
+        return;
+      }
+    }
+
+    if (form.quantity && totalAssigned > Number(form.quantity)) {
+      setError("Assigned quantity cannot exceed total quantity.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -426,6 +538,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
         amount: form.amount === "" ? undefined : Number(form.amount),
         start_date: form.start_date || undefined,
         delivery_date: form.delivery_date || undefined,
+        quantity_assignees: assignees,
         storage_key: storage_key ?? form.storage_key,
         original_name: original_name ?? form.original_name,
         content_type: content_type ?? form.content_type,
@@ -450,127 +563,317 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
   };
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalBox}>
-        <div className={styles.modalHeader}>
-          <div>
-            <h3 className={styles.modalTitle}>
-              {editingOrder ? "Edit Supply Order" : "Add Supply Order"}
-            </h3>
-            <p className={styles.modalSubtitle}>
-              Capture supply details, dates, and attach proof for auditing.
-            </p>
+    <>
+      <div className={styles.modalOverlay}>
+        <div className={styles.modalBox}>
+          <div className={styles.modalHeader}>
+            <div>
+              <h3 className={styles.modalTitle}>
+                {editingOrder ? "Edit Supply Order" : "Add Supply Order"}
+              </h3>
+              <p className={styles.modalSubtitle}>
+                Capture supply details, dates, and attach proof for auditing.
+              </p>
+            </div>
+
+            <button className={styles.closeBtn} onClick={onClose}>
+              X
+            </button>
           </div>
 
+          <form className={styles.modalForm} onSubmit={handleSubmit}>
+            <FileUploadBox
+              label="Upload Document"
+              description="Attach supply record"
+              supported="PDF/Word"
+              file={file}
+              onFileSelected={(f) => setFile(f)}
+            />
+
+            <div className={styles.grid}>
+              <Input
+                label="#SO"
+                value={form.so_number}
+                onChange={(e) => onChange("so_number", e.target.value)}
+              />
+
+              <Input
+                label="Particular"
+                value={form.particular}
+                onChange={(e) => onChange("particular", e.target.value)}
+              />
+
+              <Input
+                label="Supplier Name"
+                value={form.supplier_name}
+                onChange={(e) => onChange("supplier_name", e.target.value)}
+              />
+
+              <Input
+                label="QTY"
+                type="number"
+                min={1}
+                value={form.quantity}
+                onChange={(e) => onChange("quantity", e.target.value)}
+              />
+
+              <Input
+                label="Duration(Months)"
+                type="number"
+                min={1}
+                value={form.duration_months}
+                onChange={(e) => onChange("duration_months", e.target.value)}
+              />
+
+              <Input
+                label="Start Date"
+                type="date"
+                value={form.start_date}
+                onChange={(e) => onChange("start_date", e.target.value)}
+              />
+
+              <Input
+                label="Delivery Date"
+                type="date"
+                value={form.delivery_date}
+                onChange={(e) => onChange("delivery_date", e.target.value)}
+              />
+
+              <Input
+                label="D.Officer"
+                value={form.duty_officer}
+                onChange={(e) => onChange("duty_officer", e.target.value)}
+              />
+
+              <Input
+                label="PL Holder"
+                value={form.pl_holder}
+                onChange={(e) => onChange("pl_holder", e.target.value)}
+              />
+
+              <Input
+                label="PL/PPL Number"
+                value={form.pl_ppl_number}
+                onChange={(e) => onChange("pl_ppl_number", e.target.value)}
+              />
+
+              <Input
+                label="Status"
+                value={form.status}
+                onChange={(e) => onChange("status", e.target.value)}
+              />
+            </div>
+
+            <div className={styles.assigneeSummary}>
+              <div>
+                <p className={styles.assigneeTitle}>Quantity Allocation</p>
+                <p className={styles.assigneeHint}>
+                  Assigned {totalAssigned} of {form.quantity || 0} items
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.assigneeBtn}
+                onClick={() => setShowAssigneeModal(true)}
+                disabled={!form.quantity}
+              >
+                Manage Assignees
+              </button>
+            </div>
+
+            <div className={styles.uploadGrid}>
+              <Input
+                label="Amount"
+                type="number"
+                min={0}
+                value={form.amount}
+                onChange={(e) => onChange("amount", e.target.value)}
+              />
+            </div>
+
+            {error && <p className={styles.errorText}>{error}</p>}
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelBtn} type="button" onClick={onClose}>
+                Cancel
+              </button>
+              <button className={styles.saveBtn} type="submit" disabled={submitting}>
+                {submitting
+                  ? editingOrder
+                    ? "Saving..."
+                    : "Uploading..."
+                  : editingOrder
+                  ? "Save Changes"
+                  : "Upload Record"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {showAssigneeModal && (
+        <QuantityAssigneesModal
+          quantity={form.quantity ? Number(form.quantity) : 0}
+          initialAssignees={assignees}
+          onClose={() => setShowAssigneeModal(false)}
+          onSave={async (list) => {
+            setAssignees(list);
+            setShowAssigneeModal(false);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function QuantityAssigneesModal({ quantity, initialAssignees = [], onClose, onSave }) {
+  const [rows, setRows] = useState(
+    initialAssignees?.length
+      ? initialAssignees.map((row) => ({
+          assignee: row.assignee || "",
+          items: row.items || "",
+        }))
+      : [{ assignee: "", items: "" }]
+  );
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setRows(
+      initialAssignees?.length
+        ? initialAssignees.map((row) => ({
+            assignee: row.assignee || "",
+            items: row.items || "",
+          }))
+        : [{ assignee: "", items: "" }]
+    );
+  }, [initialAssignees]);
+
+  const totalAssigned = rows.reduce(
+    (sum, entry) => sum + (Number(entry.items) || 0),
+    0
+  );
+
+  const updateRow = (idx, key, value) => {
+    setRows((prev) =>
+      prev.map((row, i) =>
+        i === idx ? { ...row, [key]: value } : row
+      )
+    );
+  };
+
+  const addRow = () => setRows((prev) => [...prev, { assignee: "", items: "" }]);
+  const deleteRow = (idx) => setRows((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
+    const cleaned = rows
+      .map((row) => ({
+        assignee: row.assignee.trim(),
+        items: Number(row.items) || 0,
+      }))
+      .filter((row) => row.assignee || row.items);
+
+    if (cleaned.some((row) => !row.assignee || !row.items || row.items <= 0)) {
+      setError("Please fill assignee name and a quantity greater than 0.");
+      return;
+    }
+
+    const total = cleaned.reduce((sum, row) => sum + row.items, 0);
+    if (quantity && total > Number(quantity)) {
+      setError("Assigned items cannot exceed available quantity.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await onSave(cleaned);
+      onClose();
+    } catch (err) {
+      setError("Failed to save assignees. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={styles.assigneeModalOverlay}>
+      <div className={styles.assigneeModal}>
+        <div className={styles.assigneeModalHeader}>
+          <div>
+            <h4>Assignees</h4>
+            <p className={styles.assigneeSubtitle}>
+              Split the quantity across teams or rooms.
+            </p>
+          </div>
           <button className={styles.closeBtn} onClick={onClose}>
-            X
+            <FiX />
           </button>
         </div>
 
-        <form className={styles.modalForm} onSubmit={handleSubmit}>
-          <FileUploadBox
-            label="Upload Document"
-            description="Attach supply record"
-            supported="PDF/Word"
-            file={file}
-            onFileSelected={(f) => setFile(f)}
-          />
+        <div className={styles.assigneeTotals}>
+          <span>Total Quantity: {quantity ?? 0}</span>
+          <span>Assigned: {totalAssigned}</span>
+          {quantity ? (
+            <span>Remaining: {Math.max(Number(quantity) - totalAssigned, 0)}</span>
+          ) : null}
+        </div>
 
-          <div className={styles.grid}>
-            <Input
-              label="#SO"
-              value={form.so_number}
-              onChange={(e) => onChange("so_number", e.target.value)}
-            />
+        <div className={styles.assigneeList}>
+          {rows.map((row, idx) => (
+            <div className={styles.assigneeRow} key={`${idx}-${row.assignee}`}>
+              <label className={styles.assigneeInput}>
+                <span>Number of Items</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={row.items}
+                  onChange={(e) => updateRow(idx, "items", e.target.value)}
+                />
+              </label>
 
-            <Input
-              label="Particular"
-              value={form.particular}
-              onChange={(e) => onChange("particular", e.target.value)}
-            />
+              <label className={styles.assigneeInput}>
+                <span>Assign to</span>
+                <input
+                  type="text"
+                  value={row.assignee}
+                  onChange={(e) => updateRow(idx, "assignee", e.target.value)}
+                  placeholder="Name or location"
+                />
+              </label>
 
-            <Input
-              label="Supplier Name"
-              value={form.supplier_name}
-              onChange={(e) => onChange("supplier_name", e.target.value)}
-            />
+              <button
+                type="button"
+                className={styles.assigneeDelete}
+                onClick={() => deleteRow(idx)}
+                aria-label="Delete assignee"
+              >
+                <FiTrash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
 
-            <Input
-              label="QTY"
-              type="number"
-              min={1}
-              value={form.quantity}
-              onChange={(e) => onChange("quantity", e.target.value)}
-            />
+        <div className={styles.assigneeActions}>
+          <button type="button" className={styles.addAssigneeBtn} onClick={addRow}>
+            <FiPlus size={16} /> Add Assignee
+          </button>
+        </div>
 
-            <Input
-              label="Duration(Months)"
-              type="number"
-              min={1}
-              value={form.duration_months}
-              onChange={(e) => onChange("duration_months", e.target.value)}
-            />
+        {error && <p className={styles.errorText}>{error}</p>}
 
-            <Input
-              label="Start Date"
-              type="date"
-              value={form.start_date}
-              onChange={(e) => onChange("start_date", e.target.value)}
-            />
-
-            <Input
-              label="Delivery Date"
-              type="date"
-              value={form.delivery_date}
-              onChange={(e) => onChange("delivery_date", e.target.value)}
-            />
-
-            <Input
-              label="D.Officer"
-              value={form.duty_officer}
-              onChange={(e) => onChange("duty_officer", e.target.value)}
-            />
-
-            <Input
-              label="Holder"
-              value={form.holder}
-              onChange={(e) => onChange("holder", e.target.value)}
-            />
-
-            <Input
-              label="Status"
-              value={form.status}
-              onChange={(e) => onChange("status", e.target.value)}
-            />
-          </div>
-
-          <div className={styles.uploadGrid}>
-            <Input
-              label="Amount"
-              type="number"
-              min={0}
-              value={form.amount}
-              onChange={(e) => onChange("amount", e.target.value)}
-            />
-          </div>
-
-          {error && <p className={styles.errorText}>{error}</p>}
-
-          <div className={styles.modalFooter}>
-            <button className={styles.cancelBtn} type="button" onClick={onClose}>
-              Cancel
-            </button>
-            <button className={styles.saveBtn} type="submit" disabled={submitting}>
-              {submitting
-                ? editingOrder
-                  ? "Saving..."
-                  : "Uploading..."
-                : editingOrder
-                ? "Save Changes"
-                : "Upload Record"}
-            </button>
-          </div>
-        </form>
+        <div className={styles.assigneeFooter}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={styles.saveBtn}
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Done"}
+          </button>
+        </div>
       </div>
     </div>
   );
