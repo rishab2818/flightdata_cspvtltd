@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
-import { FiDownload, FiEdit2, FiEye, FiTrash2 } from "react-icons/fi";
 
 import Users from "../../assets/Users.svg";
 import Book1 from "../../assets/Book1.svg";
@@ -9,86 +8,10 @@ import Ongoing from "../../assets/Ongoing.svg";
 import Cap from "../../assets/Cap.svg";
 import styles from "./StudentEngagement.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
-
-const BADGE_COLORS = {
-  Ongoing: { bg: "#FEF3C7", text: "#B45309" },
-  Completed: { bg: "#DCFCE7", text: "#15803D" },
-  Cancelled: { bg: "#FEE2E2", text: "#B91C1C" },
-  Upcoming: { bg: "#EEF2FF", text: "#4F46E5" },
-};
-
-/* -------------------- Components ---------------------- */
-
-function StatCard({ title, value, icon, bgColor }) {
-  return (
-    <div className={styles.statCard}>
-      <div className={styles.statIcon}
-      style={{backgroundColor: bgColor}}>
-        <img src={icon} alt={title} />
-      </div>
-
-      <div>
-        <div className={styles.statLabel}>{title}</div>
-        <div className={styles.statValue}>{value}</div>
-      </div>
-    </div>
-  );
-}
-
-function Badge({ value }) {
-  const palette = BADGE_COLORS[value] || { bg: "#E5E7EB", text: "#111827" };
-
-  return (
-    <span
-      className={styles.statusBadge}
-      style={{ background: palette.bg, color: palette.text }}
-    >
-      {value}
-    </span>
-  );
-}
-
-function FilterSelect({ label, value, onChange, options }) {
-  return (
-    <label className={styles.filterLabel}>
-      <span className={styles.filterText}>{label}</span>
-
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={styles.select}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function Modal({ title, onClose, children }) {
-  return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <h3>{title}</h3>
-          <button className={styles.closeBtn} onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className={styles.modalBody}>
-          {children}
-        </div>
-
-        
-      </div>
-    </div>
-  );
-}
-
-/* -------------------- Main Component -------------------- */
+import StatCard from "./studentEngagement/components/StatCard";
+import FilterSelect from "./studentEngagement/components/FilterSelect";
+import Modal from "./studentEngagement/components/Modal";
+import ProgramTable from "./studentEngagement/components/ProgramTable";
 
 export default function StudentEngagement() {
   const [approvalFilter, setApprovalFilter] = useState("all");
@@ -363,7 +286,7 @@ export default function StudentEngagement() {
       {/* Stats */}
       <section className={styles.statsGrid}>
         {stats.map((s) => (
-          <StatCard key={s.title} {...s} /> // passes value,icons,title,bgColor
+          <StatCard key={s.title} {...s} />
         ))}
       </section>
 
@@ -411,124 +334,14 @@ export default function StudentEngagement() {
       </section>
 
       {/* Table */}
-      <div className={styles.TableWrapper}>
-        <h3>Student Programs</h3>
-
-        {(() => {
-          const columns = [
-            "Name",
-            "College Name",
-            "Project Name",
-            "Type",
-            "Duration",
-            "Start Date",
-            "End Date",
-            "Guide",
-            "Status",
-            "Approval",
-            "Actions",
-          ];
-
-          const formatDate = (value) =>
-            value ? new Date(value).toLocaleDateString("en-GB") : "—";
-
-          return (
-            <table className={styles.Table}>
-              <thead>
-                <tr>
-                  {columns.map((col) => (
-                    <th key={col}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td className="TableLoad" colSpan={columns.length}>
-                      Loading...
-                    </td>
-                  </tr>
-                )}
-
-                {!loading && error && (
-                  <tr>
-                    <td className="TableError" colSpan={columns.length}>
-                      {error}
-                    </td>
-                  </tr>
-                )}
-
-                {!loading && !error && filtered.length === 0 && (
-                  <tr>
-                    <td className="TableEmpty" colSpan={columns.length}>
-                      No student engagement records found.
-                    </td>
-                  </tr>
-                )}
-
-                {!loading &&
-                  !error &&
-                  filtered.map((row) => (
-                    <tr key={row.record_id}>
-                      <td className={styles.bold}>{row.student || "—"}</td>
-                      <td>{row.college_name || "—"}</td>
-                      <td>{row.project_name || "—"}</td>
-                      <td>{row.program_type || "—"}</td>
-                      <td>
-                        {row.duration_months ? `${row.duration_months} Months` : "—"}
-                      </td>
-                      <td>{formatDate(row.start_date)}</td>
-                      <td>{formatDate(row.end_date)}</td>
-                      <td>{row.mentor || "—"}</td>
-                      <td>
-                        <Badge value={row.status} />
-                      </td>
-                      <td>{row.approval_status === "approved" ? "Approved" : "Waiting"}</td>
-                      <td>
-                        <div className="doc-actions">
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => openEditModal(row)}
-                            title="Edit"
-                          >
-                            <FiEdit2 size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleViewDocument(row)}
-                            title="View"
-                          >
-                            <FiEye size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleDownloadDocument(row)}
-                            title="Download"
-                          >
-                            <FiDownload size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleDeleteRecord(row)}
-                            title="Delete"
-                          >
-                            <FiTrash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          );
-        })()}
-      </div>
-
+      <ProgramTable
+        rows={filtered}
+        loading={loading}
+        onView={handleViewDocument}
+        onDownload={handleDownloadDocument}
+        onEdit={openEditModal}
+        onDelete={handleDeleteRecord}
+      />
       {/* Modal */}
       {showModal && (
         <Modal
