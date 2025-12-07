@@ -14,7 +14,7 @@ import { projectApi } from '../../api/projectapi';
 import { AuthContext } from '../../context/AuthContext';
 import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
-import folderOpen from '../../assets/folderOpen.svg';
+import folderOpen from '../../assets/FolderOpen.svg';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';

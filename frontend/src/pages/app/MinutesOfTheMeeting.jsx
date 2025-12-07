@@ -11,6 +11,7 @@ import {
 import UploadMinutesModal from "../../components/app/UploadMinutesModal";
 import { documentsApi } from "../../api/documentsApi";
 import { meetingsApi } from "../../api/meetingsApi";
+import { projectApi } from "../../api/projectapi";
 import "./MinutesOfTheMeeting.css";
 import DocumentActions from "../../components/common/DocumentActions";
 
@@ -96,13 +97,17 @@ export default function MinutesOfTheMeeting() {
   const [editingDoc, setEditingDoc] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  const [projects, setProjects] = useState([]);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectError, setProjectError] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const loadData = useCallback(
-    async (subsection) => {
+    async (subsection, projectId) => {
       try {
         setLoading(true);
         setError("");
-        const data = await documentsApi.listMinutes(subsection);
+        const data = await documentsApi.listMinutes(subsection, projectId);
         // data is an array of UserDocumentOut from backend
         const mapped = data.map(convertDocToRow);
         setRows(mapped);
@@ -118,11 +123,11 @@ export default function MinutesOfTheMeeting() {
   );
 
   const loadMeeting = useCallback(
-    async (subsection) => {
+    async (subsection, projectId) => {
       try {
         setMeetingLoading(true);
         setMeetingError("");
-        const meeting = await meetingsApi.getNextMeeting(subsection);
+        const meeting = await meetingsApi.getNextMeeting(subsection, projectId);
         setNextMeeting(meeting);
       } catch (err) {
         if (err?.response?.status === 404) {
@@ -138,13 +143,63 @@ export default function MinutesOfTheMeeting() {
     []
   );
 
+  const loadProjects = useCallback(async () => {
+    try {
+      setProjectLoading(true);
+      setProjectError("");
+      const list = await projectApi.list();
+      setProjects(list || []);
+      setSelectedProjectId((prev) => {
+        if (prev) return prev;
+        if (Array.isArray(list) && list.length > 0) {
+          return list[0]?._id || list[0]?.id || "";
+        }
+        return "";
+      });
+    } catch (err) {
+      console.error("Failed to load projects", err);
+      setProjectError("Unable to load your projects.");
+      setProjects([]);
+      setSelectedProjectId("");
+    } finally {
+      setProjectLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    loadData(activeSubsection);
-    loadMeeting(activeSubsection);
-  }, [activeSubsection, loadData, loadMeeting]);
+    if (activeSubsection === "pmrc") {
+      loadProjects();
+    }
+    if (activeSubsection !== "pmrc") {
+      setProjectError("");
+      setProjectLoading(false);
+      setSelectedProjectId("");
+    }
+  }, [activeSubsection, loadProjects]);
+
+  useEffect(() => {
+    const projectId = activeSubsection === "pmrc" ? selectedProjectId : undefined;
+    if (activeSubsection === "pmrc" && !projectId && !projectLoading) {
+      setRows([]);
+      setError("Select a project to view PMRC minutes.");
+      setMeetingError("");
+      setNextMeeting(null);
+      return;
+    }
+    setError("");
+    loadData(activeSubsection, projectId);
+    loadMeeting(activeSubsection, projectId);
+  }, [
+    activeSubsection,
+    selectedProjectId,
+    projectLoading,
+    loadData,
+    loadMeeting,
+  ]);
 
   const handleUploadSuccess = () => {
-    loadData(activeSubsection);
+    const projectId = activeSubsection === "pmrc" ? selectedProjectId : undefined;
+    loadData(activeSubsection, projectId);
   };
 
   const handleMeetingSave = async (values) => {
@@ -153,6 +208,7 @@ export default function MinutesOfTheMeeting() {
       title: values.title,
       meeting_date: values.meeting_date,
       meeting_time: values.meeting_time,
+      project_id: activeSubsection === "pmrc" ? selectedProjectId : undefined,
     };
 
     try {
@@ -210,6 +266,10 @@ export default function MinutesOfTheMeeting() {
 
   const activeTab =
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
+  const isPmrc = activeSubsection === "pmrc";
+  const selectedProject = isPmrc
+    ? projects.find((p) => (p?._id || p?.id) === selectedProjectId)
+    : null;
 
   return (
     <div className="Container">
@@ -222,11 +282,24 @@ export default function MinutesOfTheMeeting() {
           onChange={(key) => setActiveSubsection(key)}
         />
 
+        {isPmrc && (
+          <ProjectSelector
+            projects={projects}
+            loading={projectLoading}
+            error={projectError}
+            selectedProjectId={selectedProjectId}
+            onChange={setSelectedProjectId}
+          />
+        )}
+
         <NextMeetingBanner
           sectionLabel={activeTab.label}
           meeting={nextMeeting}
           loading={meetingLoading}
           error={meetingError}
+          projectName={selectedProject?.project_name}
+          missingProject={isPmrc && !selectedProjectId}
+          projectLoading={projectLoading}
           onEdit={() => setShowMeetingModal(true)}
         />
 
@@ -248,13 +321,21 @@ export default function MinutesOfTheMeeting() {
         onClose={() => setShowUploadModal(false)}
         subsection={activeSubsection} // "tcm" | "pmrc" | "ebm" | "gdm"
         onUploaded={handleUploadSuccess}
+        projectOptions={projects}
+        selectedProjectId={selectedProjectId}
+        onProjectChange={setSelectedProjectId}
+        requireProject={isPmrc}
       />
 
       <NextMeetingModal
         open={showMeetingModal}
         onClose={() => setShowMeetingModal(false)}
         initialMeeting={{
-          title: nextMeeting?.title || `Next ${activeTab.label}`,
+          title:
+            nextMeeting?.title ||
+            `Next ${activeTab.label}${
+              selectedProject?.project_name ? ` - ${selectedProject.project_name}` : ""
+            }`,
           meeting_date: nextMeeting?.meeting_date || "",
           meeting_time: nextMeeting?.meeting_time || "",
           sectionLabel: activeTab.label,
@@ -302,7 +383,52 @@ function TabsRow({ activeKey, onChange }) {
   );
 }
 
-function NextMeetingBanner({ sectionLabel, meeting, loading, error, onEdit }) {
+function ProjectSelector({
+  projects,
+  loading,
+  error,
+  selectedProjectId,
+  onChange,
+}) {
+  const hasProjects = Array.isArray(projects) && projects.length > 0;
+
+  return (
+    <div className="ProjectSelector">
+      <label className="label">Select Project</label>
+      <div className="ProjectRow">
+        <select
+          className="textInput"
+          value={selectedProjectId}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={!hasProjects || loading}
+        >
+          <option value="">{loading ? "Loading..." : "Choose a project"}</option>
+          {projects.map((project) => (
+            <option key={project?._id || project?.id} value={project?._id || project?.id}>
+              {project?.project_name || "Untitled Project"}
+            </option>
+          ))}
+        </select>
+        {loading && <span className="helperText">Loading projects...</span>}
+      </div>
+      {error && <p className="errorText">{error}</p>}
+      {!loading && !error && !hasProjects && (
+        <p className="helperText">You need a project membership to upload PMRC minutes.</p>
+      )}
+    </div>
+  );
+}
+
+function NextMeetingBanner({
+  sectionLabel,
+  meeting,
+  loading,
+  error,
+  onEdit,
+  projectName,
+  missingProject,
+  projectLoading,
+}) {
   const meetingDate = meeting?.meeting_date
     ? new Date(meeting.meeting_date)
     : null;
@@ -320,15 +446,36 @@ function NextMeetingBanner({ sectionLabel, meeting, loading, error, onEdit }) {
     : "";
 
   const timeLabel = formatTimeLabel(meeting?.meeting_time);
+  const title =
+    meeting?.title ||
+    `Next ${sectionLabel}${projectName ? ` - ${projectName}` : ""}`;
+
+  if (missingProject) {
+    return (
+      <div className="Banner">
+        <div className="BannerContent">
+          <div className="BannerInfo">
+            <div className="BannerTitle">Next {sectionLabel}</div>
+            <div className="BannerMeta">
+              {projectLoading
+                ? "Loading projects..."
+                : "Select a project to view and update the next PMRC meeting."}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="Banner">
       <div className="BannerContent">
         <div className="BannerInfo">
           <div className="BannerTitle">
-            {meeting?.title || `Next ${sectionLabel}`}
+            {title}
           </div>
           <div className="BannerMeta">
+            {projectName && <span className="metaItem">{projectName}</span>}
             <span className="metaItem">{dateLabel}</span>
             {dayLabel && <span className="metaItem">{dayLabel}</span>}
             {timeLabel && (
@@ -341,7 +488,12 @@ function NextMeetingBanner({ sectionLabel, meeting, loading, error, onEdit }) {
             {error && <span className="metaError">{error}</span>}
           </div>
         </div>
-        <button type="button" className="BannerEdit" onClick={onEdit}>
+        <button
+          type="button"
+          className="BannerEdit"
+          onClick={onEdit}
+          disabled={loading}
+        >
           <FiEdit2 size={16} />
           <span>Edit</span>
         </button>
