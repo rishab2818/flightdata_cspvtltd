@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FiDownload } from 'react-icons/fi';
 import BudgetFilterBar from './components/BudgetFilterBar';
 import ForecastBudgetTable from './components/ForecastBudgetTable';
 import UploadForecastModal from './components/UploadForecastModal';
 import styles from './BudgetEstimation.module.css';
-import { defaultFormState, fiscalYearOptions, forecastColumns } from './data';
+import { budgetExportColumns, defaultFormState, fiscalYearOptions, forecastColumns } from './data';
 import { budgetsApi } from '../../../api/budgetsApi';
 import { computeSha256 } from '../../../lib/fileUtils';
+import { downloadExcel } from '../../../lib/excelExport';
 
 const normalizeNumber = (value) =>
   value === '' || value === undefined || value === null ? undefined : Number(value);
@@ -44,6 +46,7 @@ export default function BudgetEstimation() {
 
   const cashSplitLabel = useMemo(() => deriveCashSplitYear(forecastYear), [forecastYear]);
   const columns = useMemo(() => forecastColumns(cashSplitLabel), [cashSplitLabel]);
+  const exportColumns = useMemo(() => budgetExportColumns(cashSplitLabel), [cashSplitLabel]);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -68,16 +71,22 @@ export default function BudgetEstimation() {
       cash_outgo_split_over: row.cash_outgo_split_over || deriveCashSplitYear(row.forecast_year),
     }));
 
+    const byYear = withSplit.filter((row) => !forecastYear || row.forecast_year === forecastYear);
+
     const filteredByType = filters.type === 'all'
-      ? withSplit
-      : withSplit.filter((row) => (row.item || '').toLowerCase().includes(filters.type));
+      ? byYear
+      : byYear.filter((row) => {
+          const haystack = `${row.item || ''} ${row.descriptions || ''} ${row.build_or_project || ''}`.toLowerCase();
+          return haystack.includes(filters.type.toLowerCase());
+        });
 
     const filteredBySearch = filteredByType.filter((row) => {
       if (!filters.search) return true;
       const search = filters.search.toLowerCase();
       return (
         (row.division_name || '').toLowerCase().includes(search) ||
-        (row.item || '').toLowerCase().includes(search)
+        (row.item || '').toLowerCase().includes(search) ||
+        (row.descriptions || '').toLowerCase().includes(search)
       );
     });
 
@@ -88,7 +97,7 @@ export default function BudgetEstimation() {
       return [...filteredBySearch].sort((a, b) => (b.division_name || '').localeCompare(a.division_name || ''));
     }
     return filteredBySearch;
-  }, [filters.search, filters.sort, filters.type, rows]);
+  }, [filters.search, filters.sort, filters.type, forecastYear, rows]);
 
   const handleOpenModal = (mode = 'create', record = null) => {
     setModalState({ open: true, mode, record });
@@ -199,6 +208,15 @@ export default function BudgetEstimation() {
     }
   };
 
+  const handleExport = () => {
+    downloadExcel({
+      rows: sortedRows,
+      columns: exportColumns,
+      fileName: `forecast-budget-${forecastYear}`,
+      sheetName: `Forecast ${forecastYear}`,
+    });
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.heroCard}>
@@ -218,8 +236,14 @@ export default function BudgetEstimation() {
 
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <h3 className={styles.sectionTitle}>Forecast Budget</h3>
-          <div className={styles.dateBadge}>{forecastYear}</div>
+          <div className={styles.sectionHeaderLeft}>
+            <h3 className={styles.sectionTitle}>Forecast Budget</h3>
+            <div className={styles.dateBadge}>{forecastYear}</div>
+          </div>
+          <button type="button" className={styles.exportButton} onClick={handleExport}>
+            <FiDownload size={18} />
+            Download
+          </button>
         </div>
         {error && <div className={styles.errorBanner}>{error}</div>}
         {loading ? (

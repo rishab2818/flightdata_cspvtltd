@@ -55,3 +55,31 @@ export const modalFields = [
 ];
 
 export const defaultFormState = Object.fromEntries(modalFields.map((field) => [field.key, '']));
+
+export const budgetExportColumns = (cashSplitLabel) => [
+  { header: 'Forecast Year', key: 'forecast_year' },
+  { header: 'Division name', key: 'division_name' },
+  { header: 'Item', key: 'item' },
+  { header: 'Item Descriptions', key: 'descriptions' },
+  { header: 'QTY', key: 'qty' },
+  { header: 'Existing Stock', key: 'existing_stock' },
+  {
+    header: 'Previous Procurement date of similar Item',
+    accessor: (row) =>
+      row.previous_procurement_date
+        ? new Date(row.previous_procurement_date).toLocaleDateString('en-GB')
+        : '',
+  },
+  { header: 'Estimated cost each', key: 'estimated_cost' },
+  { header: 'Likely amount of cash Outgo Rs', key: 'cash_outgo' },
+  { header: `Cash Outgo split over ${cashSplitLabel}`, key: 'cash_outgo_split' },
+  { header: 'Whether Common TDCC Possible', key: 'common_tdcc' },
+  { header: 'Possibility of using the same items for other project', key: 'cross_project_use' },
+  { header: 'Necessary of using hardware technologies', key: 'hardware_need' },
+  { header: 'Initiation of condemnation of store', key: 'condemnation' },
+  { header: 'Remarks', key: 'remarks' },
+  {
+    header: 'Attachment Name',
+    accessor: (row) => row.original_name || '',
+  },
+];

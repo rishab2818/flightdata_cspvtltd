@@ -1,8 +1,9 @@
 // Cleaned and corrected full component
 import React, { useEffect, useMemo, useState } from "react";
-import { FiPlus, FiUploadCloud } from "react-icons/fi";
+import { FiDownload, FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
+import { downloadExcel } from "../../lib/excelExport";
 import Folder from "../../assets/Folder.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
 import Calculator from "../../assets/Calculator.svg";
@@ -157,6 +158,28 @@ export default function DivisionalRecords() {
     return records.filter((r) => (filters.type === "all" ? true : r.record_type === filters.type));
   }, [records, filters]);
 
+  const handleExport = () => {
+    const columns = [
+      { header: "Division Name", key: "division_name" },
+      { header: "Type", key: "record_type" },
+      {
+        header: "Created Date",
+        accessor: (row) =>
+          row.created_date ? new Date(row.created_date).toLocaleDateString("en-GB") : "",
+      },
+      { header: "Rating", key: "rating" },
+      { header: "Remarks", key: "remarks" },
+      { header: "Attachment", accessor: (row) => row.original_name || "" },
+    ];
+
+    downloadExcel({
+      rows: filtered,
+      columns,
+      fileName: "divisional-records",
+      sheetName: "Divisional Records",
+    });
+  };
+
   return (
     <div className={styles.wrapper}>
       {/* Stats */}
@@ -172,7 +195,12 @@ export default function DivisionalRecords() {
 
       {/* Table */}
       <div className={styles.tableWrapper}>
-        <h3>Divisional Records</h3>
+        <div className={styles.tableHeader}>
+          <h3>Divisional Records</h3>
+          <button type="button" className={styles.exportBtn} onClick={handleExport}>
+            <FiDownload size={16} /> Download
+          </button>
+        </div>
         <table className={styles.table}>
           <thead>
             <tr>
