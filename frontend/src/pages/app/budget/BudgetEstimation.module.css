@@ -52,6 +52,30 @@
   gap: 8px;
 }
 
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 240px;
+}
+
+.searchIcon {
+  color: #94a3b8;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+  width: 100%;
+}
+
 .filterLabel {
   font-size: 14px;
   color: #475569;
@@ -130,7 +154,7 @@
 }
 
 .table {
-  width: 1400px;
+  width: 1600px;
   border-collapse: collapse;
 }
 
@@ -196,6 +220,36 @@
   color: #1d4ed8;
 }
 
+.linkButton {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font-weight: 600;
+}
+
+.subtleText {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.errorBanner {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 12px 16px 0;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 18px;
+  color: #94a3b8;
+}
+
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -248,6 +302,24 @@
   gap: 12px 16px;
 }
 
+.modalFieldInline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.splitBadge {
+  background: #ecfeff;
+  border: 1px solid #99f6e4;
+  color: #0f766e;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 160px;
+  text-align: center;
+}
+
 .modalField {
   display: flex;
   flex-direction: column;
@@ -272,6 +344,12 @@
 .modalTextarea {
   min-height: 72px;
   resize: vertical;
+}
+
+.modalFieldFull {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .modalActions {
@@ -305,6 +383,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .modalDateInput {

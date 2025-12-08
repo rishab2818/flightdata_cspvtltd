@@ -11,6 +11,7 @@ from app.routers import ingestion
 from app.routers import visualizations
 from app.routers import notifications
 from app.routers import meetings
+from app.routers import budgets
 app = FastAPI(title="flightdv minimal backend")
 
 app.add_middleware(
@@ -35,3 +36,4 @@ app.include_router(ingestion.router)
 app.include_router(visualizations.router)
 app.include_router(notifications.router)
 app.include_router(meetings.router)
+app.include_router(budgets.router)

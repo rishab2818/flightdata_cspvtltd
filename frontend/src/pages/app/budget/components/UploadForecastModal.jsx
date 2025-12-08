@@ -1,34 +1,56 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 import { modalFields } from '../data';
 
-export default function UploadForecastModal({ open, onClose, onSave }) {
-  const [formState, setFormState] = useState(() =>
-    Object.fromEntries(modalFields.map((field) => [field.key, '']))
-  );
-  const [forecastDate, setForecastDate] = useState('2026-02-27');
+export default function UploadForecastModal({
+  open,
+  mode = 'create',
+  forecastYear,
+  cashSplitLabel,
+  values,
+  onChange,
+  onClose,
+  onSave,
+  onForecastYearChange,
+  saving = false,
+  existingFileName,
+}) {
+  const [file, setFile] = useState(null);
+  const readOnly = mode === 'view';
 
-  const groupedFields = useMemo(
-    () => modalFields.filter((field) => !field.fullWidth),
-    []
-  );
+  useEffect(() => {
+    if (!open) {
+      setFile(null);
+    }
+  }, [open, values]);
+
+  const groupedFields = useMemo(() => modalFields, []);
 
   if (!open) return null;
 
   const handleChange = (key) => (e) => {
-    setFormState((prev) => ({ ...prev, [key]: e.target.value }));
+    onChange({ ...values, [key]: e.target.value });
   };
 
-  const handleSave = () => {
-    onSave({ ...formState, forecastDate });
+  const handleSubmit = () => {
+    onSave?.({ values, file });
   };
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalCard}>
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Upload Forecast Budget</h3>
+          <div>
+            <h3 className={styles.modalTitle}>
+              {mode === 'edit' && 'Edit Forecast Budget'}
+              {mode === 'view' && 'View Forecast Budget'}
+              {mode === 'create' && 'Upload Forecast Budget'}
+            </h3>
+            <p className={styles.modalSubtitle}>
+              Enter budget details. All fields are optional and attachments are supported.
+            </p>
+          </div>
           <button className={styles.modalClose} onClick={onClose} aria-label="Close modal">
             <FiX />
           </button>
@@ -36,49 +58,82 @@ export default function UploadForecastModal({ open, onClose, onSave }) {
 
         <div className={styles.modalBody}>
           <div className={styles.modalTopControls}>
-            <input
-              type="date"
-              value={forecastDate}
-              onChange={(e) => setForecastDate(e.target.value)}
-              className={styles.modalDateInput}
-            />
-            <button className={styles.primaryButton} type="button" onClick={() => {}}>
-              Ok
-            </button>
+            <div className={styles.modalFieldInline}>
+              <label className={styles.modalLabel}>Forecast Year</label>
+              <input
+                type="text"
+                value={forecastYear}
+                onChange={(e) => onForecastYearChange?.(e.target.value)}
+                className={styles.modalInput}
+                placeholder="2024-25"
+                disabled={readOnly}
+              />
+            </div>
+            <div className={styles.modalFieldInline}>
+              <label className={styles.modalLabel}>Cash Outgo Split Over</label>
+              <div className={styles.splitBadge}>{cashSplitLabel}</div>
+            </div>
           </div>
 
           <div className={styles.modalGrid}>
             {groupedFields.map((field) => (
               <div key={field.key} className={styles.modalField}>
-                <label className={styles.modalLabel}>{field.label}</label>
+                <label className={styles.modalLabel}>
+                  {field.key === 'cash_outgo_split'
+                    ? `${field.label} (${cashSplitLabel})`
+                    : field.label}
+                </label>
                 {field.multiline ? (
                   <textarea
                     className={styles.modalTextarea}
                     placeholder={field.placeholder}
-                    value={formState[field.key]}
+                    value={values[field.key]}
                     onChange={handleChange(field.key)}
+                    disabled={readOnly}
                   />
                 ) : (
                   <input
                     type={field.type || 'text'}
                     className={styles.modalInput}
                     placeholder={field.placeholder}
-                    value={formState[field.key]}
+                    value={values[field.key]}
                     onChange={handleChange(field.key)}
+                    disabled={readOnly}
                   />
                 )}
               </div>
             ))}
           </div>
+
+          <div className={styles.modalFieldFull}>
+            <label className={styles.modalLabel}>Upload attachment (optional)</label>
+            <input
+              type="file"
+              className={styles.modalInput}
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              disabled={readOnly}
+            />
+            {existingFileName && !file && (
+              <div className={styles.subtleText}>Current file: {existingFileName}</div>
+            )}
+            {file && <div className={styles.subtleText}>Selected: {file.name}</div>}
+          </div>
         </div>
 
         <div className={styles.modalActions}>
           <button className={styles.secondaryButton} type="button" onClick={onClose}>
-            Cancel
+            {readOnly ? 'Close' : 'Cancel'}
           </button>
-          <button className={styles.primaryButton} type="button" onClick={handleSave}>
-            Upload
-          </button>
+          {!readOnly && (
+            <button
+              className={styles.primaryButton}
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : mode === 'edit' ? 'Update' : 'Upload'}
+            </button>
+          )}
         </div>
       </div>
     </div>

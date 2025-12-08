@@ -2,7 +2,23 @@ import React from 'react';
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 
-export default function ForecastBudgetTable({ columns, rows }) {
+const formatDate = (value) => {
+  if (!value) return '--';
+  try {
+    return new Date(value).toLocaleDateString('en-GB');
+  } catch (err) {
+    return value;
+  }
+};
+
+const formatCurrency = (value) => {
+  if (value === undefined || value === null || value === '') return '--';
+  const numberValue = Number(value);
+  if (Number.isNaN(numberValue)) return value;
+  return `₹ ${numberValue.toLocaleString('en-IN')}`;
+};
+
+export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onDelete, onDownload }) {
   return (
     <div className={styles.tableWrapper}>
       <table className={styles.table}>
@@ -14,36 +30,79 @@ export default function ForecastBudgetTable({ columns, rows }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>{row.id}</td>
-              <td>{row.division}</td>
-              <td>{row.item}</td>
-              <td>{row.description}</td>
-              <td>{row.qty}</td>
-              <td>{row.existingStock}</td>
-              <td>{row.previousProcurement}</td>
-              <td>₹ {row.estimatedCost}</td>
-              <td>
-                <span className={styles.chip}>₹ {row.cashOutgo}</span>
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={columns.length} className={styles.emptyState}>
+                No forecast budget entries yet.
               </td>
-              <td>{row.commonTdcc}</td>
-              <td>{row.crossProjectUse}</td>
-              <td>{row.hardwareNeed}</td>
-              <td>{row.condemnation}</td>
-              <td>{row.remarks}</td>
+            </tr>
+          )}
+          {rows.map((row, idx) => (
+            <tr key={row.record_id || row.id || idx}>
+              <td>{idx + 1}</td>
+              <td>{row.division_name || '--'}</td>
+              <td>{row.item || '--'}</td>
+              <td>{row.descriptions || '--'}</td>
+              <td>{row.qty ?? '--'}</td>
+              <td>{row.existing_stock ?? '--'}</td>
+              <td>{formatDate(row.previous_procurement_date)}</td>
+              <td>{formatCurrency(row.estimated_cost)}</td>
+              <td>{formatCurrency(row.cash_outgo)}</td>
+              <td>
+                <span className={styles.chip}>{formatCurrency(row.cash_outgo_split)}</span>
+                <div className={styles.subtleText}>{row.cash_outgo_split_over || '--'}</div>
+              </td>
+              <td>{row.common_tdcc || '--'}</td>
+              <td>{row.cross_project_use || '--'}</td>
+              <td>{row.hardware_need || '--'}</td>
+              <td>{row.condemnation || '--'}</td>
+              <td>{row.remarks || '--'}</td>
+              <td>
+                {row.original_name ? (
+                  <button
+                    className={styles.linkButton}
+                    type="button"
+                    onClick={() => onDownload?.(row)}
+                  >
+                    {row.original_name}
+                  </button>
+                ) : (
+                  <span className={styles.subtleText}>No file</span>
+                )}
+              </td>
               <td>
                 <div className={styles.actionBar}>
-                  <button className={styles.actionButton} title="View" type="button">
+                  <button
+                    className={styles.actionButton}
+                    title="View"
+                    type="button"
+                    onClick={() => onView?.(row)}
+                  >
                     <FiEye size={16} />
                   </button>
-                  <button className={styles.actionButton} title="Download" type="button">
+                  <button
+                    className={styles.actionButton}
+                    title="Download"
+                    type="button"
+                    onClick={() => onDownload?.(row)}
+                    disabled={!row.storage_key}
+                  >
                     <FiDownload size={16} />
                   </button>
-                  <button className={styles.actionButton} title="Edit" type="button">
+                  <button
+                    className={styles.actionButton}
+                    title="Edit"
+                    type="button"
+                    onClick={() => onEdit?.(row)}
+                  >
                     <FiEdit2 size={15} />
                   </button>
-                  <button className={styles.actionButton} title="Delete" type="button">
+                  <button
+                    className={styles.actionButton}
+                    title="Delete"
+                    type="button"
+                    onClick={() => onDelete?.(row)}
+                  >
                     <FiTrash2 size={16} />
                   </button>
                 </div>
