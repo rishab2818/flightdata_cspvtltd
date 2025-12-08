@@ -20,6 +20,7 @@ import TrainingRecords from './pages/app/TrainingRecords'
 import TechnicalReports from './pages/app/TechnicalReports'
 import Setting from './pages/app/Setting'
 import DigitalLibrary from './pages/app/DigitalLibrary'
+import BudgetEstimation from './pages/app/budget/BudgetEstimation'
 import ProtectedGDorDH from './routes/ProtectedGDorDH'
 import AdminShell from './pages/admin/AdminShell'
 import Settings from './pages/admin/Settings'
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="minutes" element={<MinutesOfTheMeeting />} />
           <Route path="student-engagement" element={<StudentEngagement />} />
           <Route path="inventory-records" element={<InventoryRecords />} />
+          <Route path="budget-estimation" element={<BudgetEstimation />} />
           <Route path="divisional-records" element={<DivisionalRecords />} />
           <Route path="customer-feedbacks" element={<CustomerFeedbacks />} />
           <Route path="training-records" element={<TrainingRecords />} />

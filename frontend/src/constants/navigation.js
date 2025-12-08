@@ -9,6 +9,7 @@ import technicalIcon from "../assets/reports.svg";
 import settingsIcon from "../assets/GearFine.svg";
 import usersIcon from "../assets/UsersThree.svg";
 import digitalLibIcon from "../assets/digital.svg";
+import calculatorIcon from "../assets/Calculator.svg";
 
 export const ROLE_MENUS = {
   ADMIN: [
@@ -21,6 +22,7 @@ export const ROLE_MENUS = {
     { path: "/app/minutes", label: "Minutes of meeting", icon: minutesIcon },
     { path: "/app/student-engagement", label: "Student Engagement", icon: studentIcon },
     { path: "/app/inventory-records", label: "Procurement Records", icon: inventoryIcon },
+    { path: "/app/budget-estimation", label: "Budget Estimation", icon: calculatorIcon },
     { path: "/app/divisional-records", label: "Divisional Records", icon: divisionalIcon },
     { path: "/app/customer-feedbacks", label: "Customer Feedbacks", icon: customerIcon },
     { path: "/app/training-records", label: "Training Records", icon: trainingIcon },
@@ -40,6 +42,7 @@ export const PAGE_META = {
   },
   "/app/student-engagement": { title: "Student Engagement", subtitle: "Description here" },
   "/app/inventory-records": { title: "Procurement Records", subtitle: "Description here" },
+  "/app/budget-estimation": { title: "Budget Estimation", subtitle: "Description here" },
   "/app/divisional-records": {
     title: "Divisional Records",
     subtitle: "Keep budgets, AMC, and cyber updates aligned with documentation.",
