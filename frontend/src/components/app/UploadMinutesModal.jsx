@@ -35,7 +35,6 @@ export default function UploadMinutesModal({
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [notes, setNotes] = useState("");
 
   // For multi action points
   const [actionPointInput, setActionPointInput] = useState("");
@@ -52,7 +51,6 @@ export default function UploadMinutesModal({
     setTag("");
     setFile(null);
     setError("");
-    setNotes("");
     setActionPointInput("");
     setActionPoints([]);
     setActionOnInput("");
@@ -177,7 +175,6 @@ export default function UploadMinutesModal({
       onClose();
     } catch (err) {
       console.error(err);
-
       if (err?.response?.status === 409) {
         setError("This document already exists (duplicate detected).");
       } else if (err?.response?.data?.detail) {
@@ -213,144 +210,140 @@ export default function UploadMinutesModal({
       e.preventDefault();
       handleAddActionOn();
     }
-  };  
+  };
 
   return (
-  <div className="modalOverlay">
-    <div className="modalBox">
-      <h2 className="modalTitle">Upload Meeting Minutes</h2>
+    <div className="modalOverlay">
+      <div className="modalBox">
+        <h2 className="modalTitle">Upload Meeting Minutes</h2>
 
-      <form onSubmit={handleSubmit} className="form">
-        {/* Action Points */}
-        <div>
-          <label className="label">Action Points</label>
-          <div className="row">
-            <textarea
-              type="text"
-              placeholder="CFD analysis to be conducted for Airbus 320"
-              value={actionPointInput}
-              onChange={(e) => setActionPointInput(e.target.value)}
-              onKeyDown={handleActionPointKeyDown}
-              className="textareaInput"
-            />
-            <button type="button" onClick={handleAddActionPoint} className="iconButton">
-              <FiPlus size={18} />
-            </button>
-          </div>
-
-          {actionPoints.length > 0 && (
-            <div className="chipContainer">
-              {actionPoints.map((pt, idx) => (
-                <span key={`${pt}-${idx}`} className="chip">
-                  {pt}
-                  <FiX size={12} onClick={() => handleRemoveActionPoint(idx)} className="chipRemove" />
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Meeting Date */}
-        <div className="dateWrap">
-          <label className="label">Meeting Date</label>
-          <div className="dateBox">
-            <FiCalendar size={16} className="dateIcon" />
-            <input
-              type="date"
-              value={meetingDate}
-              onChange={(e) => setMeetingDate(e.target.value)}
-              className="dateInput"
-            />
-          </div>
-        </div>
-
-        {/* Tag + Action On */}
-        <div className="row gap16">
-          <div className="flex1">
-            <label className="label">Tag Name</label>
-            <input
-              type="text"
-              placeholder="e.g., Strategy Planning, Team Sync"
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-              className="textInput"
-            />
-          </div>
-
-          <div className="flex1">
-            <label className="label">Action on (Person / Role / Team)</label>
+        <form onSubmit={handleSubmit} className="form">
+          {/* Action Points */}
+          <div>
+            <label className="label">Action Points</label>
             <div className="row">
               <input
                 type="text"
-                placeholder="e.g., CFD Team, Rishab, WT Group"
-                value={actionOnInput}
-                onChange={(e) => setActionOnInput(e.target.value)}
-                onKeyDown={handleActionOnKeyDown}
+                placeholder="CFD analysis to be conducted for Airbus 320"
+                value={actionPointInput}
+                onChange={(e) => setActionPointInput(e.target.value)}
+                onKeyDown={handleActionPointKeyDown}
                 className="textInput"
               />
-              <button type="button" onClick={handleAddActionOn} className="iconButton">
+              <button type="button" onClick={handleAddActionPoint} className="iconButton">
                 <FiPlus size={18} />
               </button>
             </div>
 
-            {actionOnList.length > 0 && (
+            {actionPoints.length > 0 && (
               <div className="chipContainer">
-                {actionOnList.map((ao, idx) => (
-                  <span key={`${ao}-${idx}`} className="chip">
-                    {ao}
-                    <FiX size={12} onClick={() => handleRemoveActionOn(idx)} className="chipRemove" />
+                {actionPoints.map((pt, idx) => (
+                  <span key={`${pt}-${idx}`} className="chip">
+                    {pt}
+                    <FiX size={12} onClick={() => handleRemoveActionPoint(idx)} className="chipRemove" />
                   </span>
                 ))}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Upload Box */}
-        <div className="uploadRoot">
-          <div className="uploadBox">
-            <FiUploadCloud size={32} className="uploadIcon" />
-            <h3 className="uploadTitle">Upload Data files</h3>
-            <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
-
-            <label className="browseBtn">
-              <span className="plusIcon">+</span>
-              <span>{file ? file.name : "Browse File"}</span>
-              <input type="file" className="hiddenInput" onChange={handleFileChange} />
-            </label>
-
-            <p className="uploadHint">Supported formats: PDF/Word/any (up to backend limits)</p>
+          {/* Meeting Date */}
+          <div className="dateWrap">
+            <label className="label">Meeting Date</label>
+            <div className="dateBox">
+              <FiCalendar size={16} className="dateIcon" />
+              <input
+                type="date"
+                value={meetingDate}
+                onChange={(e) => setMeetingDate(e.target.value)}
+                className="dateInput"
+              />
+            </div>
           </div>
-        </div>
 
-        {error && <p className="errorText">{error}</p>}
+          {/* Tag + Action On */}
+          <div className="row gap16">
+            <div className="flex1">
+              <label className="label">Tag Name</label>
+              <input
+                type="text"
+                placeholder="e.g., Strategy Planning, Team Sync"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                className="textInput"
+              />
+            </div>
 
-        {/* Footer Buttons */}
-        <div className="footerButtons">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="cancelBtn"
-          >
-            Cancel
-          </button>
+            <div className="flex1">
+              <label className="label">Action on (Person / Role / Team)</label>
+              <div className="row">
+                <input
+                  type="text"
+                  placeholder="e.g., CFD Team, Rishab, WT Group"
+                  value={actionOnInput}
+                  onChange={(e) => setActionOnInput(e.target.value)}
+                  onKeyDown={handleActionOnKeyDown}
+                  className="textInput"
+                />
+                <button type="button" onClick={handleAddActionOn} className="iconButton">
+                  <FiPlus size={18} />
+                </button>
+              </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`submitBtn ${isSubmitting ? "loading" : ""}`}
-          >
-            <FiUploadCloud size={16} />
-            <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
-          </button>
-        </div>
-      </form>
+              {actionOnList.length > 0 && (
+                <div className="chipContainer">
+                  {actionOnList.map((ao, idx) => (
+                    <span key={`${ao}-${idx}`} className="chip">
+                      {ao}
+                      <FiX size={12} onClick={() => handleRemoveActionOn(idx)} className="chipRemove" />
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Upload Box */}
+          <div className="uploadRoot">
+            <div className="uploadBox">
+              <FiUploadCloud size={32} className="uploadIcon" />
+              <h3 className="uploadTitle">Upload Data files</h3>
+              <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
+
+              <label className="browseBtn">
+                <span className="plusIcon">+</span>
+                <span>{file ? file.name : "Browse File"}</span>
+                <input type="file" className="hiddenInput" onChange={handleFileChange} />
+              </label>
+
+              <p className="uploadHint">Supported formats: PDF/Word/any (up to backend limits)</p>
+            </div>
+          </div>
+
+          {error && <p className="errorText">{error}</p>}
+
+          {/* Footer Buttons */}
+          <div className="footerButtons">
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+              className="cancelBtn"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`submitBtn ${isSubmitting ? "loading" : ""}`}
+            >
+              <FiUploadCloud size={16} />
+              <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
   );
 }
-
-
-  
- 
