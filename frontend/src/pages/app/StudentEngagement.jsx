@@ -24,7 +24,7 @@ function StatCard({ title, value, icon, bgColor }) {
   return (
     <div className={styles.statCard}>
       <div className={styles.statIcon}
-      style={{backgroundColor: bgColor}}>
+        style={{ backgroundColor: bgColor }}>
         <img src={icon} alt={title} />
       </div>
 
@@ -83,7 +83,7 @@ function Modal({ title, onClose, children }) {
           {children}
         </div>
 
-        
+
       </div>
     </div>
   );
@@ -123,19 +123,20 @@ export default function StudentEngagement() {
   const [showModal, setShowModal] = useState(false);
 
   /* -------------------- Fetch -------------------- */
+  const loadRecords = async () => {
+    setLoading(true);
+    try {
+      const data = await studentEngagementApi.list();
+      setRecords(data || []);
+    } catch (err) {
+      setError("Failed to load student engagement records");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const data = await studentEngagementApi.list();
-        setRecords(data || []);
-      } catch (err) {
-        setError("Failed to load student engagement records");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    loadRecords();
   }, []);
 
   const onChange = (key, value) =>
@@ -179,6 +180,42 @@ export default function StudentEngagement() {
     }
   }, [form.start_date, form.end_date]);
 
+  // Auto-update status based on dates:
+  useEffect(() => {
+    // Only auto-update status if the form is NOT being explicitly edited (i.e., status isn't manually changed by the user)
+    // Here we let the status be dictated by the dates if the form is new or if the user hasn't touched the status yet.
+    if (!form.end_date) return;
+
+    // Skip auto-update if editing and the status field has a value (assuming user might manually override status)
+    // if (editingRecord && form.status) return; 
+
+    const toDateOnly = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = toDateOnly(new Date());
+    const end = toDateOnly(new Date(form.end_date));
+    const start = form.start_date ? toDateOnly(new Date(form.start_date)) : null;
+
+    let newStatus = form.status;
+
+    // If end is on or before today => Completed
+    if (end <= today) {
+      newStatus = "Completed";
+    }
+    // If start is in future => Upcoming
+    else if (start && start > today) {
+      newStatus = "Upcoming";
+    }
+    // Otherwise it's ongoing
+    else {
+      newStatus = "Ongoing";
+    }
+
+    // Only update if the calculated status is different
+    if (form.status !== newStatus) {
+      setForm(prev => ({ ...prev, status: newStatus }));
+    }
+  }, [form.start_date, form.end_date]);
+
+
   const filtered = useMemo(() => {
     return records
       .filter((r) =>
@@ -201,9 +238,9 @@ export default function StudentEngagement() {
 
     return [
       { title: "Total Students", value: totalStudents, icon: Users, bgColor: "#DBEAFE" },
-      { title: "Internships", value: internships, icon: Book1, bgColor: "#FFEDD4"},
-      { title: "Ongoing Programs", value: ongoing, icon: Ongoing,bgColor:"#DCFCE7" },
-      { title: "Completed", value: completed, icon: Cap, bgColor:"#F3E8FF"},
+      { title: "Internships", value: internships, icon: Book1, bgColor: "#FFEDD4" },
+      { title: "Ongoing Programs", value: ongoing, icon: Ongoing, bgColor: "#DCFCE7" },
+      { title: "Completed", value: completed, icon: Cap, bgColor: "#F3E8FF" },
     ];
   }, [records]);
 
@@ -256,6 +293,7 @@ export default function StudentEngagement() {
       project_name: record.project_name || "",
       program_type: record.program_type || "Internship",
       duration_months: String(record.duration_months ?? ""),
+      // Slice date string to ensure format is compatible with input type="date"
       start_date: record.start_date ? record.start_date.slice(0, 10) : "",
       end_date: record.end_date ? record.end_date.slice(0, 10) : "",
       status: record.status || "Ongoing",
@@ -263,6 +301,7 @@ export default function StudentEngagement() {
       notes: record.notes || "",
       mentor: record.mentor || "",
     });
+    // Set file metadata for existing document display
     setExistingFileMeta({
       storage_key: record.storage_key,
       original_name: record.original_name,
@@ -270,12 +309,11 @@ export default function StudentEngagement() {
       size_bytes: record.size_bytes,
       content_hash: record.content_hash,
     });
-    setFile(null);
+    setFile(null); // Clear any previously selected file
     setShowModal(true);
   };
 
-  /* -------------------- Submit -------------------- */
-
+  /* -------------------- Submit (FIXED) -------------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -288,12 +326,14 @@ export default function StudentEngagement() {
     try {
       setSubmitting(true);
 
+      // Initialize file meta from existing record or null/empty strings if creating
       let storage_key = existingFileMeta?.storage_key;
       let original_name = existingFileMeta?.original_name;
       let content_type = existingFileMeta?.content_type;
       let size_bytes = existingFileMeta?.size_bytes;
       let content_hash = existingFileMeta?.content_hash;
 
+      // 1. If user uploaded a new file, replace existing one
       if (file) {
         const hash = await computeSha256(file);
 
@@ -313,9 +353,12 @@ export default function StudentEngagement() {
         content_hash = hash;
       }
 
+      // 2. Prepare payload
       const payload = {
         ...form,
-        duration_months: form.duration_months ? Number(form.duration_months) : undefined,
+        duration_months: form.duration_months
+          ? Number(form.duration_months)
+          : undefined,
         start_date: form.start_date || undefined,
         end_date: form.end_date || undefined,
         storage_key,
@@ -325,24 +368,44 @@ export default function StudentEngagement() {
         content_hash,
       };
 
+      let resultRecord;
+
+      // 3. Update or create (FIXED: Added immediate local state update)
       if (editingRecord) {
-        const updated = await studentEngagementApi.update(editingRecord.record_id, payload);
-        setRecords((prev) =>
-          prev.map((r) => (r.record_id === editingRecord.record_id ? updated : r))
-        );
+        // Update API returns the updated record
+        resultRecord = await studentEngagementApi.update(editingRecord.record_id, payload);
       } else {
-        const created = await studentEngagementApi.create(payload);
-        setRecords((prev) => [created, ...prev]);
+        // Create API returns the newly created record
+        resultRecord = await studentEngagementApi.create(payload);
       }
 
+      // 4. Update local state with the result record (more efficient than full list refresh)
+      setRecords((prev) => {
+        if (editingRecord) {
+          // Replace the old record with the updated one
+          return prev.map((r) =>
+            r.record_id === resultRecord.record_id ? resultRecord : r
+          );
+        } else {
+          // Add the new record to the list
+          return [...prev, resultRecord];
+        }
+      });
+
+      // 5. Close modal
       setShowModal(false);
       resetFormState();
+
     } catch (err) {
-      setError("Unable to save student engagement record");
+      console.error("Save error:", err?.message ?? err);
+      // Fallback: reload data if update/create failed (optional, but good for recovery)
+      // loadRecords();
+      setError("Unable to save student engagement record. Please check the details.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
   const handleViewDocument = async (record) => {
     try {
@@ -378,6 +441,7 @@ export default function StudentEngagement() {
     }
   };
 
+  // Determine which file name to display in the FileUploadBox
   const uploadDisplayFile =
     file || (existingFileMeta?.original_name ? { name: existingFileMeta.original_name } : null);
 
@@ -433,17 +497,17 @@ export default function StudentEngagement() {
         </button>
       </section>
 
-        {/* Table */}
-        <div className={styles.TableWrapper}>
-          <div className={styles.tableHeader}>
-            <h3>Student Programs</h3>
-            <button type="button" className={styles.exportBtn} onClick={handleExport}>
-              <FiDownload size={16} /> Download
-            </button>
-          </div>
+      {/* Table */}
+      <div className={styles.TableWrapper}>
+        <div className={styles.tableHeader}>
+          <h3>Student Programs</h3>
+          <button type="button" className={styles.exportBtn} onClick={handleExport}>
+            <FiDownload size={16} /> Download
+          </button>
+        </div>
 
-          {(() => {
-            const columns = [
+        {(() => {
+          const columns = [
             "Name",
             "College Name",
             "Project Name",
@@ -523,22 +587,27 @@ export default function StudentEngagement() {
                           >
                             <FiEdit2 size={16} />
                           </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleViewDocument(row)}
-                            title="View"
-                          >
-                            <FiEye size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleDownloadDocument(row)}
-                            title="Download"
-                          >
-                            <FiDownload size={16} />
-                          </button>
+                          {/* Only show view/download if a document exists */}
+                          {row.storage_key && (
+                            <>
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => handleViewDocument(row)}
+                                title="View Document"
+                              >
+                                <FiEye size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => handleDownloadDocument(row)}
+                                title="Download Document"
+                              >
+                                <FiDownload size={16} />
+                              </button>
+                            </>
+                          )}
                           <button
                             type="button"
                             className="icon-btn"
@@ -565,15 +634,15 @@ export default function StudentEngagement() {
         >
           <form onSubmit={handleSubmit} className={styles.formGrid}>
 
-             {/* 👇 Upload box moved to TOP */}
+            {/* 👇 Upload box */}
             <FileUploadBox
               label="Upload Document"
-              description="Attach training related file here"
+              description="Attach project document or certificate"
               supported="PDF/Word"
               file={uploadDisplayFile}
               onFileSelected={(f) => setFile(f)}
             />
-            
+
             {/* Repeat input format */}
             <label className={styles.inputLabel}>
               <span>Student Name</span>
@@ -614,6 +683,32 @@ export default function StudentEngagement() {
               </select>
             </label>
 
+
+
+            <label className={styles.inputLabel}>
+              <div className={styles.daterow}>
+                <div className={styles.field}>
+                  <span>Start Date</span>
+                  <input
+                    type="date"
+                    value={form.start_date}
+                    max={form.end_date || undefined}
+                    onChange={(e) => onChange("start_date", e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <span>End Date</span>
+                  <input
+                    type="date"
+                    value={form.end_date}
+                    min={form.start_date || undefined}
+                    onChange={(e) => onChange("end_date", e.target.value)}
+                  />
+                </div>
+              </div>
+              {dateError && <div className={styles.errorMsg}>{dateError}</div>}
+            </label>
             <label className={styles.inputLabel}>
               <span>Duration (months)</span>
               <input
@@ -624,32 +719,6 @@ export default function StudentEngagement() {
                 placeholder="Calculated from dates"
               />
             </label>
-
-           <label className={styles.inputLabel}>
-            <div className={styles.daterow}>
-               <div className={styles.field}>
-              <span>Start Date</span>
-              <input
-                type="date"
-                value={form.start_date}
-                max={form.end_date || undefined}
-                onChange={(e) => onChange("start_date", e.target.value)}
-              />
-              </div>
-
-              <div className={styles.field}>
-              <span>End Date</span>
-              <input
-                type="date"
-                value={form.end_date}
-                min={form.start_date || undefined}
-                onChange={(e) => onChange("end_date", e.target.value)}
-              />
-              </div>
-            </div>
-            {dateError && <div className={styles.errorMsg}>{dateError}</div>}
-           </label>
-           
             <label className={styles.inputLabel}>
               <span>Guide</span>
               <input placeholder="Enter Guide Name"
@@ -706,8 +775,8 @@ export default function StudentEngagement() {
                 {submitting
                   ? "Saving..."
                   : editingRecord
-                  ? "Save Changes"
-                  : "+ Add Program"}
+                    ? "Save Changes"
+                    : "+ Add Program"}
               </button>
             </div>
 
