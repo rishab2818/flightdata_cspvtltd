@@ -3,6 +3,7 @@ import { FiX } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 import { modalFields } from '../data';
 
+
 export default function UploadForecastModal({
   open,
   mode = 'create',
@@ -40,6 +41,7 @@ export default function UploadForecastModal({
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalCard}>
+        
         <div className={styles.modalHeader}>
           <div>
             <h3 className={styles.modalTitle}>
@@ -57,6 +59,7 @@ export default function UploadForecastModal({
         </div>
 
         <div className={styles.modalBody}>
+          
           <div className={styles.modalTopControls}>
             <div className={styles.modalFieldInline}>
               <label className={styles.modalLabel}>Forecast Year</label>

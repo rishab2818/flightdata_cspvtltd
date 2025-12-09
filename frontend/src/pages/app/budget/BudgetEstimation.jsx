@@ -8,6 +8,9 @@ import { budgetExportColumns, defaultFormState, fiscalYearOptions, forecastColum
 import { budgetsApi } from '../../../api/budgetsApi';
 import { computeSha256 } from '../../../lib/fileUtils';
 import { downloadExcel } from '../../../lib/excelExport';
+import DownloadSimple from "../../../assets/DownloadSimple.svg";
+
+
 
 const normalizeNumber = (value) =>
   value === '' || value === undefined || value === null ? undefined : Number(value);
@@ -219,13 +222,6 @@ export default function BudgetEstimation() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.heroCard}>
-        <div className={styles.heroText}>
-          <h2 className={styles.heroTitle}>Budget Estimation</h2>
-          <p className={styles.heroSubtitle}>Track forecast budgets, uploads, and approvals.</p>
-        </div>
-      </div>
-
       <BudgetFilterBar
         filters={filters}
         onChange={setFilters}
@@ -238,11 +234,20 @@ export default function BudgetEstimation() {
         <div className={styles.sectionHeader}>
           <div className={styles.sectionHeaderLeft}>
             <h3 className={styles.sectionTitle}>Forecast Budget</h3>
-            <div className={styles.dateBadge}>{forecastYear}</div>
+            <select
+                      className={styles.dateBadge}
+                      value={forecastYear}
+                      onChange={(e) => onForecastYearChange(e.target.value)}
+                    >
+                      {fiscalYearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
           </div>
           <button type="button" className={styles.exportButton} onClick={handleExport}>
-            <FiDownload size={18} />
-            Download
+            <img src={DownloadSimple} alt="download" className={styles.icons} />
           </button>
         </div>
         {error && <div className={styles.errorBanner}>{error}</div>}

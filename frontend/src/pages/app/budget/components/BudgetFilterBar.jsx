@@ -2,6 +2,8 @@ import React from 'react';
 import { FiUploadCloud, FiSearch } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 import { fiscalYearOptions } from '../data';
+import CurrencyInr from "../../../../assets/CurrencyInr.svg";
+
 
 export default function BudgetFilterBar({
   filters,
@@ -70,7 +72,7 @@ export default function BudgetFilterBar({
       </div>
 
       <button type="button" className={styles.uploadButton} onClick={onUpload}>
-        <FiUploadCloud size={18} />
+       <img src={CurrencyInr} alt="rupee" className={styles.icon} />
         Upload forecast Budget
       </button>
     </div>
