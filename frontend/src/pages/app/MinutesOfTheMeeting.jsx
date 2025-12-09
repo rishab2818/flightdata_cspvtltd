@@ -370,7 +370,8 @@ function TabsRow({ activeKey, onChange }) {
       {MOM_TABS.map((tab) => {
         const active = tab.key === activeKey;
         return (
-          <button className="TabButton"
+          <button 
+            className={`TabButton ${active ? "activeTab" : ""}`}
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
@@ -469,36 +470,26 @@ function NextMeetingBanner({
 
   return (
     <div className="Banner">
-      <div className="BannerContent">
-        <div className="BannerInfo">
-          <div className="BannerTitle">
-            {title}
-          </div>
-          <div className="BannerMeta">
-            {projectName && <span className="metaItem">{projectName}</span>}
-            <span className="metaItem">{dateLabel}</span>
-            {dayLabel && <span className="metaItem">{dayLabel}</span>}
-            {timeLabel && (
-              <span className="metaItem timeMeta">
-                <FiClock size={14} />
-                <span>{timeLabel}</span>
-              </span>
-            )}
-            {loading && <span className="metaItem">Loading...</span>}
-            {error && <span className="metaError">{error}</span>}
-          </div>
-        </div>
-        <button
-          type="button"
-          className="BannerEdit"
-          onClick={onEdit}
-          disabled={loading}
-        >
-          <FiEdit2 size={16} />
-          <span>Edit</span>
-        </button>
-      </div>
+  <div className="BannerContent">
+    <div className="BannerInfo">
+      <div className="BannerTitle">Next {sectionLabel}</div>
+
+      <span className="metaItem">{dateLabel}</span>
+      <span className="metaItem">{dayLabel}</span>
+
+      <span className="metaItem timeMeta">
+        <FiClock size={14} />
+        {timeLabel}
+      </span>
     </div>
+
+    <button className="BannerEdit" onClick={onEdit}>
+      <FiEdit2 size={16} />
+    </button>
+  </div>
+</div>
+
+   
   );
 }
 
@@ -720,7 +711,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
         <div className="ModalHeader">
           <h3>My Action</h3>
           <button type="button" className="CloseButton" onClick={onClose}>
-            Close
+            X
           </button>
         </div>
 
@@ -945,7 +936,7 @@ function ActionPointsModal({ open, onClose, actionPoints }) {
         <div className="ModalHeader">
           <h3>Action Points</h3>
           <button type="button" className="CloseButton" onClick={onClose}>
-            Close
+            X
           </button>
         </div>
 
@@ -1007,9 +998,9 @@ function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
     <div className="LightModalOverlay">
       <div className="LightModalCard">
         <div className="ModalHeader">
-          <h3>Edit next meeting</h3>
+          <h3>Edit Next Meeting</h3>
           <button type="button" className="CloseButton" onClick={onClose}>
-            Close
+           X
           </button>
         </div>
 
@@ -1066,9 +1057,6 @@ function normalizeDate(value) {
   if (Number.isNaN(d.getTime())) return value;
   return d.toISOString().slice(0, 10);
 }
-
-
-
 
 
 function IconBadge({ children, clickable, onClick }) {

@@ -329,6 +329,23 @@ export default function UploadMinutesModal({
         <h2 className="modalTitle">Upload Meeting Minutes</h2>
 
         <form onSubmit={handleSubmit} className="form">
+
+          {/* Upload Box */}
+          <div className="uploadRoot">
+            <div className="uploadBox">
+              <FiUploadCloud size={32} className="uploadIcon" />
+              <h3 className="uploadTitle">Upload Data files</h3>
+              <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
+
+              <label className="browseBtn">
+                <span className="plusIcon">+</span>
+                <span>{file ? file.name : "Browse File"}</span>
+                <input type="file" className="hiddenInput" onChange={handleFileChange} />
+              </label>
+
+              <p className="uploadHint">Supported formats: PDF/Word/any (up to backend limits)</p>
+            </div>
+          </div>
           {requireProject && (
             <div className="row gap16">
               <div className="flex1">
@@ -377,7 +394,7 @@ export default function UploadMinutesModal({
               </div>
 
               <div className="assigneeWrap">
-                <span className="subLabel">Assign to (optional)</span>
+                <span className="label">Assign to (optional)</span>
                 <div className="assigneeInputBox">
                   <input
                     type="text"
@@ -482,22 +499,7 @@ export default function UploadMinutesModal({
             </div>
           </div>
 
-          {/* Upload Box */}
-          <div className="uploadRoot">
-            <div className="uploadBox">
-              <FiUploadCloud size={32} className="uploadIcon" />
-              <h3 className="uploadTitle">Upload Data files</h3>
-              <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
-
-              <label className="browseBtn">
-                <span className="plusIcon">+</span>
-                <span>{file ? file.name : "Browse File"}</span>
-                <input type="file" className="hiddenInput" onChange={handleFileChange} />
-              </label>
-
-              <p className="uploadHint">Supported formats: PDF/Word/any (up to backend limits)</p>
-            </div>
-          </div>
+          
 
           {error && <p className="errorText">{error}</p>}
 
