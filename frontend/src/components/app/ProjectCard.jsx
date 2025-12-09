@@ -38,30 +38,30 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
           <h3
-            style={{ fontSize: 16, fontWeight: 600, color: "#000000", margin: 0 ,fontFamily: "inter-semi-bold, Helvetica"}}
+            style={{ fontSize: 16, fontWeight: 600, color: "#000000", margin: 0, fontFamily: "inter-semi-bold, Helvetica" }}
           >
             {name}
           </h3>
-          <div
+          {/* <div
             style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: `${SPACING.sm}px ${SPACING.md}px`,
-            borderRadius: 999,
-            background: "#fff",
-            border: `1px solid ${COLORS.border}`,
-            fontSize: 14,
-            color: COLORS.textSecondary,
-  }}
->
-  <img
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: `${SPACING.sm}px ${SPACING.md}px`,
+              borderRadius: 999,
+              background: "#fff",
+              border: `1px solid ${COLORS.border}`,
+              fontSize: 14,
+              color: COLORS.textSecondary,
+            }}
+          >
+            <img
     src={TYPE_ICONS[type]}
     alt={type}
     style={{ width: 16, height: 16, objectFit: "contain" }}
   />
-  {type}
-</div>
+            {type}
+          </div> */}
 
           <span
             style={{
@@ -103,7 +103,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       >
         {/* created + members group */}
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.lg + SPACING.sm }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16,color: "#000000"}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: "#000000" }}>
             <FiCalendar size={24} />
             <div>
               <div style={{ fontSize: 14, color: "#737373" }}>Created</div>
@@ -114,7 +114,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16,color: "#000000"}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: "#000000" }}>
             <FiUser size={24} />
             <div>
               <div style={{ fontSize: 14, color: "#737373" }}>Members</div>
@@ -127,7 +127,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
           </div>
         </div>
         {/* view project button */}
-        <Button variant="secondary" style={{ width:160, height:44, padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 8 , color:"#000000",fontFamily:"inter-semi-bold, Helvetica",fontSize:16}} onClick={onView}>
+        <Button variant="secondary" style={{ width: 160, height: 44, padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 8, color: "#000000", fontFamily: "inter-semi-bold, Helvetica", fontSize: 16 }} onClick={onView}>
           <FiEye size={24} /> <span>View Project</span>
         </Button>
       </div>

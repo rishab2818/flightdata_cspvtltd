@@ -1,22 +1,22 @@
 
-
 import React, { useEffect, useMemo, useState } from "react";
 import { FiDownload, FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import { downloadExcel } from "../../lib/excelExport";
 
-import totalRecord from "../../assets/customer.svg"
+import totalRecord from "../../assets/customer.svg";
 import CommonStatCard from "../../components/common/common_card/common_card";
-import avergaeRating from "../../assets/Star.svg"
-import pending_review from "../../assets/SpinnerGap.svg"
-
+import avergaeRating from "../../assets/Star.svg";
+import pending_review from "../../assets/SpinnerGap.svg";
+// 1 import docuemnt actions
+import DocumentActions from "../../components/common/DocumentActions";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
 
-
+/* --------------------- Rating Badge --------------------- */
 function Rating({ value }) {
   return (
     <span style={{ color: "#F59E0B", fontWeight: 700 }}>
@@ -25,12 +25,15 @@ function Rating({ value }) {
   );
 }
 
+/* --------------------- Main Component --------------------- */
 export default function CustomerFeedbacks() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
+  // For editing the document
+  const [editingRecord, setEditingRecord] = useState(null);
 
   const loadRecords = async () => {
     try {
@@ -52,6 +55,7 @@ export default function CustomerFeedbacks() {
 
   const filtered = useMemo(() => {
     return records.filter((row) => {
+      // Corrected filter: division should match filters.type
       const matchesType = filters.type === "all" ? true : row.division === filters.type;
       return matchesType;
     });
@@ -80,10 +84,8 @@ export default function CustomerFeedbacks() {
 
   return (
     /* Card UI */
-
     <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
-
-
+      {/* Stat Cards */}
       <div
         style={{
           marginTop: 18,
@@ -92,15 +94,9 @@ export default function CustomerFeedbacks() {
           gap: 12,
         }}
       >
-
         <CommonStatCard title="Total Feedbacks" value={records.length} icon={totalRecord} bg="#DBEAFE" />
-
-
-        <CommonStatCard title="Average Rating" value={(
-          records.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) /
-          (records.length || 1)
-        ).toFixed(1)} icon={avergaeRating} bg="#DCFCE7" />
-
+        <CommonStatCard title="Average Rating" value={averageRating} icon={avergaeRating} bg="#DCFCE7" />
+        {/* Placeholder for Pending Review (currently just showing total count again) */}
         <CommonStatCard title="Pending Review" value={records.length} icon={pending_review} bg="#FFEDD4" />
       </div>
 
@@ -116,7 +112,7 @@ export default function CustomerFeedbacks() {
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: 12
+          gap: 12,
         }}
       >
         {/* Filter By Division */}
@@ -162,9 +158,6 @@ export default function CustomerFeedbacks() {
       </div>
 
       {/* TABLE SECTION CARD */}
-
-
-
       <div
         style={{
           marginTop: 18,
@@ -227,18 +220,16 @@ export default function CustomerFeedbacks() {
                   textAlign: "left",
                   fontWeight: 400,
                   fontSize: 12,
-                  background: "#EFF7FF"
-
+                  background: "#EFF7FF",
                 }}
               >
-                {["Project Name", "Division", "Feedback", "Ratings", "Feedback Date"].map(
+                {["Project Name", "Division", "Feedback", "Ratings", "Feedback Date", "Action"].map(
                   (col) => (
                     <th
                       key={col}
                       style={{
                         padding: "12px 16px",
                         fontWeight: 600,
-
                         borderBottom: `1px solid ${BORDER}`, // Header separator
                       }}
                     >
@@ -251,21 +242,21 @@ export default function CustomerFeedbacks() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center" }}>
+                  <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
                     Loading...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
+                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
+                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
                     No feedback records found.
                   </td>
                 </tr>
@@ -273,12 +264,10 @@ export default function CustomerFeedbacks() {
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {
-                  // 1. Calculate if this is the last row
                   const isLast = index === filtered.length - 1;
 
                   return (
                     <tr key={row.record_id}>
-                      {/* 2. Apply border logic to every cell */}
                       <td
                         style={{
                           padding: "12px 16px",
@@ -321,6 +310,20 @@ export default function CustomerFeedbacks() {
                       >
                         {formatDate(row.feedback_date)}
                       </td>
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <DocumentActions
+                          doc={{ id: row.record_id, fileName: row.original_name }}
+                          onEdit={() => handleEdit(row)}
+                          onView={() => handleView(row)}
+                          onDownload={() => handleDownload(row)}
+                          onDelete={() => handleDelete(row)}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -330,12 +333,24 @@ export default function CustomerFeedbacks() {
       </div>
 
       {showModal && (
-        <FeedbackModal onClose={() => setShowModal(false)} onCreated={loadRecords} />
+        <FeedbackModal
+          onClose={closeModal}
+          onCreated={loadRecords}
+          editingRecord={editingRecord}
+          onUpdated={(updated) => {
+            setRecords((prev) =>
+              prev.map((r) =>
+                r.record_id === updated.record_id ? updated : r
+              )
+            );
+          }}
+        />
       )}
     </div>
   );
 }
 
+/* --------------------- Input Component --------------------- */
 function Input({ label, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -354,11 +369,12 @@ function Input({ label, ...rest }) {
   );
 }
 
-function FeedbackModal({ onClose, onCreated }) {
+/* --------------------- Modal Component --------------------- */
+function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
   const [form, setForm] = useState({
     project_name: "",
     division: "",
-    feedback_from: "",
+    // feedback_from: "", // Removed as it was commented out in the form, but kept below for consistency
     rating: "",
     feedback_date: "",
     feedback_text: "",
@@ -369,43 +385,83 @@ function FeedbackModal({ onClose, onCreated }) {
 
   const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Populate form when editingRecord changes
+  useEffect(() => {
+    if (!editingRecord) return;
+
+    setForm({
+      project_name: editingRecord.project_name || "",
+      division: editingRecord.division || "",
+      feedback_from: editingRecord.feedback_from || "", // Assuming this is part of the API model
+      rating: editingRecord.rating ?? "",
+      feedback_date: editingRecord.feedback_date ? editingRecord.feedback_date.split('T')[0] : "", // Format date for input type="date"
+      feedback_text: editingRecord.feedback_text || "",
+    });
+    setFile(null); // Clear file input on edit
+    setError("");
+  }, [editingRecord]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
       setSubmitting(true);
-      let storage_key;
-      let original_name;
-      let content_type;
-      let size_bytes;
-      if (file) {
-        const content_hash = await computeSha256(file);
-        const initRes = await recordsApi.initUpload("customer-feedbacks", {
 
+      // Initialize file-related variables with existing record data if editing
+      let storage_key = editingRecord ? editingRecord.storage_key : null;
+      let original_name = editingRecord ? editingRecord.original_name : "";
+      let content_type = editingRecord ? editingRecord.content_type : "";
+      let size_bytes = editingRecord ? editingRecord.size_bytes : null;
+      let content_hash = editingRecord ? editingRecord.content_hash : ""; // Added content_hash for consistency
+
+      // 1. Handle NEW file upload
+      if (file) {
+        content_hash = await computeSha256(file);
+        const initRes = await recordsApi.initUpload("customer-feedbacks", {
           section: "customer-feedbacks",
           filename: file.name,
           content_type: file.type || "application/octet-stream",
           size_bytes: file.size,
           content_hash,
         });
+
         await fetch(initRes.upload_url, { method: "PUT", body: file });
+
+        // Update metadata for the payload
         storage_key = initRes.storage_key;
         original_name = file.name;
         content_type = file.type || "application/octet-stream";
         size_bytes = file.size;
+        // content_hash is already set
       }
 
-      await recordsApi.createFeedback({
+      // 2. Prepare the final payload
+      const payload = {
         ...form,
         rating: form.rating === "" ? undefined : Number(form.rating || 0),
+        // Ensure date is formatted correctly if needed, otherwise rely on API to handle ISO format
         feedback_date: form.feedback_date || undefined,
         storage_key,
         original_name,
         content_type,
         size_bytes,
-      });
+        content_hash,
+      };
+
+      let result;
+
+      // 3. Call the correct API based on editing state
+      if (editingRecord) {
+        // **FIXED LOGIC HERE**
+        result = await recordsApi.updateFeedback(editingRecord.record_id, payload);
+        onUpdated?.(result);
+      } else {
+        result = await recordsApi.createFeedback(payload);
+        onCreated?.(result);
+      }
+
       onClose();
-      if (onCreated) onCreated();
     } catch (err) {
       console.error(err);
       setError("Failed to save feedback.");
@@ -413,6 +469,7 @@ function FeedbackModal({ onClose, onCreated }) {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div
@@ -438,7 +495,7 @@ function FeedbackModal({ onClose, onCreated }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <div>
-            <h3 style={{ margin: 0 }}>Upload Feedback</h3>
+            <h3 style={{ margin: 0 }}>{editingRecord ? "Edit Feedback" : "Upload Feedback"}</h3>
             <p style={{ margin: "6px 0 0", color: "#64748B" }}>
               Capture customer comments, division, and documents.
             </p>
@@ -482,7 +539,7 @@ function FeedbackModal({ onClose, onCreated }) {
           </label>
 
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document</span>
+            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document {editingRecord && !file ? "(Existing file attached)" : ""}</span>
             <div
               style={{
                 border: `1px dashed ${BORDER}`,
@@ -500,6 +557,11 @@ function FeedbackModal({ onClose, onCreated }) {
                 style={{ flex: 1 }}
               />
             </div>
+            {editingRecord?.original_name && !file && (
+              <p style={{ margin: 0, fontSize: 12, color: "#64748B" }}>
+                Current File: **{editingRecord.original_name}**. Upload a new file to replace it.
+              </p>
+            )}
           </label>
 
           {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
@@ -532,7 +594,7 @@ function FeedbackModal({ onClose, onCreated }) {
                 opacity: submitting ? 0.7 : 1,
               }}
             >
-              {submitting ? "Saving..." : "Save"}
+              {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
             </button>
           </div>
         </form>

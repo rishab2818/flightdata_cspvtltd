@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
@@ -6,6 +7,7 @@ import totalRecordsIcon from "../../assets/bule_message.svg";
 import technicalIcon from "../../assets/setting_black.svg";
 import designicon from "../../assets/design_black.svg";
 import FileUploadBox from "../../components/common/FileUploadBox";
+import DocumentActions from "../../components/common/DocumentActions"; // <-- Import DocumentActions
 
 import CommonStatCard from "../../components/common/common_card/common_card";
 
@@ -13,31 +15,17 @@ const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
 
-function StatCard({ title, value }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-      }}
-    >
-      <span style={{ color: "#475569", fontSize: 13 }}>{title}</span>
-      <strong style={{ fontSize: 20 }}>{value}</strong>
-    </div>
-  );
-}
+// StatCard component is replaced by CommonStatCard usage
 
+/* --------------------- Main Component --------------------- */
 export default function TechnicalReports() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all" });
   const [showModal, setShowModal] = useState(false);
+  // State for editing
+  const [editingRecord, setEditingRecord] = useState(null);
 
   const loadRecords = async () => {
     try {
@@ -63,6 +51,57 @@ export default function TechnicalReports() {
     );
   }, [records, filters]);
 
+  /* --------------------- Action Handlers --------------------- */
+
+  const handleView = async (row) => {
+    try {
+      const res = await recordsApi.downloadTechnical(row.record_id);
+      window.open(res.download_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      alert("Unable to open this record.");
+    }
+  };
+
+  const handleDownload = async (row) => {
+    try {
+      const res = await recordsApi.downloadTechnical(row.record_id);
+      const link = document.createElement("a");
+      link.href = res.download_url;
+      link.download = row.original_name || "technical-report";
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const handleDelete = async (row) => {
+    if (!window.confirm("Delete this technical report?")) return;
+    try {
+      await recordsApi.removeTechnical(row.record_id);
+      setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
+    } catch (err) {
+      alert("Delete failed. Please try again.");
+    }
+  };
+
+  const handleEdit = (row) => {
+    setEditingRecord(row);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingRecord(null); // Clear editing state when closing
+  };
+
+  const handleUpdate = (updatedRecord) => {
+    setRecords((prev) =>
+      prev.map((r) => (r.record_id === updatedRecord.record_id ? updatedRecord : r))
+    );
+  };
+
+
   return (
     <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
 
@@ -75,13 +114,9 @@ export default function TechnicalReports() {
           gap: 12,
         }}
       >
-        {/* <StatCard title="Total Records" value={records.length} /> */}
         <CommonStatCard title="Total Records" value={records.length} icon={totalRecordsIcon} bg="#DBEAFE" />
         <CommonStatCard title="Technical" value={records.filter((r) => r.report_type === "Technical").length} icon={technicalIcon} bg="#F3E8FF" />
         <CommonStatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} icon={designicon} bg="#DCFCE7" />
-        {/* <StatCard title="Technical" value={records.filter((r) => r.report_type === "Technical").length} /> */}
-
-        {/* <StatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} /> */}
       </div>
       {/* Filter section  */}
       <div
@@ -120,7 +155,7 @@ export default function TechnicalReports() {
         </label>
         <button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={() => { setEditingRecord(null); setShowModal(true); }} // Set editingRecord to null for new document
           style={{
             padding: "10px 16px",
             background: PRIMARY,
@@ -137,88 +172,7 @@ export default function TechnicalReports() {
           <FiPlus /> Upload Document
         </button>
       </div>
-      {/* Table Section  */}
-      {/* <div
-        style={{
-          marginTop: 18,
-          background: "#fff",
-          border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 20,
-        }}
-      >
 
-
-        <div style={{ marginTop: 10, overflowX: "auto" }}>
-          <div
-            style={{
-              marginBottom: 10,
-              marginLeft: 5,
-              color: "#0A0A0A",
-              fontSize: 16,
-              fontWeight: "600",
-            }}
-          >
-            Technical Reports
-          </div>
-          <table
-            style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}
-          >
-            <thead>
-              <tr
-                style={{
-                  color: "#64748B",
-                  borderBottom: `1px solid ${BORDER}`,
-                  textAlign: "left",
-                }}
-              >
-                {["Report Name", "Description", "Type", "Created Date", "Ratings"].map(
-                  (col) => (
-                    <th key={col} style={{ padding: "12px 8px", fontWeight: 600 }}>
-                      {col}
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center" }}>
-                    Loading...
-                  </td>
-                </tr>
-              )}
-              {!loading && error && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {!loading && !error && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
-                    No reports found.
-                  </td>
-                </tr>
-              )}
-              {!loading && !error &&
-                filtered.map((row) => (
-                  <tr key={row.record_id} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>{row.name}</td>
-                    <td style={{ padding: "12px 8px", color: "#475569" }}>{row.description}</td>
-                    <td style={{ padding: "12px 8px" }}>{row.report_type}</td>
-                    <td style={{ padding: "12px 8px" }}>
-                      {formatDate(row.created_date)}
-                    </td>
-                    <td style={{ padding: "12px 8px" }}>{Number(row.rating || 0).toFixed(1)}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div> */}
       <div
         style={{
           marginTop: 18,
@@ -243,11 +197,11 @@ export default function TechnicalReports() {
           <table
             style={{
               width: "100%",
-              borderCollapse: "separate", // Required for rounded corners
-              borderSpacing: 0,           // Removes gaps between cells
-              border: `1px solid ${BORDER}`, // The outer border
-              borderRadius: 8,            // The rounded corners
-              overflow: "hidden",         // Clips content within corners
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 8,
+              overflow: "hidden",
               minWidth: 900,
             }}
           >
@@ -263,7 +217,7 @@ export default function TechnicalReports() {
 
                 }}
               >
-                {["Report Name", "Description", "Type", "Created Date", "Ratings"].map(
+                {["Report Name", "Description", "Type", "Created Date", "Ratings", "Action"].map( // <-- ADDED 'Action'
                   (col) => (
                     <th
                       key={col}
@@ -271,7 +225,7 @@ export default function TechnicalReports() {
                         padding: "12px 16px",
                         fontWeight: 600,
 
-                        borderBottom: `1px solid ${BORDER}`, // Bottom border for header
+                        borderBottom: `1px solid ${BORDER}`,
                       }}
                     >
                       {col}
@@ -283,21 +237,21 @@ export default function TechnicalReports() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center" }}>
+                  <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
                     Loading...
                   </td>
                 </tr>
               )}
               {!loading && error && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
+                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
                     {error}
                   </td>
                 </tr>
               )}
               {!loading && !error && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
+                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
                     No reports found.
                   </td>
                 </tr>
@@ -305,12 +259,10 @@ export default function TechnicalReports() {
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {
-                  // 1. Check if this is the last row
                   const isLast = index === filtered.length - 1;
 
                   return (
                     <tr key={row.record_id}>
-                      {/* 2. Apply border logic to cells instead of row */}
                       <td
                         style={{
                           padding: "12px 16px",
@@ -353,6 +305,21 @@ export default function TechnicalReports() {
                       >
                         {Number(row.rating || 0).toFixed(1)}
                       </td>
+                      {/* ADDED Action Cell */}
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <DocumentActions
+                          doc={{ id: row.record_id, fileName: row.original_name }}
+                          onEdit={() => handleEdit(row)}
+                          onView={() => handleView(row)}
+                          onDownload={() => handleDownload(row)}
+                          onDelete={() => handleDelete(row)}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -361,11 +328,19 @@ export default function TechnicalReports() {
         </div>
       </div>
 
-      {showModal && <ReportModal onClose={() => setShowModal(false)} onCreated={loadRecords} />}
+      {showModal && (
+        <ReportModal
+          onClose={closeModal}
+          onCreated={loadRecords}
+          editingRecord={editingRecord} // Pass the editing record
+          onUpdated={handleUpdate} // Handle successful update
+        />
+      )}
     </div>
   );
 }
 
+/* --------------------- Input Component --------------------- */
 function Input({ label, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -384,7 +359,8 @@ function Input({ label, ...rest }) {
   );
 }
 
-function ReportModal({ onClose, onCreated }) {
+/* --------------------- Modal Component (Updated for Edit) --------------------- */
+function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -398,17 +374,39 @@ function ReportModal({ onClose, onCreated }) {
 
   const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Populate form fields if editingRecord is provided
+  useEffect(() => {
+    if (editingRecord) {
+      setForm({
+        name: editingRecord.name || "",
+        description: editingRecord.description || "",
+        report_type: editingRecord.report_type || "Technical",
+        // Format date for input type="date"
+        created_date: editingRecord.created_date ? editingRecord.created_date.split('T')[0] : "",
+        rating: editingRecord.rating ?? "",
+      });
+      setFile(null); // Clear file input when editing
+      setError("");
+    }
+  }, [editingRecord]);
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     try {
       setSubmitting(true);
-      let storage_key;
-      let original_name;
-      let content_type;
-      let size_bytes;
+
+      // Initialize file-related variables with existing data if editing, or null/empty if creating
+      let storage_key = editingRecord ? editingRecord.storage_key : null;
+      let original_name = editingRecord ? editingRecord.original_name : "";
+      let content_type = editingRecord ? editingRecord.content_type : "";
+      let size_bytes = editingRecord ? editingRecord.size_bytes : null;
+      let content_hash = editingRecord ? editingRecord.content_hash : "";
+
+      // 1. Handle NEW file upload
       if (file) {
-        const content_hash = await computeSha256(file);
+        content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("technical-reports", {
           section: "technical-reports",
           filename: file.name,
@@ -417,13 +415,15 @@ function ReportModal({ onClose, onCreated }) {
           content_hash,
         });
         await fetch(initRes.upload_url, { method: "PUT", body: file });
+
         storage_key = initRes.storage_key;
         original_name = file.name;
         content_type = file.type || "application/octet-stream";
         size_bytes = file.size;
       }
 
-      await recordsApi.createTechnical({
+      // 2. Prepare Payload
+      const payload = {
         ...form,
         rating: form.rating === "" ? undefined : Number(form.rating || 0),
         created_date: form.created_date || undefined,
@@ -431,9 +431,21 @@ function ReportModal({ onClose, onCreated }) {
         original_name,
         content_type,
         size_bytes,
-      });
+        content_hash,
+      };
+
+      let result;
+
+      // 3. Call Create or Update API
+      if (editingRecord) {
+        result = await recordsApi.updateTechnical(editingRecord.record_id, payload);
+        onUpdated?.(result); // Notify parent of update
+      } else {
+        result = await recordsApi.createTechnical(payload);
+        onCreated?.(result); // Notify parent of creation
+      }
+
       onClose();
-      if (onCreated) onCreated();
     } catch (err) {
       console.error(err);
       setError("Failed to save report.");
@@ -465,9 +477,9 @@ function ReportModal({ onClose, onCreated }) {
 
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between",height:50, alignItems:"center",flexShrink:0, marginTop:0}}>
+        <div style={{ display: "flex", justifyContent: "space-between", height: 50, alignItems: "center", flexShrink: 0, marginTop: 0 }}>
           <div>
-            <h3 style={{ margin: 0 }}>Upload Report</h3>
+            <h3 style={{ margin: 0 }}>{editingRecord ? "Edit Report" : "Upload Report"}</h3>
             <p style={{ margin: "6px 0 0", color: "#64748B" }}>
               Add report metadata and attach your document.
             </p>
@@ -482,20 +494,21 @@ function ReportModal({ onClose, onCreated }) {
               cursor: "pointer",
             }}
           >
-           X
+            X
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "70vh"  }}>
-         <FileUploadBox
-           label="Upload Document"
-           description="Attach training related file here"
-           supported="PDF/Word"
-           file={file}
-           onFileSelected={(f) => setFile(f)}
-         />
+        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "70vh" }}>
+          <FileUploadBox
+            label="Upload Document"
+            description="Attach report document here"
+            supported="PDF/Word"
+            file={file}
+            onFileSelected={(f) => setFile(f)}
+            currentFileName={editingRecord && !file ? editingRecord.original_name : null}
+          />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-              <Input label="Report Name" value={form.name} onChange={(e) => onChange("name", e.target.value)} />
+            <Input label="Report Name" value={form.name} onChange={(e) => onChange("name", e.target.value)} />
 
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ color: "#475569", fontSize: 13 }}>Type</span>
@@ -534,7 +547,7 @@ function ReportModal({ onClose, onCreated }) {
             />
           </label>
 
-         
+
 
           {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
 
@@ -566,7 +579,7 @@ function ReportModal({ onClose, onCreated }) {
                 opacity: submitting ? 0.7 : 1,
               }}
             >
-              {submitting ? "Saving..." : "Save"}
+              {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
             </button>
           </div>
         </form>
