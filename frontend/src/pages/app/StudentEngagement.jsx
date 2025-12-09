@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
-import { downloadExcel } from "../../lib/excelExport";
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from "react-icons/fi";
 
 import Users from "../../assets/Users.svg";
@@ -110,7 +109,6 @@ export default function StudentEngagement() {
     start_date: "",
     end_date: "",
     status: "Ongoing",
-    approval_status: "waiting",
     notes: "",
     mentor: "",
   };
@@ -243,28 +241,6 @@ export default function StudentEngagement() {
       { title: "Completed", value: completed, icon: Cap, bgColor: "#F3E8FF" },
     ];
   }, [records]);
-
-  const handleExport = () => {
-    const columns = [
-      { header: "Name", key: "student" },
-      { header: "College Name", key: "college_name" },
-      { header: "Project Name", key: "project_name" },
-      { header: "Type", key: "program_type" },
-      { header: "Duration", accessor: (row) => (row.duration_months ? `${row.duration_months} Months` : "") },
-      { header: "Start Date", accessor: (row) => (row.start_date ? new Date(row.start_date).toLocaleDateString("en-GB") : "") },
-      { header: "End Date", accessor: (row) => (row.end_date ? new Date(row.end_date).toLocaleDateString("en-GB") : "") },
-      { header: "Guide", key: "mentor" },
-      { header: "Status", key: "status" },
-      { header: "Approval", accessor: (row) => (row.approval_status === "approved" ? "Approved" : "Waiting") },
-    ];
-
-    downloadExcel({
-      rows: filtered,
-      columns,
-      fileName: "student-engagement",
-      sheetName: "Student Programs",
-    });
-  };
 
   const resetFormState = () => {
     setForm(initialForm);
@@ -457,16 +433,7 @@ export default function StudentEngagement() {
       {/* Filters */}
       <section className={styles.filterBar}>
         <div className={styles.filterGroup}>
-          <FilterSelect
-            label="Filter by Approval"
-            value={approvalFilter}
-            onChange={setApprovalFilter}
-            options={[
-              { value: "all", label: "All Approvals" },
-              { value: "approved", label: "Approved" },
-              { value: "waiting", label: "Waiting" },
-            ]}
-          />
+         
 
           <FilterSelect
             label="Filter by Type"
@@ -499,12 +466,7 @@ export default function StudentEngagement() {
 
       {/* Table */}
       <div className={styles.TableWrapper}>
-        <div className={styles.tableHeader}>
-          <h3>Student Programs</h3>
-          <button type="button" className={styles.exportBtn} onClick={handleExport}>
-            <FiDownload size={16} /> Download
-          </button>
-        </div>
+        <h3>Student Programs</h3>
 
         {(() => {
           const columns = [
@@ -517,7 +479,6 @@ export default function StudentEngagement() {
             "End Date",
             "Guide",
             "Status",
-            "Approval",
             "Actions",
           ];
 
@@ -576,7 +537,7 @@ export default function StudentEngagement() {
                       <td>
                         <Badge value={row.status} />
                       </td>
-                      <td>{row.approval_status === "approved" ? "Approved" : "Waiting"}</td>
+                      
                       <td>
                         <div className="doc-actions">
                           <button
@@ -683,32 +644,29 @@ export default function StudentEngagement() {
               </select>
             </label>
 
-
-
-            <label className={styles.inputLabel}>
-              <div className={styles.daterow}>
-                <div className={styles.field}>
-                  <span>Start Date</span>
-                  <input
-                    type="date"
-                    value={form.start_date}
-                    max={form.end_date || undefined}
-                    onChange={(e) => onChange("start_date", e.target.value)}
-                  />
-                </div>
-
-                <div className={styles.field}>
-                  <span>End Date</span>
-                  <input
-                    type="date"
-                    value={form.end_date}
-                    min={form.start_date || undefined}
-                    onChange={(e) => onChange("end_date", e.target.value)}
-                  />
-                </div>
+           <label className={styles.inputLabel}>
+            <div className={styles.daterow}>
+               <div className={styles.field}>
+              <span>Start Date</span>
+              <input
+                type="date"
+                value={form.start_date}
+                max={form.end_date || undefined}
+                onChange={(e) => onChange("start_date", e.target.value)}
+              />
               </div>
-              {dateError && <div className={styles.errorMsg}>{dateError}</div>}
-            </label>
+
+              <div className={styles.field}>
+              <span>End Date</span>
+              <input
+                type="date"
+                value={form.end_date}
+                min={form.start_date || undefined}
+                onChange={(e) => onChange("end_date", e.target.value)}
+              />
+              </div>
+            </div>
+
             <label className={styles.inputLabel}>
               <span>Duration (months)</span>
               <input
@@ -719,6 +677,9 @@ export default function StudentEngagement() {
                 placeholder="Calculated from dates"
               />
             </label>
+            {dateError && <div className={styles.errorMsg}>{dateError}</div>}
+           </label>
+           
             <label className={styles.inputLabel}>
               <span>Guide</span>
               <input placeholder="Enter Guide Name"
@@ -739,16 +700,7 @@ export default function StudentEngagement() {
               </select>
             </label>
 
-            <label className={styles.inputLabel}>
-              <span>Approval Status</span>
-              <select
-                value={form.approval_status}
-                onChange={(e) => onChange("approval_status", e.target.value)}
-              >
-                <option value="approved">Approved</option>
-                <option value="waiting">Waiting</option>
-              </select>
-            </label>
+           
 
             <label className={styles.textAreaLabel}>
               <span>Notes</span>

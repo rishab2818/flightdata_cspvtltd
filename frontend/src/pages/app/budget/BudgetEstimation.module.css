@@ -2,6 +2,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+  max-width: 1440px;
+   margin: 0 auto;
 }
 
 .heroCard {
@@ -34,87 +37,112 @@
   font-size: 14px;
 }
 
+
+
+/* --- Filter Bar Container --- */
 .filterBar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
   align-items: center;
-  background: #fff;
-  padding: 12px 16px;
-  border-radius: 12px;
+  justify-content: space-between;
+  height: 110px;
+  gap: 20px;
+  padding: 14px 18px;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
+/* --- Each Filter Group --- */
 .filterGroup {
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.searchBox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 8px 12px;
-  min-width: 240px;
-}
-
-.searchIcon {
-  color: #94a3b8;
-}
-
-.searchInput {
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 14px;
-  color: #0f172a;
-  width: 100%;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .filterLabel {
   font-size: 14px;
-  color: #475569;
-  min-width: 88px;
+  color: #0a0a0a;
+  font-family: "Inter-medium", Helvetica;
+  font-weight: 500;
+  
 }
 
+/* --- Select Dropdown --- */
 .select {
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 10px 12px;
-  min-width: 180px;
-  background: #f8fafc;
-  font-size: 14px;
-  color: #0f172a;
+  width: 250px;
+  padding: 0px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-family: "Inter-regular", Helvetica;
+  font-size: 14PX;
+  font-weight: 400;
+  background: #F3F3F5;
+  height: 36px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
-.uploadButton {
-  margin-left: auto;
-  display: inline-flex;
+.select:focus {
+  border-color: #3182ce;
+}
+
+/* --- Search Box --- */
+.searchBox {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  background: #0ea5e9;
-  color: #fff;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  font-size: 16px;
+  color: #718096;
+}
+
+.searchInput {
+  padding: 8px 12px 8px 35px;
+  width: 260px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+  border-color: #3182ce;
+}
+
+/* --- Upload Button --- */
+.uploadButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;                 /* spacing between icon and text */
+  background: #2563eb;      /* your color */
+  color: white;
   border: none;
-  border-radius: 10px;
   padding: 10px 16px;
-  font-weight: 600;
+  border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+  color: #fff;
 }
 
 .uploadButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(14, 165, 233, 0.28);
-}
-
-.uploadButton:active {
-  transform: translateY(0);
+  background: #2c6fb6;
 }
 
 .sectionCard {
@@ -141,52 +169,63 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0A0A0A;
+  font-family: "inter-semi-bold", Helvetica;
 }
 
 .dateBadge {
-  background: #f8fafc;
+  background: #F3F3F5;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 14px;
   color: #0f172a;
+  width: 110px;
+  height: 36px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
 .exportButton {
-  margin-left: auto;
-  display: inline-flex;
+  background: #fff;
+  border: none;
+  padding: 6px;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  border: 1px solid #cbd5e1;
-  background: #0ea5e9;
-  color: #fff;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 700;
+  justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.22);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  color: #000000;
 }
 
-.exportButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.25);
-}
-
-.exportButton:active {
-  transform: translateY(0);
+.icons {
+  width: 24px;
+  height: 24px;
+  color: #000000;
 }
 
 .tableWrapper {
-  overflow-x: auto;
+  background: white;
+  padding: 0px 24px 24px 24px;
+  width: 100%;
+  overflow-x: auto;     /* enables horizontal scroll */
+  overflow-y: hidden;
 }
 
 .table {
-  width: 1600px;
-  border-collapse: collapse;
+  display: flex;
+  flex-direction: column;
+  width: 1440px;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 1px solid #00000026;
+  border-radius: 8px;
+  border-color: #0000001A;
 }
 
 .table th,
@@ -196,14 +235,19 @@
   text-align: left;
   color: #0f172a;
   font-size: 14px;
+  font-family: "Inter-regular", Helvetica;
+  font-weight: 400;
 }
 
 .table th {
-  background: #f8fafc;
-  font-weight: 700;
-  position: sticky;
+  background: #EFF7FF;
+  font-weight: 400;
+  color:#000000;
+  position: relative;
   top: 0;
-  z-index: 1;
+  padding: 12px;
+  font-size: 14px;
+  font-family: "Inter-regular", Helvetica;
 }
 
 .table tr:hover td {
@@ -276,9 +320,12 @@
 }
 
 .emptyState {
-  text-align: center;
-  padding: 18px;
-  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  padding: 18px 4px;
+  justify-content: center;
+  font-size: 13px;
+  color: #000000cc;
 }
 
 .modalOverlay {

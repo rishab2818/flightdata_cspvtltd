@@ -1,6 +1,6 @@
 .container {
   width: 100%;
-  max-width: 1011px;
+  max-width: 1440px;
 }
 
 .header {
@@ -31,39 +31,43 @@
 
 .toolbar {
   margin-top: 16px;
+  width: 100%;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
+
 .searchBox {
   flex: 1;
-  min-width: 200px;
+  max-width: 3550px;
   display: flex;
   align-items: center;
   gap: 8px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 0px;
+  padding: 12px 24px;
 }
 
 .searchInput {
   border: none;
   outline: none;
+  min-width: 350px;
   background: transparent;
   flex: 1;
   font-size: 14px;
   color: #0f172a;
+ 
 }
 
 .select {
-  min-width: 170px;
+  min-width: 3px;
   height: 42px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -74,14 +78,16 @@
 }
 
 .uploadBtn {
+  width: 100%;
+  max-width: 200px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: linear-gradient(92deg, #2b9ad9 0%, #3b82f6 100%);
+  background: #2563eb;
   color: #ffffff;
   border: none;
-  border-radius: 10px;
+  border-radius: 3px;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.2s ease;
@@ -99,7 +105,7 @@
   margin-top: 18px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 0px;
   padding: 12px 16px 16px;
 }
 
@@ -119,7 +125,7 @@
   font-size: 12px;
   font-weight: 600;
   color: #0f172a;
-  background: #f8fafc;
+  background: #EFF7FF;
   border-bottom: 1px solid #e2e8f0;
 }
 

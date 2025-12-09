@@ -1,8 +1,11 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FiDownload, FiEdit2, FiEye, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
+
 import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUploadModal";
 import { documentsApi } from "../../api/documentsApi";
 import styles from "./DigitalLibrary.module.css";
+import uploadbutton from "../../assets/uploadbutton.svg";
+
 
 const typeLabelFromName = (name = "", contentType = "") => {
   const ext = name.split(".").pop()?.toLowerCase();
@@ -176,12 +179,7 @@ export default function DigitalLibrary() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          <h2 className={styles.title}>Digital Library</h2>
-        </div>
-        <p className={styles.subtitle}>Manage and access your digital documents</p>
-      </header>
+     
 
       <div className={styles.toolbar}>
         <div className={styles.searchBox}>
@@ -212,21 +210,27 @@ export default function DigitalLibrary() {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
         >
-          <option value="newest">Newest first</option>
+          <option value="Newest"> Newest</option>
           <option value="oldest">Oldest first</option>
         </select>
 
         <button className={styles.uploadBtn} onClick={() => setShowUpload(true)}>
-          <FiPlus /> Upload Files
-        </button>
+  <img src={uploadbutton} alt="upload" className="btnIcon" />
+  Upload Files
+</button>
+
+
+       
       </div>
 
       <div className={styles.card}>
         <div className={styles.tableWrapper}>
+          <h2>My Files</h2>
+         <div className={styles.tableWrapper}></div>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Name</th>
+                <th>File Name</th>
                 <th>Type</th>
                 <th>Size</th>
                 <th>Created Date</th>
