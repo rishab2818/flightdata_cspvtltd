@@ -1,9 +1,10 @@
 
 
 import React, { useEffect, useMemo, useState } from "react";
-import { FiPlus, FiUploadCloud } from "react-icons/fi";
+import { FiDownload, FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
+import { downloadExcel } from "../../lib/excelExport";
 
 import totalRecord from "../../assets/customer.svg"
 import CommonStatCard from "../../components/common/common_card/common_card";
@@ -55,6 +56,27 @@ export default function CustomerFeedbacks() {
       return matchesType;
     });
   }, [records, filters]);
+
+  const handleExport = () => {
+    const columns = [
+      { header: "Project Name", key: "project_name" },
+      { header: "Division", key: "division" },
+      { header: "Feedback", key: "feedback_text" },
+      { header: "Ratings", key: "rating" },
+      {
+        header: "Feedback Date",
+        accessor: (row) => (row.feedback_date ? new Date(row.feedback_date).toLocaleDateString("en-GB") : ""),
+      },
+      { header: "Attachment", accessor: (row) => row.original_name || "" },
+    ];
+
+    downloadExcel({
+      rows: filtered,
+      columns,
+      fileName: "customer-feedbacks",
+      sheetName: "Feedbacks",
+    });
+  };
 
   return (
     /* Card UI */
@@ -160,9 +182,31 @@ export default function CustomerFeedbacks() {
               color: "#0A0A0A",
               fontSize: 16,
               fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
             }}
           >
-            Feedbacks Records
+            <span>Feedbacks Records</span>
+            <button
+              type="button"
+              onClick={handleExport}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 14px",
+                borderRadius: 10,
+                border: `1px solid ${BORDER}`,
+                background: PRIMARY,
+                color: "#fff",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <FiDownload /> Download
+            </button>
           </div>
           <table
             style={{

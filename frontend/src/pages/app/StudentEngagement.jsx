@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
+import { downloadExcel } from "../../lib/excelExport";
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from "react-icons/fi";
 
 import Users from "../../assets/Users.svg";
@@ -206,6 +207,28 @@ export default function StudentEngagement() {
     ];
   }, [records]);
 
+  const handleExport = () => {
+    const columns = [
+      { header: "Name", key: "student" },
+      { header: "College Name", key: "college_name" },
+      { header: "Project Name", key: "project_name" },
+      { header: "Type", key: "program_type" },
+      { header: "Duration", accessor: (row) => (row.duration_months ? `${row.duration_months} Months` : "") },
+      { header: "Start Date", accessor: (row) => (row.start_date ? new Date(row.start_date).toLocaleDateString("en-GB") : "") },
+      { header: "End Date", accessor: (row) => (row.end_date ? new Date(row.end_date).toLocaleDateString("en-GB") : "") },
+      { header: "Guide", key: "mentor" },
+      { header: "Status", key: "status" },
+      { header: "Approval", accessor: (row) => (row.approval_status === "approved" ? "Approved" : "Waiting") },
+    ];
+
+    downloadExcel({
+      rows: filtered,
+      columns,
+      fileName: "student-engagement",
+      sheetName: "Student Programs",
+    });
+  };
+
   const resetFormState = () => {
     setForm(initialForm);
     setFile(null);
@@ -410,12 +433,17 @@ export default function StudentEngagement() {
         </button>
       </section>
 
-      {/* Table */}
-      <div className={styles.TableWrapper}>
-        <h3>Student Programs</h3>
+        {/* Table */}
+        <div className={styles.TableWrapper}>
+          <div className={styles.tableHeader}>
+            <h3>Student Programs</h3>
+            <button type="button" className={styles.exportBtn} onClick={handleExport}>
+              <FiDownload size={16} /> Download
+            </button>
+          </div>
 
-        {(() => {
-          const columns = [
+          {(() => {
+            const columns = [
             "Name",
             "College Name",
             "Project Name",
