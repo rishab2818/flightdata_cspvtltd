@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
+import "./DigitalLibraryUploadModal.css";     
 import { documentsApi } from "../../api/documentsApi";
-import styles from "../../pages/app/DigitalLibrary.module.css";
 
 const toIsoDate = (d) => d.toISOString().slice(0, 10);
 
@@ -86,7 +86,6 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
       resetForm();
       onClose?.();
     } catch (err) {
-      console.error("Upload failed", err);
       setError(err?.response?.data?.detail || "Upload failed. Please try again.");
     } finally {
       setSubmitting(false);
@@ -94,77 +93,63 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
   };
 
   return (
-    <div className={styles.modalBackdrop}>
-      <div className={styles.modalCard}>
-        <h3 className={styles.modalTitle}>Upload file</h3>
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Select file</label>
-            <input
-              type="file"
-              className={styles.input}
+    <>
+      <div className="upload-backdrop">
+        <div className="upload-card">
+          <div className="upload-title">Upload File</div>
+          
+
+          <div className="upload-box">
+            <div className="upload-add">
+
+            </div>
+            <div className="upload-text">
+              <h3>Upload Data files</h3>
+              <p>Drag & drop your PDF/Word files here, or click to browse</p>
+            </div>
+
+            <label className="upload-browse">
+              + Browse
+              <input type="file" style={{ display: "none" }}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
-              disabled={submitting}
-            />
+              />
+            </label>
+
+            <div className="upload-support">
+              Supported formats: PDF/word ( Max 10 MB per file)
+            </div>
           </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Document name</label>
-            <input
-              type="text"
-              className={styles.input}
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-              placeholder="Enter a label"
-              disabled={submitting}
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Date</label>
-            <input
-              type="date"
-              className={styles.input}
-              value={docDate}
-              onChange={(e) => setDocDate(e.target.value)}
-              disabled={submitting}
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Notes (optional)</label>
+          <div className="upload-field">
+            <label>File Name</label>
             <textarea
-              className={styles.textarea}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add a short description"
-              disabled={submitting}
+              placeholder="Enter Name"
             />
-            <span className={styles.helperText}>
-              Notes are local only and are not stored on the server.
-            </span>
+            
+            
           </div>
 
-          {error && <div className={styles.error}>{error}</div>}
+          <div className="upload-field">
+            <label>Description</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Enter report description"
+            />
+          </div>
 
-          <div className={styles.modalActions}>
-            <button
-              type="button"
-              className={styles.secondaryBtn}
-              onClick={() => {
-                resetForm();
-                onClose?.();
-              }}
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button type="submit" className={styles.primaryBtn} disabled={submitting}>
+          {error && <div className="upload-error">{error}</div>}
+
+          <div className="upload-actions">
+            <button className="upload-cancel" onClick={onClose}>Cancel</button>
+            <button className="upload-submit" onClick={handleSubmit}>
               {submitting ? "Uploading..." : "Upload"}
             </button>
           </div>
-        </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -60,7 +60,11 @@ export const PAGE_META = {
   "/app/setting": { title: "Settings", subtitle: "" },
   "/admin": { title: "Dashboard", subtitle: "Admin" },
   "/admin/users": { title: "User Management", subtitle: "" },
-  "/admin/settings": { title: "Settings", subtitle: "" },
+  
+  "/app/settings": { 
+    title: "Settings jjkn", 
+    subtitle: "In this section, you can manage your account settings", 
+  },
 };
 
 export const DEFAULT_PAGE_META = { title: "Dashboard", subtitle: "" };

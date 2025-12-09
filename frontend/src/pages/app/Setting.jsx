@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { usersApi } from "../../api/usersApi";
 import styles from "./Setting.module.css";
+import passwordImage from "../../assets/passwordsecuredimage.png";
 
 export default function Setting() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -17,11 +18,6 @@ export default function Setting() {
       setIsError(true);
       return;
     }
-    if (!currentPassword || !newPassword) {
-      setMessage("Please fill in all required fields.");
-      setIsError(true);
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -30,14 +26,16 @@ export default function Setting() {
         current_password: currentPassword,
         new_password: newPassword,
       });
-      setIsError(false);
+
       setMessage("Password updated successfully.");
+      setIsError(false);
+
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err) {
+    } catch {
       setIsError(true);
-      setMessage(err?.response?.data?.detail || "Unable to update password.");
+      setMessage("Unable to update password.");
     } finally {
       setSubmitting(false);
     }
@@ -45,65 +43,71 @@ export default function Setting() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Settings</h2>
-
+      
+      {/* MAIN CARD */}
       <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h3 className={styles.cardTitle}>Change password</h3>
-          <p className={styles.cardSubtitle}>
-            Update your password regularly to keep your account secure.
-          </p>
-        </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Current password</label>
+        {/* RESET PASSWORD */}
+        <div className={styles.section}>
+          <h3 className={styles.cardTitle}>Reset password</h3>
+
+          <div className={styles.resetContainer}>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <label>Current Password</label>
               <input
                 type="password"
-                className={styles.input}
+                placeholder="**********"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                required
               />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>New password</label>
+
+              <label>New Password</label>
               <input
                 type="password"
-                className={styles.input}
+                placeholder="**********"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-                required
               />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Confirm new password</label>
+              <small>Use at least one special character - @, #, etc.</small>
+
+              <label>Re-Enter New Password</label>
               <input
                 type="password"
-                className={styles.input}
+                placeholder="**********"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                required
               />
+
+              <button type="submit" disabled={submitting}>
+                {submitting ? "Updating..." : "Save Password"}
+              </button>
+            </form>
+
+            <div className={styles.imgContainer}>
+              <img src={passwordImage} alt="Password" />
             </div>
           </div>
+        </div>
 
-          {message && (
-            <div
-              className={`${styles.message} ${isError ? styles.error : styles.success}`}
-            >
-              {message}
-            </div>
-          )}
+        {/* ABOUT TOOL */}
+        <div className={styles.section}>
+          <h3>About Data Visualisation Tool</h3>
+          <p>
+            Our data visualization tool transforms complex datasets 
+            into clear, actionable insights. Explore trends, identify outliers, and make data-driven decisions with ease. 
+            Interactive charts and graphs bring your data to life, empowering you to communicate findings effectively and drive strategic growth.
+             Unlock the power of your data with our intuitive and comprehensive visualization solution. </p>
+        </div>
+        {/* Version  */}
+        <div className={styles.section}>
+          <h3>Version 2025.0</h3>
+          <p>
+            Our data visualization tool transforms complex datasets 
+            into clear, actionable insights. Explore trends, identify outliers, and make data-driven decisions with ease. 
+            Interactive charts and graphs bring your data to life, empowering you to communicate findings effectively and drive strategic growth.
+             Unlock the power of your data with our intuitive and comprehensive visualization solution. </p>
+         </div>
 
-          <button type="submit" className={styles.submitBtn} disabled={submitting}>
-            {submitting ? "Updating..." : "Update password"}
-          </button>
-        </form>
       </div>
     </div>
   );
