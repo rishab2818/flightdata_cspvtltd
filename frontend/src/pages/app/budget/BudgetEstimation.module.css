@@ -126,7 +126,7 @@
   display: flex;
   align-items: center;
   gap: 8px;                 /* spacing between icon and text */
-  background: #2563eb;      /* your color */
+  background: #1976D2;      /* your color */
   color: white;
   border: none;
   padding: 10px 16px;
@@ -216,10 +216,12 @@
 }
 
 .table {
+  table-layout: auto;    /* Allows flexible column width */
+  width: 100%;  
   display: flex;
   flex-direction: column;
   width: 1440px;
-  max-width: 100%;
+  max-width: 150%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
@@ -237,6 +239,9 @@
   font-size: 14px;
   font-family: "Inter-regular", Helvetica;
   font-weight: 400;
+   white-space: normal;   /* Allows wrapping */
+  text-align: center;
+  min-width: 150px;      /* Spread columns */
 }
 
 .table th {
@@ -245,17 +250,24 @@
   color:#000000;
   position: relative;
   top: 0;
-  padding: 12px;
   font-size: 14px;
   font-family: "Inter-regular", Helvetica;
+  padding: 12px 10px;
+  white-space: normal;   /* Allows wrapping */
+  text-align: center;
+  min-width: 150px;      /* Spread columns */
 }
+
 
 .table tr:hover td {
   background: #f8fbff;
 }
 
 .table td:last-child {
-  white-space: nowrap;
+  white-space: normal;
+   text-align: center;
+  min-width: 150px;      /* Spread columns */
+
 }
 
 .chip {
@@ -405,18 +417,21 @@
 }
 
 .modalLabel {
-  font-size: 13px;
-  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "inter-medium", Helvetica;
+  color:#0A0A0A;
 }
 
 .modalInput,
 .modalTextarea {
-  border: 1px solid #cbd5e1;
+  /* border: 1px solid #cbd5e1; */
   border-radius: 10px;
   padding: 10px 12px;
-  background: #f8fafc;
+  background: #F3F3F5;
   font-size: 14px;
   color: #0f172a;
+  border: none;
 }
 
 .modalTextarea {
@@ -451,10 +466,10 @@
 }
 
 .primaryButton {
-  background: #0ea5e9;
+  background: #1976D2;
   color: #fff;
-  border-color: #0ea5e9;
-  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.25);
+  border-color: #1976D2;
+
 }
 
 .modalTopControls {

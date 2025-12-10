@@ -10,6 +10,7 @@ import settingsIcon from "../assets/GearFine.svg";
 import usersIcon from "../assets/UsersThree.svg";
 import digitalLibIcon from "../assets/digital.svg";
 import calculatorIcon from "../assets/Calculator.svg";
+import Currency from "../assets/Currency.svg";
 
 export const ROLE_MENUS = {
   ADMIN: [
@@ -22,7 +23,7 @@ export const ROLE_MENUS = {
     { path: "/app/minutes", label: "Minutes of meeting", icon: minutesIcon },
     { path: "/app/student-engagement", label: "Student Engagement", icon: studentIcon },
     { path: "/app/inventory-records", label: "Procurement Records", icon: inventoryIcon },
-    { path: "/app/budget-estimation", label: "Budget Estimation", icon: calculatorIcon },
+    { path: "/app/budget-estimation", label: "Budget Estimation", icon: Currency },
     { path: "/app/divisional-records", label: "Divisional Records", icon: divisionalIcon },
     { path: "/app/customer-feedbacks", label: "Customer Feedbacks", icon: customerIcon },
     { path: "/app/training-records", label: "Training Records", icon: trainingIcon },
