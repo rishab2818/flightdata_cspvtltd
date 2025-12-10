@@ -614,6 +614,7 @@ import avergaeRating from "../../assets/Star.svg";
 import pending_review from "../../assets/SpinnerGap.svg";
 // 1 import docuemnt actions
 import DocumentActions from "../../components/common/DocumentActions";
+import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
@@ -719,7 +720,7 @@ export default function CustomerFeedbacks() {
 
   return (
     /* Card UI */
-    <div style={{ width: "100%", maxWidth: 1240, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
       {/* Stat Cards */}
       <div
         style={{
@@ -752,17 +753,30 @@ export default function CustomerFeedbacks() {
       >
         {/* Filter By Division */}
         <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ color: "#475569", fontSize: 13 }}>Filter by Division</span>
+          <span style={{ color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Division</span>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            style={{
-              minWidth: 200,
-              height: 38,
-              borderRadius: 8,
-              border: `1px solid ${BORDER}`,
-              padding: "0 12px",
-            }}
+              style={{
+    minWidth: 270,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#F3F3F5",
+    padding: "0 12px",
+    paddingRight: 32, // space for arrow
+    color: "#374151",
+    fontSize: 14,
+    lineHeight: "36px",
+    appearance: "none",
+    border: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    backgroundSize: "10px 6px",
+  }}
+
           >
             <option value="all">All Divisions</option>
             {[...new Set(records.map((r) => r.division))].filter(Boolean)
@@ -1116,6 +1130,8 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
           <button
             onClick={onClose}
             style={{
+              width:36,
+              height:36,
               border: `1px solid ${BORDER}`,
               background: "#fff",
               borderRadius: 10,
@@ -1123,11 +1139,19 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
               cursor: "pointer",
             }}
           >
-            Close
+           X
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+          <FileUploadBox
+                      label="Upload Document"
+                      description="Attach report document here"
+                      supported="PDF/Word"
+                      file={file}
+                      onFileSelected={(f) => setFile(f)}
+                      currentFileName={editingRecord && !file ? editingRecord.original_name : null}
+                    />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <Input label="Project Name" value={form.project_name} onChange={(e) => onChange("project_name", e.target.value)} />
             <Input label="Division" value={form.division} onChange={(e) => onChange("division", e.target.value)} />
@@ -1151,31 +1175,6 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Upload Document {editingRecord && !file ? "(Existing file attached)" : ""}</span>
-            <div
-              style={{
-                border: `1px dashed ${BORDER}`,
-                borderRadius: 10,
-                padding: "10px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <FiUploadCloud />
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                style={{ flex: 1 }}
-              />
-            </div>
-            {editingRecord?.original_name && !file && (
-              <p style={{ margin: 0, fontSize: 12, color: "#64748B" }}>
-                Current File: **{editingRecord.original_name}**. Upload a new file to replace it.
-              </p>
-            )}
-          </label>
 
           {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
 

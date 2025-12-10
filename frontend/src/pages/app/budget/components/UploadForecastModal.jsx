@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 import { modalFields } from '../data';
+import FileUploadBox from "../../../../components/common/FileUploadBox";
 
 
 export default function UploadForecastModal({
@@ -20,11 +21,10 @@ export default function UploadForecastModal({
   const [file, setFile] = useState(null);
   const readOnly = mode === 'view';
 
+  // reset file when modal closes
   useEffect(() => {
-    if (!open) {
-      setFile(null);
-    }
-  }, [open, values]);
+    if (!open) setFile(null);
+  }, [open]);
 
   const groupedFields = useMemo(() => modalFields, []);
 
@@ -42,6 +42,7 @@ export default function UploadForecastModal({
     <div className={styles.modalOverlay}>
       <div className={styles.modalCard}>
         
+        {/* HEADER */}
         <div className={styles.modalHeader}>
           <div>
             <h3 className={styles.modalTitle}>
@@ -53,13 +54,24 @@ export default function UploadForecastModal({
               Enter budget details. All fields are optional and attachments are supported.
             </p>
           </div>
-          <button className={styles.modalClose} onClick={onClose} aria-label="Close modal">
+          <button className={styles.modalClose} onClick={onClose}>
             <FiX />
           </button>
         </div>
 
+        {/* BODY */}
         <div className={styles.modalBody}>
-          
+
+          {/* Document Upload */}
+          <FileUploadBox
+            label="Upload Document"
+            description="Attach supply record"
+            supported="PDF/Word"
+            file={file}
+            onFileSelected={(f) => setFile(f)}
+          />
+
+          {/* Forecast Year + Cash Split */}
           <div className={styles.modalTopControls}>
             <div className={styles.modalFieldInline}>
               <label className={styles.modalLabel}>Forecast Year</label>
@@ -72,12 +84,14 @@ export default function UploadForecastModal({
                 disabled={readOnly}
               />
             </div>
+
             <div className={styles.modalFieldInline}>
               <label className={styles.modalLabel}>Cash Outgo Split Over</label>
               <div className={styles.splitBadge}>{cashSplitLabel}</div>
             </div>
           </div>
 
+          {/* Dynamic Fields */}
           <div className={styles.modalGrid}>
             {groupedFields.map((field) => (
               <div key={field.key} className={styles.modalField}>
@@ -86,11 +100,12 @@ export default function UploadForecastModal({
                     ? `${field.label} (${cashSplitLabel})`
                     : field.label}
                 </label>
+
                 {field.multiline ? (
                   <textarea
                     className={styles.modalTextarea}
                     placeholder={field.placeholder}
-                    value={values[field.key]}
+                    value={values[field.key] || ''}
                     onChange={handleChange(field.key)}
                     disabled={readOnly}
                   />
@@ -99,7 +114,7 @@ export default function UploadForecastModal({
                     type={field.type || 'text'}
                     className={styles.modalInput}
                     placeholder={field.placeholder}
-                    value={values[field.key]}
+                    value={values[field.key] || ''}
                     onChange={handleChange(field.key)}
                     disabled={readOnly}
                   />
@@ -107,30 +122,17 @@ export default function UploadForecastModal({
               </div>
             ))}
           </div>
-
-          <div className={styles.modalFieldFull}>
-            <label className={styles.modalLabel}>Upload attachment (optional)</label>
-            <input
-              type="file"
-              className={styles.modalInput}
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              disabled={readOnly}
-            />
-            {existingFileName && !file && (
-              <div className={styles.subtleText}>Current file: {existingFileName}</div>
-            )}
-            {file && <div className={styles.subtleText}>Selected: {file.name}</div>}
-          </div>
         </div>
 
+        {/* ACTIONS */}
         <div className={styles.modalActions}>
-          <button className={styles.secondaryButton} type="button" onClick={onClose}>
+          <button className={styles.secondaryButton} onClick={onClose}>
             {readOnly ? 'Close' : 'Cancel'}
           </button>
+
           {!readOnly && (
             <button
               className={styles.primaryButton}
-              type="button"
               onClick={handleSubmit}
               disabled={saving}
             >

@@ -389,12 +389,19 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
         </div>
 
         <form className={styles.modalForm} onSubmit={handleSubmit}>
+          <FileUploadBox
+                        label="Upload Document"
+                        description="Attach supply record"
+                        supported="PDF/Word"
+                        file={file}
+                        onFileSelected={(f) => setFile(f)}
+                      />
           <div className={styles.UploadGrid}>
             <Input className={styles.input} label="Division Name" value={form.division_name} onChange={(e) => onChange("division_name", e.target.value)} />
 
             <label>
               <span>Type</span>
-              <select className={styles.input} value={form.record_type} onChange={(e) => onChange("record_type", e.target.value)}>
+              <select className={styles.inputSelect} value={form.record_type} onChange={(e) => onChange("record_type", e.target.value)}>
                 <option value="Budget">Budget</option>
                 <option value="AMC">AMC</option>
                 <option value="Cyber Security">Cyber Security</option>
@@ -408,14 +415,6 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
             <label className={styles.inputBox}>
               <span className={styles.inputLabel}>Remarks</span>
               <textarea rows={3} value={form.remarks} onChange={(e) => onChange("remarks", e.target.value)} className={styles.textarea} />
-            </label>
-
-            <label className={styles.inputBox}>
-              <span className={styles.inputLabel}>Upload Document</span>
-              <div className={styles.uploadBoxFile}>
-                <FiUploadCloud />
-                <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-              </div>
             </label>
 
             {error && <p className={styles.errorText}>{error}</p>}

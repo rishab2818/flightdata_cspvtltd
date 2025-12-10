@@ -134,7 +134,7 @@ export default function TechnicalReports() {
         }}
       >
         <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ color: "#475569", fontSize: 13 }}>Filter by Type</span>
+          <span style={{  color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Type</span>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ type: e.target.value })}
@@ -145,6 +145,18 @@ export default function TechnicalReports() {
               borderRadius: 8,
               border: "none",
               padding: "0 12px",
+              paddingRight: 32, // space for arrow
+              color: "#374151",
+              fontSize: 14,
+              lineHeight: "36px",
+              appearance: "none",
+              border: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
+              backgroundSize: "10px 6px",
             }}
           >
             <option value="all">All Types</option>
@@ -521,6 +533,17 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
                   border: `1px solid ${BORDER}`,
                   padding: "0 12px",
                   background: "#F3F3F5",
+                  paddingRight: 32, // space for arrow
+                  color: "#374151",
+                  fontSize: 14,
+                  lineHeight: "36px",
+                  appearance: "none",
+                  WebkitAppearance: "none",
+                  MozAppearance: "none",
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 12px center",
+                  backgroundSize: "10px 6px",
                 }}
               >
                 <option value="Technical">Technical</option>
