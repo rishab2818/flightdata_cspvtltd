@@ -29,6 +29,7 @@ export const forecastColumns = (cashSplitLabel) => [
   'Possibility of using the same items for other project',
   'Necessary of using hardware technologies',
   'Initiation of condemnation of store',
+  'capital_or_revenue',
   'Remarks',
   'Attachment',
   'Action',
@@ -42,6 +43,8 @@ export const modalFields = [
   { label: 'Previous Procurement date of similar Item', type: 'date', key: 'previous_procurement_date' },
   { label: 'Estimated cost each (in Lac)', placeholder: 'Enter amount', key: 'estimated_cost' },
   { label: 'Demand Indication Months', placeholder: 'Enter Number', key: 'demand_indication_months' },
+  // for the revenue / capital 
+  { label: "Capital/Revenue", placeholder: "Enter Capital or revenue", key: 'capital_or_revenue' },
   { label: 'Build or Project/Misc', placeholder: 'Enter Name', key: 'build_or_project' },
   { label: 'DPP 2020 S No.', placeholder: 'Enter Number', key: 'dpp_number' },
   { label: 'Likely amount of cash Outgo Rs', placeholder: 'Enter Number', key: 'cash_outgo' },
@@ -77,6 +80,8 @@ export const budgetExportColumns = (cashSplitLabel) => [
   { header: 'Possibility of using the same items for other project', key: 'cross_project_use' },
   { header: 'Necessary of using hardware technologies', key: 'hardware_need' },
   { header: 'Initiation of condemnation of store', key: 'condemnation' },
+  { header: 'Capital / Revenue', key: 'capital_or_revenue' },
+
   { header: 'Remarks', key: 'remarks' },
   {
     header: 'Attachment Name',

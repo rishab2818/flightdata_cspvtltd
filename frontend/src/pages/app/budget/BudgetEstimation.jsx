@@ -79,9 +79,9 @@ export default function BudgetEstimation() {
     const filteredByType = filters.type === 'all'
       ? byYear
       : byYear.filter((row) => {
-          const haystack = `${row.item || ''} ${row.descriptions || ''} ${row.build_or_project || ''}`.toLowerCase();
-          return haystack.includes(filters.type.toLowerCase());
-        });
+        const haystack = `${row.item || ''} ${row.descriptions || ''} ${row.build_or_project || ''}`.toLowerCase();
+        return haystack.includes(filters.type.toLowerCase());
+      });
 
     const filteredBySearch = filteredByType.filter((row) => {
       if (!filters.search) return true;
@@ -191,6 +191,7 @@ export default function BudgetEstimation() {
         cross_project_use: values.cross_project_use || undefined,
         hardware_need: values.hardware_need || undefined,
         condemnation: values.condemnation || undefined,
+        capital_or_revenue: values.capital_or_revenue || undefined,
         remarks: values.remarks || undefined,
         ...uploadMeta,
       };
@@ -235,16 +236,16 @@ export default function BudgetEstimation() {
           <div className={styles.sectionHeaderLeft}>
             <h3 className={styles.sectionTitle}>Forecast Budget</h3>
             <select
-                      className={styles.dateBadge}
-                      value={forecastYear}
-                      onChange={(e) => onForecastYearChange(e.target.value)}
-                    >
-                      {fiscalYearOptions.map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
+              className={styles.dateBadge}
+              value={forecastYear}
+              onChange={(e) => onForecastYearChange(e.target.value)}
+            >
+              {fiscalYearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
           <button type="button" className={styles.exportButton} onClick={handleExport}>
             <img src={DownloadSimple} alt="download" className={styles.icons} />

@@ -1,5 +1,6 @@
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import Group from '../../assets/Group.svg';
 
 const BORDER = "#0000001A";
 
@@ -14,46 +15,32 @@ export default function PieChartCard({ title, value }) {
   return (
     <div
       style={{
-        position: "relative",
-        width: "100%",
-        maxWidth: 520,
-        minWidth: 0,
-        height: "clamp(320px, 42vh, 420px)",
-        gap: 10,
-        borderRadius: 8,
+        alignItems:"flex-start",
         background: "#fff",
         border: `1px solid ${BORDER}`,
-        padding: "30px 20px",
-        boxSizing: "border-box",
+        borderColor:"#0000001A",
+        borderRadius: 8,
+        display:"flex",
+        flexDirection:"column",
+        gap: 10,
+        height:343,
+        padding: "35px 25px",
+        position: "relative",
+        maxWidth: 520,
       }}
     >
-      <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: "#0f172a" }}>{title}</h3>
-      <p style={{ fontSize: 13, color: "#475569", marginTop: 4, marginBottom: 12 }}>
-        Distribution of different datasets
-      </p>
-      <div style={{ width: "100%", height: "calc(100% - 70px)" }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie data={data} dataKey="value" innerRadius={60} outerRadius={80} paddingAngle={5}>
-              {data.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+      <div>
+        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#000000",fontFamily: `"SF Pro-Bold", Helvetica, sans-serif` }}>{title}</h3>
       </div>
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          fontWeight: "700",
-          fontSize: 24,
-        }}
-      >
-        {value}
+      <div style={{ height:250, left:40, position:"absolute",top:97,width:340,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+        <div style={{ alignItems:"center", display:"flex",flexDirection:"column",gap:7,height:33, left:0, position:"absolute", top:131, width:440}}>
+          <div style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#000000",fontFamily: `"SF Pro-Bold", Helvetica, sans-serif`,alignItems:"center"}}> No data available yet.</div>
+          <p style={{ fontSize: 11, fontWeight: 400, margin: 0, color: "#333333",fontFamily: `"SF Pro-Regular", Helvetica, sans-serif`,alignItems:"center"}}>Once you upload a project, your visual insights will appear here</p>
+          
       </div>
+      <img style={{ height:100, width:200}} src={Group} alt="Group" />
+        </div>
+        
     </div>
   );
 }

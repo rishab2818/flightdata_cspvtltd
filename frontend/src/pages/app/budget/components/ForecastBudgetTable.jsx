@@ -55,6 +55,7 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
               <td>{row.common_tdcc || '--'}</td>
               <td>{row.cross_project_use || '--'}</td>
               <td>{row.hardware_need || '--'}</td>
+              <td>{row.capital_or_revenue || '--'}</td>
               <td>{row.condemnation || '--'}</td>
               <td>{row.remarks || '--'}</td>
               <td>

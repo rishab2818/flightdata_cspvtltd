@@ -37,6 +37,11 @@ class BudgetForecastCreate(BudgetAttachment):
     cross_project_use: Optional[str] = None
     hardware_need: Optional[str] = None
     condemnation: Optional[str] = None
+    capital_or_revenue: Optional[str] = Field(
+    None,
+    description="Indicates whether the item is Capital or Revenue"
+)
+
     remarks: Optional[str] = None
 
 

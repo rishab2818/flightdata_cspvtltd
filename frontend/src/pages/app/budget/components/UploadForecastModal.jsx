@@ -3,7 +3,6 @@ import { FiX } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 import { modalFields } from '../data';
 
-
 export default function UploadForecastModal({
   open,
   mode = 'create',
