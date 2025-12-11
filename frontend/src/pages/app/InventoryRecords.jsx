@@ -9,7 +9,7 @@ import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
 import styles from "./InventoryRecords.module.css";
 import DocumentActions from "../../components/common/DocumentActions";
-
+import EmptySection from "../../components/common/EmptyProject";
 import FileUploadBox from "../../components/common/FileUploadBox";
 
 const BORDER = "#E2E8F0";
@@ -347,10 +347,25 @@ export default function InventoryRecords() {
             )}
 
             {!loading && !error && filtered.length === 0 && (
-              <tr>
-                <td colSpan={13}>No supply orders found.</td>
-              </tr>
-            )}
+                            <tr style={{ height: "300px" }}>
+                              <td colSpan={10} style={{ padding: 0 }}>
+                                <div
+                                   style={{
+                                     width: "100%",
+                                     height: "100%",
+                                     display: "flex",
+                                     alignItems: "center",
+                                     justifyContent: "center",
+                                     padding: "40px 0",
+                                    }}
+                  >
+                                  <EmptySection />
+                                </div>
+                              </td>
+                            </tr>
+                           )}
+
+            
 
             {!loading &&
               !error &&

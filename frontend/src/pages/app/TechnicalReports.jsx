@@ -8,7 +8,7 @@ import technicalIcon from "../../assets/setting_black.svg";
 import designicon from "../../assets/design_black.svg";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions"; // <-- Import DocumentActions
-
+import EmptySection from "../../components/common/EmptyProject";
 import CommonStatCard from "../../components/common/common_card/common_card";
 
 const BORDER = "#E2E8F0";
@@ -261,13 +261,25 @@ export default function TechnicalReports() {
                   </td>
                 </tr>
               )}
+              
               {!loading && !error && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
-                    No reports found.
-                  </td>
-                </tr>
-              )}
+                                <tr style={{ height: "300px" }}>
+                                  <td colSpan={10} style={{ padding: 0 }}>
+                                                <div
+                                                   style={{
+                                                     width: "100%",
+                                                     height: "100%",
+                                                     display: "flex",
+                                                     alignItems: "center",
+                                                     justifyContent: "center",
+                                                     padding: "40px 0",
+                                                    }}
+                                  >
+                                                  <EmptySection />
+                                                </div>
+                                              </td>
+                                            </tr>
+                                           )}
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {

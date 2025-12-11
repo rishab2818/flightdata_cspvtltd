@@ -615,6 +615,8 @@ import pending_review from "../../assets/SpinnerGap.svg";
 // 1 import docuemnt actions
 import DocumentActions from "../../components/common/DocumentActions";
 import FileUploadBox from "../../components/common/FileUploadBox";
+import EmptySection from "../../components/common/EmptyProject";
+
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
@@ -881,13 +883,26 @@ export default function CustomerFeedbacks() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>
-                    No feedback records found.
-                  </td>
-                </tr>
-              )}
+              
+               {!loading && !error && filtered.length === 0 && (
+                              <tr style={{ height: "300px" }}>
+                                <td colSpan={10} style={{ padding: 0 }}>
+                                  <div
+                                     style={{
+                                       width: "100%",
+                                       height: "100%",
+                                       display: "flex",
+                                       alignItems: "center",
+                                       justifyContent: "center",
+                                       padding: "40px 0",
+                                      }}
+                    >
+                                    <EmptySection />
+                                  </div>
+                                </td>
+                              </tr>
+                             )}
+
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {

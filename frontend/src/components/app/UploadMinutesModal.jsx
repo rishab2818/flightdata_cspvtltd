@@ -470,7 +470,7 @@ export default function UploadMinutesModal({
               />
             </div>
 
-            <div className="flex1">
+            {/* <div className="flex1">
               <label className="label">Action on (Person / Role / Team)</label>
               <div className="row">
                 <input
@@ -496,7 +496,7 @@ export default function UploadMinutesModal({
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
 
           

@@ -58,8 +58,8 @@ export default function PieChartCard({ title, value }) {
         />
         <div
           style={{
-            fontSize: 16,
-            fontWeight: 700,
+            fontSize: 14,
+            fontWeight: 600,
             color: "#000",
             fontFamily: `"SF Pro-Bold", Helvetica, sans-serif`,
           }}

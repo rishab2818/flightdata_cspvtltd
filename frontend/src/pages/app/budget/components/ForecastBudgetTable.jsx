@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
+// import EmptySection from "../../components/common/EmptyProject";
 
 const formatDate = (value) => {
   if (!value) return '--';
@@ -30,13 +31,24 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={columns.length} className={styles.emptyState}>
-                No forecast budget entries yet.
-              </td>
-            </tr>
-          )}
+          {/* {!loading && !error && filtered.length === 0 && (
+                          <tr style={{ height: "300px" }}>
+                            <td colSpan={10} style={{ padding: 0 }}>
+                              <div
+                                 style={{
+                                   width: "100%",
+                                   height: "100%",
+                                   display: "flex",
+                                   alignItems: "center",
+                                   justifyContent: "center",
+                                   padding: "40px 0",
+                                  }}
+                >
+                                <EmptySection />
+                              </div>
+                            </td>
+                          </tr>
+                         )} */}
           {rows.map((row, idx) => (
             <tr key={row.record_id || row.id || idx}>
               <td>{idx + 1}</td>

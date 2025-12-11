@@ -576,6 +576,8 @@ import ongoingIcon from "../../assets/SpinnerGap.svg"
 import CommonStatCard from "../../components/common/common_card/common_card";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
+import EmptySection from "../../components/common/EmptyProject";
+
 
 
 const BORDER = "#E2E8F0";
@@ -905,9 +907,25 @@ export default function TrainingRecords() {
               {!loading && error && (
                 <tr><td colSpan={8} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>{error}</td></tr>
               )}
+              
               {!loading && !error && filtered.length === 0 && (
-                <tr><td colSpan={8} style={{ padding: 16, textAlign: "center", color: "#94A3B8" }}>No training records found.</td></tr>
-              )}
+                  <tr style={{ height: "300px" }}>
+                    <td colSpan={10} style={{ padding: 0 }}>
+                                  <div
+                                     style={{
+                                       width: "100%",
+                                       height: "100%",
+                                       display: "flex",
+                                       alignItems: "center",
+                                       justifyContent: "center",
+                                       padding: "40px 0",
+                                      }}
+                    >
+                                    <EmptySection />
+                                  </div>
+                                </td>
+                              </tr>
+                             )}
 
               {/* Data rows */}
               {!loading &&

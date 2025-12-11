@@ -15,6 +15,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
 import folderOpen from '../../assets/FolderOpen.svg';
+import EmptySection from '../common/EmptyProject';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -116,6 +117,19 @@ export default function ProjectsSectionImproved() {
             </Button>
           )}
         </div>
+
+       <div style={{ padding: "20px" }}>
+      {projects.length === 0 ? (
+        <EmptySection />
+      ) : (
+        <div>
+          {projects.map((p) => (
+            <div key={p.id}>{p.name}</div>
+          ))}
+        </div>
+      )}
+    </div>
+        
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.md }}>
           {projects.map((p, i) => (
