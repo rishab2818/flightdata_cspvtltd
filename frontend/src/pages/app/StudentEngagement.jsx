@@ -9,6 +9,7 @@ import Ongoing from "../../assets/Ongoing.svg";
 import Cap from "../../assets/Cap.svg";
 import styles from "./StudentEngagement.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
+import EmptySection from "../../components/common/EmptyProject";
 
 const BADGE_COLORS = {
   Ongoing: { bg: "#FEF3C7", text: "#B45309" },
@@ -513,12 +514,23 @@ export default function StudentEngagement() {
                 )}
 
                 {!loading && !error && filtered.length === 0 && (
-                  <tr>
-                    <td className="TableEmpty" colSpan={columns.length}>
-                      No student engagement records found.
-                    </td>
-                  </tr>
-                )}
+                <tr style={{ height: "300px" }}>
+                  <td colSpan={10} style={{ padding: 0 }}>
+                    <div
+                       style={{
+                         width: "100%",
+                         height: "100%",
+                         display: "flex",
+                         alignItems: "center",
+                         justifyContent: "center",
+                         padding: "40px 0",
+                        }}
+      >
+                      <EmptySection />
+                    </div>
+                  </td>
+                </tr>
+               )}
 
                 {!loading &&
                   !error &&

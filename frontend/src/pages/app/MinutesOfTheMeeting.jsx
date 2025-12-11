@@ -14,6 +14,8 @@ import { meetingsApi } from "../../api/meetingsApi";
 import { projectApi } from "../../api/projectapi";
 import "./MinutesOfTheMeeting.css";
 import DocumentActions from "../../components/common/DocumentActions";
+import EmptySection from "../../components/common/EmptyProject";
+
 
 
 // Back-end subsection codes:
@@ -551,15 +553,12 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit, setRows }) {
           )}
 
           {!loading && !error && rows.length === 0 && (
-            <tr>
-              <td
-                colSpan={6}
-                className="TableEmpty"
-              >
-                No minutes uploaded yet.
-              </td>
-            </tr>
-          )}
+  <tr style={{ height: "100%" }}>
+    <td colSpan={6} style={{ padding: 0, height: "100%" }}>
+      <EmptySection />
+    </td>
+  </tr>
+)}
 
           {!loading &&
             !error &&

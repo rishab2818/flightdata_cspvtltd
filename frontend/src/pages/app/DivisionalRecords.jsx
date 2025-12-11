@@ -11,6 +11,7 @@ import DotsThreeOutline from "../../assets/DotsThreeOutline.svg";
 import styles from "./DivisionalRecords.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
+import EmptySection from "../../components/common/EmptyProject";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -219,10 +220,24 @@ export default function DivisionalRecords() {
               <tr><td colSpan={5} className={styles.errorText}>{error}</td></tr>
             )}
 
-            {!loading && !error && filtered.length === 0 && (
-              <tr><td colSpan={5} className={styles.centerText}>No divisional records found.</td></tr>
-            )}
-
+             {!loading && !error && filtered.length === 0 && (
+                            <tr style={{ height: "300px" }}>
+                              <td colSpan={10} style={{ padding: 0 }}>
+                                <div
+                                   style={{
+                                     width: "100%",
+                                     height: "100%",
+                                     display: "flex",
+                                     alignItems: "center",
+                                     justifyContent: "center",
+                                     padding: "40px 0",
+                                    }}
+                  >
+                                  <EmptySection />
+                                </div>
+                              </td>
+                            </tr>
+                           )}
             {!loading && !error && filtered.map((row) => (
               <tr key={row.record_id}>
                 <td>{row.division_name || "—"}</td>

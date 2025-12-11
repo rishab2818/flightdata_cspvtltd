@@ -120,7 +120,7 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
             </div>
           </div>
 
-          <div className="upload-field">
+          {/* <div className="upload-field">
             <label>File Name</label>
             <textarea
               value={notes}
@@ -129,11 +129,11 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
             />
             
             
-          </div>
+          </div> */}
 
           <div className="upload-field">
             <label>Description</label>
-            <textarea
+            <input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Enter report description"

@@ -5,6 +5,7 @@ import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUpload
 import { documentsApi } from "../../api/documentsApi";
 import styles from "./DigitalLibrary.module.css";
 import uploadbutton from "../../assets/uploadbutton.svg";
+import EmptySection from "../../components/common/EmptyProject";
 
 
 const typeLabelFromName = (name = "", contentType = "") => {
@@ -218,15 +219,12 @@ export default function DigitalLibrary() {
   <img src={uploadbutton} alt="upload" className="btnIcon" />
   Upload Files
 </button>
-
-
        
       </div>
 
-      <div className={styles.card}>
-        <div className={styles.tableWrapper}>
-          <h2>My Files</h2>
-         <div className={styles.tableWrapper}></div>
+      <div className={styles.tableWrapper}>
+        <div style={{padding: "16px 20px",width:"100%",fontSize:16, fontWeight:600, color: "#0a0a0a",fontfamily: "Inter-semiBold, Helvetica"}}>My Files</div>
+        <div className={styles.tableHeader}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -252,13 +250,27 @@ export default function DigitalLibrary() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className={styles.empty}>
-                    No documents yet. Upload your first file to get started.
-                  </td>
-                </tr>
-              )}
+
+              
+               {!loading && !error && filtered.length === 0 && (
+                <tr style={{ height: "300px" }}>
+                    <td colSpan={10} style={{ padding: 0 }}>
+                       <div
+                        style={{
+                           width: "100%",
+                           height: "100%",
+                           display: "flex",
+                           alignItems: "center",
+                           justifyContent: "center",
+                           padding: "40px 0",
+                                      }}
+                    >
+                                    <EmptySection />
+                                  </div>
+                                </td>
+                              </tr>
+                             )}
+              
               {!loading && !error &&
                 filtered.map((doc) => (
                   <tr key={doc.id}>
