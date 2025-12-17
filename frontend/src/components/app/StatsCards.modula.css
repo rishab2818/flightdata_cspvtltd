@@ -7,10 +7,11 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
+  max-width: 1580px;
 }
 
 /* Large screens (default) → 6 cards */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
   }

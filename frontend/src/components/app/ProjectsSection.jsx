@@ -63,96 +63,109 @@ export default function ProjectsSectionImproved() {
   };
   const canCreate = role === 'GD' || role === 'DH';
   return (
-    <div
-      style={{
-        width: '100%',
-        minWidth: 0,
-      }}
-    >
-      <div
-        style={{
-          background: COLORS.background,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: 10,
-          padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
-          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
-        }}
-      >
-        {/* Header row */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-  <img
-    src={folderOpen}
-    alt="Projects"
-    style={{ width: 30, height: 30, objectFit: 'contain'}}
-  />
-  <span
+ <div
+  style={{
+    width: '100%',
+    height: '100%',        // outer container full height
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between', // stretch content if needed
+  }}
+>
+  <div
     style={{
-      fontSize: 28,
-      fontWeight: 600,
-      color: "#000000",
-      fontFamily: "inter-semi-bold, Helvetica",
+      background: COLORS.background,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: 10,
+      padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
+      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',      // key: make this container fill parent
+      overflow: 'hidden',  // prevent extra scroll
     }}
   >
-    Projects
-  </span>
-</div>
+    {/* Header row */}
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        marginBottom: SPACING.md,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <img
+          src={folderOpen}
+          alt="Projects"
+          style={{ width: 30, height: 30, objectFit: 'contain' }}
+        />
+        <span
+          style={{
+            fontSize: 28,
+            fontWeight: 600,
+            color: '#000',
+            fontFamily: 'inter-semi-bold, Helvetica',
+          }}
+        >
+          Projects
+        </span>
+      </div>
 
-          {canCreate && (
-            <Button
-              onClick={() => setShowModal(true)}
-              variant="primary"
-              style={{ width: 200, height: 44, borderRadius: 6 ,fontFamily: "inter-regular, Helvetica", fontSize: 16}}
-            >
-              + New Project
-            </Button>
-          )}
-        </div>
+      {canCreate && (
+        <Button
+          onClick={() => setShowModal(true)}
+          variant="primary"
+          style={{
+            width: 200,
+            height: 44,
+            borderRadius: 6,
+            fontFamily: 'inter-regular, Helvetica',
+            fontSize: 16,
+          }}
+        >
+          + New Project
+        </Button>
+      )}
+    </div>
 
-       <div style={{ padding: "20px" }}>
+    {/* Content */}
+    <div
+      style={{
+        flex: 1,              // key: make content stretch to full height
+        overflowY: 'auto',    // scroll if too many projects
+        display: 'flex',
+        flexDirection: 'column',
+        gap: SPACING.md,
+      }}
+    >
       {projects.length === 0 ? (
         <EmptySection />
       ) : (
-        <div>
-          {projects.map((p) => (
-            <div key={p.id}>{p.name}</div>
-          ))}
-        </div>
+        projects.map((p, i) => (
+          <ProjectCard
+            key={p._id || i}
+            name={p.project_name}
+            type="Aero Data"
+            date={formatDate(p.created_at)}
+            members={p.members?.length || 0}
+            desc={p.project_description}
+            onView={() => navigate(`/app/projects/${p._id}`)}
+          />
+        ))
       )}
     </div>
-        
+  </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.md }}>
-          {projects.map((p, i) => (
-            <ProjectCard
-              key={p._id || i}
-              name={p.project_name}
-              type="Aero Data"
-              date={formatDate(p.created_at)}
-              members={p.members?.length || 0}
-              desc={p.project_description}
-              onView={() => navigate(`/app/projects/${p._id}`)}
-            />
-          ))}
-        </div>
-      </div>
+  {/* Modal */}
+  <NewProjectModal
+    open={showModal}
+    onClose={() => !creating && setShowModal(false)}
+    onSubmit={handleCreateProject}
+    loading={creating}
+  />
+</div>
 
-      {/* Modal */}
-      <NewProjectModal
-        open={showModal}
-        onClose={() => !creating && setShowModal(false)}
-        onSubmit={handleCreateProject}
-        loading={creating}
-      />
-    </div>
   );
 }

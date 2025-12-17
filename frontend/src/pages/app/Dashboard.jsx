@@ -12,17 +12,21 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      <StatsCards />
+      <div className="dashboard-container">
+        <StatsCards />
 
-      <div className="dashboard-lower">
-        <ProjectsSection />
-        {isGDorDH && (
-          <div className="dashboard-charts">
-            <PieChartCard title="Data Distribution" value={35500} />
-            <PieChartCard title="Reports" value={4089} />
-          </div>
-        )}
+        <div className="dashboard-lower">
+          <ProjectsSection />
+
+          {isGDorDH && (
+            <div className="dashboard-charts">
+              <PieChartCard title="Data Distribution" value={35500} />
+              <PieChartCard title="Reports" value={4089} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

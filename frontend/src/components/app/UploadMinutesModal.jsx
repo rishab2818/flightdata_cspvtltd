@@ -376,7 +376,83 @@ export default function UploadMinutesModal({
           )}
 
           {/* Action Points */}
-          <div>
+
+          {/* Action Points */}
+<div>
+  <label className="label">Action Points</label>
+
+  <div className="actionGrid">
+    {/* Action Point */}
+    <div className="field">
+      <input
+        type="text"
+        placeholder="CFD analysis to be conducted for Airbus 320"
+        value={actionPointDescription}
+        onChange={(e) => setActionPointDescription(e.target.value)}
+        onKeyDown={handleActionPointKeyDown}
+        className="textInput"
+      />
+    </div>
+
+    {/* Assign To */}
+    <div className="field">
+      <div className="assigneeInputBox">
+        <input
+          type="text"
+          placeholder="Assign to (optional)"
+          value={actionPointAssignee}
+          onChange={(e) => {
+            setActionPointAssignee(e.target.value);
+            setAssigneeQuery(e.target.value);
+          }}
+          className="textInput"
+        />
+
+        <button
+          type="button"
+          onClick={handleAddActionPoint}
+          className="iconButton"
+        >
+          <FiPlus size={18} />
+        </button>
+
+        {assigneeOptions.length > 0 && (
+          <div className="suggestionsBox">
+            {assigneeOptions.map((name) => (
+              <button
+                type="button"
+                key={name}
+                className="suggestionItem"
+                onClick={() => handleSelectAssignee(name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* Added action points list */}
+  {actionPoints.length > 0 && (
+    <div className="actionPointList">
+      {actionPoints.map((pt, idx) => (
+        <div key={idx} className="actionPointCard">
+          <div className="actionPointText">{pt.description}</div>
+          {pt.assigned_to && <div className="assigneeTag">{pt.assigned_to}</div>}
+          <FiX
+            size={14}
+            onClick={() => handleRemoveActionPoint(idx)}
+            className="chipRemove"
+          />
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+          {/* <div > 
             <label className="label">Action Points</label>
             <div className="actionPointSection">
               <div className="row">
@@ -441,7 +517,7 @@ export default function UploadMinutesModal({
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Meeting Date */}
           <div className="dateWrap">

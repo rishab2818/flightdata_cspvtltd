@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
-import { FiPlus, FiTrash2, FiUsers, FiX } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import Users from "../../assets/Users.svg";
@@ -11,6 +11,7 @@ import styles from "./InventoryRecords.module.css";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import FileUploadBox from "../../components/common/FileUploadBox";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const BORDER = "#E2E8F0";
 
@@ -110,10 +111,15 @@ export default function InventoryRecords() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [assigneeModalOrder, setAssigneeModalOrder] = useState(null);
+
+  /** 🔴 NEW — Delete Modal State */
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [recordToDelete, setRecordToDelete] = useState(null);
 
   const openModal = () => {
     setEditingOrder(null);
@@ -198,29 +204,69 @@ export default function InventoryRecords() {
     }
   };
 
-  const handleDelete = async (row) => {
-    if (!window.confirm("Delete this supply order?")) return;
-    try {
-      await recordsApi.removeInventory(row.record_id);
-      setOrders((prev) => prev.filter((o) => o.record_id !== row.record_id));
-    } catch (err) {
-      alert("Delete failed. Please try again.");
-    }
-  };
+  // const handleDelete = async (row) => {
+  //   if (!window.confirm("Delete this supply order?")) return;
+  //   try {
+  //     await recordsApi.removeInventory(row.record_id);
+  //     setOrders((prev) => prev.filter((o) => o.record_id !== row.record_id));
+  //   } catch (err) {
+  //     alert("Delete failed. Please try again.");
+  //   }
+  // };
+
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+  const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  try {
+    await recordsApi.removeInventory(recordToDelete.record_id);
+
+    setOrders((prev) =>
+      prev.filter((o) => o.record_id !== recordToDelete.record_id)
+    );
+  } catch (err) {
+    alert("Unable to delete record.");
+  }
+
+  setShowDeleteModal(false);
+  setRecordToDelete(null);
+};
+
 
   /*---------------------- Filtering ------------------------*/
+  // const filtered = useMemo(() => {
+  //   return orders.filter((row) => {
+  //     const matchesType =
+  //       filters.type === "all" ||
+  //       row.particular?.toLowerCase().includes(filters.type.toLowerCase());
+
+  //     const matchesStatus =
+  //       filters.status === "all" || row.status === filters.status;
+
+  //     return matchesType && matchesStatus;
+  //   });
+  // }, [orders, filters]);
+
   const filtered = useMemo(() => {
-    return orders.filter((row) => {
-      const matchesType =
-        filters.type === "all" ||
-        row.particular?.toLowerCase().includes(filters.type.toLowerCase());
+  const searchText = search.toLowerCase().trim();
 
-      const matchesStatus =
-        filters.status === "all" || row.status === filters.status;
+  return orders.filter((row) => {
+    const matchesType =
+      filters.type === "all" ||
+      row.particular?.toLowerCase().includes(filters.type.toLowerCase());
 
-      return matchesType && matchesStatus;
-    });
-  }, [orders, filters]);
+    const matchesStatus =
+      filters.status === "all" || row.status === filters.status;
+
+    const matchesSearch =
+      !searchText ||
+      row.particular?.toLowerCase().includes(searchText) ||
+      row.supplier_name?.toLowerCase().includes(searchText);
+
+    return matchesType && matchesStatus && matchesSearch;
+  });
+}, [orders, filters, search]);
+
 
   /*------------------------ Stats ---------------------------*/
 
@@ -299,6 +345,26 @@ export default function InventoryRecords() {
             </select>
           </label>
         </div>
+
+         <div style={{flex:1, maxWidth:"550px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
+                          <FiSearch size={16} color="#64748b" />
+                          <input
+                            style={{
+                              border: "none",
+                              outline: "none",
+                              minwidth: "350px",
+                              background: "transparent",
+                              flex: 1,
+                              gap:20,
+                              fontsize: "14px",
+                              color: "#0f172a",
+        
+                            }}
+                            placeholder="Search particulars..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                          />
+          </div>
 
         {/* Upload Button */}
         <button className={styles.uploadBtn} onClick={openModal}>
@@ -411,7 +477,11 @@ export default function InventoryRecords() {
                       }}
                       onView={() => handleView(row)}
                       onDownload={() => handleDownload(row)}
-                      onDelete={() => handleDelete(row)}
+                      onDelete={() => {
+                       setRecordToDelete(row);
+                       setShowDeleteModal(true);
+                      }}
+
                     />
                   </td>
                 </tr>
@@ -444,6 +514,18 @@ export default function InventoryRecords() {
           }
         />
       )}
+
+
+      {showDeleteModal && (
+  <ConfirmationModal
+    title="Delete Procurement Records"
+    onCancel={() => {
+      setShowDeleteModal(false);
+      setRecordToDelete(null);
+    }}
+    onConfirm={confirmDelete}
+  />
+)}   
     </div>
   );
 }
@@ -660,6 +742,8 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
               onFileSelected={(f) => setFile(f)}
             />
 
+            <div className={styles.formModal}>
+
             <div className={styles.grid}>
               <Input
                 label="#SO"
@@ -736,6 +820,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
                 onChange={(e) => onChange("status", e.target.value)}
               />
             </div>
+            </div>
 
             <div className={styles.assigneeSummary}>
               <div>
@@ -763,6 +848,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
                 onChange={(e) => onChange("amount", e.target.value)}
               />
             </div>
+            
 
             {error && <p className={styles.errorText}>{error}</p>}
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   FiFileText,
   FiCalendar,
@@ -7,34 +7,42 @@ import {
   FiPlus,
   FiX,
   FiTrash2,
+  FiSearch,
 } from "react-icons/fi";
+
 import UploadMinutesModal from "../../components/app/UploadMinutesModal";
-import { documentsApi } from "../../api/documentsApi";
-import { meetingsApi } from "../../api/meetingsApi";
-import { projectApi } from "../../api/projectapi";
-import "./MinutesOfTheMeeting.css";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 
+import { documentsApi } from "../../api/documentsApi";
+import { meetingsApi } from "../../api/meetingsApi";
+import { projectApi } from "../../api/projectapi";
 
+import "./MinutesOfTheMeeting.css";
 
-// Back-end subsection codes:
+/* ---------------- constants ---------------- */
+
 const MOM_TABS = [
-  { key: "tcm", label: "Technology Council(TCM)" },
+  { key: "tcm", label: "Technology Council (TCM)" },
   { key: "pmrc", label: "PMRC" },
-  { key: "ebm", label: "Executive Board meeting" },
+  { key: "ebm", label: "Executive Board Meeting" },
   { key: "gdm", label: "Group Director Meeting" },
 ];
 
-function formatDate(isoDateString) {
-  if (!isoDateString) return "";
-  const d = new Date(isoDateString);
-  if (Number.isNaN(d.getTime())) return isoDateString;
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const PROJECT_REQUIRED_TABS = ["pmrc", "ebm"];
+
+/* ---------------- helpers ---------------- */
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
 }
 
 function formatTimeLabel(timeString) {
@@ -56,94 +64,75 @@ function formatTimeLabel(timeString) {
 }
 
 function convertDocToRow(doc) {
-  const actionOnList = doc.action_on || [];
-  const actionPointsList = (doc.action_points || []).map((ap) => ({
+  const actionPoints = (doc.action_points || []).map((ap) => ({
     description: ap?.description || "",
     assigned_to: ap?.assigned_to || "",
     completed: Boolean(ap?.completed),
   }));
-  const assigneesFromPoints = actionPointsList
-    .map((ap) => ap?.assigned_to)
-    .filter((name) => Boolean(name));
+
   const combinedActionOn = [
-    ...new Set([...(actionOnList || []), ...assigneesFromPoints]),
+    ...new Set([
+      ...(doc.action_on || []),
+      ...actionPoints.map((a) => a.assigned_to).filter(Boolean),
+    ]),
   ];
 
   return {
     id: doc.doc_id,
     fileName: doc.original_name,
     tag: doc.tag,
-    actionOn:
-      Array.isArray(combinedActionOn) && combinedActionOn.length > 0
-        ? combinedActionOn.join(", ")
-        : "—",
-    rawActionOn: actionOnList,
     meetingDate: formatDate(doc.doc_date),
     meetingDateRaw: doc.doc_date,
-    actionPoints: actionPointsList,
+    rawActionOn: doc.action_on || [],
+    actionPoints,
+    actionOn: combinedActionOn.length ? combinedActionOn.join(", ") : "—",
   };
 }
 
+/* =================== MAIN COMPONENT =================== */
+
 export default function MinutesOfTheMeeting() {
-  const [activeSubsection, setActiveSubsection] = useState("tcm"); // "tcm" | "pmrc" | "ebm" | "gdm" (TCM is default Tab)
+  const [activeSubsection, setActiveSubsection] = useState("tcm");
+  const requiresProject = PROJECT_REQUIRED_TABS.includes(activeSubsection);
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const [search, setSearch] = useState("");
+
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectError, setProjectError] = useState("");
+
   const [nextMeeting, setNextMeeting] = useState(null);
   const [meetingLoading, setMeetingLoading] = useState(false);
   const [meetingError, setMeetingError] = useState("");
+
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showMeetingModal, setShowMeetingModal] = useState(false);
-  const [selectedActions, setSelectedActions] = useState([]);
-  const [showActionsModal, setShowActionsModal] = useState(false);
+
   const [editingDoc, setEditingDoc] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
-  const [projects, setProjects] = useState([]);
-  const [projectLoading, setProjectLoading] = useState(false);
-  const [projectError, setProjectError] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
 
-  const loadData = useCallback(
-    async (subsection, projectId) => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await documentsApi.listMinutes(subsection, projectId);
-        // data is an array of UserDocumentOut from backend
-        const mapped = data.map(convertDocToRow);
-        setRows(mapped);
-      } catch (e) {
-        console.error("Failed to load minutes:", e);
-        setError("Failed to load minutes. Please try again.");
-        setRows([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const [selectedActions, setSelectedActions] = useState([]);
+  const [showActionsModal, setShowActionsModal] = useState(false);
 
-  const loadMeeting = useCallback(
-    async (subsection, projectId) => {
-      try {
-        setMeetingLoading(true);
-        setMeetingError("");
-        const meeting = await meetingsApi.getNextMeeting(subsection, projectId);
-        setNextMeeting(meeting);
-      } catch (err) {
-        if (err?.response?.status === 404) {
-          setNextMeeting(null);
-        } else {
-          console.error("Failed to load meeting:", err);
-          setMeetingError("Unable to load next meeting details.");
-        }
-      } finally {
-        setMeetingLoading(false);
-      }
-    },
-    []
-  );
+
+  const handleDeleteDocument = async (doc) => {
+  try {
+    await documentsApi.remove(doc.id);
+    setRows((prev) => prev.filter((r) => r.id !== doc.id));
+  } catch {
+    alert("Unable to delete document.");
+  }
+};
+
+
+
+  /* ---------------- data loaders ---------------- */
 
   const loadProjects = useCallback(async () => {
     try {
@@ -151,140 +140,179 @@ export default function MinutesOfTheMeeting() {
       setProjectError("");
       const list = await projectApi.list();
       setProjects(list || []);
-      setSelectedProjectId((prev) => {
-        if (prev) return prev;
-        if (Array.isArray(list) && list.length > 0) {
-          return list[0]?._id || list[0]?.id || "";
-        }
-        return "";
-      });
-    } catch (err) {
-      console.error("Failed to load projects", err);
-      setProjectError("Unable to load your projects.");
+      if (!selectedProjectId && list?.length) {
+        setSelectedProjectId(list[0]?._id || list[0]?.id || "");
+      }
+    } catch {
+      setProjectError("Unable to load projects.");
       setProjects([]);
-      setSelectedProjectId("");
     } finally {
       setProjectLoading(false);
     }
+  }, [selectedProjectId]);
+
+  const loadData = useCallback(async (subsection, projectId) => {
+    try {
+      setLoading(true);
+      const data = await documentsApi.listMinutes(subsection, projectId);
+      setRows(data.map(convertDocToRow));
+    } catch {
+      setError("Failed to load minutes.");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (activeSubsection === "pmrc") {
-      loadProjects();
+  const loadMeeting = useCallback(async (subsection, projectId) => {
+    try {
+      setMeetingLoading(true);
+      const m = await meetingsApi.getNextMeeting(subsection, projectId);
+      setNextMeeting(m);
+    } catch (e) {
+      if (e?.response?.status !== 404) {
+        setMeetingError("Unable to load next meeting.");
+      }
+      setNextMeeting(null);
+    } finally {
+      setMeetingLoading(false);
     }
-    if (activeSubsection !== "pmrc") {
-      setProjectError("");
-      setProjectLoading(false);
-      setSelectedProjectId("");
-    }
-  }, [activeSubsection, loadProjects]);
+  }, []);
+
+  /* ---------------- effects ---------------- */
 
   useEffect(() => {
-    const projectId = activeSubsection === "pmrc" ? selectedProjectId : undefined;
-    if (activeSubsection === "pmrc" && !projectId && !projectLoading) {
+    if (requiresProject) {
+      loadProjects();
+    } else {
+      setProjects([]);
+      setSelectedProjectId("");
+      setProjectError("");
+    }
+  }, [requiresProject, loadProjects]);
+
+  useEffect(() => {
+    const projectId = requiresProject ? selectedProjectId : undefined;
+
+    if (requiresProject && !projectId && !projectLoading) {
       setRows([]);
-      setError("Select a project to view PMRC minutes.");
-      setMeetingError("");
+      setError("Select a project to view meeting minutes.");
       setNextMeeting(null);
       return;
     }
+
     setError("");
     loadData(activeSubsection, projectId);
     loadMeeting(activeSubsection, projectId);
   }, [
     activeSubsection,
     selectedProjectId,
+    requiresProject,
     projectLoading,
     loadData,
     loadMeeting,
   ]);
 
-  const handleUploadSuccess = () => {
-    const projectId = activeSubsection === "pmrc" ? selectedProjectId : undefined;
-    loadData(activeSubsection, projectId);
-  };
+  /* ---------------- derived ---------------- */
 
-  const handleMeetingSave = async (values) => {
-    const payload = {
-      subsection: activeSubsection,
-      title: values.title,
-      meeting_date: values.meeting_date,
-      meeting_time: values.meeting_time,
-      project_id: activeSubsection === "pmrc" ? selectedProjectId : undefined,
-    };
-
-    try {
-      setMeetingError("");
-      setMeetingLoading(true);
-      const saved = await meetingsApi.saveNextMeeting(payload);
-      setNextMeeting(saved);
-      setShowMeetingModal(false);
-      return { ok: true };
-    } catch (err) {
-      console.error("Failed to save meeting details:", err);
-      const detail = err?.response?.data?.detail;
-      const message = Array.isArray(detail)
-        ? detail.map((d) => d?.msg || d).join(", ")
-        : detail || "Failed to save meeting details.";
-      setMeetingError(message);
-      return { ok: false, error: message };
-    } finally {
-      setMeetingLoading(false);
-    }
-  };
-
-  const handleViewActions = (actionPoints = []) => {
-    setSelectedActions(actionPoints || []);
-    setShowActionsModal(true);
-  };
-
-  const handleEditDocument = (row) => {
-    setEditingDoc(row);
-    setEditError("");
-  };
-
-  const handleSaveEdit = async (payload) => {
-    if (!editingDoc) return;
-    try {
-      setSavingEdit(true);
-      setEditError("");
-      const updated = await documentsApi.update(editingDoc.id, payload);
-      const mapped = convertDocToRow(updated);
-      setRows((prev) => prev.map((r) => (r.id === mapped.id ? mapped : r)));
-      setEditingDoc(mapped);
-      return { ok: true };
-    } catch (err) {
-      console.error("Failed to update document:", err);
-      const detail = err?.response?.data?.detail;
-      const message = Array.isArray(detail)
-        ? detail.map((d) => d?.msg || d).join(", ")
-        : detail || "Unable to update the document.";
-      setEditError(message);
-      return { ok: false, error: message };
-    } finally {
-      setSavingEdit(false);
-    }
-  };
+  const filteredRows = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (r) =>
+        r.fileName?.toLowerCase().includes(q) ||
+        r.tag?.toLowerCase().includes(q) ||
+        r.actionOn?.toLowerCase().includes(q) ||
+        r.meetingDate?.toLowerCase().includes(q)
+    );
+  }, [rows, search]);
 
   const activeTab =
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
-  const isPmrc = activeSubsection === "pmrc";
-  const selectedProject = isPmrc
+
+  const selectedProject = requiresProject
     ? projects.find((p) => (p?._id || p?.id) === selectedProjectId)
     : null;
 
+  /* ---------------- handlers ---------------- */
+
+  const handleUploadSuccess = () => {
+    loadData(activeSubsection, requiresProject ? selectedProjectId : undefined);
+  };
+
+  const handleMeetingSave = async (values) => {
+      const payload = {
+        subsection: activeSubsection,
+        title: values.title,
+        meeting_date: values.meeting_date,
+        meeting_time: values.meeting_time,
+        project_id: activeSubsection === "pmrc" ? selectedProjectId : undefined,
+      };
+  
+      try {
+        setMeetingError("");
+        setMeetingLoading(true);
+        const saved = await meetingsApi.saveNextMeeting(payload);
+        setNextMeeting(saved);
+        setShowMeetingModal(false);
+        return { ok: true };
+      } catch (err) {
+        console.error("Failed to save meeting details:", err);
+        const detail = err?.response?.data?.detail;
+        const message = Array.isArray(detail)
+          ? detail.map((d) => d?.msg || d).join(", ")
+          : detail || "Failed to save meeting details.";
+        setMeetingError(message);
+        return { ok: false, error: message };
+      } finally {
+        setMeetingLoading(false);
+      }
+    };
+  
+    const handleViewActions = (actionPoints = []) => {
+      setSelectedActions(actionPoints || []);
+      setShowActionsModal(true);
+    };
+  
+    const handleEditDocument = (row) => {
+      setEditingDoc(row);
+      setEditError("");
+    };
+  
+    const handleSaveEdit = async (payload) => {
+      if (!editingDoc) return;
+      try {
+        setSavingEdit(true);
+        setEditError("");
+        const updated = await documentsApi.update(editingDoc.id, payload);
+        const mapped = convertDocToRow(updated);
+        setRows((prev) => prev.map((r) => (r.id === mapped.id ? mapped : r)));
+        setEditingDoc(mapped);
+        return { ok: true };
+      } catch (err) {
+        console.error("Failed to update document:", err);
+        const detail = err?.response?.data?.detail;
+        const message = Array.isArray(detail)
+          ? detail.map((d) => d?.msg || d).join(", ")
+          : detail || "Unable to update the document.";
+        setEditError(message);
+        return { ok: false, error: message };
+      } finally {
+        setSavingEdit(false);
+      }
+    };
+
+  /* ---------------- render ---------------- */
+
   return (
     <div className="Container">
-
-      {/* main card */}
       <div className="Cardcontainer">
-
         <TabsRow
           activeKey={activeSubsection}
-          onChange={(key) => setActiveSubsection(key)}
+          onChange={setActiveSubsection}
         />
 
-        {isPmrc && (
+        {requiresProject && (
           <ProjectSelector
             projects={projects}
             loading={projectLoading}
@@ -300,33 +328,40 @@ export default function MinutesOfTheMeeting() {
           loading={meetingLoading}
           error={meetingError}
           projectName={selectedProject?.project_name}
-          missingProject={isPmrc && !selectedProjectId}
+          missingProject={requiresProject && !selectedProjectId}
           projectLoading={projectLoading}
           onEdit={() => setShowMeetingModal(true)}
         />
 
-        <UploadHeader onUploadClick={() => setShowUploadModal(true)} />
+        <UploadHeader
+          search={search}
+          onSearchChange={setSearch}
+          onUploadClick={() => setShowUploadModal(true)}
+        />
 
         <MinutesTable
-          rows={rows}
+          rows={filteredRows}
           loading={loading}
           error={error}
-          onViewAction={handleViewActions}
-          onEdit={handleEditDocument}
+          onViewAction={(a) => {
+            setSelectedActions(a);
+            setShowActionsModal(true);
+          }}
+          onEdit={setEditingDoc}
+          onDelete={handleDeleteDocument} 
           setRows={setRows}
         />
       </div>
 
-      {/* upload modal */}
       <UploadMinutesModal
         open={showUploadModal}
         onClose={() => setShowUploadModal(false)}
-        subsection={activeSubsection} // "tcm" | "pmrc" | "ebm" | "gdm"
+        subsection={activeSubsection}
         onUploaded={handleUploadSuccess}
         projectOptions={projects}
         selectedProjectId={selectedProjectId}
         onProjectChange={setSelectedProjectId}
-        requireProject={isPmrc}
+        requireProject={requiresProject}
       />
 
       <NextMeetingModal
@@ -363,6 +398,7 @@ export default function MinutesOfTheMeeting() {
     </div>
   );
 }
+
 
 /* ---------- small components ---------- */
 
@@ -495,27 +531,49 @@ function NextMeetingBanner({
   );
 }
 
-function UploadHeader({ onUploadClick }) {
+    function UploadHeader({ onUploadClick, search, onSearchChange }) {
   return (
     <div className="Header">
-      <div>
-        <h3>
-          Uploaded Meeting Minutes
-        </h3>
+      <h3>Uploaded Meeting Minutes</h3>
+
+    <div style={{display:"flex", alignItems:"center",gap:"20px"}}>
+    <div style={{flex:1, maxWidth:"550px", height:"39px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
+        <FiSearch size={16} color="#64748b" />
+            <input
+             style={{
+                  border: "none",
+                  outline: "none",
+                  minwidth: "350px",
+                  background: "transparent",
+                  flex: 1,
+                  gap:20,
+                  fontsize: "14px",
+                  color: "#0f172a",
+    
+                    }}
+                  type="text"
+                  placeholder="Search reports, tags, projects..."
+                  value={search}
+                  onChange={(e) => onSearchChange(e.target.value)}
+              />
       </div>
-      <button
-        type="button"
-        onClick={onUploadClick}
-        className="UploadButton"
-      >
-        <FiFileText size={16} />
-        <span>Upload Minutes</span>
-      </button>
+
+        {/* ⬆ Upload */}
+        <button
+          type="button"
+          onClick={onUploadClick}
+          className="UploadButton"
+        >
+          <FiFileText size={16} />
+          <span>Upload Minutes</span>
+        </button>
+        </div>
+      
     </div>
   );
 }
 
-function MinutesTable({ rows, loading, error, onViewAction, onEdit, setRows }) {
+function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, setRows }) {
   return (
     <div className="TableGrid">
       <table className="Table">
@@ -553,8 +611,8 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit, setRows }) {
           )}
 
           {!loading && !error && rows.length === 0 && (
-  <tr style={{ height: "100%" }}>
-    <td colSpan={6} style={{ padding: 0, height: "100%" }}>
+  <tr className="TableEmpty">
+    <td colSpan={6} style={{ padding: 0 }}>
       <EmptySection />
     </td>
   </tr>
@@ -570,6 +628,7 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit, setRows }) {
                 setRows={setRows}
                 onViewAction={onViewAction}
                 onEdit={onEdit}
+                onDelete={onDelete}
               />
 
             ))}
@@ -580,7 +639,7 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit, setRows }) {
 }
 
 
-function MinutesRow({ row, onViewAction, onEdit, setRows }) {
+function MinutesRow({ row, onViewAction, onEdit, setRows, onDelete }) {
   return (
     <tr className="minutes-row">
 
@@ -608,14 +667,11 @@ function MinutesRow({ row, onViewAction, onEdit, setRows }) {
       {/* 6️⃣ Actions */}
       <td className="cell cell-center cell-actions">
         <DocumentActions
-          doc={{
-            id: row.id,
-            fileName: row.fileName,
-            onDeleted: (id) =>
-              setRows((prev) => prev.filter((r) => r.id !== id)),
-          }}
-          onEdit={() => onEdit(row)}
-        />
+  doc={{ id: row.id, fileName: row.fileName }}
+  onEdit={() => onEdit(row)}
+  onDelete={onDelete}
+/>
+
       </td>
     </tr>
   );

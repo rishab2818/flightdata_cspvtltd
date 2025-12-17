@@ -12,6 +12,7 @@ import styles from "./DivisionalRecords.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -102,6 +103,10 @@ export default function DivisionalRecords() {
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
 
+  /** 🔴 NEW — Delete Modal State */
+      const [showDeleteModal, setShowDeleteModal] = useState(false);
+      const [recordToDelete, setRecordToDelete] = useState(null);
+
   const openModal = () => {
     setEditingRecord(null);
     setShowModal(true);
@@ -145,16 +150,38 @@ export default function DivisionalRecords() {
     }
   };
 
-  const handleDelete = async (row) => {
-    if (!window.confirm("Delete this divisional record?")) return;
-    try {
-      await recordsApi.removeDivisional(row.record_id);
-      setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
-    } catch (err) {
-      alert("Delete failed. Please try again.");
-    }
-  };
+  // const handleDelete = async (row) => {
+  //   if (!window.confirm("Delete this divisional record?")) return;
+  //   try {
+  //     await recordsApi.removeDivisional(row.record_id);
+  //     setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
+  //   } catch (err) {
+  //     alert("Delete failed. Please try again.");
+  //   }
+  // };
 
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+ const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  console.log("Deleting record:", recordToDelete);
+
+  try {
+    const res = await recordsApi.removeDivisional(recordToDelete.record_id);
+    console.log("Delete response:", res);
+    setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
+  } catch (err) {
+    console.error("Delete error:", err);
+    alert("Unable to delete record.");
+  } finally {
+    setShowDeleteModal(false);
+    setRecordToDelete(null);
+  }
+};
+
+
+
+  /*----------------------------------------------------------------------*/
   const filtered = useMemo(() => {
     return records.filter((r) => (filters.type === "all" ? true : r.record_type === filters.type));
   }, [records, filters]);
@@ -257,7 +284,10 @@ export default function DivisionalRecords() {
                     }}
                     onView={() => handleView(row)}
                     onDownload={() => handleDownload(row)}
-                    onDelete={() => handleDelete(row)}
+                    onDelete={() => {
+                       setRecordToDelete(row);
+                       setShowDeleteModal(true);
+                      }}
                   />
                 </td>
               </tr>
@@ -275,6 +305,18 @@ export default function DivisionalRecords() {
               prev.map((r) => (r.record_id === updated.record_id ? updated : r))
             );
           }}
+        />
+      )}
+
+        {showDeleteModal && (
+          
+        <ConfirmationModal
+          title="Delete this divisional record?"
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setRecordToDelete(null);
+          }}
+          onConfirm={confirmDelete}
         />
       )}
     </div>

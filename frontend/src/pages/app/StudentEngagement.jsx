@@ -10,6 +10,8 @@ import Cap from "../../assets/Cap.svg";
 import styles from "./StudentEngagement.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
+
 
 const BADGE_COLORS = {
   Ongoing: { bg: "#FEF3C7", text: "#B45309" },
@@ -23,8 +25,7 @@ const BADGE_COLORS = {
 function StatCard({ title, value, icon, bgColor }) {
   return (
     <div className={styles.statCard}>
-      <div className={styles.statIcon}
-        style={{ backgroundColor: bgColor }}>
+      <div className={styles.statIcon} style={{ backgroundColor: bgColor }}>
         <img src={icon} alt={title} />
       </div>
 
@@ -72,18 +73,14 @@ function FilterSelect({ label, value, onChange, options }) {
 function Modal({ title, onClose, children }) {
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalgrid} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h3>{title}</h3>
           <button className={styles.closeBtn} onClick={onClose}>
             ✕
           </button>
         </div>
-        <div className={styles.modalBody}>
-          {children}
-        </div>
-
-
+        <div className={styles.modalBody}>{children}</div>
       </div>
     </div>
   );
@@ -100,6 +97,12 @@ export default function StudentEngagement() {
   const [error, setError] = useState("");
   const [editingRecord, setEditingRecord] = useState(null);
   const [existingFileMeta, setExistingFileMeta] = useState(null);
+
+  const [showModal, setShowModal] = useState(false);
+
+  /** 🔴 NEW — Delete Modal State */
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
 
   const initialForm = {
     student: "",
@@ -119,7 +122,6 @@ export default function StudentEngagement() {
 
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showModal, setShowModal] = useState(false);
 
   /* -------------------- Fetch -------------------- */
   const loadRecords = async () => {
@@ -179,14 +181,9 @@ export default function StudentEngagement() {
     }
   }, [form.start_date, form.end_date]);
 
-  // Auto-update status based on dates:
+  /* ---------------- Auto Status ---------------- */
   useEffect(() => {
-    // Only auto-update status if the form is NOT being explicitly edited (i.e., status isn't manually changed by the user)
-    // Here we let the status be dictated by the dates if the form is new or if the user hasn't touched the status yet.
     if (!form.end_date) return;
-
-    // Skip auto-update if editing and the status field has a value (assuming user might manually override status)
-    // if (editingRecord && form.status) return; 
 
     const toDateOnly = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const today = toDateOnly(new Date());
@@ -195,25 +192,14 @@ export default function StudentEngagement() {
 
     let newStatus = form.status;
 
-    // If end is on or before today => Completed
-    if (end <= today) {
-      newStatus = "Completed";
-    }
-    // If start is in future => Upcoming
-    else if (start && start > today) {
-      newStatus = "Upcoming";
-    }
-    // Otherwise it's ongoing
-    else {
-      newStatus = "Ongoing";
-    }
+    if (end <= today) newStatus = "Completed";
+    else if (start && start > today) newStatus = "Upcoming";
+    else newStatus = "Ongoing";
 
-    // Only update if the calculated status is different
     if (form.status !== newStatus) {
-      setForm(prev => ({ ...prev, status: newStatus }));
+      setForm((prev) => ({ ...prev, status: newStatus }));
     }
   }, [form.start_date, form.end_date]);
-
 
   const filtered = useMemo(() => {
     return records
@@ -270,7 +256,6 @@ export default function StudentEngagement() {
       project_name: record.project_name || "",
       program_type: record.program_type || "Internship",
       duration_months: String(record.duration_months ?? ""),
-      // Slice date string to ensure format is compatible with input type="date"
       start_date: record.start_date ? record.start_date.slice(0, 10) : "",
       end_date: record.end_date ? record.end_date.slice(0, 10) : "",
       status: record.status || "Ongoing",
@@ -278,7 +263,7 @@ export default function StudentEngagement() {
       notes: record.notes || "",
       mentor: record.mentor || "",
     });
-    // Set file metadata for existing document display
+
     setExistingFileMeta({
       storage_key: record.storage_key,
       original_name: record.original_name,
@@ -286,11 +271,12 @@ export default function StudentEngagement() {
       size_bytes: record.size_bytes,
       content_hash: record.content_hash,
     });
-    setFile(null); // Clear any previously selected file
+
+    setFile(null);
     setShowModal(true);
   };
 
-  /* -------------------- Submit (FIXED) -------------------- */
+  /* -------------------- Submit -------------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -303,14 +289,12 @@ export default function StudentEngagement() {
     try {
       setSubmitting(true);
 
-      // Initialize file meta from existing record or null/empty strings if creating
       let storage_key = existingFileMeta?.storage_key;
       let original_name = existingFileMeta?.original_name;
       let content_type = existingFileMeta?.content_type;
       let size_bytes = existingFileMeta?.size_bytes;
       let content_hash = existingFileMeta?.content_hash;
 
-      // 1. If user uploaded a new file, replace existing one
       if (file) {
         const hash = await computeSha256(file);
 
@@ -330,7 +314,6 @@ export default function StudentEngagement() {
         content_hash = hash;
       }
 
-      // 2. Prepare payload
       const payload = {
         ...form,
         duration_months: form.duration_months
@@ -347,42 +330,54 @@ export default function StudentEngagement() {
 
       let resultRecord;
 
-      // 3. Update or create (FIXED: Added immediate local state update)
       if (editingRecord) {
-        // Update API returns the updated record
-        resultRecord = await studentEngagementApi.update(editingRecord.record_id, payload);
+        resultRecord = await studentEngagementApi.update(
+          editingRecord.record_id,
+          payload
+        );
       } else {
-        // Create API returns the newly created record
         resultRecord = await studentEngagementApi.create(payload);
       }
 
-      // 4. Update local state with the result record (more efficient than full list refresh)
       setRecords((prev) => {
         if (editingRecord) {
-          // Replace the old record with the updated one
           return prev.map((r) =>
             r.record_id === resultRecord.record_id ? resultRecord : r
           );
         } else {
-          // Add the new record to the list
           return [...prev, resultRecord];
         }
       });
 
-      // 5. Close modal
       setShowModal(false);
       resetFormState();
-
     } catch (err) {
-      console.error("Save error:", err?.message ?? err);
-      // Fallback: reload data if update/create failed (optional, but good for recovery)
-      // loadRecords();
       setError("Unable to save student engagement record. Please check the details.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+
+  const confirmDelete = async () => {
+    if (!recordToDelete) return;
+
+    try {
+      await studentEngagementApi.remove(recordToDelete.record_id);
+
+      setRecords((prev) =>
+        prev.filter((r) => r.record_id !== recordToDelete.record_id)
+      );
+    } catch (err) {
+      alert("Unable to delete record.");
+    }
+
+    setShowDeleteModal(false);
+    setRecordToDelete(null);
+  };
+
+  /* -------------------- DOCUMENT VIEW / DOWNLOAD -------------------- */
 
   const handleViewDocument = async (record) => {
     try {
@@ -408,34 +403,24 @@ export default function StudentEngagement() {
     }
   };
 
-  const handleDeleteRecord = async (record) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
-    try {
-      await studentEngagementApi.remove(record.record_id);
-      setRecords((prev) => prev.filter((r) => r.record_id !== record.record_id));
-    } catch (err) {
-      alert("Unable to delete record.");
-    }
-  };
-
-  // Determine which file name to display in the FileUploadBox
   const uploadDisplayFile =
-    file || (existingFileMeta?.original_name ? { name: existingFileMeta.original_name } : null);
+    file ||
+    (existingFileMeta?.original_name
+      ? { name: existingFileMeta.original_name }
+      : null);
 
   return (
     <div className={styles.wrapper}>
       {/* Stats */}
       <section className={styles.statsGrid}>
         {stats.map((s) => (
-          <StatCard key={s.title} {...s} /> // passes value,icons,title,bgColor
+          <StatCard key={s.title} {...s} />
         ))}
       </section>
 
       {/* Filters */}
       <section className={styles.filterBar}>
         <div className={styles.filterGroup}>
-         
-
           <FilterSelect
             label="Filter by Type"
             value={typeFilter}
@@ -469,145 +454,150 @@ export default function StudentEngagement() {
       <div className={styles.TableWrapper}>
         <h3>Student Programs</h3>
 
-        {(() => {
-          const columns = [
-            "Name",
-            "College Name",
-            "Project Name",
-            "Type",
-            "Duration",
-            "Start Date",
-            "End Date",
-            "Guide",
-            "Status",
-            "Actions",
-          ];
+        <table className={styles.Table}>
+          <thead>
+            <tr>
+              {[
+                "Name",
+                "College Name",
+                "Project Name",
+                "Type",
+                "Duration",
+                "Start Date",
+                "End Date",
+                "Guide",
+                "Status",
+                "Actions",
+              ].map((col) => (
+                <th key={col}>{col}</th>
+              ))}
+            </tr>
+          </thead>
 
-          const formatDate = (value) =>
-            value ? new Date(value).toLocaleDateString("en-GB") : "—";
+          <tbody>
+            {loading && (
+              <tr>
+                <td className="TableLoad" colSpan={10}>
+                  Loading...
+                </td>
+              </tr>
+            )}
 
-          return (
-            <table className={styles.Table}>
-              <thead>
-                <tr>
-                  {columns.map((col) => (
-                    <th key={col}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
+            {!loading && error && (
+              <tr>
+                <td className="TableError" colSpan={10}>
+                  {error}
+                </td>
+              </tr>
+            )}
 
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td className="TableLoad" colSpan={columns.length}>
-                      Loading...
-                    </td>
-                  </tr>
-                )}
+            {!loading && !error && filtered.length === 0 && (
+              <tr >
+                <td colSpan={10} style={{ padding: 0 }}>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "40px 0",
+                    }}
+                  >
+                    <EmptySection />
+                  </div>
+                </td>
+              </tr>
+            )}
 
-                {!loading && error && (
-                  <tr>
-                    <td className="TableError" colSpan={columns.length}>
-                      {error}
-                    </td>
-                  </tr>
-                )}
+            {!loading &&
+              !error &&
+              filtered.map((row) => (
+                <tr key={row.record_id}>
+                  <td className={styles.bold}>{row.student || "—"}</td>
+                  <td>{row.college_name || "—"}</td>
+                  <td>{row.project_name || "—"}</td>
+                  <td>{row.program_type || "—"}</td>
+                  <td>
+                    {row.duration_months
+                      ? `${row.duration_months} Months`
+                      : "—"}
+                  </td>
+                  <td>
+                    {row.start_date
+                      ? new Date(row.start_date).toLocaleDateString("en-GB")
+                      : "—"}
+                  </td>
+                  <td>
+                    {row.end_date
+                      ? new Date(row.end_date).toLocaleDateString("en-GB")
+                      : "—"}
+                  </td>
+                  <td>{row.mentor || "—"}</td>
+                  <td>
+                    <Badge value={row.status} />
+                  </td>
 
-                {!loading && !error && filtered.length === 0 && (
-                <tr style={{ height: "300px" }}>
-                  <td colSpan={10} style={{ padding: 0 }}>
-                    <div
-                       style={{
-                         width: "100%",
-                         height: "100%",
-                         display: "flex",
-                         alignItems: "center",
-                         justifyContent: "center",
-                         padding: "40px 0",
+                  <td>
+                    <div className="doc-actions">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => openEditModal(row)}
+                        title="Edit"
+                      >
+                        <FiEdit2 size={16} />
+                      </button>
+
+                      {row.storage_key && (
+                        <>
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => handleViewDocument(row)}
+                            title="View Document"
+                          >
+                            <FiEye size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => handleDownloadDocument(row)}
+                            title="Download Document"
+                          >
+                            <FiDownload size={16} />
+                          </button>
+                        </>
+                      )}
+
+                      {/* 🔴 OPEN DELETE CONFIRM MODAL */}
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => {
+                          setRecordToDelete(row);
+                          setShowDeleteModal(true);
                         }}
-      >
-                      <EmptySection />
+                        title="Delete"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
-               )}
-
-                {!loading &&
-                  !error &&
-                  filtered.map((row) => (
-                    <tr key={row.record_id}>
-                      <td className={styles.bold}>{row.student || "—"}</td>
-                      <td>{row.college_name || "—"}</td>
-                      <td>{row.project_name || "—"}</td>
-                      <td>{row.program_type || "—"}</td>
-                      <td>
-                        {row.duration_months ? `${row.duration_months} Months` : "—"}
-                      </td>
-                      <td>{formatDate(row.start_date)}</td>
-                      <td>{formatDate(row.end_date)}</td>
-                      <td>{row.mentor || "—"}</td>
-                      <td>
-                        <Badge value={row.status} />
-                      </td>
-                      
-                      <td>
-                        <div className="doc-actions">
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => openEditModal(row)}
-                            title="Edit"
-                          >
-                            <FiEdit2 size={16} />
-                          </button>
-                          {/* Only show view/download if a document exists */}
-                          {row.storage_key && (
-                            <>
-                              <button
-                                type="button"
-                                className="icon-btn"
-                                onClick={() => handleViewDocument(row)}
-                                title="View Document"
-                              >
-                                <FiEye size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                className="icon-btn"
-                                onClick={() => handleDownloadDocument(row)}
-                                title="Download Document"
-                              >
-                                <FiDownload size={16} />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleDeleteRecord(row)}
-                            title="Delete"
-                          >
-                            <FiTrash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          );
-        })()}
+              ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Modal */}
+      {/* Form Modal */}
       {showModal && (
-        <Modal
+        <Modal 
           title={editingRecord ? "Edit Student Program" : "Add Student Program"}
           onClose={handleCloseModal}
         >
           <form onSubmit={handleSubmit} className={styles.formGrid}>
-
-            {/* 👇 Upload box */}
             <FileUploadBox
               label="Upload Document"
               description="Attach project document or certificate"
@@ -616,7 +606,119 @@ export default function StudentEngagement() {
               onFileSelected={(f) => setFile(f)}
             />
 
-            {/* Repeat input format */}
+            <div className={styles.formModal}>
+
+  <label className={styles.inputLabel}>
+    <span>Student Name</span>
+    <input
+      placeholder="Enter Student Name"
+      value={form.student}
+      onChange={(e) => onChange("student", e.target.value)}
+    />
+  </label>
+
+  <label className={styles.inputLabel}>
+    <span>College Name</span>
+    <input
+      placeholder="Enter College Name"
+      value={form.college_name}
+      onChange={(e) => onChange("college_name", e.target.value)}
+    />
+  </label>
+
+  <label className={styles.inputLabel}>
+    <span>Project Title</span>
+    <input
+      placeholder="Enter Project Title"
+      value={form.project_name}
+      onChange={(e) => onChange("project_name", e.target.value)}
+    />
+  </label>
+
+  <label className={styles.inputLabel}>
+    <span>Program Type</span>
+    <select
+      value={form.program_type}
+      onChange={(e) => onChange("program_type", e.target.value)}
+    >
+      <option value="Internship">Internship</option>
+      <option value="Project">Project</option>
+      <option value="Research">Research</option>
+    </select>
+  </label>
+
+  {/* Dates – full width */}
+  <div className={`${styles.inputLabel} ${styles.fullWidth}`}>
+    <span>Duration</span>
+
+    <div className={styles.daterow}>
+      <div className={styles.field}>
+        <span>Start Date</span>
+        <input
+          type="date"
+          value={form.start_date}
+          max={form.end_date || undefined}
+          onChange={(e) => onChange("start_date", e.target.value)}
+        />
+      </div>
+
+      <div className={styles.field}>
+        <span>End Date</span>
+        <input
+          type="date"
+          value={form.end_date}
+          min={form.start_date || undefined}
+          onChange={(e) => onChange("end_date", e.target.value)}
+        />
+      </div>
+
+      <div className={styles.field}>
+        <span>Duration (months)</span>
+        <input
+          type="number"
+          readOnly
+          value={form.duration_months}
+        />
+      </div>
+    </div>
+
+    {dateError && <div className={styles.errorMsg}>{dateError}</div>}
+  </div>
+
+  <label className={styles.inputLabel}>
+    <span>Guide</span>
+    <input
+      placeholder="Enter Guide Name"
+      value={form.mentor}
+      onChange={(e) => onChange("mentor", e.target.value)}
+    />
+  </label>
+
+  <label className={styles.inputLabel}>
+    <span>Status</span>
+    <select
+      value={form.status}
+      onChange={(e) => onChange("status", e.target.value)}
+    >
+      <option value="Ongoing">Ongoing</option>
+      <option value="Completed">Completed</option>
+      <option value="Upcoming">Upcoming</option>
+    </select>
+  </label>
+
+  {/* Notes – full width */}
+  <label className={`${styles.textAreaLabel} ${styles.fullWidth}`}>
+    <span>Notes</span>
+    <textarea
+      value={form.notes}
+      onChange={(e) => onChange("notes", e.target.value)}
+    />
+  </label>
+
+</div>
+
+
+          {/* <div className="styles.formModal">
             <label className={styles.inputLabel}>
               <span>Student Name</span>
               <input
@@ -656,45 +758,47 @@ export default function StudentEngagement() {
               </select>
             </label>
 
-           <label className={styles.inputLabel}>
-            <div className={styles.daterow}>
-               <div className={styles.field}>
-              <span>Start Date</span>
-              <input
-                type="date"
-                value={form.start_date}
-                max={form.end_date || undefined}
-                onChange={(e) => onChange("start_date", e.target.value)}
-              />
-              </div>
-
-              <div className={styles.field}>
-              <span>End Date</span>
-              <input
-                type="date"
-                value={form.end_date}
-                min={form.start_date || undefined}
-                onChange={(e) => onChange("end_date", e.target.value)}
-              />
-              </div>
-            </div>
-
             <label className={styles.inputLabel}>
-              <span>Duration (months)</span>
-              <input
-                type="number"
-                min="1"
-                value={form.duration_months}
-                readOnly
-                placeholder="Calculated from dates"
-              />
+              <div className={styles.daterow}>
+                <div className={styles.field}>
+                  <span>Start Date</span>
+                  <input
+                    type="date"
+                    value={form.start_date}
+                    max={form.end_date || undefined}
+                    onChange={(e) => onChange("start_date", e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <span>End Date</span>
+                  <input
+                    type="date"
+                    value={form.end_date}
+                    min={form.start_date || undefined}
+                    onChange={(e) => onChange("end_date", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <label className={styles.inputLabel}>
+                <span>Duration (months)</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.duration_months}
+                  readOnly
+                  placeholder="Calculated from dates"
+                />
+              </label>
+
+              {dateError && <div className={styles.errorMsg}>{dateError}</div>}
             </label>
-            {dateError && <div className={styles.errorMsg}>{dateError}</div>}
-           </label>
-           
+
             <label className={styles.inputLabel}>
               <span>Guide</span>
-              <input placeholder="Enter Guide Name"
+              <input
+                placeholder="Enter Guide Name"
                 value={form.mentor}
                 onChange={(e) => onChange("mentor", e.target.value)}
               />
@@ -711,8 +815,7 @@ export default function StudentEngagement() {
                 <option value="Upcoming">Upcoming</option>
               </select>
             </label>
-
-           
+            </div>
 
             <label className={styles.textAreaLabel}>
               <span>Notes</span>
@@ -720,7 +823,7 @@ export default function StudentEngagement() {
                 value={form.notes}
                 onChange={(e) => onChange("notes", e.target.value)}
               />
-            </label>
+            </label> */}
 
             <div className={styles.formActions}>
               <button
@@ -739,8 +842,8 @@ export default function StudentEngagement() {
                 {submitting
                   ? "Saving..."
                   : editingRecord
-                    ? "Save Changes"
-                    : "+ Add Program"}
+                  ? "Save Changes"
+                  : "+ Add Program"}
               </button>
             </div>
 
@@ -748,6 +851,18 @@ export default function StudentEngagement() {
           </form>
         </Modal>
       )}
+
+      {showDeleteModal && (
+  
+    <ConfirmationModal
+      title="Delete Student Records"
+      onCancel={() => {
+        setShowDeleteModal(false);
+        setRecordToDelete(null);
+      }}
+      onConfirm={confirmDelete}
+    />
+)}
     </div>
   );
 }

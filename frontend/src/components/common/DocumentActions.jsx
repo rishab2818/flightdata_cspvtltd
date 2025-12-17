@@ -1,10 +1,17 @@
 
 // src/components/common/DocumentActions.jsx
-import React from "react";
+import React, {useState} from "react";
 import { FiEye, FiDownload, FiTrash2, FiEdit2 } from "react-icons/fi";
 import { viewDocument, downloadDocument, deleteDocument } from "../../utils/documentActions";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 export default function DocumentActions({ doc, onEdit, onView, onDownload, onDelete }) {
+   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+  };
+  
   const handleView = () => {
     if (onView) return onView(doc);
     return viewDocument(doc.id);
@@ -15,9 +22,12 @@ export default function DocumentActions({ doc, onEdit, onView, onDownload, onDel
     return downloadDocument(doc.id, doc.fileName);
   };
 
-  const handleDelete = () => {
-    if (onDelete) return onDelete(doc);
-    return deleteDocument(doc.id, doc.onDeleted);
+const confirmDelete = async () => {
+    try {
+      await onDelete?.(doc);
+    } finally {
+      setShowDeleteModal(false);
+    }
   };
 
   return (
@@ -40,7 +50,19 @@ export default function DocumentActions({ doc, onEdit, onView, onDownload, onDel
         <FiDownload size={16} />
       </button>
 
-      <button
+       <button className="icon-btn" onClick={handleDelete}>
+        <FiTrash2 size={16} />
+      </button>
+
+      {showDeleteModal && (
+        <ConfirmationModal
+          title="Delete Meeting Minutes"
+          onCancel={() => setShowDeleteModal(false)}
+          onConfirm={confirmDelete}
+        />
+         )}
+
+      {/* <button
         type="button"
         className="icon-btn"
         onClick={handleDelete}
@@ -48,6 +70,17 @@ export default function DocumentActions({ doc, onEdit, onView, onDownload, onDel
       >
         <FiTrash2 size={16} />
       </button>
+
+       {showDeleteModal && (
+        <ConfirmationModal
+          title="Delete Procurement Records"
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setRecordToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+        /> */}
+     
     </div>
   );
 }

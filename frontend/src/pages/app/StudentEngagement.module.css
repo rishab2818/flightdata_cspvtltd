@@ -3,6 +3,8 @@
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
+  height:100%; 
+  
 }
 
 /* ---------- Stats Cards ---------- */
@@ -137,14 +139,19 @@
   padding: 0px 24px 24px 24px;
   width: 100%;
   overflow-x: auto;     /* enables horizontal scroll */
-  overflow-y: hidden;
-}
+  overflow-y: auto;
+  display: block;
+  flex-direction: column;
+  height: 70%;
+} 
+
 
 .h3{
   font-family: "Inter-semiBold", Helvetica;
   font-size: 16px;
   font-weight: 600;
   color: #0a0a0a;
+
 }
 
 .Table {
@@ -156,18 +163,23 @@
   border: 1px solid #00000026;
   border-radius: 8px;
   border-color: #0000001A;
+  overflow-y: auto;
+  z-index: 60;
+  
 }
 
 .Table th {
   margin-top: -10px;
   padding: 12px;
   background: #EFF7FF;
-  text-align: left;
+  text-align: center;
   font-size: 14px;
   font-family: "Inter-regular", Helvetica;
   font-weight: 400;
   color:#000000;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+   z-index: 10; 
 }
 
 .Table td {
@@ -177,6 +189,10 @@
   color: #000000CC;
   font-family: "Inter-regular", Helvetica;
   font-weight: 600;
+  vertical-align: top;
+  overflow-y: auto;
+  max-height: calc(90vh - 80px);
+  text-align: center;
 }
 
 
@@ -194,6 +210,7 @@
     text-align: center;
     font-size: 13px;
     color: #000000cc;
+    height: 100%;
 }
 
 .TableLoading {
@@ -210,6 +227,7 @@
   font-weight: 600;
 }
 
+
 /* ---------- Modal ---------- */
 .modalOverlay {
   position: fixed;
@@ -221,8 +239,8 @@
   z-index: 60;
 }
 
-.modal {
-  width: 820px;
+.modalgrid {
+  width: 720px;
   max-width: 95%;
   max-height: 90vh;
   background: #fff;
@@ -233,6 +251,7 @@
   padding: 0px 25px 25px;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
 }
+
 
 .modalHeader {
   display: flex;
@@ -257,6 +276,21 @@
   max-height: calc(90vh - 80px);
 }
 
+.fullWidth {
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .formModal {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: span 1;
+  }
+}
+
+
 
 .closeBtn {
   width: 16px;
@@ -274,6 +308,12 @@
   gap: 12px;
   width: 100%;
   position: relative;
+}
+
+.formModal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .inputLabel {

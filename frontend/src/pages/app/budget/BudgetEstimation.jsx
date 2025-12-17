@@ -9,6 +9,10 @@ import { budgetsApi } from '../../../api/budgetsApi';
 import { computeSha256 } from '../../../lib/fileUtils';
 import { downloadExcel } from '../../../lib/excelExport';
 import DownloadSimple from "../../../assets/DownloadSimple.svg";
+import ConfirmationModal from "../../../components/common/ConfirmationModal.jsx";
+
+
+
 
 
 
@@ -50,6 +54,10 @@ export default function BudgetEstimation() {
   const cashSplitLabel = useMemo(() => deriveCashSplitYear(forecastYear), [forecastYear]);
   const columns = useMemo(() => forecastColumns(cashSplitLabel), [cashSplitLabel]);
   const exportColumns = useMemo(() => budgetExportColumns(cashSplitLabel), [cashSplitLabel]);
+
+  /** 🔴 NEW — Delete Modal State */
+      const [showDeleteModal, setShowDeleteModal] = useState(false);
+      const [recordToDelete, setRecordToDelete] = useState(null);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -116,19 +124,36 @@ export default function BudgetEstimation() {
     setError('');
   };
 
-  const handleDelete = async (record) => {
-    if (!record?.record_id) return;
-    const confirmed = window.confirm('Are you sure you want to delete this forecast?');
-    if (!confirmed) return;
-    try {
-      await budgetsApi.remove(record.record_id);
-      setRows((prev) => prev.filter((row) => row.record_id !== record.record_id));
-    } catch (err) {
-      setError('Failed to delete forecast.');
-    }
-  };
+  // const handleDelete = async (record) => {
+  //   if (!record?.record_id) return;
+  //   const confirmed = window.confirm('Are you sure you want to delete this forecast?');
+  //   if (!confirmed) return;
+  //   try {
+  //     await budgetsApi.remove(record.record_id);
+  //     setRows((prev) => prev.filter((row) => row.record_id !== record.record_id));
+  //   } catch (err) {
+  //     setError('Failed to delete forecast.');
+  //   }
+  // };
 
-  const handleDownload = async (record) => {
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+    const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  try {
+    await budgetsApi.remove(recordToDelete.record_id); // ✅ use recordToDelete
+    setRows((prev) => prev.filter((row) => row.record_id !== recordToDelete.record_id));
+  } catch (err) {
+    alert("Unable to delete record.");
+  } finally {
+    setShowDeleteModal(false);
+    setRecordToDelete(null);
+  }
+};
+
+/*----------------------------------------------------------------------*/
+   
+const handleDownload = async (record) => {
     if (!record?.record_id) return;
     try {
       const { download_url } = await budgetsApi.download(record.record_id);
@@ -260,7 +285,10 @@ export default function BudgetEstimation() {
             rows={sortedRows}
             onView={(row) => handleOpenModal('view', row)}
             onEdit={(row) => handleOpenModal('edit', row)}
-            onDelete={handleDelete}
+             onDelete={(row) => {
+                       setRecordToDelete(row);
+                       setShowDeleteModal(true);
+                      }}
             onDownload={handleDownload}
           />
         )}
@@ -279,6 +307,19 @@ export default function BudgetEstimation() {
         onForecastYearChange={setForecastYear}
         existingFileName={modalState.record?.original_name}
       />
+
+        {showDeleteModal && (
+        <ConfirmationModal
+          title="Are you sure you want to delete this forecast?"
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setRecordToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+        />
+      )}
+
+
     </div>
   );
 }
