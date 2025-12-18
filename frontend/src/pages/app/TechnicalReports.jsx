@@ -134,7 +134,7 @@ export default function TechnicalReports() {
         }}
       >
         <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{  color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Type</span>
+          <span style={{ color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight: 500 }}>Filter by Type</span>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ type: e.target.value })}
@@ -150,7 +150,7 @@ export default function TechnicalReports() {
               fontSize: 14,
               lineHeight: "36px",
               appearance: "none",
-              border: "none",
+
               WebkitAppearance: "none",
               MozAppearance: "none",
               backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
@@ -261,25 +261,25 @@ export default function TechnicalReports() {
                   </td>
                 </tr>
               )}
-              
+
               {!loading && !error && filtered.length === 0 && (
-                                <tr style={{ height: "300px" }}>
-                                  <td colSpan={10} style={{ padding: 0 }}>
-                                                <div
-                                                   style={{
-                                                     width: "100%",
-                                                     height: "100%",
-                                                     display: "flex",
-                                                     alignItems: "center",
-                                                     justifyContent: "center",
-                                                     padding: "40px 0",
-                                                    }}
-                                  >
-                                                  <EmptySection />
-                                                </div>
-                                              </td>
-                                            </tr>
-                                           )}
+                <tr style={{ height: "300px" }}>
+                  <td colSpan={10} style={{ padding: 0 }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "40px 0",
+                      }}
+                    >
+                      <EmptySection />
+                    </div>
+                  </td>
+                </tr>
+              )}
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {
