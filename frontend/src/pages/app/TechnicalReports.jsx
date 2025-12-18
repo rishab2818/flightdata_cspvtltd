@@ -30,8 +30,12 @@ export default function TechnicalReports() {
   const [editingRecord, setEditingRecord] = useState(null);
 
   /** 🔴 NEW — Delete Modal State */
-      const [showDeleteModal, setShowDeleteModal] = useState(false);
-      const [recordToDelete, setRecordToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
+
+  /** 🔴 NEW — Delete Modal State */
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
 
   const loadRecords = async () => {
     try {
@@ -58,18 +62,18 @@ export default function TechnicalReports() {
   // }, [records, filters]);
 
   const filtered = useMemo(() => {
-  const searchText = search.toLowerCase();
+    const searchText = search.toLowerCase();
 
-  return records.filter((row) => {
-    const typeMatch =
-      filters.type === "all" || row.report_type === filters.type;
+    return records.filter((row) => {
+      const typeMatch =
+        filters.type === "all" || row.report_type === filters.type;
 
-    const searchMatch =
-      row.report_name?.toLowerCase().includes(searchText);
-      
-    return typeMatch && searchMatch;
-  });
-}, [records, filters, search]);
+      const searchMatch =
+        row.report_name?.toLowerCase().includes(searchText);
+
+      return typeMatch && searchMatch;
+    });
+  }, [records, filters, search]);
 
 
   /* --------------------- Action Handlers --------------------- */
@@ -106,21 +110,21 @@ export default function TechnicalReports() {
   //   }
   // };
 
-    /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
   const confirmDelete = async () => {
-  if (!recordToDelete) return;
+    if (!recordToDelete) return;
 
-  try {
-    // Use recordToDelete instead of row
-    await recordsApi.removeTechnical(recordToDelete.record_id);
-    setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
-  } catch (err) {
-    alert("Unable to delete record.");
-  }
+    try {
+      // Use recordToDelete instead of row
+      await recordsApi.removeTechnical(recordToDelete.record_id);
+      setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
+    } catch (err) {
+      alert("Unable to delete record.");
+    }
 
-  setShowDeleteModal(false);
-  setRecordToDelete(null);
-};
+    setShowDeleteModal(false);
+    setRecordToDelete(null);
+  };
 
 
   const handleEdit = (row) => {
@@ -141,7 +145,7 @@ export default function TechnicalReports() {
 
 
   return (
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto",height:"100%", gap:"10px" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height: "100%", gap: "10px" }}>
 
 
       <div
@@ -172,7 +176,7 @@ export default function TechnicalReports() {
         }}
       >
         <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{  color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Type</span>
+          <span style={{ color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight: 500 }}>Filter by Type</span>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ type: e.target.value })}
@@ -203,25 +207,25 @@ export default function TechnicalReports() {
           </select>
         </label>
 
-        <div style={{flex:1, maxWidth:"850px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
-                  <FiSearch size={16} color="#64748b" />
-                  <input
-                    style={{
-                      border: "none",
-                      outline: "none",
-                      minwidth: "350px",
-                      background: "transparent",
-                      flex: 1,
-                      gap:20,
-                      fontsize: "14px",
-                      color: "#0f172a",
+        <div style={{ flex: 1, maxWidth: "850px", display: "flex", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderradius: "0px", padding: "12px 24px" }}>
+          <FiSearch size={16} color="#64748b" />
+          <input
+            style={{
+              border: "none",
+              outline: "none",
+              minwidth: "350px",
+              background: "transparent",
+              flex: 1,
+              gap: 20,
+              fontsize: "14px",
+              color: "#0f172a",
 
-                    }}
-                    type="text"
-                    placeholder="Search reports, tags, projects..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
+            }}
+            type="text"
+            placeholder="Search reports, tags, projects..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         <button
@@ -238,7 +242,7 @@ export default function TechnicalReports() {
             gap: 8,
             fontWeight: 600,
             cursor: "pointer",
-            height:"43px",
+            height: "43px",
           }}
         >
           <FiPlus /> Upload Document
@@ -252,12 +256,12 @@ export default function TechnicalReports() {
           border: `1px solid ${BORDER}`,
           borderRadius: 12,
           padding: "10px 24px 24px 24px",
-          display:"flex",
-          flexDirection:"column",
+          display: "flex",
+          flexDirection: "column",
           height: "calc(68vh - 70px)", // adjust if header size changes
         }}
       >
-        <div style={{ marginTop: 10,flex:1, maxHeight:"100",overflowX: "auto",overflowY: "auto" }}>
+        <div style={{ marginTop: 10, flex: 1, maxHeight: "100", overflowX: "auto", overflowY: "auto" }}>
           <div
             style={{
               marginBottom: 10,
@@ -265,7 +269,7 @@ export default function TechnicalReports() {
               color: "#0A0A0A",
               fontSize: 16,
               fontWeight: "600",
-              gap:15,
+              gap: 15,
             }}
           >
             Technical Reports
@@ -279,7 +283,7 @@ export default function TechnicalReports() {
               borderRadius: 8,
               overflow: "hidden",
               minWidth: 900,
-              marginTop:"20px"
+              marginTop: "20px"
             }}
           >
             <thead >
@@ -303,7 +307,7 @@ export default function TechnicalReports() {
                       style={{
                         padding: "12px 16px",
                         fontWeight: 600,
-                       
+
                         borderBottom: `1px solid ${BORDER}`,
                       }}
                     >
@@ -328,25 +332,25 @@ export default function TechnicalReports() {
                   </td>
                 </tr>
               )}
-              
+
               {!loading && !error && filtered.length === 0 && (
-                                <tr style={{ height: "250px" }}>
-                                  <td colSpan={10} style={{ padding: 0 }}>
-                                                <div
-                                                   style={{
-                                                     width: "100%",
-                                                     height: "60%",
-                                                     display: "flex",
-                                                     alignItems: "center",
-                                                     justifyContent: "center",
-                                                     padding: "40px 0",
-                                                    }}
-                                  >
-                                                  <EmptySection />
-                                                </div>
-                                              </td>
-                                            </tr>
-                                           )}
+                <tr style={{ height: "250px" }}>
+                  <td colSpan={10} style={{ padding: 0 }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "60%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "40px 0",
+                      }}
+                    >
+                      <EmptySection />
+                    </div>
+                  </td>
+                </tr>
+              )}
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {
@@ -408,10 +412,10 @@ export default function TechnicalReports() {
                           onEdit={() => handleEdit(row)}
                           onView={() => handleView(row)}
                           onDownload={() => handleDownload(row)}
-                           onDelete={() => {
-                       setRecordToDelete(row);
-                       setShowDeleteModal(true);
-                      }}
+                          onDelete={() => {
+                            setRecordToDelete(row);
+                            setShowDeleteModal(true);
+                          }}
                         />
                       </td>
                     </tr>
@@ -431,7 +435,7 @@ export default function TechnicalReports() {
         />
       )}
 
-       {showDeleteModal && (
+      {showDeleteModal && (
         <ConfirmationModal
           title="Delete this technical report?"
           onCancel={() => {
@@ -440,7 +444,7 @@ export default function TechnicalReports() {
           }}
           onConfirm={confirmDelete}
         />
-      )} 
+      )}
     </div>
   );
 }

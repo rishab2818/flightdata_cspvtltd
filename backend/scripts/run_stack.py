@@ -12,6 +12,7 @@ left running so they can be reused across runs.
 """
 
 import argparse
+import os
 import signal
 import shutil
 import subprocess
@@ -114,6 +115,8 @@ def start_process(label: str, args: List[str]) -> subprocess.Popen:
     return subprocess.Popen(args)
 
 
+
+
 def stop_processes(processes: List[subprocess.Popen]) -> None:
     for proc in processes:
         if proc.poll() is None:
@@ -128,7 +131,8 @@ def stop_processes(processes: List[subprocess.Popen]) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Start Mongo, Redis, MinIO, uvicorn, and Celery with one command.")
-    parser.add_argument("--host", default="127.0.0.1", help="Host/interface for uvicorn (default: 127.0.0.1)")
+    # parser.add_argument("--host", default="127.0.0.1", help="Host/interface for uvicorn (default: 127.0.0.1)")
+    parser.add_argument("--host", default="0.0.0.0", help="Host/interface for uvicorn (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8000, help="Port for uvicorn (default: 8000)")
     parser.add_argument("--minio-console-port", type=int, default=9090, help="MinIO console port (default: 9090)")
     parser.add_argument("--minio-api-port", type=int, default=9000, help="MinIO API port (default: 9000)")
