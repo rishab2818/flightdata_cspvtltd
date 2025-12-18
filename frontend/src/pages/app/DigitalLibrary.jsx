@@ -6,6 +6,7 @@ import { documentsApi } from "../../api/documentsApi";
 import styles from "./DigitalLibrary.module.css";
 import uploadbutton from "../../assets/uploadbutton.svg";
 import EmptySection from "../../components/common/EmptyProject";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 
 const typeLabelFromName = (name = "", contentType = "") => {
@@ -60,6 +61,10 @@ export default function DigitalLibrary() {
   const [editError, setEditError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
+  /** 🔴 NEW — Delete Modal State */
+      const [showDeleteModal, setShowDeleteModal] = useState(false);
+      const [recordToDelete, setRecordToDelete] = useState(null);
+
   const mapDocument = useCallback((doc) => ({
     id: doc.doc_id,
     name: doc.original_name,
@@ -92,15 +97,38 @@ export default function DigitalLibrary() {
     setDocuments((prev) => [mapDocument(doc), ...prev]);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this file permanently?")) return;
-    try {
-      await documentsApi.remove(id);
-      setDocuments((prev) => prev.filter((d) => d.id !== id));
-    } catch (err) {
-      alert("Delete failed. Please try again.");
-    }
-  };
+  // const handleDelete = async (id) => {
+  //   if (!window.confirm("Delete this file permanently?")) return;
+  //   try {
+  //     await documentsApi.remove(id);
+  //     setDocuments((prev) => prev.filter((d) => d.id !== id));
+  //   } catch (err) {
+  //     alert("Delete failed. Please try again.");
+  //   }
+  // };
+
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+  // Trigger modal
+const handleDelete = (doc) => {
+  setRecordToDelete(doc);
+  setShowDeleteModal(true);
+};
+
+// Confirm delete
+const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  try {
+    await documentsApi.remove(recordToDelete.id);
+    setDocuments((prev) => prev.filter((d) => d.id !== recordToDelete.id));
+  } catch (err) {
+    alert("Unable to delete record.");
+  }
+
+  setShowDeleteModal(false);
+  setRecordToDelete(null);
+};
+
 
   const handleDownload = async (id, fileName) => {
     try {
@@ -309,7 +337,7 @@ export default function DigitalLibrary() {
                         <button
                           type="button"
                           className="icon-btn"
-                          onClick={() => handleDelete(doc.id)}
+                          onClick={() => handleDelete(doc)}
                           aria-label="Delete"
                         >
                           <FiTrash2 size={16} />
@@ -328,6 +356,17 @@ export default function DigitalLibrary() {
         onClose={() => setShowUpload(false)}
         onUploaded={handleUploaded}
       />
+
+       {showDeleteModal && (
+              <ConfirmationModal
+                title="Delete this technical report?"
+                onCancel={() => {
+                  setShowDeleteModal(false);
+                  setRecordToDelete(null);
+                }}
+                onConfirm={confirmDelete}
+              />
+            )}
 
       {editingDoc && (
         <div className={styles.modalBackdrop}>

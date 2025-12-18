@@ -616,6 +616,8 @@ import pending_review from "../../assets/SpinnerGap.svg";
 import DocumentActions from "../../components/common/DocumentActions";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
+
 
 
 const BORDER = "#E2E8F0";
@@ -640,6 +642,10 @@ export default function CustomerFeedbacks() {
   const [showModal, setShowModal] = useState(false);
   // For editing the document
   const [editingRecord, setEditingRecord] = useState(null);
+
+  /** 🔴 NEW — Delete Modal State */
+      const [showDeleteModal, setShowDeleteModal] = useState(false);
+      const [recordToDelete, setRecordToDelete] = useState(null);
 
   const loadRecords = async () => {
     try {
@@ -691,16 +697,37 @@ export default function CustomerFeedbacks() {
     }
   };
 
-  // handle delete
-  const handleDelete = async (row) => {
-    if (!window.confirm("Delete this feedback?")) return;
-    try {
-      await recordsApi.removeFeedback(row.record_id);
-      setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
-    } catch (err) {
-      alert("Delete failed. Please try again.");
-    }
-  };
+  // // handle delete
+  // const handleDelete = async (row) => {
+  //   if (!window.confirm("Delete this feedback?")) return;
+  //   try {
+  //     await recordsApi.removeFeedback(row.record_id);
+  //     setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
+  //   } catch (err) {
+  //     alert("Delete failed. Please try again.");
+  //   }
+  // };
+
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+  
+    const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  try {
+    // Use recordToDelete instead of row
+    await recordsApi.removeFeedback(recordToDelete.record_id);
+
+    setRecords((prev) =>
+      prev.filter((r) => r.record_id !== recordToDelete.record_id)
+    );
+  } catch (err) {
+    alert("Unable to delete record.");
+  }
+
+  setShowDeleteModal(false);
+  setRecordToDelete(null);
+};
+
 
   // handle edit
   const handleEdit = (row) => {
@@ -722,7 +749,7 @@ export default function CustomerFeedbacks() {
 
   return (
     /* Card UI */
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%" }}>
       {/* Stat Cards */}
       <div
         style={{
@@ -811,14 +838,18 @@ export default function CustomerFeedbacks() {
       {/* TABLE SECTION CARD */}
       <div
         style={{
-          marginTop: 18,
+          marginTop: 25,
           background: "#fff",
           border: `1px solid ${BORDER}`,
           borderRadius: 12,
-          padding: 20,
+          padding: "10px 24px 24px 24px",
+          display:"block",
+          flexDirection:"column",
+          gap:16,
+          height: "calc(68vh - 70px)", // adjust if header size changes
         }}
       >
-        <div style={{ marginTop: 10, overflowX: "auto" }}>
+        <div style={{ marginTop: 10,maxHeight:"56vh", overflowX: "auto",overflowY: "auto" }}>
           <div
             style={{
               marginBottom: 10,
@@ -839,6 +870,8 @@ export default function CustomerFeedbacks() {
               borderRadius: 8,
               overflow: "hidden", // Clips corners
               minWidth: 900,
+              gap:16,
+              marginTop:"20px",
             }}
           >
             <thead>
@@ -846,7 +879,7 @@ export default function CustomerFeedbacks() {
                 style={{
                   color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
-                  textAlign: "left",
+                  textAlign: "center",
                   fontWeight: 400,
                   fontSize: 12,
                   background: "#EFF7FF",
@@ -859,6 +892,7 @@ export default function CustomerFeedbacks() {
                       style={{
                         padding: "12px 16px",
                         fontWeight: 600,
+                        textAlign: "center",
                         borderBottom: `1px solid ${BORDER}`, // Header separator
                       }}
                     >
@@ -868,7 +902,7 @@ export default function CustomerFeedbacks() {
                 )}
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ textAlign: "center" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
@@ -963,7 +997,11 @@ export default function CustomerFeedbacks() {
                           onEdit={() => handleEdit(row)}
                           onView={() => handleView(row)}
                           onDownload={() => handleDownload(row)}
-                          onDelete={() => handleDelete(row)}
+                           onDelete={() => {
+                       setRecordToDelete(row);
+                       setShowDeleteModal(true);
+                      }}
+
                         />
                       </td>
                     </tr>
@@ -988,6 +1026,17 @@ export default function CustomerFeedbacks() {
           }}
         />
       )}
+
+      {showDeleteModal && (
+        <ConfirmationModal
+          title="Delete This Feedback?"
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setRecordToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+        />
+      )}   
     </div>
   );
 }
