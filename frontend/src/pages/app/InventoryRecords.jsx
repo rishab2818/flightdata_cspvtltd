@@ -7,6 +7,10 @@ import Users from "../../assets/Users.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
 import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
+import FileText from "../../assets/FileText.svg"
+import load from "../../assets/load.svg";
+
+
 import styles from "./InventoryRecords.module.css";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
@@ -311,10 +315,18 @@ export default function InventoryRecords() {
 
       {/* Filters */}
       <div className={styles.filtersContainer}>
-        <div className={styles.leftFilters}>
+          <div className={styles.searchBox}>
+                          <FiSearch size={16} color="#64748b" />
+                          <input
+                            className={styles.searchInput}
+                            placeholder="Search particulars..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                          />
+          </div>
           {/* Filter by Type */}
           <label className={styles.filterGroup}>
-            <span className={styles.filterLabel}>Filter by Type</span>
+            {/* <span className={styles.filterLabel}>Filter by Type</span> */}
             <select
               className={styles.select}
               value={filters.type}
@@ -331,7 +343,7 @@ export default function InventoryRecords() {
 
           {/* Filter by Status */}
           <label className={styles.filterGroup}>
-            <span className={styles.filterLabel}>Filter by Status</span>
+            {/* <span className={styles.filterLabel}>Filter by Status</span> */}
             <select
               className={styles.select}
               value={filters.status}
@@ -344,31 +356,14 @@ export default function InventoryRecords() {
               <option value="Completed">Completed</option>
             </select>
           </label>
-        </div>
-
-         <div style={{flex:1, maxWidth:"550px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
-                          <FiSearch size={16} color="#64748b" />
-                          <input
-                            style={{
-                              border: "none",
-                              outline: "none",
-                              minwidth: "350px",
-                              background: "transparent",
-                              flex: 1,
-                              gap:20,
-                              fontsize: "14px",
-                              color: "#0f172a",
         
-                            }}
-                            placeholder="Search particulars..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                          />
-          </div>
+
+         
 
         {/* Upload Button */}
         <button className={styles.uploadBtn} onClick={openModal}>
-          <FiPlus size={16} /> Upload Record
+           <img src={FileText} alt="Record"/>
+           Procurement Record
         </button>
       </div>
 
@@ -865,6 +860,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
                 type="submit"
                 disabled={submitting}
               >
+                <img src={load} alt="loading" className={styles.icon} />
                 {submitting
                   ? editingOrder
                     ? "Saving..."
@@ -1048,14 +1044,19 @@ function QuantityAssigneesModal({
           >
             Cancel
           </button>
-          <button
+          {/* <button className={styles.submitBtn} onClick={handleSubmit}>
+  <img src={load} alt="loading" className={styles.icon} />
+  {submitting ? "Uploading..." : "Upload"}
+</button> */}
+
+         <button
             type="button"
             className={styles.saveBtn}
             onClick={handleSave}
             disabled={saving}
           >
             {saving ? "Saving..." : "Done"}
-          </button>
+          </button> 
         </div>
       </div>
     </div>

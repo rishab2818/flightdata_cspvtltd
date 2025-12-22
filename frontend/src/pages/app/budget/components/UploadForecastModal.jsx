@@ -3,6 +3,7 @@ import { FiX } from 'react-icons/fi';
 import styles from '../BudgetEstimation.module.css';
 import { modalFields } from '../data';
 import FileUploadBox from "../../../../components/common/FileUploadBox";
+import load from "../../../../assets/load.svg"
 
 
 export default function UploadForecastModal({
@@ -136,6 +137,7 @@ export default function UploadForecastModal({
               onClick={handleSubmit}
               disabled={saving}
             >
+              <img src={load} alt="load" className={styles.icons} />
               {saving ? 'Saving…' : mode === 'edit' ? 'Update' : 'Upload'}
             </button>
           )}
