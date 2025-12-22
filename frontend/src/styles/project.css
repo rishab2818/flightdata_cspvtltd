@@ -360,3 +360,40 @@
   overflow: hidden;
 }
 
+.excel-preview {
+  margin-top: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: auto;
+  background: #fff;
+  max-height: 320px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table thead th {
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+.data-table--sheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.data-table--sheet tbody tr:nth-child(even) {
+  background: #f8fafc;
+}

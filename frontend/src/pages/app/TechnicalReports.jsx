@@ -333,7 +333,7 @@ export default function TechnicalReports() {
                   </td>
                 </tr>
               )}
-              
+
               {!loading && !error && filtered.length === 0 && (
                                 <tr style={{ height: "250px" }}>
                                   <td colSpan={10} style={{ padding: 0 }}>
