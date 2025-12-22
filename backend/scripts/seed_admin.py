@@ -6,7 +6,7 @@ from enum import Enum
 
 # --- Direct config here ---
 MONGO_URI = "mongodb://127.0.0.1:27017"
-MONGO_DB = "flightdv"
+MONGO_DB = "projectManagement"
 
 
 # --- Define Role enum directly (if you need it) ---

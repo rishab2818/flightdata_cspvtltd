@@ -127,7 +127,19 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
           </div>
         </div>
         {/* view project button */}
-        <Button variant="secondary" style={{ width: 160, height: 44, padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 8, color: "#000000", fontFamily: "inter-semi-bold, Helvetica", fontSize: 16 }} onClick={onView}>
+        <Button
+          variant="secondary"
+          style={{
+            width: 160,
+            height: 44,
+            padding: `${SPACING.sm}px ${SPACING.md}px`,
+            borderRadius: 8,
+            color: "#000000",
+            fontFamily: "inter-semi-bold, Helvetica",
+            fontSize: 16
+          }}
+          onClick={() => alert('View project will be implemented later')}
+        >
           <FiEye size={24} /> <span>View Project</span>
         </Button>
       </div>

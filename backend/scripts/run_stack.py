@@ -145,18 +145,18 @@ def main() -> None:
     minio_env = {"MINIO_ROOT_USER": "minioadmin", "MINIO_ROOT_PASSWORD": "minioadmin"}
 
     ensure_container(
-        name="flightdata-mongo",
+        name="projectManagement-mongo",
         image="mongo:7",
         ports=[f"{args.mongo_port}:27017"],
         volumes=[f"{DATA_ROOT / 'mongo'}:/data/db"],
     )
     ensure_container(
-        name="flightdata-redis",
+        name="projectManagement-redis",
         image="redis:7",
         ports=[f"{args.redis_port}:6379"],
     )
     ensure_container(
-        name="flightdata-minio",
+        name="projectManagement-minio",
         image="quay.io/minio/minio",
         ports=[f"{args.minio_api_port}:9000", f"{args.minio_console_port}:9090"],
         env=minio_env,

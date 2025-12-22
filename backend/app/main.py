@@ -7,8 +7,7 @@ from app.routers import projects
 from app.routers import documents
 from app.routers import records
 from app.routers import student_engagement
-from app.routers import ingestion
-from app.routers import visualizations
+
 from app.routers import notifications
 from app.routers import meetings
 from app.routers import budgets
@@ -32,8 +31,7 @@ app.include_router(projects.router)
 app.include_router(documents.router)
 app.include_router(records.router)
 app.include_router(student_engagement.router)
-app.include_router(ingestion.router)
-app.include_router(visualizations.router)
+
 app.include_router(notifications.router)
 app.include_router(meetings.router)
 app.include_router(budgets.router)
