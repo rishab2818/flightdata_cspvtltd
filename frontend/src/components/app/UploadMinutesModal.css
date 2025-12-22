@@ -1,261 +1,82 @@
-/* Modal */
+/* ---------- Overlay & Modal ---------- */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  margin-top: 20px;
+  z-index: 1000;
 }
-
 
 .modalBox {
   width: 720px;
-  max-width: 95vw;
-  background: #fff;
+  max-width: 95%;
+  background: #ffffff;
   border-radius: 10px;
-  padding: 0px 25px 25px;
-}
-
-.form {
-  /* ⭐ Scroll inside form */
-  max-height: 70vh;
+  padding: 24px 28px 28px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+   display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  padding-right: 10px;
-  /* avoids content hiding behind scrollbar */
-
-  display: grid;
-  grid-template-columns: 1fr;
-  row-gap: 20px;
 }
 
 .modalTitle {
-  display: flex;
-  height: 50px;
-  flex-shrink: 0;
-  margin-top: 15px;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  color: #0A0A0A;
-  font-family: "inter-semibold", Helvetica;
-  z-index: 10;
+  margin-bottom: 20px;
+  margin-top: 0px;
 }
 
-/* Labels */
-.label {
-  display: block;
-  font-size: 13px;
-  color: #4b5563;
-  margin-bottom: 6px;
-}
-
-/* Inputs */
-.textInput {
-  width: 100%;
-  height: 40px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #F3F3F5;
-  padding: 0 12px;
-  font-size: 14px;
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.gap16 {
-  gap: 16px;
-}
-
-.flex1 {
-  flex: 1;
-}
-
-/* Chips */
-.chipContainer {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  border: 1px solid #e2e8f0;
-  background: #f1f5f9;
-  padding: 4px 8px;
-  font-size: 11px;
-  color: #111827;
-}
-
-.chipRemove {
-  cursor: pointer;
-}
-
-.actionPointSection {
+/* ---------- Form ---------- */
+.form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
 }
 
-.assigneeWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.subLabel {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.assigneeInputBox {
-  position: relative;
-}
-
-.suggestionsBox {
-  position: absolute;
-  top: 44px;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
-  z-index: 12;
-  max-height: 180px;
-  overflow-y: auto;
-}
-
-.suggestionItem {
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.suggestionItem:hover {
-  background: #f3f4f6;
-}
-
-.actionPointList {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.actionPointCard {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-.actionPointText {
-  flex: 1;
-  font-size: 13px;
-  color: #111827;
-}
-
-.assigneeTag {
-  padding: 4px 8px;
-  border-radius: 12px;
-  background: #e0f2fe;
-  color: #0c4a6e;
-  font-size: 12px;
-}
-
-/* Date */
-.dateWrap {
-  max-width: 260px;
-}
-
-.dateBox {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 40px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  padding: 0 10px;
-}
-
-.dateInput {
-  border: none;
-  outline: none;
-  flex: 1;
-  font-size: 14px;
-  color: #4b5563;
-  background: transparent;
-}
-
-.dateIcon {
-  color: #6b7280;
-}
-
-/* Upload Box */
+/* ---------- Upload Box ---------- */
 .uploadRoot {
-  margin-top: 4px;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  padding: 28px 20px 24px;
+  padding: 24px;
 }
 
 .uploadBox {
+  border: 1px dashed #cfd4dc;
   border-radius: 8px;
-  border: 1px dashed #e2e8f0;
-  padding: 32px 16px 28px;
+  padding: 32px 20px;
   text-align: center;
 }
 
 .uploadIcon {
   color: #6b7280;
+  margin-bottom: 8px;
 }
 
 .uploadTitle {
-  margin: 16px 0 6px;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  margin-bottom: 4px;
 }
 
 .uploadText {
-  margin: 0;
   font-size: 13px;
   color: #6b7280;
+  margin-bottom: 16px;
 }
 
 .browseBtn {
-  margin-top: 18px;
-  padding: 10px 26px;
-  border-radius: 6px;
-  background: #1976d2;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .plusIcon {
@@ -267,63 +88,210 @@
 }
 
 .uploadHint {
-  margin-top: 10px;
-  font-size: 11px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ---------- Labels & Inputs ---------- */
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.textInput,
+.dateInput,
+select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+   background: #F3F3F5;
+}
+
+.textInput::placeholder {
   color: #9ca3af;
 }
 
-/* Buttons */
-.footerButtons {
+.textInput:focus,
+.dateInput:focus,
+select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+/* ---------- Layout Helpers ---------- */
+.row {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 18px;
 }
 
-.cancelBtn {
-  padding: 8px 24px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  color: #111827;
-  font-size: 14px;
-  cursor: pointer;
+.gap16 {
+  gap: 16px;
 }
 
-.submitBtn {
-  padding: 8px 24px;
-  border-radius: 6px;
-  background: #1976d2;
-  color: white;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  display: inline-flex;
+.flex1 {
+  flex: 1;
+}
+
+/* ---------- Action Points ---------- */
+.actionGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+}
+
+.assigneeInputBox {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: 0.2s;
 }
 
-.submitBtn.loading {
-  opacity: 0.7;
-}
-
-.errorText {
-  color: red;
-  font-size: 12px;
-  margin-top: -4px;
-}
-
-/* Plus Button */
 .iconButton {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  position: absolute;
+  right: 6px;
+  height: 28px;
+  width: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.iconButton:hover {
+  background: #e5e7eb;
+}
+
+/* ---------- Suggestions ---------- */
+.suggestionsBox {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.suggestionItem {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestionItem:hover {
+  background: #f3f4f6;
+}
+
+/* ---------- Added Action Points List ---------- */
+.actionPointList {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionPointCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.actionPointText {
+  white-space: nowrap;
+}
+
+.assigneeTag {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.chipRemove {
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* ---------- Date ---------- */
+.dateWrap {
+  width: 260px;
+}
+
+.dateBox {
+  position: relative;
+}
+
+.dateIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+}
+
+.dateInput {
+  padding-left: 36px;
+}
+
+/* ---------- Errors ---------- */
+.errorText {
+  color: #d32f2f;
+  font-size: 13px;
+}
+
+/* ---------- Footer ---------- */
+.footerButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cancelBtn {
+  background: #fff;
+  border: 1px solid #1976d2;
+  color: #1976d2;
+  padding: 10px; 
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100px;
+}
+
+.submitBtn {
+  display:flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  padding: 10px; 
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  
+}
+
+.submitBtn.loading {
+  opacity: 0.7;
+  pointer-events: none;
 }

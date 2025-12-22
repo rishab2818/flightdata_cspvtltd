@@ -1,8 +1,11 @@
 .Container {
   width: 100%;
-  max-width: 1480px;
+  max-width: 1440px;
   margin: 0 auto;
-  border: 1px solid #FFF1DB;
+  border: 1px solid;
+  border-color: #0000001A;
+  border-radius: 4px;
+  height: 100%;
 }
 
 .Cardcontainer {
@@ -10,6 +13,7 @@
   background: #fff;
   border-radius: 4;
   padding: 35px 25px;
+  height: 100%;
 }
 
 .TabsRow {
@@ -142,8 +146,8 @@
 
 .UploadButton {
   width: 157px;
-  height: 36px;
-  border-radius: 2px;
+  height: 39px;
+  border-radius: 4px;
   background: #1976d2;
   border: none;
   color: #ffffff;
@@ -158,12 +162,14 @@
 }
 
 .TableGrid {
-  margin-top: 8px;
-  
+  margin-top: 25px;
   width: 100%;
   overflow-x: auto;     /* enables horizontal scroll */
-  overflow-y: hidden;
+  overflow-y: auto;
   border-radius: 6px;
+  display: block;
+  flex-direction: column;
+  height: 80%;
 }
 
 .Table {
@@ -174,6 +180,8 @@
   border: 1px solid #00000026;
   border-radius: 8px;
   border-color: #0000001A;
+  overflow-y: auto;
+  z-index: 60;
 }
 
 .Table th {
@@ -197,6 +205,7 @@
   color: #000000cc;
   font-family: "inter-regular", Helvetica;
   border-bottom: 1px solid #e5e7eb;
+  height: 100%;
 }
 
 .TableEmpty {
@@ -205,6 +214,7 @@
   text-align: center;
   font-size: 13px;
   color: #000000cc;
+  height: 100%;
 }
 
 .TableLoading {
@@ -349,6 +359,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+   overflow-y: auto;
 }
 
 .ModalActions {

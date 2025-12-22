@@ -566,18 +566,20 @@
 // }
 
 import React, { useEffect, useMemo, useState } from "react";
-import { FiPlus, FiUploadCloud } from "react-icons/fi";
+import { FiPlus, FiUploadCloud, FiSearch } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
-import totalTrainingIcon from "../../assets/reports.svg"
-import noOfParticipantsIcon from "../../assets/UsersThree_green.svg"
-import ongoingIcon from "../../assets/SpinnerGap.svg"
+import totalTrainingIcon from "../../assets/reports.svg";
+import noOfParticipantsIcon from "../../assets/UsersThree_green.svg";
+import ongoingIcon from "../../assets/SpinnerGap.svg";
+import load from "../../assets/load.svg";
+import Cap1 from "../../assets/Cap1.svg";
 
 import CommonStatCard from "../../components/common/common_card/common_card";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
-
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 
 const BORDER = "#E2E8F0";
@@ -614,10 +616,16 @@ export default function TrainingRecords() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
   // State for editing the record
   const [editingRecord, setEditingRecord] = useState(null);
+
+  /** 🔴 NEW — Delete Modal State */
+      const [showDeleteModal, setShowDeleteModal] = useState(false);
+      const [recordToDelete, setRecordToDelete] = useState(null);
+  
 
   const loadRecords = async () => {
     try {
@@ -638,12 +646,36 @@ export default function TrainingRecords() {
   }, []);
 
   const filtered = useMemo(() => {
-    return records.filter((row) => {
-      const matchesType = filters.type === "all" ? true : row.training_type === filters.type;
-      const matchesStatus = filters.status === "all" ? true : row.status === filters.status;
-      return matchesType && matchesStatus;
-    });
-  }, [records, filters]);
+  const q = search.trim().toLowerCase();
+
+  return records.filter((row) => {
+    const matchesType =
+      filters.type === "all" || row.training_type === filters.type;
+
+    const matchesStatus =
+      filters.status === "all" || row.status === filters.status;
+
+    const matchesSearch =
+      !q ||
+      row.trainee_name?.toLowerCase().includes(q) ||
+      row.training_name?.toLowerCase().includes(q);
+
+    return matchesType && matchesStatus && matchesSearch;
+  });
+}, [records, filters, search]);
+
+
+  // const filtered = useMemo(() => {
+  //   return records.filter((row) => {
+  //     const matchesType = filters.type === "all" ? true : row.training_type === filters.type;
+  //     const matchesStatus = filters.status === "all" ? true : row.status === filters.status;
+  //     const matchesSearch =
+  //     !searchText ||
+  //     row.name?.toLowerCase().includes(searchText) ||
+  //     row.training_name?.toLowerCase().includes(searchText);
+  //     return matchesType && matchesStatus && matchesSearch;
+  //   });
+  // }, [records, filters, search]);
 
   /* --------------------- Action Handlers --------------------- */
 
@@ -669,15 +701,34 @@ export default function TrainingRecords() {
     }
   };
 
-  const handleDelete = async (row) => {
-    if (!window.confirm("Delete this training record?")) return;
-    try {
-      await recordsApi.removeTraining(row.record_id);
-      setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
-    } catch (err) {
-      alert("Delete failed. Please try again.");
-    }
-  };
+  // const handleDelete = async (row) => {
+  //   if (!window.confirm("Delete this training record?")) return;
+  //   try {
+  //     await recordsApi.removeTraining(row.record_id);
+  //     setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
+  //   } catch (err) {
+  //     alert("Delete failed. Please try again.");
+  //   }
+  // };
+
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+
+  const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  try {
+    // Use recordToDelete instead of row
+    await recordsApi.removeTraining(recordToDelete.record_id);
+    setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
+  } catch (err) {
+    alert("Unable to delete record.");
+  }
+
+  setShowDeleteModal(false);
+  setRecordToDelete(null);
+};
+
+
 
   // New handler for editing
   const handleEdit = (row) => {
@@ -698,14 +749,14 @@ export default function TrainingRecords() {
 
   /* --------------------- Rendering --------------------- */
   return (
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%" }}>
       {/* Stat Cards */}
       <div
         style={{
-          marginTop: 18,
+          
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
-          gap: 12,
+          gap: "24px",
         }}
       >
         <CommonStatCard title="Total Training" value={records.length} icon={totalTrainingIcon} bg="#DBEAFE" />
@@ -722,49 +773,58 @@ export default function TrainingRecords() {
           marginTop: 22,
           background: "#fff",
           border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 18,
+          borderRadius: "8px",
+          padding: "24px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          flexWrap: "wrap",
-          gap: 12
+          gap: "18px",
         }}
       >
-        {/* Left: filters */}
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            flexWrap: "wrap",
-            minWidth: 0,
-          }}
-        >
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+           <div style={{flex:1, maxWidth:"900px", height:"42px",display:"flex",gap: "8px",background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
+            <FiSearch size={16} color="#64748b" />
+                <input
+                  style={{
+                     border: "none",
+                     outline: "none",
+                     minwidth: "350px",
+                     background: "transparent",
+                     flex: 1,
+                     gap:20,
+                    fontsize: "14px",
+                    color: "#0f172a",
+        
+                      }}
+                type="text"
+                placeholder="Search training names..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                />
+        </div>
+          <div style={{ display: "flex", gap: "18px", flexWrap: "wrap" }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500}}>Filter by Type</span>
+              {/* <span style={{ color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500}}>Filter by Type</span> */}
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                 style={{
-                  minWidth: 284,
-                  height: 36,
+                  minWidth: "284px",
+                  height: "42px",
                   background: "#F3F3F5",
-                  borderRadius: 8,
+                  borderRadius: "8px",
                   padding: "0 12px",
                   paddingRight: 32, // space for arrow
-    color: "#374151",
-    fontSize: 14,
-    lineHeight: "36px",
-    appearance: "none",
-    border: "none",
-    WebkitAppearance: "none",
-    MozAppearance: "none",
-    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 12px center",
-    backgroundSize: "10px 6px",
+                  color: "#374151",
+                  fontSize: 14,
+                  lineHeight: "36px",
+                  appearance: "none",
+                  border: "none",
+                  WebkitAppearance: "none",
+                  MozAppearance: "none",
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 12px center",
+                  backgroundSize: "10px 6px",
                 }}
               >
                 <option value="all">All Types</option>
@@ -774,15 +834,15 @@ export default function TrainingRecords() {
               </select>
             </label>
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Status</span>
+              {/* <span style={{color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Status</span> */}
               <select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 style={{
-                  minWidth: 284,
-                  height: 36,
+                  minWidth: "284px",
+                  height: "42px",
                   background: "#F3F3F5",
-                  borderRadius: 8,
+                  borderRadius: "8px",
                   padding: "0 12px",
                   paddingRight: 32, // space for arrow
     color: "#374151",
@@ -805,10 +865,13 @@ export default function TrainingRecords() {
               </select>
             </label>
           </div>
-        </div>
+        
+
+        
+        
 
         {/* Right: upload button */}
-        <div style={{ display: "flex", alignItems: "center" }}>
+        
           <button
             type="button"
             onClick={() => { setEditingRecord(null); setShowModal(true); }} // Ensure editingRecord is null for new upload
@@ -817,30 +880,37 @@ export default function TrainingRecords() {
               background: PRIMARY,
               color: "#fff",
               border: "none",
-              borderRadius: 10,
+              borderRadius: "4px",
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
               fontWeight: 600,
               cursor: "pointer",
+              width:"200px",
+              height:"42px",
+              justifyContent:"center",
             }}
           >
-            <FiPlus /> Upload Training
+          <img src={Cap1} alt="Training"/>
+           Upload Training
           </button>
         </div>
-      </div>
+    
 
       {/* Table Section */}
       <div
         style={{
-          marginTop: 18,
+          marginTop: 23,
           background: "#fff",
           border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 20,
+          borderRadius: "8px",
+          padding: "10px 24px 24px 24px",
+          display:"block",
+          flexDirection:"column",
+          height: "calc(68vh - 70px)", // adjust if header size changes
         }}
       >
-        <div style={{ marginTop: 10, overflowX: "auto" }}>
+        <div style={{ marginTop: 10, maxHeight:"100%", overflowX: "auto",overflowY: "auto" }}>
           <div
             style={{
               marginBottom: 10,
@@ -859,9 +929,8 @@ export default function TrainingRecords() {
               borderCollapse: "separate",
               borderSpacing: 0,
               border: `1px solid ${BORDER}`,
-              borderRadius: 8,
-              overflow: "hidden",
-              minWidth: 900,
+              borderRadius: "8px",
+              marginTop:"20px"
             }}
           >
             <thead>
@@ -869,7 +938,7 @@ export default function TrainingRecords() {
                 style={{
                   color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
-                  textAlign: "left",
+                  textAlign: "center",
                   fontWeight: 400,
                   fontSize: 12,
                   background: "#EFF7FF"
@@ -891,6 +960,8 @@ export default function TrainingRecords() {
                       padding: "12px 16px",
                       fontWeight: 600,
                       borderBottom: `1px solid ${BORDER}`,
+                      flexshrink: 0,
+                      zindex: 10, 
                     }}
                   >
                     {col}
@@ -899,7 +970,7 @@ export default function TrainingRecords() {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody style={{ textAlign: "center" }}>
               {/* Conditional rendering for loading, error, and no results */}
               {loading && (
                 <tr><td colSpan={8} style={{ padding: 16, textAlign: "center" }}>Loading...</td></tr>
@@ -1005,7 +1076,11 @@ export default function TrainingRecords() {
                           onEdit={() => handleEdit(row)} // Call handleEdit
                           onView={() => handleView(row)}
                           onDownload={() => handleDownload(row)}
-                          onDelete={() => handleDelete(row)}
+                           onDelete={() => {
+                               setRecordToDelete(row);
+                               setShowDeleteModal(true);
+                          }}
+
                         />
                       </td>
                     </tr>
@@ -1024,12 +1099,23 @@ export default function TrainingRecords() {
           onUpdated={handleUpdate} // Handle successful update
         />
       )}
+
+      {showDeleteModal && (
+              <ConfirmationModal
+                title="Delete this training record?"
+                onCancel={() => {
+                  setShowDeleteModal(false);
+                  setRecordToDelete(null);
+                }}
+                onConfirm={confirmDelete}
+              />
+            )}   
     </div>
   );
 }
 
 /* --------------------- Input Component --------------------- */
-function Input({ label, ...rest }) {
+function Input({ label,style, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
@@ -1037,10 +1123,10 @@ function Input({ label, ...rest }) {
         {...rest}
         style={{
           height: 40,
-          borderRadius: 8,
+          borderRadius: "8px",
           border: `1px solid ${BORDER}`,
           padding: "0 12px",
-          background: "#F9FAFB",
+          background: "#F3F3F5",
         }}
       />
     </label>
@@ -1166,12 +1252,12 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
         style={{
           width: "min(900px, 96vw)",
           background: "#fff",
-          borderRadius: 12,
-          padding: "24px 28px",
+          borderRadius: "8px",
+          padding: "24px",
           boxShadow: "0 30px 70px rgba(15,23,42,0.25)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", height: 50, alignItems: "center", flexShrink: 0, marginTop: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", height: 50, alignItems: "center", flexShrink: 0, marginTop: "-20px"}}>
           <div>
             <h3 style={{ margin: 0 }}>{editingRecord ? "Edit Training Record" : "Upload Training Record"}</h3>
           </div>
@@ -1181,10 +1267,10 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
             style={{
               border: `1px solid ${BORDER}`,
               background: "#fff",
-              borderRadius: 10,
+              borderRadius: "8px",
               padding: 8,
-              width: 36,
-              height: 36,
+              width: 30,
+              height: 30,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1194,11 +1280,11 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
             }}
           >
-            ×
+            X
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "70vh" }}>
+        <form onSubmit={handleSubmit} style={{display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "70vh" }}>
 
           <FileUploadBox
             label="Upload Document"
@@ -1211,8 +1297,8 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
           />
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-            <Input label="Trainee Name" value={form.trainee_name} onChange={(e) => onChange("trainee_name", e.target.value)} />
-            <Input label="Training Name" value={form.training_name} onChange={(e) => onChange("training_name", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5"}} label="Trainee Name" value={form.trainee_name} onChange={(e) => onChange("trainee_name", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5"}}  label="Training Name" value={form.training_name} onChange={(e) => onChange("training_name", e.target.value)} />
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ color: "#475569", fontSize: 13 }}>Type</span>
               <select
@@ -1220,9 +1306,15 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 onChange={(e) => onChange("training_type", e.target.value)}
                 style={{
                   height: 40,
-                  borderRadius: 8,
+                  borderRadius: "8px",
                   border: `1px solid ${BORDER}`,
                   padding: "0 12px",
+                  appearance: "none",
+              WebkitAppearance: "none",
+                  MozAppearance: "none",
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
                 }}
               >
                 <option value="Pre-Training">Pre-Training</option>
@@ -1230,8 +1322,8 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 <option value="Other">Other</option>
               </select>
             </label>
-            <Input label="Start Date" type="date" value={form.start_date} onChange={(e) => onChange("start_date", e.target.value)} />
-            <Input label="End Date" type="date" value={form.end_date} onChange={(e) => onChange("end_date", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5"}} label="Start Date" type="date" value={form.start_date} onChange={(e) => onChange("start_date", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5"}} label="End Date" type="date" value={form.end_date} onChange={(e) => onChange("end_date", e.target.value)} />
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ color: "#475569", fontSize: 13 }}>Status</span>
               <select
@@ -1239,9 +1331,16 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 onChange={(e) => onChange("status", e.target.value)}
                 style={{
                   height: 40,
-                  borderRadius: 8,
+                  borderRadius: "8px",
                   border: `1px solid ${BORDER}`,
                   padding: "0 12px",
+                  appearance: "none",
+              WebkitAppearance: "none",
+                  MozAppearance: "none",
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
+                  
                 }}
               >
                 <option value="Ongoing">Ongoing</option>
@@ -1258,11 +1357,11 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
               onChange={(e) => onChange("remarks", e.target.value)}
               rows={3}
               style={{
-                borderRadius: 8,
+                borderRadius: "8px",
                 border: `1px solid ${BORDER}`,
                 padding: 10,
-                background: "#F9FAFB",
-                resize: "vertical",
+                background: "#F3F3F5",
+                resize: "none",
               }}
             />
           </label>
@@ -1274,11 +1373,13 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
               type="button"
               onClick={onClose}
               style={{
-                border: `1px solid ${BORDER}`,
+                border: `1px solid #1976D2`,
+                color: "#1976d2",
                 background: "#fff",
                 padding: "10px 16px",
-                borderRadius: 10,
+                borderRadius: "4px",
                 cursor: "pointer",
+                width:"100px",
               }}
             >
               Cancel
@@ -1292,13 +1393,18 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 background: PRIMARY,
                 color: "#fff",
                 padding: "10px 18px",
-                borderRadius: 10,
+                borderRadius: "4px",
                 fontWeight: 600,
                 cursor: submitting ? "not-allowed" : "pointer",
                 opacity: submitting ? 0.7 : 1,
+                display: "flex",
+                alignitems: "center",
+                justify0content: "center",
+                gap: "8px",
               }}
             >
-              {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
+              <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
+                {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
             </button>
           </div>
         </form>

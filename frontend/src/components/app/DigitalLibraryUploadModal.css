@@ -6,13 +6,15 @@
   justify-content:center;
   align-items:center;
   z-index:999;
+  margin: 0 auto;
 }
 
 .upload-card {
   width:580px;
   background:#fff;
   border-radius:10px;
-  padding:30px;
+  padding:24px;
+  margin-top: -50px;
 }
 
 .upload-title {
@@ -22,7 +24,7 @@
 }
 
 .upload-box {
-  border:2px solid #b2b2b2;
+  border:1px solid #b2b2b2;
   padding:40px;
   text-align:center;
   
@@ -40,7 +42,7 @@
   font-size:16px;
   color:#fff;
   padding:15px 50px;
-  border-radius:3px;
+  border-radius:4px;
   cursor:pointer;
   display:inline-block;
   margin:15px 0;
@@ -54,15 +56,18 @@
 .upload-field {
   display:flex;
   flex-direction:column;
-  margin-bottom:12px;
+  margin-top: 15px;
+  margin-bottom:15px;
+  gap: 8px;
 }
 
 .upload-field input,
 .upload-field textarea {
-  border:1px solid #F1F7FF;
-  background-color: #F1F7FF;
+
+  background-color: #F3F3F5;
+  border: none;
   padding:10px;
-  border-radius:6px;
+  border-radius:8px;
 }
 
 .upload-actions {
@@ -74,9 +79,10 @@
 
 .upload-cancel {
   padding:10px 22px;
-  border-radius:px;
-  border:1px solid #aaa;
+  border-radius:4px;
+  border: 1px solid #1976D2;
   background:white;
+  width:100px;
 }
 
 .upload-submit {
@@ -84,7 +90,12 @@
   border: 1px solid #aaa;
   color:#fff;
   padding:10px 25px;
-  border-radius:px;
+  border-radius:4px;
+  width:"100px";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .upload-error {

@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { FiUploadCloud, FiPlus, FiCalendar, FiX } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
+import UploadSimple from "../../assets/UploadSimple.svg";
+import load from "../../assets/load.svg";
 import "./UploadMinutesModal.css";
 
 const BORDER = "#E5E7EB";
@@ -333,7 +335,7 @@ export default function UploadMinutesModal({
           {/* Upload Box */}
           <div className="uploadRoot">
             <div className="uploadBox">
-              <FiUploadCloud size={32} className="uploadIcon" />
+              <img src={UploadSimple} alt="Upload"/>
               <h3 className="uploadTitle">Upload Data files</h3>
               <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
 
@@ -376,7 +378,84 @@ export default function UploadMinutesModal({
           )}
 
           {/* Action Points */}
-          <div>
+
+          {/* Action Points */}
+<div>
+  <label className="label">Action Points</label>
+
+  <div className="actionGrid">
+    {/* Action Point */}
+    <div className="field">
+      <input
+        type="text"
+        placeholder="CFD analysis to be conducted for Airbus 320"
+        value={actionPointDescription}
+        onChange={(e) => setActionPointDescription(e.target.value)}
+        onKeyDown={handleActionPointKeyDown}
+        className="textInput"
+        autoComplete="off"
+      />
+    </div>
+
+    {/* Assign To */}
+    <div className="field">
+      <div className="assigneeInputBox">
+        <input
+          type="text"
+          placeholder="Assign to (optional)"
+          value={actionPointAssignee}
+          onChange={(e) => {
+            setActionPointAssignee(e.target.value);
+            setAssigneeQuery(e.target.value);
+          }}
+          className="textInput"
+        />
+
+        <button
+          type="button"
+          onClick={handleAddActionPoint}
+          className="iconButton"
+        >
+          <FiPlus size={18} />
+        </button>
+
+        {assigneeOptions.length > 0 && (
+          <div className="suggestionsBox">
+            {assigneeOptions.map((name) => (
+              <button
+                type="button"
+                key={name}
+                className="suggestionItem"
+                onClick={() => handleSelectAssignee(name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* Added action points list */}
+  {actionPoints.length > 0 && (
+    <div className="actionPointList">
+      {actionPoints.map((pt, idx) => (
+        <div key={idx} className="actionPointCard">
+          <div className="actionPointText">{pt.description}</div>
+          {pt.assigned_to && <div className="assigneeTag">{pt.assigned_to}</div>}
+          <FiX
+            size={14}
+            onClick={() => handleRemoveActionPoint(idx)}
+            className="chipRemove"
+          />
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+          {/* <div > 
             <label className="label">Action Points</label>
             <div className="actionPointSection">
               <div className="row">
@@ -441,7 +520,7 @@ export default function UploadMinutesModal({
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Meeting Date */}
           <div className="dateWrap">
@@ -467,6 +546,7 @@ export default function UploadMinutesModal({
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
                 className="textInput"
+                autoComplete="off"
               />
             </div>
 
@@ -519,7 +599,7 @@ export default function UploadMinutesModal({
               disabled={isSubmitting}
               className={`submitBtn ${isSubmitting ? "loading" : ""}`}
             >
-              <FiUploadCloud size={16} />
+              <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
               <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
             </button>
           </div>

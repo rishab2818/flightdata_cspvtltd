@@ -612,10 +612,15 @@ import totalRecord from "../../assets/customer.svg";
 import CommonStatCard from "../../components/common/common_card/common_card";
 import avergaeRating from "../../assets/Star.svg";
 import pending_review from "../../assets/SpinnerGap.svg";
+import Book2 from "../../assets/Book2.svg";
+import load from "../../assets/load.svg";
+
 // 1 import docuemnt actions
 import DocumentActions from "../../components/common/DocumentActions";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
+
 
 
 const BORDER = "#E2E8F0";
@@ -640,6 +645,10 @@ export default function CustomerFeedbacks() {
   const [showModal, setShowModal] = useState(false);
   // For editing the document
   const [editingRecord, setEditingRecord] = useState(null);
+
+  /** 🔴 NEW — Delete Modal State */
+      const [showDeleteModal, setShowDeleteModal] = useState(false);
+      const [recordToDelete, setRecordToDelete] = useState(null);
 
   const loadRecords = async () => {
     try {
@@ -691,16 +700,37 @@ export default function CustomerFeedbacks() {
     }
   };
 
-  // handle delete
-  const handleDelete = async (row) => {
-    if (!window.confirm("Delete this feedback?")) return;
-    try {
-      await recordsApi.removeFeedback(row.record_id);
-      setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
-    } catch (err) {
-      alert("Delete failed. Please try again.");
-    }
-  };
+  // // handle delete
+  // const handleDelete = async (row) => {
+  //   if (!window.confirm("Delete this feedback?")) return;
+  //   try {
+  //     await recordsApi.removeFeedback(row.record_id);
+  //     setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
+  //   } catch (err) {
+  //     alert("Delete failed. Please try again.");
+  //   }
+  // };
+
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+  
+    const confirmDelete = async () => {
+  if (!recordToDelete) return;
+
+  try {
+    // Use recordToDelete instead of row
+    await recordsApi.removeFeedback(recordToDelete.record_id);
+
+    setRecords((prev) =>
+      prev.filter((r) => r.record_id !== recordToDelete.record_id)
+    );
+  } catch (err) {
+    alert("Unable to delete record.");
+  }
+
+  setShowDeleteModal(false);
+  setRecordToDelete(null);
+};
+
 
   // handle edit
   const handleEdit = (row) => {
@@ -722,14 +752,15 @@ export default function CustomerFeedbacks() {
 
   return (
     /* Card UI */
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%", marginTop:"-18px" }}>
       {/* Stat Cards */}
       <div
         style={{
           marginTop: 18,
+          borderRadius:"8px",
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
-          gap: 12,
+          gap: "24px",
         }}
       >
         <CommonStatCard title="Total Feedbacks" value={records.length} icon={totalRecord} bg="#DBEAFE" />
@@ -744,8 +775,8 @@ export default function CustomerFeedbacks() {
           marginTop: 22,
           background: "#fff",
           border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 18,
+          borderRadius: "8px",
+          padding: "24px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -762,7 +793,7 @@ export default function CustomerFeedbacks() {
               style={{
     minWidth: 270,
     height: 36,
-    borderRadius: 8,
+    borderRadius: "8px",
     backgroundColor: "#F3F3F5",
     padding: "0 12px",
     paddingRight: 32, // space for arrow
@@ -796,32 +827,39 @@ export default function CustomerFeedbacks() {
             background: PRIMARY,
             color: "#fff",
             border: "none",
-            borderRadius: 10,
-            display: "inline-flex",
+            borderRadius: "4px",
+            display: "flex",
             alignItems: "center",
-            gap: 8,
+            justifyContent:"center",
+            gap: "8px",
             fontWeight: 600,
+            width: "190px",
             cursor: "pointer",
           }}
         >
-          <FiPlus /> Upload Feedback
+           <img src={Book2} alt="Feedback"/>
+           Upload Feedback
         </button>
       </div>
 
       {/* TABLE SECTION CARD */}
       <div
         style={{
-          marginTop: 18,
+          marginTop: 22,
           background: "#fff",
           border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 20,
+          borderRadius: "8px",
+          padding: "10px 24px 24px 24px",
+          display:"block",
+          flexDirection:"column",
+          gap:16,
+          height: "calc(68vh - 70px)", // adjust if header size changes
         }}
       >
-        <div style={{ marginTop: 10, overflowX: "auto" }}>
+        <div style={{ marginTop: 10,maxHeight:"45vh", overflowX: "auto",overflowY: "auto" }}>
           <div
             style={{
-              marginBottom: 10,
+              marginBottom: 20,
               marginLeft: 5,
               color: "#0A0A0A",
               fontSize: 16,
@@ -836,9 +874,11 @@ export default function CustomerFeedbacks() {
               borderCollapse: "separate",
               borderSpacing: 0,
               border: `1px solid ${BORDER}`, // Outer border
-              borderRadius: 8,
+              borderRadius: "8px",
               overflow: "hidden", // Clips corners
               minWidth: 900,
+              gap:16,
+              marginTop:"20px",
             }}
           >
             <thead>
@@ -846,7 +886,7 @@ export default function CustomerFeedbacks() {
                 style={{
                   color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
-                  textAlign: "left",
+                  textAlign: "center",
                   fontWeight: 400,
                   fontSize: 12,
                   background: "#EFF7FF",
@@ -859,6 +899,7 @@ export default function CustomerFeedbacks() {
                       style={{
                         padding: "12px 16px",
                         fontWeight: 600,
+                        textAlign: "center",
                         borderBottom: `1px solid ${BORDER}`, // Header separator
                       }}
                     >
@@ -868,7 +909,7 @@ export default function CustomerFeedbacks() {
                 )}
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ textAlign: "center" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
@@ -963,7 +1004,11 @@ export default function CustomerFeedbacks() {
                           onEdit={() => handleEdit(row)}
                           onView={() => handleView(row)}
                           onDownload={() => handleDownload(row)}
-                          onDelete={() => handleDelete(row)}
+                           onDelete={() => {
+                       setRecordToDelete(row);
+                       setShowDeleteModal(true);
+                      }}
+
                         />
                       </td>
                     </tr>
@@ -988,12 +1033,23 @@ export default function CustomerFeedbacks() {
           }}
         />
       )}
+
+      {showDeleteModal && (
+        <ConfirmationModal
+          title="Delete This Feedback?"
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setRecordToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+        />
+      )}   
     </div>
   );
 }
 
 /* --------------------- Input Component --------------------- */
-function Input({ label, ...rest }) {
+function Input({ label,style, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
@@ -1001,10 +1057,10 @@ function Input({ label, ...rest }) {
         {...rest}
         style={{
           height: 40,
-          borderRadius: 8,
+          borderRadius: "8px",
           border: `1px solid ${BORDER}`,
           padding: "0 12px",
-          background: "#F9FAFB",
+          background: "#F3F3F5",
         }}
       />
     </label>
@@ -1122,6 +1178,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+         borderRadius: "8px",
         padding: 12,
         zIndex: 100,
       }}
@@ -1130,7 +1187,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
         style={{
           width: "min(840px, 96vw)",
           background: "#fff",
-          borderRadius: 12,
+          borderRadius: "8px",
           padding: "24px 28px",
           boxShadow: "0 30px 70px rgba(15,23,42,0.25)",
         }}
@@ -1149,7 +1206,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
               height:36,
               border: `1px solid ${BORDER}`,
               background: "#fff",
-              borderRadius: 10,
+              borderRadius: "8px",
               padding: "8px 12px",
               cursor: "pointer",
             }}
@@ -1181,11 +1238,11 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
               onChange={(e) => onChange("feedback_text", e.target.value)}
               rows={3}
               style={{
-                borderRadius: 8,
+                borderRadius: "8px",
                 border: `1px solid ${BORDER}`,
                 padding: 10,
-                background: "#F9FAFB",
-                resize: "vertical",
+                background: "#F3F3F5",
+                resize: "none",
               }}
             />
           </label>
@@ -1198,31 +1255,41 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
               type="button"
               onClick={onClose}
               style={{
-                border: `1px solid ${BORDER}`,
+                border: `1px solid #1976D2`,
+                 color: "#1976d2",
                 background: "#fff",
                 padding: "10px 16px",
-                borderRadius: 10,
+                borderRadius: "4px",
                 cursor: "pointer",
+                width:"100px",
               }}
             >
               Cancel
             </button>
             <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                border: "none",
-                background: PRIMARY,
-                color: "#fff",
-                padding: "10px 18px",
-                borderRadius: 10,
-                fontWeight: 600,
-                cursor: submitting ? "not-allowed" : "pointer",
-                opacity: submitting ? 0.7 : 1,
-              }}
-            >
-              {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
-            </button>
+  type="submit"
+  disabled={submitting}
+  style={{
+    Width:"100px",
+    border: "none",
+    background: PRIMARY,
+    color: "#fff",
+    padding: "10px 18px",
+    borderRadius: "4px",
+    fontWeight: 600,
+    cursor: submitting ? "not-allowed" : "pointer",
+    opacity: submitting ? 0.7 : 1,
+    display: "flex",
+    alignitems: "center",
+    justify0content: "center",
+    gap: "8px",
+  }}
+>
+  <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
+  {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
+</button>
+
+           
           </div>
         </form>
       </div>
