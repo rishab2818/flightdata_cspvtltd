@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
@@ -28,10 +27,6 @@ export default function TechnicalReports() {
   const [showModal, setShowModal] = useState(false);
   // State for editing
   const [editingRecord, setEditingRecord] = useState(null);
-
-  /** 🔴 NEW — Delete Modal State */
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState(null);
 
   /** 🔴 NEW — Delete Modal State */
   const [showDeleteModal, setShowDeleteModal] = useState(false);

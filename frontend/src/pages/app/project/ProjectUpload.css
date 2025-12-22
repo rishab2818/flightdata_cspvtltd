@@ -1,4 +1,230 @@
-/* --- PAGE LAYOUT --- */
+/* Backdrop */
+.fd-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+  z-index: 999999;
+  /* increase */
+}
+
+.fd-modal__panel {
+  width: min(1100px, 96vw);
+  height: min(760px, 92vh);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+
+/* Header */
+.fd-modal__header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.fd-modal__close {
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.fd-modal__close:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+/* Content grid */
+.fd-modal__grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  /* important to allow inner scrolling */
+}
+
+/* Scroll columns */
+.fd-modal__left,
+.fd-modal__right {
+  overflow: auto;
+  min-height: 0;
+  padding-right: 6px;
+}
+
+/* Responsive: stack columns */
+@media (max-width: 980px) {
+  .fd-modal__panel {
+    height: min(860px, 94vh);
+  }
+
+  .fd-modal__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   Selected file list
+   ========================= */
+
+.fd-filelist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.fd-fileitem {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  background: #ffffff;
+}
+
+.fd-fileitem:hover {
+  background: #f8fafc;
+}
+
+.fd-fileitem--active {
+  border-color: #0284c7;
+  background: #e0f2fe;
+}
+
+.fd-fileitem__name {
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 380px;
+}
+
+/* =========================
+   Toggle Switch
+   ========================= */
+
+.fd-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 46px;
+  height: 26px;
+}
+
+.fd-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.fd-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.fd-slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  background: #ffffff;
+  border-radius: 999px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(2, 6, 23, 0.2);
+}
+
+.fd-switch input:checked+.fd-slider {
+  background: #1976d2;
+}
+
+.fd-switch input:checked+.fd-slider::before {
+  transform: translateX(20px);
+}
+
+/* disabled switch look */
+.fd-switch input:disabled+.fd-slider {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Preview area
+   ========================= */
+
+.fd-preview {
+  margin-top: 10px;
+}
+
+.excel-preview {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: auto;
+}
+
+/* Data table used in preview */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid #eef2f7;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Empty state helper */
+.empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  color: #475569;
+  background: #f8fafc;
+}
+
+/* =========================
+   Keep your existing shared UI
+   (project-card / tablist / etc.)
+   ========================= */
+
+/* (You can keep these as-is, but ensure they exist somewhere) */
 .project-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -9,40 +235,12 @@
   flex-direction: column;
   gap: 16px;
 }
-.project-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.project-card__title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-}
-.project-card__content {
-  margin-top: 10px;
-}
 
-
-
-/* Typography */
 .summary-label {
   font-size: 14px;
   color: #64748b;
 }
 
-/* --- BADGES --- */
-.badge {
-  background: #e1f5ff;
-  color: #0284c7;
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: 20px;
-  font-weight: 500;
-  display: inline-block;
-}
-
-/* --- DATASET TABS --- */
 .tablist {
   display: flex;
   gap: 10px;
@@ -68,7 +266,6 @@
   font-weight: 600;
 }
 
-/* --- HEADER OPTIONS --- */
 .header-options {
   border: 1px dashed #cbd5e1;
   border-radius: 10px;
@@ -84,10 +281,6 @@
   margin-top: 10px;
 }
 
-.header-options__inputs {
-  margin-top: 14px;
-}
-
 .input-control {
   width: 100%;
   padding: 10px 12px;
@@ -96,9 +289,7 @@
   font-size: 14px;
 }
 
-/* --- UPLOAD TILE --- */
 .upload-tile {
-  margin-top: 20px;
   border: 2px dashed #94a3b8;
   background: #f8fafc;
   border-radius: 12px;
@@ -127,7 +318,6 @@
   background: #0e60b2;
 }
 
-/* --- PROGRESS BARS --- */
 .progress-bar {
   width: 100%;
   height: 10px;
@@ -142,7 +332,6 @@
   transition: width 0.25s ease;
 }
 
-/* Error box */
 .project-shell__error {
   background: #fee2e2;
   color: #b91c1c;
