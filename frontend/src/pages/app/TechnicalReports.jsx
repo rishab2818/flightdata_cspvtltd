@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
@@ -32,8 +31,8 @@ export default function TechnicalReports() {
   const [editingRecord, setEditingRecord] = useState(null);
 
   /** 🔴 NEW — Delete Modal State */
-      const [showDeleteModal, setShowDeleteModal] = useState(false);
-      const [recordToDelete, setRecordToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
 
   const loadRecords = async () => {
     try {
@@ -60,18 +59,18 @@ export default function TechnicalReports() {
   // }, [records, filters]);
 
   const filtered = useMemo(() => {
-  const searchText = search.toLowerCase();
+    const searchText = search.toLowerCase();
 
-  return records.filter((row) => {
-    const typeMatch =
-      filters.type === "all" || row.report_type === filters.type;
+    return records.filter((row) => {
+      const typeMatch =
+        filters.type === "all" || row.report_type === filters.type;
 
-    const searchMatch =
-      row.report_name?.toLowerCase().includes(searchText);
-      
-    return typeMatch && searchMatch;
-  });
-}, [records, filters, search]);
+      const searchMatch =
+        row.report_name?.toLowerCase().includes(searchText);
+
+      return typeMatch && searchMatch;
+    });
+  }, [records, filters, search]);
 
 
   /* --------------------- Action Handlers --------------------- */
@@ -108,21 +107,21 @@ export default function TechnicalReports() {
   //   }
   // };
 
-    /* -------------------- DELETE WITH CONFIRMATION -------------------- */
+  /* -------------------- DELETE WITH CONFIRMATION -------------------- */
   const confirmDelete = async () => {
-  if (!recordToDelete) return;
+    if (!recordToDelete) return;
 
-  try {
-    // Use recordToDelete instead of row
-    await recordsApi.removeTechnical(recordToDelete.record_id);
-    setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
-  } catch (err) {
-    alert("Unable to delete record.");
-  }
+    try {
+      // Use recordToDelete instead of row
+      await recordsApi.removeTechnical(recordToDelete.record_id);
+      setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
+    } catch (err) {
+      alert("Unable to delete record.");
+    }
 
-  setShowDeleteModal(false);
-  setRecordToDelete(null);
-};
+    setShowDeleteModal(false);
+    setRecordToDelete(null);
+  };
 
 
   const handleEdit = (row) => {
@@ -257,12 +256,12 @@ export default function TechnicalReports() {
           border: `1px solid ${BORDER}`,
           borderRadius: "8px",
           padding: "10px 24px 24px 24px",
-          display:"flex",
-          flexDirection:"column",
+          display: "flex",
+          flexDirection: "column",
           height: "calc(68vh - 70px)", // adjust if header size changes
         }}
       >
-        <div style={{ marginTop: 10,flex:1, maxHeight:"100",overflowX: "auto",overflowY: "auto" }}>
+        <div style={{ marginTop: 10, flex: 1, maxHeight: "100", overflowX: "auto", overflowY: "auto" }}>
           <div
             style={{
               marginBottom: 10,
@@ -270,7 +269,7 @@ export default function TechnicalReports() {
               color: "#0A0A0A",
               fontSize: 16,
               fontWeight: "600",
-              gap:15,
+              gap: 15,
             }}
           >
             Technical Reports
@@ -284,7 +283,7 @@ export default function TechnicalReports() {
               borderRadius: "8px",
               overflow: "hidden",
               minWidth: 900,
-              marginTop:"20px"
+              marginTop: "20px"
             }}
           >
             <thead >
@@ -308,7 +307,7 @@ export default function TechnicalReports() {
                       style={{
                         padding: "12px 16px",
                         fontWeight: 600,
-                       
+
                         borderBottom: `1px solid ${BORDER}`,
                       }}
                     >
@@ -335,23 +334,23 @@ export default function TechnicalReports() {
               )}
 
               {!loading && !error && filtered.length === 0 && (
-                                <tr style={{ height: "250px" }}>
-                                  <td colSpan={10} style={{ padding: 0 }}>
-                                                <div
-                                                   style={{
-                                                     width: "100%",
-                                                     height: "60%",
-                                                     display: "flex",
-                                                     alignItems: "center",
-                                                     justifyContent: "center",
-                                                     padding: "40px 0",
-                                                    }}
-                                  >
-                                                  <EmptySection />
-                                                </div>
-                                              </td>
-                                            </tr>
-                                           )}
+                <tr style={{ height: "250px" }}>
+                  <td colSpan={10} style={{ padding: 0 }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "60%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "40px 0",
+                      }}
+                    >
+                      <EmptySection />
+                    </div>
+                  </td>
+                </tr>
+              )}
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {
@@ -413,10 +412,10 @@ export default function TechnicalReports() {
                           onEdit={() => handleEdit(row)}
                           onView={() => handleView(row)}
                           onDownload={() => handleDownload(row)}
-                           onDelete={() => {
-                       setRecordToDelete(row);
-                       setShowDeleteModal(true);
-                      }}
+                          onDelete={() => {
+                            setRecordToDelete(row);
+                            setShowDeleteModal(true);
+                          }}
                         />
                       </td>
                     </tr>
@@ -436,7 +435,7 @@ export default function TechnicalReports() {
         />
       )}
 
-       {showDeleteModal && (
+      {showDeleteModal && (
         <ConfirmationModal
           title="Delete this technical report?"
           onCancel={() => {
@@ -445,7 +444,7 @@ export default function TechnicalReports() {
           }}
           onConfirm={confirmDelete}
         />
-      )} 
+      )}
     </div>
   );
 }
