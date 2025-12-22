@@ -269,23 +269,26 @@ select:focus {
   background: #fff;
   border: 1px solid #1976d2;
   color: #1976d2;
-  padding: 8px 18px;
-  border-radius: 6px;
+  padding: 10px; 
+  border-radius: 4px;
   font-size: 14px;
   cursor: pointer;
+  width: 100px;
 }
 
 .submitBtn {
-  display: inline-flex;
+  display:flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   background: #1976d2;
   color: #fff;
   border: none;
-  padding: 8px 18px;
-  border-radius: 6px;
+  padding: 10px; 
+  border-radius: 4px;
   font-size: 14px;
   cursor: pointer;
+  
 }
 
 .submitBtn.loading {

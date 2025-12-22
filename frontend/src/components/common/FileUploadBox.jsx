@@ -1,4 +1,5 @@
 import React from "react";
+import UploadSimple from "../../assets/UploadSimple.svg";
 import { FiUploadCloud } from "react-icons/fi";
 
 const BORDER = "#E2E8F0";
@@ -34,7 +35,8 @@ export default function FileUploadBox({
           textAlign: "center",
         }}
       >
-        <FiUploadCloud size={32} style={{ color: "#6b7280" }} />
+       
+        <img src={UploadSimple} alt="Upload"/>
 
         <h3
           style={{
@@ -61,7 +63,7 @@ export default function FileUploadBox({
           style={{
             marginTop: 18,
             padding: "10px 26px",
-            borderRadius: 6,
+            borderRadius: "8px",
             background: PRIMARY,
             border: "none",
             color: "#ffffff",
@@ -72,6 +74,7 @@ export default function FileUploadBox({
             justifyContent: "center",
             gap: 6,
             cursor: "pointer",
+            width:"180px",
           }}
         >
           <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>

@@ -18,7 +18,7 @@
 .statCard {
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px;
   max-height: 106px;
   display: flex;
@@ -57,8 +57,8 @@
 .filterBar {
   background:#FFF;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 16px 24px;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -108,28 +108,30 @@
 }
 
 .addBtn { 
-  align-items: center;   
+  display: flex;
+  align-items: center;
+  justify-content: center; 
+  gap: 10px;
   background:#1976D2; 
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 0px 12px;
   font-size: 16px;
   font-weight: 400;
   cursor: pointer;
   font-family: "Inter-regular", Helvetica; 
-  justify-content: space-between;
-  position: relative;
   width: 200px; 
- height: 40px;
-  gap: 10px;   
-  margin-top: 10px; 
+  height: 40px;  
+  margin-top:7px; 
    
 }
 
-.addBtn:hover {
-  background: #1d4ed8;
+.addBtn img {
+  width: 20px;
+  height: 20px;
 }
+
 
 /* ---------- Table ---------- */
 .TableWrapper {
@@ -220,12 +222,7 @@
     color: #6b7280;
 }
 
-.statusBadge {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
+
 
 
 /* ---------- Modal ---------- */
@@ -244,7 +241,7 @@
   max-width: 95%;
   max-height: 90vh;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   overflow-y: auto; 
@@ -343,7 +340,7 @@
 
 .daterow {
   display: flex;
-  gap: 20px;
+  gap: 12px;
 }
 
 .field {
@@ -358,6 +355,8 @@
   padding: 8px 10px;
   border: 1px solid #e2e8f0;
   resize: vertical;
+  resize: none;
+  background-color: #F3F3F5;
 }
 
 .uploadLabel {
@@ -369,7 +368,7 @@
 .uploadBox {
   border: 1px dashed #e2e8f0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -383,24 +382,26 @@
   grid-column: span 2;
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 15px;
   margin-top: 6px;
 }
-
 .cancelBtn {
-  background: #f3f4f6;
-  border: none;
+  background: #fff;
+  border: 1px solid #1976D2;
+  color: #1976d2;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
+  width: 120px;
 }
+
 
 .saveBtn {
   background: #1d6fe6;
   color: white;
   border: none;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
 }
 

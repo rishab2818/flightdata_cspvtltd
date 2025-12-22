@@ -5,8 +5,10 @@ import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUpload
 import { documentsApi } from "../../api/documentsApi";
 import styles from "./DigitalLibrary.module.css";
 import uploadbutton from "../../assets/uploadbutton.svg";
+import load from "../../assets/load.svg";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+
 
 
 const typeLabelFromName = (name = "", contentType = "") => {
@@ -359,7 +361,7 @@ const confirmDelete = async () => {
 
        {showDeleteModal && (
               <ConfirmationModal
-                title="Delete this technical report?"
+                title="Delete this file?"
                 onCancel={() => {
                   setShowDeleteModal(false);
                   setRecordToDelete(null);

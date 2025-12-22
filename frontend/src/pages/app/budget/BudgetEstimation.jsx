@@ -12,10 +12,6 @@ import DownloadSimple from "../../../assets/DownloadSimple.svg";
 import ConfirmationModal from "../../../components/common/ConfirmationModal.jsx";
 
 
-
-
-
-
 const normalizeNumber = (value) =>
   value === '' || value === undefined || value === null ? undefined : Number(value);
 

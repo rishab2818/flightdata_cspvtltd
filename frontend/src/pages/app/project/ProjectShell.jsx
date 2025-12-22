@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { projectApi } from '../../../api/projectapi'
-import brandIcon from '../../../assets/Database.svg'
 import TopBarActions from '../../../components/layout/TopBarActions'
 import '../../../styles/project.css'
-import ArrowLeft from "../../../assets/ArrowLeft.svg";
+import ChartPieSlice from "../../../assets/ChartPieSlice.svg";
+import Database2 from "../../../assets/Database2.svg";
+import TrendUp from "../../../assets/TrendUp.svg";
+import GearFine from "../../../assets/GearFine.svg";
+import reply from "../../../assets/reply.svg";
+
 
 const navItems = [
-  { key: 'upload', to: '', label: 'Upload File' },
-  { key: 'data', to: 'data', label: 'Data Management' },
-  { key: 'visualisation', to: 'visualisation', label: 'Data Visualisation' },
-  { key: 'settings', to: 'settings', label: 'Settings' },
+  { key: 'data', to: 'data', label: 'Data', icon: Database2 },
+  { key: 'visualisation', to: 'visualisation', label: 'Visualize', icon: ChartPieSlice },
+  { key: 'report', to: 'report', label: 'Report Generation',icon:TrendUp },
+  { key: 'settings', to: 'settings', label: 'Settings', icon:GearFine },
 ]
 
 export default function ProjectShell() {
@@ -45,8 +49,10 @@ export default function ProjectShell() {
     <div className="project-shell">
       <aside className="project-shell__sidebar">
         <div className="project-shell__brand">
-          <img src={brandIcon} alt="logo" />
-          <div className="project-shell__brand-text">Data Visualisation</div>
+          <button type="button" className="project-shell__back" onClick={() => navigate('/app')}>
+               <img src={reply} alt="Back" className="back-icon" />
+          </button>
+          <div className="project-shell__brand-text">back</div>
         </div>
         
         <nav className="project-shell__nav">
@@ -65,6 +71,7 @@ export default function ProjectShell() {
                   .join(' ')
               }
             >
+              <img src={item.icon} alt={item.label} className="project-shell__navIcon" />
               {item.label}
             </NavLink>
           ))}
@@ -73,13 +80,10 @@ export default function ProjectShell() {
       <div className="project-shell__content">
         <header className="project-shell__header">
           <div className="project-shell__header-main">
-            <button type="button" className="project-shell__back" onClick={() => navigate('/app')}>
-               <img src={ArrowLeft} alt="Back" className="back-icon" />
-               
-            </button>
-
             <div>
-              <p className="project-shell__header-label">Project Overview</p>
+              <p className="project-shell__header-label">
+                {loading ? 'Loading…' : project?.project_name}
+              </p>
             </div>
           </div>
           <TopBarActions />

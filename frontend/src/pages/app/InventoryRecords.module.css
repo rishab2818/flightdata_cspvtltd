@@ -18,7 +18,7 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 8px;
   max-height: 106px;
   display: flex;
   align-items: center;
@@ -69,8 +69,8 @@
   width: 100%;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 20px;
+  border-radius: 8px;
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -88,7 +88,7 @@
 .filterGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 32px;
 }
 
 .filterLabel {
@@ -99,8 +99,8 @@
 }
 
 .select {
-    height: 36px;
-  min-width: 270px;
+  height: 42px;
+  min-width: 250px;
   padding: 10px 14px;
   background:  #F3F3F5;
   border: 1px solid #e5e7eb;
@@ -122,8 +122,8 @@
 /* Upload Button */
 .uploadBtn {
   display: flex;
-  width: 200px;
-  height: 43px;
+  width: 230px;
+  height: 42px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -131,7 +131,7 @@
   color: #ffffff;
   padding: 10px 18px;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -139,11 +139,49 @@
 }
 
 .uploadBtn:hover {
-  background: #125aa5;
+  background: #2c6fb6;
 }
 
-.uploadBtn:active {
-  background: #0d3d73;
+.toolbar {
+  margin-top: 16px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+  height: 100px;
+  flex-wrap: nowrap;
+  border-radius: 5px;
+}
+
+
+.searchBox {
+  flex: 1;
+  max-width: 700px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0px;
+  padding: 12px 24px;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  min-width: 350px;
+  background: transparent;
+  flex: 1;
+  font-size: 14px;
+  color: #0f172a;
+ 
 }
 
 /* ----------- Table ----------- */
@@ -151,7 +189,7 @@
 .tableWrapper {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 0px 24px 24px 24px;
   width: 100%;
   overflow-x: auto;     /* enables horizontal scroll */
@@ -280,7 +318,7 @@
   max-width: 95%;
    max-height: 90vh;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
   display: flex;
@@ -394,7 +432,7 @@
   padding: 10px;
   background-color: #F3F3F5;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -419,7 +457,7 @@
 
 .uploadBox {
   border: 1px dashed #94a3b8;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 16px;
   text-align: center;
   cursor: pointer;
@@ -443,37 +481,45 @@
 .modalFooter {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 15px;
 }
 
 .cancelBtn {
   padding: 10px 16px;
-  background: #e2e8f0;
-  border-radius: 6px;
-  border: none;
+  border: 1px solid #1976D2;
+  color: #1976d2;
+  background: #fff;
+  border-radius: 4px;
   cursor: pointer;
+  width: 127px;
 }
 
 .saveBtn {
   padding: 10px 16px;
-  background: #2563eb;
+  background: #1976D2;
   color: white;
-  border-radius: 6px;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap:10px;
 }
 
-.saveBtn:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
+.saveBtn.icon {
+  width: 16px;
+  height: 16px;
+  gap: 10px;
 }
+
+
 
 .assigneeSummary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 12px 14px;
   background: #f8fafc;
   gap: 10px;
@@ -498,7 +544,7 @@
   background: #1d4ed8;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -522,7 +568,7 @@
   width: 640px;
   max-width: 95%;
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 20px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
   max-height: 82vh;
@@ -565,7 +611,7 @@
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .assigneeInput span {
@@ -586,7 +632,7 @@
 .assigneeDelete {
   height: 40px;
   width: 40px;
-  border-radius: 10px;
+  border-radius: 4px;
   border: 1px solid #fecdd3;
   background: #fff1f2;
   color: #dc2626;
