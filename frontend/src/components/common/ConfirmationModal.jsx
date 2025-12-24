@@ -43,7 +43,7 @@ import styles from "./ConfirmationModal.module.css";
 //   );
 // }
 
-function ConfirmationModal({ title, onConfirm, onCancel }) {
+export default function ConfirmationModal({ title, onConfirm, onCancel }) {
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
@@ -55,7 +55,7 @@ function ConfirmationModal({ title, onConfirm, onCancel }) {
   return (
     <div className="modal">
       <h3>{title}</h3> {/* ✅ DO NOT change this */}
-      
+
       <div className="actions">
         <button onClick={onCancel} disabled={loading}>
           Cancel
