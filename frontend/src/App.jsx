@@ -29,6 +29,7 @@ import ProjectUpload from './pages/app/project/ProjectUpload'
 import ProjectDataManagement from './pages/app/project/ProjectDataManagement'
 import ProjectVisualisation from './pages/app/project/ProjectVisualisation'
 import ProjectSettings from './pages/app/project/ProjectSettings'
+import ProjectTagView from './pages/app/project/ProjectTagView'
 export default function App() {
   return (
     <Routes>
@@ -69,6 +70,11 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/projects/:projectId/data/:datasetType/:tagName"
+        element={<ProjectTagView />}
+      />
+
     </Routes>
   )
 }
