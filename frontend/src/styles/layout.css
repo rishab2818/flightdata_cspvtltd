@@ -128,6 +128,7 @@
   justify-content: flex-end;
   gap: 10px;
   position: relative;
+  margin-right: -5px;
 }
 
 .notification {

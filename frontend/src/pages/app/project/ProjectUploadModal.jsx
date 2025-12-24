@@ -461,7 +461,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
-import { ingestionApi } from '../../../api/ingestionApi'
+import { ingestionApi } from '../../../api/ingestionApi';
+import './ProjectUploadModal.css';
+// import './ProjectUpload.css';
+
+import Plus from "../../../assets/Plus.svg";
 
 const DATASET_OPTIONS = [
     { key: 'cfd', label: 'CFD' },
@@ -771,7 +775,7 @@ export default function UploadModal({
                         <h3 style={{ margin: 0 }}>{title}</h3>
                         <p className="summary-label" style={{ margin: '4px 0 0 0' }}>{subtitle}</p>
                     </div>
-                    <button className="fd-modal__close" onClick={onClose} type="button">✕</button>
+                    <button className="close_icon" onClick={onClose} type="button">✕</button>
                 </div>
 
                 {error && <div className="project-shell__error" style={{ margin: 14 }}>{error}</div>}
@@ -924,7 +928,7 @@ export default function UploadModal({
                                         >
                                             <div style={{ minWidth: 0 }}>
                                                 <div className="fd-fileitem__name">{item.file.name}</div>
-                                                <div className="summary-label" style={{ margin: 0 }}>
+                                                <div className="label" style={{ margin: 0 }}>
                                                     {item.file.type || 'unknown'} · {Math.round(item.file.size / 1024)} KB · {visualizeInfo(item.file, item.visualize)}
                                                 </div>
                                             </div>
@@ -966,10 +970,10 @@ export default function UploadModal({
                                 {preview.type === 'none' && <div className="empty-state">No preview</div>}
                                 {preview.type === 'message' && <div className="empty-state" style={{ textAlign: 'left' }}>{preview.message}</div>}
                                 {preview.type === 'image' && (
-                                    <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
+                                    <img src={preview.url} alt={preview.name} />
                                 )}
                                 {preview.type === 'table' && (
-                                    <div className="excel-preview" style={{ maxHeight: 420 }}>
+                                    <div className="excel-preview" >
                                         <table className="data-table">
                                             <thead>
                                                 <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
