@@ -1,3 +1,6 @@
+
+
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
@@ -23,14 +26,25 @@ function sanitizeTag(tag) {
     return (tag || '').trim()
 }
 
-// Used to dedupe across multiple selections
 function fileKey(f) {
     return `${f.name}__${f.size}__${f.lastModified}`
 }
 
-export default function UploadModal({ projectId, projectName, onClose }) {
-    const [datasetType, setDatasetType] = useState('wind')
-    const [tagName, setTagName] = useState('')
+export default function UploadModal({
+    projectId,
+    projectName,
+    onClose,
+    mode = 'create',            // "create" | "edit"
+    initialTag = '',            // old tag name when edit
+    datasetTypeFixed = 'cfd',   // active dataset from parent
+}) {
+    // ✅ dataset is fixed by parent; UI selector shown only in create mode
+    const [datasetType, setDatasetType] = useState(datasetTypeFixed || 'cfd')
+
+    // ✅ prefill tag in edit mode
+    const [tagName, setTagName] = useState(initialTag || '')
+
+    // header is unchanged (you said no edit needed, but it can stay for uploads)
     const [headerMode, setHeaderMode] = useState('file')
     const [customHeadersText, setCustomHeadersText] = useState('')
 
@@ -43,11 +57,26 @@ export default function UploadModal({ projectId, projectName, onClose }) {
     const [error, setError] = useState(null)
     const [result, setResult] = useState(null)
 
+    // lock background scroll
     useEffect(() => {
         const prev = document.body.style.overflow
         document.body.style.overflow = 'hidden'
         return () => { document.body.style.overflow = prev }
     }, [])
+
+    // keep props in sync if modal reused
+    useEffect(() => {
+        setDatasetType(datasetTypeFixed || 'cfd')
+    }, [datasetTypeFixed])
+
+    useEffect(() => {
+        setTagName(initialTag || '')
+        setFiles([])
+        setSelectedIdx(null)
+        setPreview({ type: 'none' })
+        setError(null)
+        setResult(null)
+    }, [initialTag, mode])
 
     const headersList = useMemo(() => {
         if (headerMode !== 'custom') return null
@@ -140,7 +169,6 @@ export default function UploadModal({ projectId, projectName, onClose }) {
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
     }
 
-    // ✅ FIX #2: append files instead of replacing
     const onPickFiles = async (fileList) => {
         const incoming = Array.from(fileList || [])
         if (!incoming.length) return
@@ -155,12 +183,11 @@ export default function UploadModal({ projectId, projectName, onClose }) {
             for (const f of incoming) {
                 const k = fileKey(f)
                 if (existingKeys.has(k)) continue
-                appended.push({ file: f, visualize: isTabular(f) }) // default ON for tabular
+                appended.push({ file: f, visualize: isTabular(f) })
             }
 
             const next = [...prev, ...appended]
 
-            // If nothing selected earlier, auto-select first
             if (selectedIdx == null && next.length) {
                 setSelectedIdx(0)
                 loadPreview(next[0].file)
@@ -169,7 +196,6 @@ export default function UploadModal({ projectId, projectName, onClose }) {
             return next
         })
 
-        // Clear the input so selecting same file again triggers change event
         const el = document.getElementById('fd-modal-file-input')
         if (el) el.value = ''
     }
@@ -194,20 +220,49 @@ export default function UploadModal({ projectId, projectName, onClose }) {
         await loadPreview(files[idx]?.file)
     }
 
+    // ✅ Rename only (edit mode)
+    const onSaveRename = async () => {
+        setError(null)
+        const newTag = sanitizeTag(tagName)
+        if (!newTag) return setError('Tag Name is required.')
+
+        // no change -> just close
+        if (sanitizeTag(initialTag) === newTag) {
+            onClose()
+            return
+        }
+
+        try {
+            await ingestionApi.renameTag(projectId, datasetTypeFixed, initialTag, newTag)
+            onClose()
+        } catch (err) {
+            setError(err?.response?.data?.detail || err.message || 'Rename failed')
+        }
+    }
+
     const onUpload = async () => {
         setError(null)
         setResult(null)
 
         const tag = sanitizeTag(tagName)
         if (!tag) return setError('Tag Name is required.')
-        if (!files.length) return setError('Please select at least one file.')
+
+        // ✅ In create mode, files are required. In edit mode, uploading files is optional.
+        if (mode !== 'edit' && !files.length) return setError('Please select at least one file.')
+
+        // if edit mode and no files, treat as rename-only
+        if (mode === 'edit' && files.length === 0) {
+            await onSaveRename()
+            return
+        }
+
         if (headerMode === 'custom' && (!headersList || !headersList.length)) {
             return setError("Provide custom headers when header_mode is 'custom'.")
         }
 
         const finalItems = files.map((it) => ({
             ...it,
-            visualize: isTabular(it.file) ? !!it.visualize : false, // force OFF non-tabular
+            visualize: isTabular(it.file) ? !!it.visualize : false,
         }))
 
         setUploading(true)
@@ -219,8 +274,8 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                 projectId,
                 finalItems.map((it) => it.file),
                 {
-                    datasetType,
-                    tagName: tag,
+                    datasetType: datasetTypeFixed, // ✅ fixed from parent
+                    tagName: tag,                  // ✅ new tag name (updated)
                     headerMode,
                     customHeaders: headerMode === 'custom' ? headersList : null,
                     manifest,
@@ -231,9 +286,7 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                 }
             )
             setResult(res)
-            if (res?.jobs?.length) {
-                onClose()
-            }
+            if (res?.jobs?.length) onClose()
         } catch (err) {
             setError(err?.response?.data?.detail || err.message || 'Upload failed')
         } finally {
@@ -247,15 +300,19 @@ export default function UploadModal({ projectId, projectName, onClose }) {
         return visualize ? 'ON' : 'OFF'
     }
 
+    const title = mode === 'edit' ? 'Edit Tag' : 'Upload Files'
+    const subtitle =
+        mode === 'edit'
+            ? `${projectName} · Update Tag Name. Upload new files (optional).`
+            : `${projectName} · Choose category, tag, header handling, and which files should be processed.`
+
     const modalUi = (
         <div className="fd-modal__backdrop" role="dialog" aria-modal="true" onMouseDown={onClose}>
             <div className="fd-modal__panel" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="fd-modal__header">
                     <div>
-                        <h3 style={{ margin: 0 }}>Upload Files</h3>
-                        <p className="summary-label" style={{ margin: '4px 0 0 0' }}>
-                            {projectName} · Choose category, tag, header handling, and which files should be processed.
-                        </p>
+                        <h3 style={{ margin: 0 }}>{title}</h3>
+                        <p className="summary-label" style={{ margin: '4px 0 0 0' }}>{subtitle}</p>
                     </div>
                     <button className="fd-modal__close" onClick={onClose} type="button">✕</button>
                 </div>
@@ -266,19 +323,34 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                     {/* Left */}
                     <div className="fd-modal__left">
                         <div className="project-card" style={{ padding: 14 }}>
-                            <label className="summary-label">Data Category</label>
-                            <div className="tablist" style={{ marginTop: 6 }}>
-                                {DATASET_OPTIONS.map((opt) => (
-                                    <button
-                                        key={opt.key}
-                                        type="button"
-                                        className={datasetType === opt.key ? 'active' : ''}
-                                        onClick={() => setDatasetType(opt.key)}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
+                            {/* ✅ Only show dataset selector in create mode */}
+                            {mode !== 'edit' && (
+                                <>
+                                    <label className="summary-label">Data Category</label>
+                                    <div className="tablist" style={{ marginTop: 6 }}>
+                                        {DATASET_OPTIONS.map((opt) => (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                className={datasetType === opt.key ? 'active' : ''}
+                                                onClick={() => setDatasetType(opt.key)}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+
+                            {/* In edit mode show fixed dataset */}
+                            {mode === 'edit' && (
+                                <div style={{ marginBottom: 10 }}>
+                                    <div className="summary-label">Data Category</div>
+                                    <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 4 }}>
+                                        {DATASET_OPTIONS.find(d => d.key === datasetTypeFixed)?.label || datasetTypeFixed}
+                                    </div>
+                                </div>
+                            )}
 
                             <label className="summary-label" style={{ marginTop: 10 }}>Tag / Folder Name</label>
                             <input
@@ -288,6 +360,7 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                 onChange={(e) => setTagName(e.target.value)}
                             />
 
+                            {/* Header handling (kept same; affects new uploads) */}
                             <div className="header-options" style={{ marginTop: 12 }}>
                                 <strong>Header handling</strong>
                                 <div className="actions-row">
@@ -320,9 +393,11 @@ export default function UploadModal({ projectId, projectName, onClose }) {
 
                             <div style={{ marginTop: 12 }}>
                                 <label className="upload-tile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
-                                    <p style={{ margin: '0 0 6px 0', fontWeight: 700 }}>Browse files</p>
+                                    <p style={{ margin: '0 0 6px 0', fontWeight: 700 }}>
+                                        {mode === 'edit' ? 'Browse new files (optional)' : 'Browse files'}
+                                    </p>
                                     <p style={{ margin: 0, color: '#475569' }}>
-                                        Supported: CSV/Excel for visualization. Images/others will be stored as raw only.
+                                        Supported: CSV/Excel for visualization. Images/others stored as raw only.
                                     </p>
                                 </label>
                                 <input
@@ -333,14 +408,33 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                     onChange={(e) => onPickFiles(e.target.files)}
                                 />
                             </div>
+
+                            {/* ✅ Edit mode: Save rename button (works even with no files) */}
+                            {mode === 'edit' && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                                    <button
+                                        className="project-shell__nav-link"
+                                        type="button"
+                                        onClick={onSaveRename}
+                                        disabled={uploading}
+                                    >
+                                        Save Tag Name
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        {/* File list */}
+                        {/* File list + Upload button (only really needed when user selected files) */}
                         <div className="project-card" style={{ padding: 14 }}>
                             <div className="actions-row" style={{ justifyContent: 'space-between', marginTop: 0 }}>
                                 <strong>Selected files ({files.length})</strong>
-                                <button className="project-shell__nav-link" type="button" onClick={onUpload} disabled={uploading || !files.length}>
-                                    {uploading ? 'Uploading…' : 'Upload'}
+                                <button
+                                    className="project-shell__nav-link"
+                                    type="button"
+                                    onClick={onUpload}
+                                    disabled={uploading || (mode !== 'edit' && !files.length)}
+                                >
+                                    {uploading ? 'Uploading…' : (mode === 'edit' ? 'Upload Files' : 'Upload')}
                                 </button>
                             </div>
 
@@ -355,9 +449,12 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                 </div>
                             )}
 
-                            {!files.length && <div className="empty-state" style={{ marginTop: 10 }}>No files selected.</div>}
+                            {!files.length && (
+                                <div className="empty-state" style={{ marginTop: 10 }}>
+                                    {mode === 'edit' ? 'No new files selected.' : 'No files selected.'}
+                                </div>
+                            )}
 
-                            {/* ✅ FIX #3: Make list scrollable */}
                             {files.length > 0 && (
                                 <div className="fd-filelist" style={{ maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
                                     {files.map((item, idx) => (
