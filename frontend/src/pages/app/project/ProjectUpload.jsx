@@ -229,9 +229,11 @@
 // }
 
 import React, { useState } from 'react'
-import { useOutletContext, useParams } from 'react-router-dom'
-import UploadModal from './UploadModal'
-import "./ProjectUpload.css";
+import { useOutletContext, useParams } from 'react-router-dom';
+// import UploadModal from './UploadModal';
+
+ import UploadModal from './ProjectUploadModal';
+// import './ProjectUpload.css';
 
 
 export default function ProjectUpload() {

@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
-import { ingestionApi } from '../../../api/ingestionApi'
+import { ingestionApi } from '../../../api/ingestionApi';
+import './ProjectUploadModal.css';
+// import './ProjectUpload.css';
+
+import Plus from "../../../assets/Plus.svg";
 
 const DATASET_OPTIONS = [
     { key: 'cfd', label: 'CFD' },
@@ -250,14 +254,14 @@ export default function UploadModal({ projectId, projectName, onClose }) {
     const modalUi = (
         <div className="fd-modal__backdrop" role="dialog" aria-modal="true" onMouseDown={onClose}>
             <div className="fd-modal__panel" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="fd-modal__header">
-                    <div>
-                        <h3 style={{ margin: 0 }}>Upload Files</h3>
-                        <p className="summary-label" style={{ margin: '4px 0 0 0' }}>
+                <div className="modal_header">
+                    <div className="div_wapper">
+                        <h3 className="text_wapper">Upload Files</h3>
+                        <p className="subtitle" style={{ margin: '4px 0 0 0' }}>
                             {projectName} · Choose category, tag, header handling, and which files should be processed.
                         </p>
                     </div>
-                    <button className="fd-modal__close" onClick={onClose} type="button">✕</button>
+                    <button className="close_icon" onClick={onClose} type="button">✕</button>
                 </div>
 
                 {error && <div className="project-shell__error" style={{ margin: 14 }}>{error}</div>}
@@ -265,8 +269,85 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                 <div className="fd-modal__grid">
                     {/* Left */}
                     <div className="fd-modal__left">
-                        <div className="project-card" style={{ padding: 14 }}>
-                            <label className="summary-label">Data Category</label>
+                        <div className="project-card" >
+
+                             <div style={{ marginTop: "6px", border: "1px solid #00000026", borderRadius: "4px", backgroundColor: "#F3F3F5",overflow: "hidden"}}>
+                                <label className="upload-tile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
+                                    <p className='button'>
+                                        <img src={Plus} ait="Browse" className='icon'/>
+                                        Browse Plot Files
+                                        </p>
+                                    <p className='text'>
+                                        Supported: CSV/Excel for visualization. Images/others will be stored as raw only.
+                                    </p>
+                                </label>
+                                <input
+                                    id="fd-modal-file-input"
+                                    type="file"
+                                    multiple
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => onPickFiles(e.target.files)}
+                                />
+                            </div>
+
+                            {/* <div className="form-field">
+                             <label className="summary-label" >File Name/Tag</label>
+                            <input
+                                className="input-control"
+                                placeholder="e.g. Run_12"
+                                value={tagName}
+                                onChange={(e) => setTagName(e.target.value)}
+                            />
+                            </div>
+
+                            <div className="form-field">
+                            <label className="summary-label">Data Type</label>
+                            <select
+                              className="input-control"
+                              value={datasetType}
+                              onChange={(e) => setDatasetType(e.target.value)}
+                              style={{ marginTop: 6 }}
+                            >
+                            <option value="" disabled>
+                             Select Data Category
+                              </option>
+
+                           {DATASET_OPTIONS.map((opt) => (
+                             <option key={opt.key} value={opt.key}>
+                                   {opt.label}
+                             </option>
+                               ))}
+                            </select>
+                            </div> */}
+
+                            <div className="form-field">
+  <label className="summary-label">File Name/Tag</label>
+  <input
+    className="input"
+    placeholder="Write File Name/Tag"
+    value={tagName}
+    onChange={(e) => setTagName(e.target.value)}
+  />
+</div>
+
+<div className="form-field">
+  <label className="summary-label">Data Type</label>
+  <select
+    className="input-control"
+    value={datasetType}
+    onChange={(e) => setDatasetType(e.target.value)}
+  >
+    <option value="" disabled>Select Data Category</option>
+    {DATASET_OPTIONS.map((opt) => (
+      <option key={opt.key} value={opt.key}>
+        {opt.label}
+      </option>
+    ))}
+  </select>
+</div>
+
+
+                            {/* <label className="summary-label">Data Category</label>
                             <div className="tablist" style={{ marginTop: 6 }}>
                                 {DATASET_OPTIONS.map((opt) => (
                                     <button
@@ -278,16 +359,8 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                         {opt.label}
                                     </button>
                                 ))}
-                            </div>
-
-                            <label className="summary-label" style={{ marginTop: 10 }}>Tag / Folder Name</label>
-                            <input
-                                className="input-control"
-                                placeholder="e.g. Run_12"
-                                value={tagName}
-                                onChange={(e) => setTagName(e.target.value)}
-                            />
-
+                            </div> */}
+{/* 
                             <div className="header-options" style={{ marginTop: 12 }}>
                                 <strong>Header handling</strong>
                                 <div className="actions-row">
@@ -316,29 +389,71 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                         />
                                     </div>
                                 )}
-                            </div>
+                            </div> */}
 
-                            <div style={{ marginTop: 12 }}>
-                                <label className="upload-tile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
-                                    <p style={{ margin: '0 0 6px 0', fontWeight: 700 }}>Browse files</p>
-                                    <p style={{ margin: 0, color: '#475569' }}>
-                                        Supported: CSV/Excel for visualization. Images/others will be stored as raw only.
-                                    </p>
-                                </label>
-                                <input
-                                    id="fd-modal-file-input"
-                                    type="file"
-                                    multiple
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => onPickFiles(e.target.files)}
-                                />
-                            </div>
-                        </div>
+  
+                            {/* <div className="header-options" style={{ marginTop: 12 }}> */}
+{/*   
+  <div className="form-field">
+  <label className="summary-label">
+    <strong>Header handling</strong>
+  </label>
+
+  <select
+    className="input-control"
+    value={headerMode}
+    onChange={(e) => setHeaderMode(e.target.value)}
+    style={{ marginTop: 6 }}
+  >
+    <option value="file">Use headers from file</option>A
+    <option value="none">File has no headers</option>
+    <option value="custom">Provide custom headers</option>
+  </select>
+
+  {headerMode === 'custom' && (
+    <div className="header-options__inputs" style={{ marginTop: 10 }}>
+      <label className="summary-label">Comma separated headers</label>
+      <input
+        className="input-control"
+        placeholder="e.g. time, alpha, mach"
+        value={customHeadersText}
+        onChange={(e) => setCustomHeadersText(e.target.value)}
+      />
+    </div>
+  )}
+ </div>  */}
+ <div className="form-field">
+  <label className="summary-label">Plot File Header</label>
+
+  <select
+    className="input-control"
+    value={headerMode}
+    onChange={(e) => setHeaderMode(e.target.value)}
+  >
+    <option value="file">Use headers from file</option>
+    <option value="none">File has no headers</option>
+    <option value="custom">Provide custom headers</option>
+  </select>
+
+  {headerMode === 'custom' && (
+    <div className="form-field form-field--nested">
+      <label  style={{marginTop:10}}className="summary-label">Comma separated headers</label>
+      <input
+        className="input-control"
+        placeholder="e.g. time, alpha, mach"
+        value={customHeadersText}
+        onChange={(e) => setCustomHeadersText(e.target.value)}
+      />
+    </div>
+  )}
+</div>
+
+      </div>
 
                         {/* File list */}
-                        <div className="project-card" style={{ padding: 14 }}>
-                            <div className="actions-row" style={{ justifyContent: 'space-between', marginTop: 0 }}>
-                                <strong>Selected files ({files.length})</strong>
+                        <div className="project-card2" >
+                            <div className="actions-row" >
+                                <h4>Selected Files ({files.length})</h4>
                                 <button className="project-shell__nav-link" type="button" onClick={onUpload} disabled={uploading || !files.length}>
                                     {uploading ? 'Uploading…' : 'Upload'}
                                 </button>
@@ -355,11 +470,11 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                 </div>
                             )}
 
-                            {!files.length && <div className="empty-state" style={{ marginTop: 10 }}>No files selected.</div>}
+                            {!files.length && <div className="empty-state" >No files selected.</div>}
 
                             {/* ✅ FIX #3: Make list scrollable */}
                             {files.length > 0 && (
-                                <div className="fd-filelist" style={{ maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                                <div className="fd-filelist" style={{ maxHeight: 260, overflowY: 'auto'}}>
                                     {files.map((item, idx) => (
                                         <div
                                             key={`${fileKey(item.file)}-${idx}`}
@@ -370,7 +485,7 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                         >
                                             <div style={{ minWidth: 0 }}>
                                                 <div className="fd-fileitem__name">{item.file.name}</div>
-                                                <div className="summary-label" style={{ margin: 0 }}>
+                                                <div className="label" style={{ margin: 0 }}>
                                                     {item.file.type || 'unknown'} · {Math.round(item.file.size / 1024)} KB · {visualizeInfo(item.file, item.visualize)}
                                                 </div>
                                             </div>
@@ -402,20 +517,60 @@ export default function UploadModal({ projectId, projectName, onClose }) {
 
                     {/* Right */}
                     <div className="fd-modal__right">
-                        <div className="project-card" style={{ padding: 14, height: '100%' }}>
-                            <strong>Preview</strong>
-                            <div className="summary-label" style={{ marginTop: 6 }}>
+                        <div className="project-card1" >
+                            <div className='card'>
+                            <h3>Preview</h3>
+                            <div className="summary-label1" >
                                 {selectedFile ? selectedFile.name : 'Select a file to preview'}
                             </div>
-
                             <div className="fd-preview">
+    {preview.type === 'none' && <div className="empty-state">No preview</div>}
+
+    {preview.type === 'message' && (
+        <div className="empty-state" style={{ textAlign: 'left' }}>
+            {preview.message}
+        </div>
+    )}
+
+    {preview.type === 'image' && (
+        <img src={preview.url} alt={preview.name} />
+    )}
+
+    {preview.type === 'table' && (
+        <div className="excel-preview">
+            <div className="excel-scroll">
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            {preview.headers.map((h, i) => (
+                                <th key={`${h}-${i}`}>{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {preview.rows.map((row, rIdx) => (
+                            <tr key={`r-${rIdx}`}>
+                                {preview.headers.map((h, cIdx) => (
+                                    <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )}
+</div>
+
+
+                            {/* <div className="fd-preview">
                                 {preview.type === 'none' && <div className="empty-state">No preview</div>}
                                 {preview.type === 'message' && <div className="empty-state" style={{ textAlign: 'left' }}>{preview.message}</div>}
                                 {preview.type === 'image' && (
-                                    <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
+                                    <img src={preview.url} alt={preview.name} />
                                 )}
                                 {preview.type === 'table' && (
-                                    <div className="excel-preview" style={{ maxHeight: 420 }}>
+                                    <div className="excel-preview" >
                                         <table className="data-table">
                                             <thead>
                                                 <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
@@ -430,9 +585,9 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                         </table>
                                     </div>
                                 )}
-                            </div>
+                            </div> */}
 
-                            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                            {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
                                     className="project-shell__nav-link"
@@ -441,7 +596,8 @@ export default function UploadModal({ projectId, projectName, onClose }) {
                                 >
                                     Close
                                 </button>
-                            </div>
+                            </div> */}
+                        </div>
                         </div>
                     </div>
 
