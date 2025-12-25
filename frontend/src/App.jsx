@@ -30,6 +30,7 @@ import ProjectDataManagement from './pages/app/project/ProjectDataManagement'
 import ProjectVisualisation from './pages/app/project/ProjectVisualisation'
 import ProjectSettings from './pages/app/project/ProjectSettings'
 import ProjectTagView from './pages/app/project/ProjectTagView'
+import ProcessedPreviewPage from './pages/app/project/ProcessedPreviewPage'
 export default function App() {
   return (
     <Routes>
@@ -74,6 +75,8 @@ export default function App() {
         path="/projects/:projectId/data/:datasetType/:tagName"
         element={<ProjectTagView />}
       />
+      <Route path="/processed-preview/:jobId" element={<ProcessedPreviewPage />} />
+
 
     </Routes>
   )

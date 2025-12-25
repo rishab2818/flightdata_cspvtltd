@@ -28,7 +28,7 @@ export default function ProjectUpload() {
 
   // Load tags when dataset changes
   useEffect(() => {
-    if (activeDataset === 'others') return
+    // if (activeDataset === 'others') return
     ingestionApi
       .listTags(projectId, activeDataset)
       .then(setTags)
@@ -171,9 +171,10 @@ export default function ProjectUpload() {
           onClose={() => setModal({ open: false, mode: "create", tag: "" })}
           mode={modal.mode}
           initialTag={modal.tag}
-          datasetTypeFixed={activeDataset}
+          initialDatasetType={activeDataset}
         />
       )}
+
 
     </div>
   )
