@@ -318,12 +318,25 @@ def generate_visualization(self, viz_id: str):
         stats_metadata = []
 
         for idx, item in enumerate(series_jobs, start=1):
-            data_url = minio.presigned_get_object(
-                bucket_name=settings.ingestion_bucket,
-                object_name=item["job"]["storage_key"],
-                expires=timedelta(hours=6),
-            )
-            ext = os.path.splitext(item["job"].get("filename", "").lower())[-1]
+            job = item["job"]
+
+            # ✅ Prefer processed parquet if available
+            if job.get("processed_key"):
+                data_url = minio.presigned_get_object(
+                    bucket_name=settings.ingestion_bucket,
+                    object_name=job["processed_key"],
+                    expires=timedelta(hours=6),
+                )
+                ext = ".parquet"
+            else:
+                # fallback only if processed not available
+                data_url = minio.presigned_get_object(
+                    bucket_name=settings.ingestion_bucket,
+                    object_name=job["storage_key"],
+                    expires=timedelta(hours=6),
+                )
+                ext = os.path.splitext(job.get("filename", "").lower())[-1]
+
 
             _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
             base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"

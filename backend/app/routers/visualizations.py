@@ -111,14 +111,25 @@ async def create_visualization(
                     detail=f"Columns not found in dataset for series {idx}: {', '.join(missing)}",
                 )
 
+        # series_docs.append(
+        #     {
+        #         "job_id": item.job_id,
+        #         "y_axis": item.y_axis,
+        #         "label": item.label or item.y_axis,
+        #         "filename": job.get("filename", "dataset"),
+        #     }
+        # )
         series_docs.append(
-            {
-                "job_id": item.job_id,
-                "y_axis": item.y_axis,
-                "label": item.label or item.y_axis,
-                "filename": job.get("filename", "dataset"),
-            }
-        )
+        {
+        "job_id": item.job_id,
+        "y_axis": item.y_axis,
+        "label": item.label or item.y_axis,
+        "filename": job.get("filename", "dataset"),
+        "tag_name": job.get("tag_name"),
+        "dataset_type": job.get("dataset_type"),
+        }
+    )
+
 
     primary_filename = series_docs[0]["filename"] if series_docs else "dataset"
 
