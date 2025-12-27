@@ -17,8 +17,6 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 import DownloadSimple from "../../assets/DownloadSimple.svg";
 import load from "../../assets/load.svg"
 
-
-
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
 

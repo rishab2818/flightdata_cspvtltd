@@ -54,7 +54,7 @@
   width: 100%;
   display: grid;
   
-  grid-template-columns: minmax(0, 1.85fr) minmax(520px, 1.1fr);
+  grid-template-columns: minmax(0, 1.90fr) minmax(520px, 1.1fr);
   align-items: stretch;   /* ✅ forces equal height */
   gap: 20px;
   align-items: start;

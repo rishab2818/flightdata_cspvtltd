@@ -139,7 +139,7 @@
   position: absolute;
   inset: 0;
   cursor: pointer;
-  background: #cbd5e1;
+  background: #0808e2;
   border-radius: 999px;
   transition: background 0.2s ease;
 }
@@ -228,12 +228,12 @@
 .project-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .summary-label {
@@ -290,7 +290,7 @@
 }
 
 .upload-tile {
-  border: 2px dashed #94a3b8;
+  border: 1px solid transparent;
   background: #f8fafc;
   border-radius: 12px;
   text-align: center;
@@ -299,10 +299,10 @@
   transition: 0.2s;
 }
 
-.upload-tile:hover {
+/* .upload-tile:hover {
   background: #f1f5f9;
   border-color: #0284c7;
-}
+} */
 
 .project-shell__nav-link {
   background: #1976d2;
