@@ -1,10 +1,9 @@
-
-
 import json
 import os
 import re
 from datetime import timedelta
 from uuid import uuid4
+from typing import Dict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response
 from sse_starlette.sse import EventSourceResponse
@@ -18,12 +17,16 @@ from app.models.ingestion import IngestionBatchCreateResponse, IngestionCreateRe
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 from app.tasks.ingestion import ingest_file
+# for the processed data view 
+import pyarrow as pa
+import pyarrow.parquet as pq
+import io
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
 projects = ProjectRepository()
 
-TABULAR_EXTS = {".csv", ".xlsx", ".xls"}
+TABULAR_EXTS = {".csv", ".xlsx", ".xls",'.txt'}
 
 
 def _safe_slug(value: str) -> str:
@@ -392,6 +395,117 @@ async def rename_tag(
     return {"updated": res.modified_count}
 
 
-# for prev
+# for preview of the processed data 
+# Load parquet form minio (Helper function)
+def _read_parquet_from_minio(bucket: str, object_key: str):
+    minio = get_minio_client()
+    resp = minio.get_object(bucket, object_key)
+    try:
+        data = resp.read()  # OK for preview sizes; if you expect huge parquet, we can stream
+    finally:
+        resp.close()
+        resp.release_conn()
 
+    buf = io.BytesIO(data)
+    return pq.read_table(buf)  # pyarrow Table
+
+#Preview JSON (all columns, limited rows)
+@router.get("/jobs/{job_id}/processed/preview")
+async def preview_processed(
+    job_id: str,
+    limit: int = Query(20, ge=1, le=200),
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    processed_key = doc.get("processed_key")
+    if not processed_key:
+        raise HTTPException(status_code=400, detail="No processed parquet available for this file")
+
+    bucket = settings.ingestion_bucket
+
+    # Read parquet and keep only a small number of rows
+    table = _read_parquet_from_minio(bucket, processed_key)
+    original_cols = table.schema.names
+
+    # ensure we have stored schema once (optional but useful)
+    # (safe even if called multiple times)
+    try:
+        await repo.update_job_fields(job_id, {"processed_schema": original_cols})
+    except Exception:
+        pass
+
+    rename_map: Dict[str, str] = doc.get("column_rename_map") or {}
+    display_cols = [rename_map.get(c, c) for c in original_cols]
+
+    # Slice rows
+    sliced = table.slice(0, limit)
+
+    # Convert to list-of-dicts using display column names
+    # This keeps UI simple.
+    cols_as_py = {display_cols[i]: sliced.column(i).to_pylist() for i in range(sliced.num_columns)}
+    rows = []
+    for r in range(sliced.num_rows):
+        rows.append({col: cols_as_py[col][r] for col in display_cols})
+
+    return {
+        "job_id": job_id,
+        "filename": doc.get("filename"),
+        "original_columns": original_cols,
+        "rename_map": rename_map,
+        "display_columns": display_cols,
+        "rows": rows,
+        "limit": limit,
+        "total_rows": table.num_rows,
+    }
+
+# End B : Save rename map (per file)
+
+class RenameColumnsIn(BaseModel):
+    rename_map: Dict[str, str]
+
+@router.put("/jobs/{job_id}/processed/columns")
+async def save_processed_column_names(
+    job_id: str,
+    payload: RenameColumnsIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    processed_key = doc.get("processed_key")
+    if not processed_key:
+        raise HTTPException(status_code=400, detail="No processed parquet available for this file")
+
+    # get original schema (from DB if present, else read parquet once)
+    original_cols = doc.get("processed_schema")
+    if not original_cols:
+        table = _read_parquet_from_minio(settings.ingestion_bucket, processed_key)
+        original_cols = table.schema.names
+
+    rename_map = payload.rename_map or {}
+
+    # validate keys exist + new names non-empty
+    for k, v in rename_map.items():
+        if k not in original_cols:
+            raise HTTPException(status_code=400, detail=f"Unknown column in rename_map: {k}")
+        if not isinstance(v, str) or not v.strip():
+            raise HTTPException(status_code=400, detail=f"Empty display name for column: {k}")
+
+    # validate duplicates after rename
+    display_cols = [rename_map.get(c, c).strip() for c in original_cols]
+    if len(set(display_cols)) != len(display_cols):
+        raise HTTPException(status_code=400, detail="Duplicate column names after rename")
+
+    await repo.update_job_fields(job_id, {
+        "processed_schema": original_cols,
+        "column_rename_map": {k: v.strip() for k, v in rename_map.items()},
+    })
+
+    return {"ok": True}
 

@@ -96,6 +96,20 @@ export const ingestionApi = {
     })
     return data
   },
+  // Api for the preview and save processed columns 
+  getProcessedPreview: async (jobId, limit = 20) => {
+    const { data } = await axiosClient.get(`/api/ingestion/jobs/${jobId}/processed/preview`, {
+      params: { limit }
+    })
+    return data
+  },
+
+  saveProcessedColumns: async (jobId, renameMap) => {
+    const { data } = await axiosClient.put(`/api/ingestion/jobs/${jobId}/processed/columns`, {
+      rename_map: renameMap
+    })
+    return data
+  },
 
 
 

@@ -48,7 +48,20 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                             <td>{f.filename}</td>
                             <td>{new Date(f.created_at).toLocaleDateString()}</td>
                             <td>
-                                <button>👁</button>
+                                <button
+                                    onClick={() => {
+                                        if (tab === 'processed') {
+                                            console.log("Processed file object:", f);
+                                            window.open(`/processed-preview/${f.job_id}`, "_blank", "noopener,noreferrer");
+                                        } else {
+                                            alert("We will use another view method for others file");
+                                        }
+                                    }}
+                                >
+                                    👁
+                                </button>
+
+
                                 <button>⬇</button>
                                 <button>🗑</button>
                             </td>
