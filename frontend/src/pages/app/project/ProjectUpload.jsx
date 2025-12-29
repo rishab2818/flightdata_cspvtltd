@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
+
+
 import UploadModal from './ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../api/ingestionApi'
 import './ProjectUpload.css'
@@ -149,6 +151,9 @@ export default function ProjectUpload() {
 
   /* ================= Render ================= */
   return (
+   
+       
+
     <div className="project-card">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -290,5 +295,6 @@ export default function ProjectUpload() {
         />
       )}
     </div>
+   
   )
 }
