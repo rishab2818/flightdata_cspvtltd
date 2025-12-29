@@ -1,3 +1,6 @@
+
+
+
 from datetime import datetime
 from typing import List, Optional
 from bson import ObjectId
@@ -16,6 +19,11 @@ class IngestionRepository:
         dataset_type: str | None = None,
         header_mode: str | None = None,
         custom_headers: list[str] | None = None,
+        tag_name: str | None = None,
+        visualize_enabled: bool = False,
+        processed_key: str | None = None,
+        content_type: str | None = None,
+        size_bytes: int | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
@@ -23,7 +31,12 @@ class IngestionRepository:
             "project_id": project_id,
             "filename": filename,
             "storage_key": storage_key,
+            "processed_key": processed_key,
             "dataset_type": dataset_type,
+            "tag_name": tag_name,
+            "visualize_enabled": visualize_enabled,
+            "content_type": content_type,
+            "size_bytes": size_bytes,
             "header_mode": header_mode,
             "custom_headers": custom_headers,
             "status": "queued",
@@ -57,9 +70,9 @@ class IngestionRepository:
             db[self.collection_name]
             .find({"project_id": project_id})
             .sort("created_at", -1)
-            .limit(25)
+            .limit(200)
         )
-        docs = await cursor.to_list(length=25)
+        docs = await cursor.to_list(length=200)
         for d in docs:
             d["job_id"] = str(d["_id"])
             d.pop("_id", None)
@@ -68,3 +81,12 @@ class IngestionRepository:
     async def delete_job(self, job_id: str):
         db = await get_db()
         await db[self.collection_name].delete_one({"_id": ObjectId(job_id)})
+    # for the preview and save 
+    async def update_job_fields(self, job_id: str, fields: dict):
+        db = await get_db()
+        fields["updated_at"] = datetime.utcnow()
+        await db[self.collection_name].update_one(
+            {"_id": ObjectId(job_id)},
+            {"$set": fields},
+        )
+

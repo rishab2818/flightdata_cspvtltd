@@ -65,6 +65,8 @@ export default function StatsCardsImproved({ className = 'stats-grid' }) {
         gap: SPACING.md,
         width: "100%",
         marginTop: SPACING.lg,
+        paddingRight:"-50px",
+         maxwidth: "1580px",
       }}
     >
       {stats.map((s, i) => (

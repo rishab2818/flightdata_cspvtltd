@@ -54,9 +54,11 @@ const confirmDelete = async () => {
         <FiTrash2 size={16} />
       </button>
 
+  
+
       {showDeleteModal && (
         <ConfirmationModal
-          title="Delete Meeting Minutes"
+          title=""
           onCancel={() => setShowDeleteModal(false)}
           onConfirm={confirmDelete}
         />

@@ -63,6 +63,18 @@ export default function ProjectDataManagement() {
     })
   }, [jobs, activeTab, search])
 
+  const selectedPreview = useMemo(() => {
+    if (!selected?.sample_rows?.length) return null
+    const headers =
+      selected.columns?.length > 0
+        ? selected.columns
+        : Object.keys(selected.sample_rows[0] || {})
+    return {
+      headers,
+      rows: selected.sample_rows,
+    }
+  }, [selected])
+
   const handleDownload = async (job) => {
     try {
       const { url } = await ingestionApi.download(job.job_id)
@@ -220,12 +232,41 @@ export default function ProjectDataManagement() {
               <p className="summary-label">{selected.columns.join(', ')}</p>
             </div>
           )}
-          {selected.sample_rows && (
+          {selectedPreview && (
             <div>
-              <strong>Sample rows</strong>
-              <pre className="input-control" style={{ maxHeight: 240, overflow: 'auto' }}>
-                {JSON.stringify(selected.sample_rows, null, 2)}
-              </pre>
+              <strong>Data preview</strong>
+              <div className="excel-preview">
+                <table className="data-table data-table--sheet">
+                  <thead>
+                    <tr>
+                      {selectedPreview.headers.map((header) => (
+                        <th key={header}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedPreview.rows.map((row, idx) => (
+                      <tr key={`preview-row-${idx}`}>
+                        {selectedPreview.headers.map((header) => {
+                          const value = row?.[header]
+                          let cell = value
+                          if (value === null || value === undefined) cell = ''
+                          else if (typeof value === 'object') cell = JSON.stringify(value)
+                          return <td key={`${idx}-${header}`}>{cell}</td>
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="summary-label" style={{ marginTop: 6 }}>
+                Showing {selectedPreview.rows.length} rows from the ingested file.
+              </p>
+            </div>
+          )}
+          {!selectedPreview && (
+            <div className="empty-state" style={{ textAlign: 'left' }}>
+              No preview rows available for this file yet.
             </div>
           )}
         </div>

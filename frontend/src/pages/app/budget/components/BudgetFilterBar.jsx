@@ -19,7 +19,21 @@ export default function BudgetFilterBar({
   return (
     <div className={styles.filterBar}>
       <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Forecast Year</span>
+        <div className={styles.searchBox}>
+          <FiSearch size={16} color="#64748b" />
+        
+        <input
+          type="search"
+          placeholder="Search division or item"
+          value={filters.search}
+          onChange={(e) => onChange({ ...filters, search: e.target.value })}
+          className={styles.searchInput}
+        />
+      </div>
+      </div>
+     
+      <div className={styles.filterGroup}>
+        {/* <span className={styles.filterLabel}>Forecast Year</span> */}
         <select
           className={styles.select}
           value={forecastYear}
@@ -34,7 +48,7 @@ export default function BudgetFilterBar({
       </div>
 
       <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Filter by Type</span>
+        {/* <span className={styles.filterLabel}>Filter by Type</span> */}
         <select
           className={styles.select}
           value={filters.type}
@@ -48,7 +62,7 @@ export default function BudgetFilterBar({
       </div>
 
       <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Sort by</span>
+        {/* <span className={styles.filterLabel}>Sort by</span> */}
         <select
           className={styles.select}
           value={filters.sort}
@@ -60,16 +74,7 @@ export default function BudgetFilterBar({
         </select>
       </div>
 
-      <div className={styles.searchBox}>
-        <FiSearch className={styles.searchIcon} />
-        <input
-          type="search"
-          placeholder="Search division or item"
-          value={filters.search}
-          onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          className={styles.searchInput}
-        />
-      </div>
+      
 
       <button type="button" className={styles.uploadButton} onClick={onUpload}>
        <img src={CurrencyInr} alt="rupee" className={styles.icon} />

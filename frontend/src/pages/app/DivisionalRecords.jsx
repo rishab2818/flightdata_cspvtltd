@@ -8,11 +8,14 @@ import Folder from "../../assets/Folder.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
 import Calculator from "../../assets/Calculator.svg";
 import DotsThreeOutline from "../../assets/DotsThreeOutline.svg";
+import Newspaper from "../../assets/Newspaper.svg"
 import styles from "./DivisionalRecords.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import DownloadSimple from "../../assets/DownloadSimple.svg";
+import load from "../../assets/load.svg"
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -88,7 +91,8 @@ function FiltersBar({ filters, setFilters, openModal }) {
       </div>
 
       <button className={styles.uploadBtn} onClick={openModal}>
-        <FiPlus size={16} /> Upload Record
+        <img src={Newspaper} alt="Record"/>
+         Upload Record
       </button>
     </div>
   );
@@ -178,9 +182,6 @@ export default function DivisionalRecords() {
     setRecordToDelete(null);
   }
 };
-
-
-
   /*----------------------------------------------------------------------*/
   const filtered = useMemo(() => {
     return records.filter((r) => (filters.type === "all" ? true : r.record_type === filters.type));
@@ -225,9 +226,12 @@ export default function DivisionalRecords() {
       <div className={styles.tableWrapper}>
         <div className={styles.tableHeader}>
           <h3>Divisional Records</h3>
-          <button type="button" className={styles.exportBtn} onClick={handleExport}>
-            <FiDownload size={16} /> Download
+          <button type="button" className={styles.exportButton} onClick={handleExport}>
+          <img src={DownloadSimple} alt="download" className={styles.icons} />
           </button>
+          {/* <button type="button" className={styles.exportBtn} onClick={handleExport}>
+            <FiDownload size={16} /> 
+          </button> */}
         </div>
         <table className={styles.table}>
           <thead>
@@ -308,17 +312,18 @@ export default function DivisionalRecords() {
         />
       )}
 
-        {showDeleteModal && (
-          
-        <ConfirmationModal
-          title="Delete this divisional record?"
-          onCancel={() => {
-            setShowDeleteModal(false);
-            setRecordToDelete(null);
-          }}
-          onConfirm={confirmDelete}
-        />
-      )}
+       {showDeleteModal && recordToDelete && (
+  <ConfirmationModal
+    key={recordToDelete.record_id}  // ✅ forces remount
+    title="Delete this divisional record?"
+    onCancel={() => {
+      setShowDeleteModal(false);
+      setRecordToDelete(null);
+    }}
+    onConfirm={confirmDelete}
+  />
+)}
+
     </div>
   );
 }
@@ -478,8 +483,11 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
             <div className={styles.modelFooter}>
               <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
+              
               <button type="submit" className={styles.saveBtn} disabled={submitting}>
-                {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
+                <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
+                 {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
+                {/* {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"} */}
               </button>
             </div>
           </div>

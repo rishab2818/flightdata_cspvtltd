@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { FiUploadCloud, FiPlus, FiCalendar, FiX } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
+import UploadSimple from "../../assets/UploadSimple.svg";
+import load from "../../assets/load.svg";
 import "./UploadMinutesModal.css";
 
 const BORDER = "#E5E7EB";
@@ -333,7 +335,7 @@ export default function UploadMinutesModal({
           {/* Upload Box */}
           <div className="uploadRoot">
             <div className="uploadBox">
-              <FiUploadCloud size={32} className="uploadIcon" />
+              <img src={UploadSimple} alt="Upload"/>
               <h3 className="uploadTitle">Upload Data files</h3>
               <p className="uploadText">Drag and drop your PDF/Word files here, or click to browse</p>
 
@@ -391,6 +393,7 @@ export default function UploadMinutesModal({
         onChange={(e) => setActionPointDescription(e.target.value)}
         onKeyDown={handleActionPointKeyDown}
         className="textInput"
+        autoComplete="off"
       />
     </div>
 
@@ -543,6 +546,7 @@ export default function UploadMinutesModal({
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
                 className="textInput"
+                autoComplete="off"
               />
             </div>
 
@@ -595,7 +599,7 @@ export default function UploadMinutesModal({
               disabled={isSubmitting}
               className={`submitBtn ${isSubmitting ? "loading" : ""}`}
             >
-              <FiUploadCloud size={16} />
+              <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
               <span>{isSubmitting ? "Uploading..." : "Upload MOM"}</span>
             </button>
           </div>

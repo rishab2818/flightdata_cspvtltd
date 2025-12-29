@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MdKeyboardArrowDown } from 'react-icons/md'
 import { AuthContext } from '../../context/AuthContext'
 import NotificationBell from './NotificationBell'
+import Ellipse49 from "../../assets/Ellipse49.svg"
 
 export default function TopBarActions() {
   const { user, logout } = useContext(AuthContext)
@@ -32,7 +33,10 @@ export default function TopBarActions() {
     <div className="header__actions" ref={menuRef}>
       <NotificationBell />
       <div className="header__profile">
-        <div className="header__avatar" aria-hidden />
+        <div className="header__avatar">
+        <img src={Ellipse49} alt="" />
+        </div>
+
         <div className="header__info">
           <span className="header__name">{userId}</span>
           <span className="header__role">{roleLabel}</span>

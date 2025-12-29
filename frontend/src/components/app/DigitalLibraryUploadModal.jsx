@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./DigitalLibraryUploadModal.css";     
 import { documentsApi } from "../../api/documentsApi";
+import FileUploadBox from "../../components/common/FileUploadBox";
+import load from "../../assets/load.svg";
 
 const toIsoDate = (d) => d.toISOString().slice(0, 10);
 
@@ -97,9 +99,19 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
       <div className="upload-backdrop">
         <div className="upload-card">
           <div className="upload-title">Upload File</div>
+
+          <FileUploadBox
+  label="Upload Document"
+  description="Attach training related file here"
+  supported="PDF/Word"
+  file={file}
+  onFileSelected={(f) => setFile(f)}
+  currentFileName={file ? file.name : null}
+/>
+
           
 
-          <div className="upload-box">
+          {/* <div className="upload-box">
             <div className="upload-add">
 
             </div>
@@ -118,7 +130,7 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
             <div className="upload-support">
               Supported formats: PDF/word ( Max 10 MB per file)
             </div>
-          </div>
+          </div> */}
 
           {/* <div className="upload-field">
             <label>File Name</label>
@@ -145,6 +157,7 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
           <div className="upload-actions">
             <button className="upload-cancel" onClick={onClose}>Cancel</button>
             <button className="upload-submit" onClick={handleSubmit}>
+              <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
               {submitting ? "Uploading..." : "Upload"}
             </button>
           </div>

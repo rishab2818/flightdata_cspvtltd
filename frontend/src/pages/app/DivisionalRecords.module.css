@@ -70,8 +70,8 @@
   width: 100%;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 20px;
+  border-radius: 8px;
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -122,14 +122,15 @@
 /* Upload Button */
 .uploadBtn {
   display: flex;
-  width: 210;
+  width: 190px;
   align-items: center;
+  justify-Content:center;
   gap: 8px;
   background: #1976d2;
   color: #ffffff;
   padding: 10px 18px;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -140,16 +141,13 @@
   background: #125aa5;
 }
 
-.uploadBtn:active {
-  background: #0d3d73;
-}
 
 /* ----------- Table ----------- */
 
 .tableWrapper {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 0px 24px 24px 24px;
   display: block;
   flex-direction: column;
@@ -166,24 +164,30 @@
   padding: 16px 0 12px;
 }
 
+.exportButton {
+  background: #fff;
+  border: none;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000000;
+}
+
+.icons {
+  width: 24px;
+  height: 24px;
+  color: #000000;
+}
+
 .exportBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #0ea5e9;
-  color: #fff;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 18px rgba(14, 165, 233, 0.2);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-
-.exportBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 22px rgba(14, 165, 233, 0.22);
 }
 
 .exportBtn:active {
@@ -262,7 +266,7 @@
   max-width: 95%;
    max-height: 90vh;
   background: #fff;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 24px;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
   display: flex;
@@ -291,6 +295,7 @@
   font-weight: 600;
   color: #0a0a0a;
   z-index: 10;
+  margin-top: -20px;
 }
 
 .modalTitle {
@@ -402,6 +407,8 @@ textarea {
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 14px;
+  resize: none;
+  background: #F3F3F5;
 
 }
 
@@ -411,7 +418,7 @@ textarea {
   gap: 10px;
   padding: 16px;
   border: 1px dashed #999;
-  border-radius: px;
+  border-radius: 6px;
   cursor: pointer;
   text-align: center;
   background: #F3F3F5;
@@ -431,20 +438,28 @@ textarea {
 
 .cancelBtn {
   padding: 10px 16px;
-  background: #e2e8f0;
-  border-radius: 6px;
-  border: none;
+  background: #fff;
+  border: 1px solid #1976D2;
+  color: #1976d2;
+  border-radius: 4px;
   cursor: pointer;
+  width:100px;
 }
 
+
 .saveBtn {
-  width:80px;
-  padding: 10px 16px;
+  width:100px;
+  padding: 10px 18px;
   background: #1976D2;
   color: white;
-  border-radius: 6px;
+  border-radius: 4px;
   border: none;
+  font-Weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .saveBtn:disabled {

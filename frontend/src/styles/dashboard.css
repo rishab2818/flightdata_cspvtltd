@@ -21,7 +21,7 @@
   height: 100%;
   margin: 0;
   padding-left: 70px; 
-  padding-right: 70px;  /* ✅ REQUIRED GAP */
+  padding-right: 55px;  /* ✅ REQUIRED GAP */
 }
 
 .dashboard-container {
@@ -30,12 +30,10 @@
   /* padding: 0 16px; */
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   padding: 0;
-  margin-top: -15px;
+  margin-top: -25px;
 }
-
-
 
 .stats-grid {
   display: grid;
@@ -56,9 +54,9 @@
   width: 100%;
   display: grid;
   
-  grid-template-columns: minmax(0, 1.85fr) minmax(520px, 1.1fr);
+  grid-template-columns: minmax(0, 1.90fr) minmax(520px, 1.1fr);
   align-items: stretch;   /* ✅ forces equal height */
-  gap: 24px;
+  gap: 20px;
   align-items: start;
   padding: 0px 0px 25px 0px;
   height:60%,
@@ -68,7 +66,7 @@
 .dashboard-charts {
   width: 100%;
   display: grid;
-  gap: 24px;
+  gap: 20px;
 }
 
 @media (max-width: 1400px) {

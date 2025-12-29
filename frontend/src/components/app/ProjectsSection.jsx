@@ -76,7 +76,7 @@ export default function ProjectsSectionImproved() {
     style={{
       background: COLORS.background,
       border: `1px solid ${COLORS.border}`,
-      borderRadius: 10,
+      borderRadius: "8px",
       padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
       boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
       display: 'flex',
@@ -120,7 +120,7 @@ export default function ProjectsSectionImproved() {
           style={{
             width: 200,
             height: 44,
-            borderRadius: 6,
+            borderRadius: "4px",
             fontFamily: 'inter-regular, Helvetica',
             fontSize: 16,
           }}

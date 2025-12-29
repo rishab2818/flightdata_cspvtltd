@@ -16,12 +16,12 @@
   align-items: center;
   justify-content: space-between;
   height: 110px;
-  gap: 20px;
-  padding: 14px 18px;
+  gap: 10px;
+  padding: 24px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  margin-bottom: 20px;
+  border-radius: 8px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 
@@ -42,7 +42,8 @@
 
 /* --- Select Dropdown --- */
 .select {
-  width: 250px;
+  width: 230px;
+  height: 42px;
   padding: 0px 12px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
@@ -50,7 +51,6 @@
   font-size: 14PX;
   font-weight: 400;
   background: #F3F3F5;
-  height: 36px;
   cursor: pointer;
   outline: none;
   transition: border-color 0.2s ease;
@@ -65,49 +65,91 @@
 }
 
 /* --- Search Box --- */
-.searchBox {
+
+.toolbar {
+  margin-top: 16px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+  height: 100px;
+  flex-wrap: nowrap;
+  border-radius: 5px;
+}
+
+/* .searchBox {
   position: relative;
   display: flex;
   align-items: center;
-}
+ 
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0px;
+  padding: 24px;
+  
+} */
 
-.searchIcon {
-  position: absolute;
-  left: 12px;
-  font-size: 16px;
-  color: #718096;
+.searchBox {
+  flex: 1;
+  width: 400px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;   /* 👈 FIX */
+  box-sizing: border-box;
 }
 
 .searchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  font-size: 14px;
+  color: #0f172a;
+  height: 22px;
+}
+
+/* .searchInput {
   padding: 8px 12px 8px 35px;
   width: 260px;
+  height: 42px;
   border: 1px solid #cbd5e0;
-  border-radius: 6px;
+  border-radius: 0px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease;
-}
+} */
 
-.searchInput:focus {
-  border-color: #3182ce;
-}
+
 
 /* --- Upload Button --- */
 .uploadButton {
   display: flex;
+
+  height: 42px;
   align-items: center;
   gap: 8px;                 /* spacing between icon and text */
   background: #1976D2;      /* your color */
   color: white;
   border: none;
   padding: 10px 16px;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
 .icon {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   filter: brightness(0) invert(1);
   color: #fff;
 }
@@ -122,7 +164,7 @@
   flex-direction: column;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   overflow: hidden;
 }
@@ -133,7 +175,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  
   margin-bottom: 8px;
   justify-content: space-between;
 }
@@ -154,7 +195,6 @@
 
 .dateBadge {
   background: #F3F3F5;
-  
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 14px;
@@ -188,7 +228,7 @@
   background: white;
   padding: 0px 24px 24px 24px;
   width: 100%;
-  border-radius: 14px;
+  border-radius: 8px;
   display: block;
   flex-direction: column;
   height: 60%;
@@ -209,13 +249,11 @@
   border: 1px solid #00000026;
   border-radius: 8px;
   border-color: #0000001A;
- 
 }
 
 .table th,
 .table td {
   border-bottom: 1px solid #e2e8f0;
-
   text-align: left;
   color: #0f172a;
   font-size: 14px;
@@ -234,7 +272,7 @@
   top: 0;
   font-size: 14px;
   font-family: "Inter-regular", Helvetica;
-  padding: 12px 10px;
+  padding: 12px 15px;
   white-space: normal;   /* Allows wrapping */
   text-align: center;
   min-width: 150px;      /* Spread columns */
@@ -258,7 +296,7 @@
   gap: 6px;
   background: #e0f2fe;
   color: #0284c7;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 6px 10px;
   font-weight: 600;
   border: 1px solid #bae6fd;
@@ -340,7 +378,7 @@
   width: 100%;
   max-width: 720px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
   display: flex;
@@ -376,6 +414,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 16px;
 }
+.modalSubtitle{
+  margin-top: 3px;
+  margin-bottom: -10px;
+}
 
 .modalFieldInline {
   display: flex;
@@ -389,7 +431,7 @@
   border: 1px solid #99f6e4;
   color: #0f766e;
   font-weight: 700;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px 12px;
   min-width: 160px;
   text-align: center;
@@ -411,17 +453,18 @@
 .modalInput,
 .modalTextarea {
   /* border: 1px solid #cbd5e1; */
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px 12px;
   background: #F3F3F5;
   font-size: 14px;
   color: #0f172a;
   border: none;
+
 }
 
 .modalTextarea {
   min-height: 72px;
-  resize: vertical;
+  resize: none;
 }
 
 .modalFieldFull {
@@ -442,7 +485,7 @@
 .secondaryButton,
 .primaryButton {
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: 4px;
   border: 1px solid #cbd5e1;
   background: #fff;
   color: #0f172a;
@@ -451,11 +494,34 @@
 }
 
 .primaryButton {
+  padding: 10px 16px;
   background: #1976D2;
   color: #fff;
-  border-color: #1976D2;
-
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+
+.primaryButton.icons {
+  width: 10px;
+  height: 10px;
+  gap: 8px;
+}
+
+.secondaryButton{
+  padding: 10px 16px;
+  border: 1px solid #1976D2;
+   color: #1976d2;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100px;
+}
+
 
 .modalTopControls {
   display: flex;
@@ -466,7 +532,7 @@
 
 .modalDateInput {
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px 12px;
   background: #f8fafc;
   color: #0f172a;
@@ -479,6 +545,8 @@
   font-size: 20px;
   cursor: pointer;
 }
+
+
 
 @media (max-width: 980px) {
   .modalGrid {
