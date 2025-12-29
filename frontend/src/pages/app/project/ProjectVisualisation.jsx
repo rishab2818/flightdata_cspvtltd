@@ -269,7 +269,7 @@ export default function ProjectVisualisation() {
         ))}
 
         <button type="button" onClick={() => setSeries([...series, { jobId: '', yAxis: '', label: '' }])}>
-          + Add series
+          + Overplot
         </button>
 
         <div className="tablist">
