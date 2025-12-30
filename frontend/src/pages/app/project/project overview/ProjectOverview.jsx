@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
-import UploadModal from './ProjectUploadModal.jsx'
-import { ingestionApi } from '../../../api/ingestionApi'
-import './ProjectUpload.css'
-import TagDetails from './TagDetails'
+import UploadModal from '../ProjectUploadModal.jsx'
+import { ingestionApi } from '../../../../api/ingestionApi.js'
+import './ProjectOverview.css'
+import TagDetails from '../TagDetails.jsx'
 
 const DATASET_TABS = [
   { key: 'cfd', label: 'CFD data' },
@@ -12,7 +12,7 @@ const DATASET_TABS = [
   { key: 'others', label: 'Others' },
 ]
 
-export default function ProjectUpload() {
+export default function ProjectOverview() {
   const { projectId } = useParams()
   const { project } = useOutletContext()
 
@@ -95,16 +95,16 @@ export default function ProjectUpload() {
   useEffect(() => {
     let cancelled = false
 
-    ;(async () => {
-      if (cancelled) return
-      stopAllPolling()
-      setJobProgress({})
-      setTagJobMap({})
-      await refreshTagsAndAttachProgress()
+      ; (async () => {
+        if (cancelled) return
+        stopAllPolling()
+        setJobProgress({})
+        setTagJobMap({})
+        await refreshTagsAndAttachProgress()
 
-      // second refresh handles race after upload
-      setTimeout(refreshTagsAndAttachProgress, 2000)
-    })()
+        // second refresh handles race after upload
+        setTimeout(refreshTagsAndAttachProgress, 2000)
+      })()
 
     return () => {
       cancelled = true
@@ -153,9 +153,12 @@ export default function ProjectUpload() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <p className="summary-label">Upload data files</p>
+
           <h2>{project?.project_name}</h2>
+
         </div>
+
+
 
         <button
           className="project-shell__nav-link"
