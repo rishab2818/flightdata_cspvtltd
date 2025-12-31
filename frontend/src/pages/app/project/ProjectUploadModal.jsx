@@ -884,7 +884,7 @@ export default function UploadModal({
                                         <img src={Plus} ait="Browse" className='icon'/>
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
-                                    <p className='text'>
+                                    <p className='uploadtext'>
                                         Supported: CSV/Excel for visualization. Images/others stored as raw only.
                                     </p>
                                 </label>
@@ -1064,14 +1064,14 @@ export default function UploadModal({
                                                 </div>
                                             </div>
 
-                                            <label className="fd-switch" onClick={(e) => e.stopPropagation()}>
+                                            <label className="toggle" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     checked={isTabular(item.file) ? item.visualize : false}
                                                     onChange={() => toggleVisualize(idx)}
                                                     disabled={!isTabular(item.file)}
                                                 />
-                                                <span className="fd-sliderNew" />
+                                                <span className="slider" />
                                             </label>
                                         </div>
                                     ))}
@@ -1105,7 +1105,7 @@ export default function UploadModal({
                                     <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }}/>
                                 )}
                                 {preview.type === 'table' && (
-                                    <div className="excelpreview" >
+                                    <div className="excel-preview" >
                                         <table className="data-table">
                                             <thead>
                                                 <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>

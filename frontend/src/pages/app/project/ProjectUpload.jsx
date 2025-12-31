@@ -157,19 +157,10 @@ export default function ProjectUpload() {
     <div className="project-card">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+        {/* <div>
           <p className="summary-label">Upload data files</p>
           <h2>{project?.project_name}</h2>
-        </div>
-
-        <button
-          className="project-shell__nav-link"
-          type="button"
-          onClick={() => setModal({ open: true, mode: 'create', tag: '' })}
-        >
-          Upload File
-        </button>
-      </div>
+        </div> */}
 
       {/* Dataset tabs */}
       <div className="tablist">
@@ -186,6 +177,15 @@ export default function ProjectUpload() {
             {tab.label}
           </button>
         ))}
+      </div>
+
+         <button
+          className="project-shell__nav-link"
+          type="button"
+          onClick={() => setModal({ open: true, mode: 'create', tag: '' })}
+        >
+          Upload File
+        </button>
       </div>
 
       {/* ================= TAG LIST ================= */}
