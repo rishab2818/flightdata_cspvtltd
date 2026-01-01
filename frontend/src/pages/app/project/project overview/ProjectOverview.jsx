@@ -1,9 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
+<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
+
+
+import UploadModal from './ProjectUploadModal.jsx'
+import { ingestionApi } from '../../../api/ingestionApi'
+import './ProjectUpload.css'
+import TagDetails from './TagDetails'
+import Plus from '../../../assets/Plus.svg'
+import Folder1 from '../../../assets/Folder1.svg'
+import CalendarBlank from '../../../assets/CalendarBlank.svg'
+import Delete from '../../../assets/Delete.svg'
+import PencilSimple from '../../../assets/PencilSimple.svg'
+import ArrowRight from '../../../assets/ArrowRight.svg'
+
+=======
 import UploadModal from '../ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../../api/ingestionApi.js'
 import './ProjectOverview.css'
 import TagDetails from '../TagDetails.jsx'
+>>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
 
 const DATASET_TABS = [
   { key: 'cfd', label: 'CFD data' },
@@ -149,6 +165,20 @@ export default function ProjectOverview() {
 
   /* ================= Render ================= */
   return (
+<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
+   
+    <div className="UploadWapper">
+      {/* Header */}
+      
+        <div className='statscard'>
+          <label className='projectTitle'>{project?.project_name}</label>
+             <span className='projectActive' >
+                      Active
+                    </span>
+          
+        </div>
+        
+=======
     <div className="project-card">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -168,8 +198,12 @@ export default function ProjectOverview() {
           Upload File
         </button>
       </div>
+>>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
 
       {/* Dataset tabs */}
+      {!selectedTag && (
+      <div className="UploadCard">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div className="tablist">
         {DATASET_TABS.map((tab) => (
           <button
@@ -186,14 +220,36 @@ export default function ProjectOverview() {
         ))}
       </div>
 
+<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
+         <button
+          className="projectUploadLink"
+          type="button"
+          onClick={() => setModal({ open: true, mode: 'create', tag: '' })}
+        >
+          <img className="actionBtn" src={Plus} alt="plus"/>
+          Upload File
+        </button>
+      </div>
+
+=======
+>>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
       {/* ================= TAG LIST ================= */}
-      {!selectedTag && (
-        <table className="data-table">
+      
+        <table className="DataTable">
           <thead>
             <tr>
-              <th>Tag Name</th>
-              <th>Created Date</th>
-              <th>Action</th>
+              <th className="tablehead">
+                <span className="th-content">
+                 <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>Tag/Folder Name
+                 </span>
+                 </th>
+              <th className="tablehead">
+                <span className="th-content">
+                <img style={{width:'20px', height:'20px'}} src={CalendarBlank} alt="calendar" />Created Date
+                </span>
+                </th>
+                
+              <th >Action</th>
               <th>Go to</th>
             </tr>
           </thead>
@@ -207,7 +263,12 @@ export default function ProjectOverview() {
               return (
                 <tr key={tag.tag_name}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{tag.tag_name}</div>
+                    <div style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
+                      <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
+                                                      <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
+                      {tag.tag_name}
+                      </div>
+                      </div>
 
                     {showProgress && (
                       <div style={{ marginTop: 8, maxWidth: 360 }}>
@@ -232,36 +293,42 @@ export default function ProjectOverview() {
                     )}
                   </td>
 
-                  <td>
+                  <td style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
+                    <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
+                    <img style={{width:'20px', height:'20px'}} src={CalendarBlank} alt="calendar" />
                     {tag.latest_created_at
                       ? new Date(tag.latest_created_at).toLocaleDateString()
                       : '-'}
+                    </div>
                   </td>
-
-                  <td>
+                 
+                  <td >
                     <button
+                    style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}
                       type="button"
                       onClick={() => setModal({ open: true, mode: 'edit', tag: tag.tag_name })}
                     >
-                      ✏
+                      <img style={{width:'20px', height:'20px'}} src={PencilSimple} alt="pencil"/>
                     </button>
                     <button
+                      style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',marginLeft: 8}}
                       type="button"
                       onClick={() => handleDeleteTag(tag.tag_name)}
                       disabled={deletingTag === tag.tag_name}
-                      style={{ marginLeft: 8 }}
                     >
-                      {deletingTag === tag.tag_name ? '...' : '🗑'}
+                      {deletingTag === tag.tag_name ? '...' : ''}
+                      <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
+                      
                     </button>
                   </td>
-
+                 
                   <td>
                     <button
-                      className="project-shell__nav-link"
+                      className="projectlink"
                       type="button"
                       onClick={() => setSelectedTag(tag.tag_name)}
                     >
-                      →
+                      <img className="actionBtn" src={ArrowRight} alt="arrow"/>
                     </button>
                   </td>
                 </tr>
@@ -269,6 +336,7 @@ export default function ProjectOverview() {
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       {/* ================= TAG DETAILS ================= */}
@@ -293,5 +361,10 @@ export default function ProjectOverview() {
         />
       )}
     </div>
+<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
+    
+   
+=======
+>>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
   )
 }
