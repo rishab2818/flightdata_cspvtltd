@@ -26,7 +26,9 @@ repo = VisualizationRepository()
 ingestions = IngestionRepository()
 projects = ProjectRepository()
 
-REQUIRED_VIZ_FIELDS = {"x_axis", "chart_type", "series"}
+# REQUIRED_VIZ_FIELDS = {"x_axis", "chart_type", "series"}
+REQUIRED_VIZ_FIELDS = {"chart_type", "series"}
+
 
 
 def _inject_url(doc: dict | None):
@@ -104,7 +106,11 @@ async def create_visualization(
         if not job or job["project_id"] != payload.project_id:
             raise HTTPException(status_code=404, detail=f"Dataset not found for series {idx}")
         if job.get("columns"):
-            missing = [col for col in [payload.x_axis, item.y_axis] if col not in job["columns"]]
+            # missing = [col for col in [payload.x_axis, item.y_axis] if col not in job["columns"]]
+            missing = [col for col in [item.x_axis , item.y_axis] 
+                       if col not in job["columns"]
+                       ]
+
             if missing:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,28 +125,45 @@ async def create_visualization(
         #         "filename": job.get("filename", "dataset"),
         #     }
         # )
-        series_docs.append(
-        {
+        # series_docs.append(
+        # {
+        # "job_id": item.job_id,
+        # "y_axis": item.y_axis,
+        # "label": item.label or item.y_axis,
+        # "filename": job.get("filename", "dataset"),
+        # "tag_name": job.get("tag_name"),
+        # "dataset_type": job.get("dataset_type"),
+        # }
+        series_docs.append({
         "job_id": item.job_id,
+        "x_axis": item.x_axis,
         "y_axis": item.y_axis,
         "label": item.label or item.y_axis,
         "filename": job.get("filename", "dataset"),
-        "tag_name": job.get("tag_name"),
-        "dataset_type": job.get("dataset_type"),
-        }
-    )
+    })
+
+    
 
 
     primary_filename = series_docs[0]["filename"] if series_docs else "dataset"
 
+    # viz_id = await repo.create(
+    #     payload.project_id,
+    #     payload.x_axis,
+    #     payload.chart_type,
+    #     user.email,
+    #     series_docs,
+    #     filename=primary_filename,
+    # )
     viz_id = await repo.create(
-        payload.project_id,
-        payload.x_axis,
-        payload.chart_type,
-        user.email,
-        series_docs,
-        filename=primary_filename,
+    payload.project_id,
+    payload.chart_type,
+    user.email,
+    series_docs,
+    filename=primary_filename,
     )
+
+
     generate_visualization.delay(viz_id)
     doc = _with_series(await repo.get(viz_id))
     return VisualizationOut(**doc)
