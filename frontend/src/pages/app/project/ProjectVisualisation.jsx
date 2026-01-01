@@ -786,7 +786,7 @@ const handleToggle = (index) => {
             </button>
           </div> */}
 
-<div className="project-card">
+<div className="projectcard1">
   <div className="actionsrow actionsrow--header">
     <label className="text">
       Saved visualizations ({visualizations.length})
