@@ -1,6 +1,3 @@
-
-
-
 // import React, { useEffect, useMemo, useState } from 'react'
 // import { createPortal } from 'react-dom'
 // import * as XLSX from 'xlsx'
@@ -878,10 +875,10 @@ export default function UploadModal({
                     <div className="fd-modal__left">
                         <div className="project-card">
 
-                           <div className="UploadBox">
+                            <div className="UploadBox">
                                 <label className="uploadTile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
                                     <p className='button'>
-                                        <img src={Plus} ait="Browse" className='icon'/>
+                                        <img src={Plus} ait="Browse" className='icon' />
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
                                     <p className='uploadtext'>
@@ -899,30 +896,30 @@ export default function UploadModal({
 
                             <div className="form-field">
 
-                            <label className="summaryLabel" style={{ marginTop: 8 }}>File Name/Tag</label>
-                            <input
-                                className="input"
-                                placeholder="Write File Name/Tag"
-                                value={tagName}
-                                onChange={(e) => setTagName(e.target.value)}
-                            />
+                                <label className="summaryLabel" style={{ marginTop: 8 }}>File Name/Tag</label>
+                                <input
+                                    className="input"
+                                    placeholder="Write File Name/Tag"
+                                    value={tagName}
+                                    onChange={(e) => setTagName(e.target.value)}
+                                />
                             </div>
 
                             <div className="form-field">
-  <label className="summaryLabel"style={{ marginTop: 8 }}>Data Type</label>
-  <select
-    className="input-data"
-    value={datasetType}
-    onChange={(e) => setDatasetType(e.target.value)}
-  >
-    <option value="" disabled>Select Data Category</option>
-    {DATASET_OPTIONS.map((opt) => (
-      <option key={opt.key} value={opt.key}>
-        {opt.label}
-      </option>
-    ))}
-  </select>
-</div>
+                                <label className="summaryLabel" style={{ marginTop: 8 }}>Data Type</label>
+                                <select
+                                    className="input-data"
+                                    value={datasetType}
+                                    onChange={(e) => setDatasetType(e.target.value)}
+                                >
+                                    <option value="" disabled>Select Data Category</option>
+                                    {DATASET_OPTIONS.map((opt) => (
+                                        <option key={opt.key} value={opt.key}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
                             {/* ✅ Dataset selector stays in modal; no parent control needed
                             {mode !== 'edit' && (
@@ -953,7 +950,8 @@ export default function UploadModal({
                                 </div>
                             )}
 
-                            
+
+
 
                             {/* Header handling (affects new uploads) */}
                             {/* <div className="header-options" style={{ marginTop: 12 }}>
@@ -973,22 +971,37 @@ export default function UploadModal({
                                     </label>
                                 </div> */}
 
-                                <div className="form-field">
-  <label style={{marginTop:8}} className="summaryLabel">Plot File Header</label>
+                            <div className="form-field">
+                                <label style={{ marginTop: 8 }} className="summaryLabel">Plot File Header</label>
 
-  <select
-    className="input-data"
-    value={headerMode}
-    onChange={(e) => setHeaderMode(e.target.value)}
-  >
-    <option value="file">Use headers from file</option>
-    <option value="none">File has no headers</option>
-    <option value="custom">Provide custom headers</option>
-  </select>
+                                <select
+                                    className="input-data"
+                                    value={headerMode}
+                                    onChange={(e) => setHeaderMode(e.target.value)}
+                                >
+                                    <option value="file">Use headers from file</option>
+                                    <option value="none">File has no headers</option>
+                                    <option value="custom">Provide custom headers</option>
+                                </select>
+                            </div>
+
+                            <div className="form-field">
+                                <label style={{ marginTop: 8 }} className="summaryLabel">Plot File Header</label>
+
+                                <select
+                                    className="input-data"
+                                    value={headerMode}
+                                    onChange={(e) => setHeaderMode(e.target.value)}
+                                >
+                                    <option value="file">Use headers from file</option>
+                                    <option value="none">File has no headers</option>
+                                    <option value="custom">Provide custom headers</option>
+                                </select>
 
                                 {headerMode === 'custom' && (
                                     <div className="header-options__inputs">
-                                        <label style={{marginTop:10}} className="summary-label">Comma separated headers</label>
+                                        <label style={{ marginTop: 10 }} className="summary-label">Comma separated headers</label>
+                                        <label style={{ marginTop: 10 }} className="summary-label">Comma separated headers</label>
                                         <input
                                             className="input-data"
                                             placeholder="e.g. time, alpha, mach"
@@ -999,7 +1012,8 @@ export default function UploadModal({
                                 )}
                             </div>
 
-                         
+
+
 
                             {/* Edit mode: Save rename button */}
                             {mode === 'edit' && (
@@ -1093,35 +1107,65 @@ export default function UploadModal({
                     <div className="fd-modal__right">
                         <div className="project-card1" >
                             <div className='card'>
-                            <h3>Preview</h3>
-                            <div className="summaryLabel" >
-                                {selectedFile ? selectedFile.name : 'Select a file to preview'}
-                            </div>
+                                <h3>Preview</h3>
+                                <div className="summaryLabel" >
+                                    {selectedFile ? selectedFile.name : 'Select a file to preview'}
+                                </div>
+                                <div className="project-card1" >
+                                    <div className='card'>
+                                        <h3>Preview</h3>
+                                        <div className="summaryLabel" >
+                                            {selectedFile ? selectedFile.name : 'Select a file to preview'}
+                                        </div>
 
-                            <div className="fd-preview">
-                                {preview.type === 'none' && <div className="EmptyState">No preview</div>}
-                                {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
-                                {preview.type === 'image' && (
-                                    <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }}/>
-                                )}
-                                {preview.type === 'table' && (
-                                    <div className="excel-preview" >
-                                        <table className="data-table">
-                                            <thead>
-                                                <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
-                                            </thead>
-                                            <tbody>
-                                                {preview.rows.map((row, rIdx) => (
-                                                    <tr key={`r-${rIdx}`}>
-                                                        {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
+                                        <div className="fd-preview">
+                                            {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+                                            {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+                                            {preview.type === 'image' && (
+                                                <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
+                                            )}
+                                            {preview.type === 'table' && (
+                                                <div className="excel-preview" >
+                                                    <table className="data-table">
+                                                        <thead>
+                                                            <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {preview.rows.map((row, rIdx) => (
+                                                                <tr key={`r-${rIdx}`}>
+                                                                    {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="fd-preview">
+                                            {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+                                            {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+                                            {preview.type === 'image' && (
+                                                <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
+                                            )}
+                                            {preview.type === 'table' && (
+                                                <div className="excel-preview" >
+                                                    <table className="data-table">
+                                                        <thead>
+                                                            <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {preview.rows.map((row, rIdx) => (
+                                                                <tr key={`r-${rIdx}`}>
+                                                                    {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
 
+                                        {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
                             {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
@@ -1132,7 +1176,9 @@ export default function UploadModal({
                                     Close
                                 </button>
                             </div> */}
-                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

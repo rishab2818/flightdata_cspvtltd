@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
 import { ingestionApi } from "../../../api/ingestionApi"
 
 export default function ProcessedPreviewPage() {
     const { jobId } = useParams()
+    const location = useLocation()
+    const isEditable = new URLSearchParams(location.search).get("edit") === "1"
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -96,10 +98,20 @@ export default function ProcessedPreviewPage() {
                         {[10, 20, 50, 100, 200].map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
 
-                    <button className="project-shell__nav-link" type="button" onClick={onReset} disabled={saving || loading}>
+                    <button
+                        className="project-shell__nav-link"
+                        type="button"
+                        onClick={onReset}
+                        disabled={saving || loading || !isEditable}
+                    >
                         Reset
                     </button>
-                    <button className="project-shell__nav-link" type="button" onClick={onSave} disabled={saving || loading}>
+                    <button
+                        className="project-shell__nav-link"
+                        type="button"
+                        onClick={onSave}
+                        disabled={saving || loading || !isEditable}
+                    >
                         {saving ? "Saving..." : "Save"}
                     </button>
                 </div>
@@ -120,6 +132,7 @@ export default function ProcessedPreviewPage() {
                                             className="input-control"
                                             value={renameMap?.[oldCol] ?? oldCol}
                                             onChange={(e) => onChangeHeader(oldCol, e.target.value)}
+                                            disabled={!isEditable}
                                         />
                                     </th>
                                 ))}

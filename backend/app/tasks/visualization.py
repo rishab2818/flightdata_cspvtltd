@@ -200,17 +200,23 @@ def _materialize_tiles(
     return overview_frame, tiles, {"x_min": x_min, "x_max": x_max, "rows": rows, "partitions": partitions}
 
 
-def _build_figure(series_frames: list[dict], x_axis: str, chart_type: str):
+
+
+def _build_figure(series_frames: list[dict], chart_type: str):
     chart_type = (chart_type or "scatter").lower()
     fig = go.Figure()
 
     for item in series_frames:
         series = item["series"]
         df = item["frame"]
+
         label = series.get("label") or series.get("y_axis") or "Series"
+        x_col = series["x_axis"]
         y_col = series["y_axis"]
+
         min_col = f"{y_col}_min"
         max_col = f"{y_col}_max"
+
         error_y = None
         if {min_col, max_col}.issubset(set(df.columns)):
             error_y = {
@@ -222,31 +228,19 @@ def _build_figure(series_frames: list[dict], x_axis: str, chart_type: str):
             }
 
         if chart_type == "bar":
-            fig.add_bar(name=label, x=df[x_axis], y=df[y_col])
+            fig.add_bar(name=label, x=df[x_col], y=df[y_col])
         elif chart_type == "line":
-            fig.add_scatter(
-                name=label,
-                x=df[x_axis],
-                y=df[y_col],
-                mode="lines",
-                error_y=error_y,
-            )
+            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
         else:
-            fig.add_scatter(
-                name=label,
-                x=df[x_axis],
-                y=df[y_col],
-                mode="markers+lines",
-                opacity=0.8,
-                error_y=error_y,
-            )
+            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
 
     fig.update_layout(
         template="plotly_white",
-        title=f"{', '.join([item['series'].get('label') or item['series'].get('y_axis') or 'Series' for item in series_frames])} vs {x_axis}",
+        title="Overplot",
         legend_title_text="Series",
     )
     return fig
+
 
 
 @celery_app.task(bind=True, name=f"{settings.celery_task_prefix}.generate_visualization")
@@ -340,31 +334,46 @@ def generate_visualization(self, viz_id: str):
 
             _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
             base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
+            x_axis = item["series"]["x_axis"]
+            y_axis = item["series"]["y_axis"]
             overview, tiles, stats = _materialize_tiles(
-                minio,
-                bucket,
-                base_key,
-                data_url,
-                ext,
-                doc["x_axis"],
-                item["series"]["y_axis"],
+                    minio,
+                    bucket,
+                    base_key,
+                    data_url,
+                    ext,
+                    x_axis,
+                    y_axis,
+                
             )
 
+            # display_frame = overview.rename(
+            #     columns=
+            #     {
+            #         "y_mean": item["series"]["y_axis"],
+            #         "y_min": f"{item['series']['y_axis']}_min",
+            #         "y_max": f"{item['series']['y_axis']}_max",
+            #     }
+            # )
+            x_col = item["series"]["x_axis"]
+            y_col = item["series"]["y_axis"]
+
             display_frame = overview.rename(
-                columns=
-                {
-                    "y_mean": item["series"]["y_axis"],
-                    "y_min": f"{item['series']['y_axis']}_min",
-                    "y_max": f"{item['series']['y_axis']}_max",
+                columns={
+                    "y_mean": y_col,
+                    "y_min": f"{y_col}_min",
+                    "y_max": f"{y_col}_max",
                 }
             )
+
 
             series_frames.append({"series": item["series"], "frame": display_frame})
             tile_metadata.append({"series": item["series"], "tiles": tiles})
             stats_metadata.append({"series": item["series"], "stats": stats})
 
         _set_status(redis, viz_id, states.STARTED, 60, "Building Plotly figure")
-        fig = _build_figure(series_frames, doc["x_axis"], doc.get("chart_type", "scatter"))
+        fig = _build_figure(series_frames, doc.get("chart_type", "scatter"))
+        # fig = _build_figure(series_frames, doc["x_axis"], doc.get("chart_type", "scatter"))
         html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
 
         _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")
