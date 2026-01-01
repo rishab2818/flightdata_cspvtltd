@@ -3,6 +3,12 @@ import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { LazyTileCard } from '../../../components/viz/LazyTileCard'
+import './ProjectVisualisation.css'
+import ChartLine1 from '../../../assets/ChartLine1.svg'
+import DownloadSimple from '../../../assets/DownloadSimple.svg'
+import Delete from '../../../assets/Delete.svg'
+import ViewIcon from '../../../assets/ViewIcon.svg'
+
 
 const DATASET_TYPES = [
   { key: 'cfd', label: 'CFD' },

@@ -881,7 +881,7 @@ export default function UploadModal({
                                         <img src={Plus} ait="Browse" className='icon' />
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
-                                    <p className='text'>
+                                    <p className='uploadtext'>
                                         Supported: CSV/Excel for visualization. Images/others stored as raw only.
                                     </p>
                                 </label>
@@ -952,6 +952,7 @@ export default function UploadModal({
 
 
 
+
                             {/* Header handling (affects new uploads) */}
                             {/* <div className="header-options" style={{ marginTop: 12 }}>
                                 <strong>Header handling</strong>
@@ -982,9 +983,24 @@ export default function UploadModal({
                                     <option value="none">File has no headers</option>
                                     <option value="custom">Provide custom headers</option>
                                 </select>
+                            </div>
+
+                            <div className="form-field">
+                                <label style={{ marginTop: 8 }} className="summaryLabel">Plot File Header</label>
+
+                                <select
+                                    className="input-data"
+                                    value={headerMode}
+                                    onChange={(e) => setHeaderMode(e.target.value)}
+                                >
+                                    <option value="file">Use headers from file</option>
+                                    <option value="none">File has no headers</option>
+                                    <option value="custom">Provide custom headers</option>
+                                </select>
 
                                 {headerMode === 'custom' && (
                                     <div className="header-options__inputs">
+                                        <label style={{ marginTop: 10 }} className="summary-label">Comma separated headers</label>
                                         <label style={{ marginTop: 10 }} className="summary-label">Comma separated headers</label>
                                         <input
                                             className="input-data"
@@ -995,6 +1011,7 @@ export default function UploadModal({
                                     </div>
                                 )}
                             </div>
+
 
 
 
@@ -1061,14 +1078,14 @@ export default function UploadModal({
                                                 </div>
                                             </div>
 
-                                            <label className="fd-switch" onClick={(e) => e.stopPropagation()}>
+                                            <label className="toggle" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     checked={isTabular(item.file) ? item.visualize : false}
                                                     onChange={() => toggleVisualize(idx)}
                                                     disabled={!isTabular(item.file)}
                                                 />
-                                                <span className="fd-sliderNew" />
+                                                <span className="slider" />
                                             </label>
                                         </div>
                                     ))}
@@ -1094,32 +1111,62 @@ export default function UploadModal({
                                 <div className="summaryLabel" >
                                     {selectedFile ? selectedFile.name : 'Select a file to preview'}
                                 </div>
-
-                                <div className="fd-preview">
-                                    {preview.type === 'none' && <div className="EmptyState">No preview</div>}
-                                    {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
-                                    {preview.type === 'image' && (
-                                        <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
-                                    )}
-                                    {preview.type === 'table' && (
-                                        <div className="excel-preview" >
-                                            <table className="data-table">
-                                                <thead>
-                                                    <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
-                                                </thead>
-                                                <tbody>
-                                                    {preview.rows.map((row, rIdx) => (
-                                                        <tr key={`r-${rIdx}`}>
-                                                            {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                <div className="project-card1" >
+                                    <div className='card'>
+                                        <h3>Preview</h3>
+                                        <div className="summaryLabel" >
+                                            {selectedFile ? selectedFile.name : 'Select a file to preview'}
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                                        <div className="fd-preview">
+                                            {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+                                            {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+                                            {preview.type === 'image' && (
+                                                <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
+                                            )}
+                                            {preview.type === 'table' && (
+                                                <div className="excel-preview" >
+                                                    <table className="data-table">
+                                                        <thead>
+                                                            <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {preview.rows.map((row, rIdx) => (
+                                                                <tr key={`r-${rIdx}`}>
+                                                                    {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="fd-preview">
+                                            {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+                                            {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+                                            {preview.type === 'image' && (
+                                                <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
+                                            )}
+                                            {preview.type === 'table' && (
+                                                <div className="excel-preview" >
+                                                    <table className="data-table">
+                                                        <thead>
+                                                            <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {preview.rows.map((row, rIdx) => (
+                                                                <tr key={`r-${rIdx}`}>
+                                                                    {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                            {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
                                     className="project-shell__nav-link"
@@ -1129,6 +1176,8 @@ export default function UploadModal({
                                     Close
                                 </button>
                             </div> */}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
