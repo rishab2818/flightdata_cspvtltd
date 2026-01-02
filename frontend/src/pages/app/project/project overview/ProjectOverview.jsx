@@ -1,25 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
-<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
 
 
-import UploadModal from './ProjectUploadModal.jsx'
-import { ingestionApi } from '../../../api/ingestionApi'
-import './ProjectUpload.css'
-import TagDetails from './TagDetails'
-import Plus from '../../../assets/Plus.svg'
-import Folder1 from '../../../assets/Folder1.svg'
-import CalendarBlank from '../../../assets/CalendarBlank.svg'
-import Delete from '../../../assets/Delete.svg'
-import PencilSimple from '../../../assets/PencilSimple.svg'
-import ArrowRight from '../../../assets/ArrowRight.svg'
-
-=======
-import UploadModal from '../ProjectUploadModal.jsx'
-import { ingestionApi } from '../../../../api/ingestionApi.js'
+import UploadModal from './../ProjectUploadModal.jsx'
+import { ingestionApi } from '../../../../api/ingestionApi'
 import './ProjectOverview.css'
-import TagDetails from '../TagDetails.jsx'
->>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
+import TagDetails from './../TagDetails.jsx'
+import Plus from '../../../../assets/Plus.svg'
+import Folder1 from '../../../../assets/Folder1.svg'
+import CalendarBlank from '../../../../assets/CalendarBlank.svg'
+import Delete from '../../../../assets/Delete.svg'
+import PencilSimple from '../../../../assets/PencilSimple.svg'
+import ArrowRight from '../../../../assets/ArrowRight.svg'
+
+
+
+
 
 const DATASET_TABS = [
   { key: 'cfd', label: 'CFD data' },
@@ -28,7 +24,7 @@ const DATASET_TABS = [
   { key: 'others', label: 'Others' },
 ]
 
-export default function ProjectOverview() {
+export default function ProjectUpload() {
   const { projectId } = useParams()
   const { project } = useOutletContext()
 
@@ -111,16 +107,16 @@ export default function ProjectOverview() {
   useEffect(() => {
     let cancelled = false
 
-      ; (async () => {
-        if (cancelled) return
-        stopAllPolling()
-        setJobProgress({})
-        setTagJobMap({})
-        await refreshTagsAndAttachProgress()
+    ;(async () => {
+      if (cancelled) return
+      stopAllPolling()
+      setJobProgress({})
+      setTagJobMap({})
+      await refreshTagsAndAttachProgress()
 
-        // second refresh handles race after upload
-        setTimeout(refreshTagsAndAttachProgress, 2000)
-      })()
+      // second refresh handles race after upload
+      setTimeout(refreshTagsAndAttachProgress, 2000)
+    })()
 
     return () => {
       cancelled = true
@@ -165,7 +161,8 @@ export default function ProjectOverview() {
 
   /* ================= Render ================= */
   return (
-<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
+   
+    <div className="UploadWapper">
    
     <div className="UploadWapper">
       {/* Header */}
@@ -178,28 +175,16 @@ export default function ProjectOverview() {
           
         </div>
         
-=======
-    <div className="project-card">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-
-          <h2>{project?.project_name}</h2>
-
+      
+        <div className='statscard'>
+          <label className='projectTitle'>{project?.project_name}</label>
+             <span className='projectActive' >
+                      Active
+                    </span>
+          
         </div>
-
-
-
-        <button
-          className="project-shell__nav-link"
-          type="button"
-          onClick={() => setModal({ open: true, mode: 'create', tag: '' })}
-        >
-          Upload File
-        </button>
-      </div>
->>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
-
+       
       {/* Dataset tabs */}
       {!selectedTag && (
       <div className="UploadCard">
@@ -220,7 +205,6 @@ export default function ProjectOverview() {
         ))}
       </div>
 
-<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
          <button
           className="projectUploadLink"
           type="button"
@@ -231,8 +215,7 @@ export default function ProjectOverview() {
         </button>
       </div>
 
-=======
->>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
+
       {/* ================= TAG LIST ================= */}
       
         <table className="DataTable">
@@ -361,10 +344,10 @@ export default function ProjectOverview() {
         />
       )}
     </div>
-<<<<<<< HEAD:frontend/src/pages/app/project/ProjectUpload.jsx
     
    
-=======
->>>>>>> origin/Suraj_v:frontend/src/pages/app/project/project overview/ProjectOverview.jsx
+    
+   
+
   )
 }
