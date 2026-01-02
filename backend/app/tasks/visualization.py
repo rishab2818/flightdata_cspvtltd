@@ -241,7 +241,52 @@ def _materialize_tiles(
 #     )
 #     return fig
 
-def _build_figure(series_frames: list[dict], chart_type: str, show_error_bars: bool = False):
+# def _build_figure(series_frames: list[dict], chart_type: str, show_error_bars: bool = False):
+#     chart_type = (chart_type or "scatter").lower()
+#     fig = go.Figure()
+
+#     for item in series_frames:
+#         series = item["series"]
+#         df = item["frame"]
+
+#         label = series.get("label") or series.get("y_axis") or "Series"
+#         x_col = series["x_axis"]
+#         y_col = series["y_axis"]
+
+#         error_y = None
+#         if show_error_bars:
+#             min_col = f"{y_col}_min"
+#             max_col = f"{y_col}_max"
+#             if {min_col, max_col}.issubset(df.columns):
+#                 error_y = dict(
+#                     type="data",
+#                     symmetric=False,
+#                     array=(df[max_col] - df[y_col]).tolist(),
+#                     arrayminus=(df[y_col] - df[min_col]).tolist(),
+#                     thickness=0.8,
+#                 )
+
+#         if chart_type == "bar":
+#             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
+#         elif chart_type == "line":
+#             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
+#         elif chart_type =='ploar':
+#             fig.add_trace(go.Scatterpolar(
+#                 name = label,
+#                 theta=df['x_col'],
+#                 r = df['y_col'],
+#                 mode="markers+lines"
+#             ))
+#             fig.update_layout(polar =dict(radialaxis=dict(visible =True)))
+#         else:
+#             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
+
+#     fig.update_layout(template="plotly_white", title="plot", legend_title_text="Series")
+#     return fig
+
+
+## For ploar 
+def _build_figure(series_frames: list[dict], chart_type: str , show_error_bars: bool = False):
     chart_type = (chart_type or "scatter").lower()
     fig = go.Figure()
 
@@ -252,6 +297,9 @@ def _build_figure(series_frames: list[dict], chart_type: str, show_error_bars: b
         label = series.get("label") or series.get("y_axis") or "Series"
         x_col = series["x_axis"]
         y_col = series["y_axis"]
+
+        min_col = f"{y_col}_min"
+        max_col = f"{y_col}_max"
 
         error_y = None
         if show_error_bars:
@@ -266,6 +314,19 @@ def _build_figure(series_frames: list[dict], chart_type: str, show_error_bars: b
                     thickness=0.8,
                 )
 
+        # ✅ POLAR
+        if chart_type == "polar":
+            fig.add_trace(
+                go.Scatterpolar(
+                    name=label,
+                    theta=df[x_col],   # angle
+                    r=df[y_col],       # radius
+                    mode="lines+markers",
+                )
+            )
+            continue
+
+        # ✅ CARTESIAN (existing)
         if chart_type == "bar":
             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
         elif chart_type == "line":
@@ -273,8 +334,24 @@ def _build_figure(series_frames: list[dict], chart_type: str, show_error_bars: b
         else:
             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
 
-    fig.update_layout(template="plotly_white", title="Overplot", legend_title_text="Series")
+    fig.update_layout(
+        template="plotly_white",
+        title="Overplot",
+        legend_title_text="Series",
+    )
+
+    # ✅ Add polar layout if polar
+    if chart_type == "polar":
+        fig.update_layout(
+            polar=dict(
+                angularaxis=dict(direction="counterclockwise"),  # optional
+                radialaxis=dict(visible=True),
+            )
+        )
+
     return fig
+
+
 
 
 @celery_app.task(bind=True, name=f"{settings.celery_task_prefix}.generate_visualization")

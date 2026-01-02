@@ -9,6 +9,7 @@ import ChartLine1 from '../../../assets/ChartLine1.svg'
 import DownloadSimple from '../../../assets/DownloadSimple.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
+import blackPloticon from '../../../assets/ChartLine.svg'
 
 const DATASET_TYPES = [
   { key: 'cfd', label: 'CFD' },
@@ -21,6 +22,8 @@ const CHART_TYPES = [
   { value: 'scatter', label: 'Scatter' },
   { value: 'line', label: 'Line' },
   { value: 'bar', label: 'Bar' },
+  // Add plaor 
+  { value: 'polar', label: 'Polar' },
 ]
 
 const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
@@ -328,7 +331,7 @@ export default function ProjectVisualisation() {
           </div>
         )}
 
-        
+
         {/* ===== Editor (aligned with old UI grid) ===== */}
         <div className="ps-row">
           <div className="ps-field">
@@ -427,11 +430,11 @@ export default function ProjectVisualisation() {
           </div>
 
 
-        {/* ===== Y Axis (old CSS row style) ===== */}
+          {/* ===== Y Axis (old CSS row style) ===== */}
           <div className="ps-field">
-          <label className="viz-label">Y Axis</label>
+            <label className="viz-label">Y Axis</label>
 
-         
+
             <select
               className="viz-select"
               value={activeSeries?.yAxis || ''}
@@ -446,9 +449,9 @@ export default function ProjectVisualisation() {
                 </option>
               ))}
             </select>
-            </div>
+          </div>
 
-            
+
           <div className="ps-field" >
             <label className="viz-label">Plot Name(Optional)</label>
             <input
@@ -457,18 +460,18 @@ export default function ProjectVisualisation() {
               onChange={(e) => updateActiveSeries({ label: e.target.value })}
             />
           </div>
-      
+
           <div className="ps-field" >
             {/* Generate button (old UI position) */}
             <button type="submit" className="plot-btn" disabled={loading}>
               <img src={ChartLine1} alt="chart" />
               {loading ? 'Generating…' : `Generate Plot`}
             </button>
-            </div>
-         
           </div>
 
-          {/* ===== Series Manager (KEPT) ===== */}
+        </div>
+
+        {/* ===== Series Manager (KEPT) ===== */}
         <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
           <div className="ps-field" style={{ gridColumn: 'span 4' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -548,7 +551,7 @@ export default function ProjectVisualisation() {
           </div>
         </div>
 
-       
+
       </form>
 
       {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
@@ -610,37 +613,37 @@ export default function ProjectVisualisation() {
                 </div>
               </div>
             ))} */}
-            <div className="projectcard1">
-            {tilePreview && (
-              <div style={{ marginTop: 12 }}>
-                <p className="summarylabel1">
-                  Tile level {tilePreview.level} ({tilePreview.rows} rows)
-                </p>
-                <div style={{ maxHeight: 200, overflow: 'auto' }}>
-                  <table className="datatable">
-                    <thead>
-                      <tr>
+        <div className="projectcard1">
+          {tilePreview && (
+            <div style={{ marginTop: 12 }}>
+              <p className="summarylabel1">
+                Tile level {tilePreview.level} ({tilePreview.rows} rows)
+              </p>
+              <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                <table className="datatable">
+                  <thead>
+                    <tr>
+                      {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
+                        <th key={k}>{k}</th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {(tilePreview.data || []).slice(0, 12).map((row, i) => (
+                      <tr key={i}>
                         {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
-                          <th key={k}>{k}</th>
+                          <td key={`${i}-${k}`}>{row[k]}</td>
                         ))}
                       </tr>
-                    </thead>
-                    
-                    <tbody>
-                      {(tilePreview.data || []).slice(0, 12).map((row, i) => (
-                        <tr key={i}>
-                          {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
-                            <td key={`${i}-${k}`}>{row[k]}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
-        
+            </div>
+          )}
+        </div>
+
 
         {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
         <div className="projectcard1">
@@ -683,7 +686,7 @@ export default function ProjectVisualisation() {
 
                       {viz.html_url && (
                         <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
-                          <img className="actionBtn" src={DownloadSimple} alt="download" />
+                          <img className="actionBtn" src={blackPloticon} alt="download" />
                         </button>
                       )}
 
