@@ -388,7 +388,7 @@ export default function ProjectVisualisation() {
               }
               disabled={!activeSeries?.tag}
             >
-              <option value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
+              <option style={{background:'#f3f3f5'}} value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
               {activeFiles.map((f) => (
                 <option key={f.job_id} value={f.job_id}>
                   {f.filename}
