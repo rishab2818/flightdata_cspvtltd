@@ -15,6 +15,9 @@ import ConfirmationModal from "../../../../components/common/ConfirmationModal";
 
 
 
+
+
+
 const DATASET_TABS = [
   { key: 'cfd', label: 'CFD data' },
   { key: 'wind', label: 'Wind Tunnel Data' },
@@ -210,6 +213,8 @@ export default function ProjectUpload() {
   return (
    
     <div className="UploadWapper">
+   
+    <div className="UploadWapper">
       {/* Header */}
       
         <div className='statscard'>
@@ -250,6 +255,7 @@ export default function ProjectUpload() {
           Upload File
         </button>
       </div>
+
 
       {/* ================= TAG LIST ================= */}
       
@@ -396,5 +402,8 @@ export default function ProjectUpload() {
     </div>
     
    
+    
+   
+
   )
 }

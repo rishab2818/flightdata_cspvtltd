@@ -64,7 +64,7 @@
   justify-content: center;
 }
 
-.project-shell__nav-link {
+.project-shell_link {
   display: block;
   padding: 12px 14px;
   align-items: center;
@@ -72,8 +72,9 @@
   display: flex;
   gap: 5px;
   text-decoration: none;
-  color: #0f172a;
-
+  color: #ffffff;
+  background: #1976D2;
+  border-radius: 4px;
   font-weight: 600;
   border: 1px solid transparent;
   transition: all 0.2s ease;
@@ -101,13 +102,13 @@
   /* optional hover like active */
 }
 
-.project-shell__nav-link:hover {
+/* .project-shell__nav-link:hover {
   background: #e8f0ff;
-}
+} */
 
 .project-shell__nav-link--active {
   border-color: #f6f6f7;
-  background: #91BFF9;
+  background: #1976D2;
 }
 
 .project-shell__content {
