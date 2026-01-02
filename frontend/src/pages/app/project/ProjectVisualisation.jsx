@@ -3,94 +3,247 @@ import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { LazyTileCard } from '../../../components/viz/LazyTileCard'
+import './ProjectVisualisation.css'
 
-const chartTypes = [
+import ChartLine1 from '../../../assets/ChartLine1.svg'
+import DownloadSimple from '../../../assets/DownloadSimple.svg'
+import Delete from '../../../assets/Delete.svg'
+import ViewIcon from '../../../assets/ViewIcon.svg'
+
+const DATASET_TYPES = [
+  { key: 'cfd', label: 'CFD' },
+  { key: 'wind', label: 'Wind Tunnel' },
+  { key: 'flight', label: 'Flight Data' },
+  { key: 'others', label: 'Others' },
+]
+
+const CHART_TYPES = [
   { value: 'scatter', label: 'Scatter' },
   { value: 'line', label: 'Line' },
   { value: 'bar', label: 'Bar' },
 ]
 
+const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
+
+const newSeries = (n = 1) => ({
+  id: `s-${Date.now()}-${n}`,
+  enabled: true,
+
+  datasetType: 'wind',
+  tag: '',
+  jobId: '',
+  xAxis: '',
+  yAxis: '',
+  label: '',
+})
+
 export default function ProjectVisualisation() {
   const { projectId } = useParams()
   const { project } = useOutletContext()
-  const [jobs, setJobs] = useState([])
-  const [visualizations, setVisualizations] = useState([])
-  const [xJobId, setXJobId] = useState('')
-  const [xAxis, setXAxis] = useState('')
-  const [series, setSeries] = useState([{ jobId: '', yAxis: '', label: '' }])
+
+  /* ================= series manager ================= */
+  const [seriesList, setSeriesList] = useState([newSeries(1)])
+  const [activeSeriesId, setActiveSeriesId] = useState(seriesList[0]?.id)
+
+  /* ================= global plot config ================= */
   const [chartType, setChartType] = useState('scatter')
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [plotHtml, setPlotHtml] = useState('')
+
+  /* ================= data caches ================= */
+  const [tagsByDataset, setTagsByDataset] = useState({})
+  const [filesByDatasetTag, setFilesByDatasetTag] = useState({})
+
+  /* ================= visualization state ================= */
+  const [visualizations, setVisualizations] = useState([])
   const [activeViz, setActiveViz] = useState(null)
-  const [statusMessage, setStatusMessage] = useState('Select a dataset to begin')
+  const [plotHtml, setPlotHtml] = useState('')
   const [tilePreview, setTilePreview] = useState(null)
+  const [statusMessage, setStatusMessage] = useState('Select data to begin')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
   const pollTimer = useRef(null)
+  const [isExpanded, setIsExpanded] = useState(true)
 
-  const xJob = useMemo(() => jobs.find((job) => job.job_id === xJobId), [jobs, xJobId])
-
-  const validSeries = useMemo(
-    () => series.filter((item) => item.jobId && item.yAxis),
-    [series]
+  /* ================= helpers ================= */
+  const activeSeries = useMemo(
+    () => seriesList.find((s) => s.id === activeSeriesId) || seriesList[0],
+    [seriesList, activeSeriesId]
   )
 
-  const fetchJobs = async () => {
-    try {
-      const list = await ingestionApi.list(projectId)
-      setJobs(list)
-    } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
+  // keep activeSeriesId always valid
+  useEffect(() => {
+    if (!seriesList.length) {
+      const s = newSeries(1)
+      setSeriesList([s])
+      setActiveSeriesId(s.id)
+      return
+    }
+    if (!activeSeriesId || !seriesList.some((s) => s.id === activeSeriesId)) {
+      setActiveSeriesId(seriesList[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seriesList])
+
+  const updateActiveSeries = (patch) => {
+    setSeriesList((prev) =>
+      prev.map((s) => (s.id === activeSeriesId ? { ...s, ...patch } : s))
+    )
+  }
+
+  const setSeriesEnabled = (id, enabled) => {
+    setSeriesList((prev) => prev.map((s) => (s.id === id ? { ...s, enabled } : s)))
+  }
+
+  const addSeriesSlot = () => {
+    setSeriesList((prev) => {
+      const s = newSeries(prev.length + 1)
+      s.datasetType = activeSeries?.datasetType || 'wind'
+      return [...prev, s]
+    })
+
+    setTimeout(() => {
+      setSeriesList((prev) => {
+        const last = prev[prev.length - 1]
+        if (last?.id) setActiveSeriesId(last.id)
+        return prev
+      })
+    }, 0)
+  }
+
+  const removeSeriesSlot = (id) => {
+    if (seriesList.length === 1) return
+    const remaining = seriesList.filter((s) => s.id !== id)
+    setSeriesList(remaining)
+    if (activeSeriesId === id) {
+      setActiveSeriesId(remaining[0]?.id)
     }
   }
 
+  const seriesSummary = (s) => {
+    const ds = datasetLabel(s.datasetType)
+    const x = s.xAxis || '-'
+    const y = s.yAxis || '-'
+    const f = s.jobId ? 'file✅' : 'file❌'
+    return `${ds} • ${f} • ${x} → ${y}`
+  }
+
+  const getTags = (datasetType) => tagsByDataset[datasetType] || []
+  const getFiles = (datasetType, tag) => filesByDatasetTag[`${datasetType}::${tag}`] || []
+
+  /* ================= load tags for datasetType (per active series) ================= */
+  useEffect(() => {
+    const ds = activeSeries?.datasetType
+    if (!ds) return
+    if (tagsByDataset[ds]) return
+
+    ingestionApi
+      .listTags(projectId, ds)
+      .then((rows) => {
+        setTagsByDataset((prev) => ({ ...prev, [ds]: rows || [] }))
+      })
+      .catch((e) => {
+        console.error(e)
+        setError(e?.response?.data?.detail || e.message || 'Failed to load tags')
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeSeries?.datasetType])
+
+  /* ================= load files for (datasetType, tag) (per active series) ================= */
+  useEffect(() => {
+    const ds = activeSeries?.datasetType
+    const tag = activeSeries?.tag
+    if (!ds || !tag) return
+    const key = `${ds}::${tag}`
+    if (filesByDatasetTag[key]) return
+
+    ingestionApi
+      .listFilesInTag(projectId, ds, tag)
+      .then((list) => {
+        const processed = (list || []).filter((f) => f.processed_key && f.columns?.length)
+        setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }))
+      })
+      .catch((e) => {
+        console.error(e)
+        setError(e?.response?.data?.detail || e.message || 'Failed to load files')
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeSeries?.datasetType, activeSeries?.tag])
+
+  /* ================= saved visualizations ================= */
   const fetchVisualizations = async () => {
     try {
       const list = await visualizationApi.listForProject(projectId)
-      setVisualizations(list)
-    } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
-    }
-  }
-
-  const deleteVisualization = async (vizId) => {
-    if (!window.confirm('Delete this visualization?')) return
-    try {
-      await visualizationApi.remove(vizId)
-      setVisualizations((prev) => prev.filter((item) => item.viz_id !== vizId))
-      if (activeViz?.viz_id === vizId) {
-        setActiveViz(null)
-        setPlotHtml('')
-        setTilePreview(null)
-      }
-    } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
+      setVisualizations(list || [])
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Failed to load visualizations')
     }
   }
 
   useEffect(() => {
-    fetchJobs()
     fetchVisualizations()
-    return () => {
-      if (pollTimer.current) clearTimeout(pollTimer.current)
-    }
+    return () => pollTimer.current && clearTimeout(pollTimer.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
-  const resetForm = () => {
-    setXJobId('')
-    setXAxis('')
-    setSeries([{ jobId: '', yAxis: '', label: '' }])
-    setChartType('scatter')
+  /* ================= columns for active series ================= */
+  const activeFiles = useMemo(() => {
+    if (!activeSeries?.datasetType || !activeSeries?.tag) return []
+    return getFiles(activeSeries.datasetType, activeSeries.tag)
+  }, [activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
+
+  const activeJob = useMemo(
+    () => activeFiles.find((f) => f.job_id === activeSeries?.jobId),
+    [activeFiles, activeSeries?.jobId]
+  )
+
+  const activeColumns = useMemo(() => activeJob?.columns || [], [activeJob])
+
+  /* ================= submit ================= */
+  const enabledSeries = useMemo(() => seriesList.filter((s) => s.enabled), [seriesList])
+
+  const buildAutoLabel = (s) => {
+    const ds = datasetLabel(s.datasetType)
+    const x = s.xAxis || ''
+    const y = s.yAxis || ''
+    if (!x || !y) return ds
+    return `${ds} | ${x} → ${y}`
   }
 
-  const loadVisualization = async (vizId) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    const payloadSeries = enabledSeries
+      .filter((s) => s.jobId && s.xAxis && s.yAxis)
+      .map((s) => ({
+        job_id: s.jobId,
+        x_axis: s.xAxis,
+        y_axis: s.yAxis,
+        label: (s.label || '').trim() || buildAutoLabel(s),
+      }))
+
+    if (payloadSeries.length === 0) {
+      setError('Please configure at least one enabled series with File, X and Y selected.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setPlotHtml('')
+    setTilePreview(null)
+    setStatusMessage('Starting visualization…')
+    if (pollTimer.current) clearTimeout(pollTimer.current)
+
     try {
-      const detail = await visualizationApi.detail(vizId)
-      setActiveViz(detail)
-      setPlotHtml(detail.html || '')
-      setStatusMessage(detail.message || detail.status)
-      setTilePreview(null)
+      const res = await visualizationApi.create({
+        project_id: projectId,
+        chart_type: chartType,
+        series: payloadSeries,
+      })
+      pollVisualization(res.viz_id)
     } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
+      setError(err?.response?.data?.detail || err.message || 'Failed to create visualization')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -100,425 +253,452 @@ export default function ProjectVisualisation() {
       setActiveViz(detail)
       setPlotHtml(detail.html || '')
       setStatusMessage(detail.message || detail.status)
-      setTilePreview(null)
-      if (detail.status !== 'SUCCESS' && detail.status !== 'FAILURE') {
+
+      if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
         pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
       } else {
-        pollTimer.current = null
         fetchVisualizations()
       }
-    } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
     }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!xJobId || !xAxis || validSeries.length === 0) {
-      setError('Please choose an X axis dataset, X axis column, and at least one Y series')
-      return
-    }
-    setError(null)
-    setLoading(true)
-    setPlotHtml('')
-    setStatusMessage('Starting visualization job…')
-    setTilePreview(null)
-    if (pollTimer.current) clearTimeout(pollTimer.current)
+  const loadVisualization = async (vizId) => {
     try {
-      const res = await visualizationApi.create({
-        project_id: projectId,
-        x_axis: xAxis,
-        series: validSeries.map((item) => ({
-          job_id: item.jobId,
-          y_axis: item.yAxis,
-          label: item.label?.trim() || undefined,
-        })),
-        chart_type: chartType,
-      })
-      setActiveViz(res)
-      pollVisualization(res.viz_id)
-      resetForm()
-    } catch (err) {
-      setError(err?.response?.data?.detail || err.message)
-    } finally {
-      setLoading(false)
+      const detail = await visualizationApi.detail(vizId)
+      setActiveViz(detail)
+      setPlotHtml(detail.html || '')
+      setStatusMessage(detail.message || detail.status)
+      setTilePreview(null)
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Failed to load visualization')
     }
   }
 
-  const xColumns = xJob?.columns || []
-
-  const getColumnsForJob = (jobId) => jobs.find((job) => job.job_id === jobId)?.columns || []
-
-  const updateSeriesItem = (index, field, value) => {
-    setSeries((prev) => {
-      const clone = [...prev]
-      clone[index] = { ...clone[index], [field]: value }
-      return clone
-    })
-  }
-
-  const addSeriesRow = () => setSeries((prev) => [...prev, { jobId: '', yAxis: '', label: '' }])
-
-  const removeSeriesRow = (index) => {
-    setSeries((prev) => prev.filter((_, idx) => idx !== index))
-  }
-
-  const summarizeSeries = (viz) => {
-    const items = viz?.series?.length
-      ? viz.series
-      : viz?.y_axis
-        ? [{ y_axis: viz.y_axis, label: viz.y_axis, filename: viz.filename }]
-        : []
-    if (!items.length) return 'No series'
-    return items.map((item) => item.label || item.y_axis).join(', ')
-  }
-
-  const primaryFilename = (viz) => viz?.filename || viz?.series?.[0]?.filename || 'dataset'
-
-  const formatRangeValue = (val) => {
-    if (val === undefined || val === null) return '-'
-    if (Number.isFinite(Number(val))) return Number(val).toFixed(2)
-    return val
-  }
-
-  const loadTileData = useCallback(
-    async (seriesIndex = 0, level, options = {}) => {
-      if (!activeViz?.viz_id) return
-      const { silent = false } = options
-      if (!silent) setStatusMessage('Fetching tile data…')
-      try {
-        const data = await visualizationApi.tileData(activeViz.viz_id, {
-          series: seriesIndex,
-          level,
-        })
-        setTilePreview({ ...data, fetchedAt: new Date().toISOString(), seriesIndex })
-        setStatusMessage(
-          silent
-            ? `Auto-loaded level ${data.level} tile while scrolling series ${seriesIndex + 1}`
-            : `Loaded level ${data.level} tile for series ${seriesIndex + 1}`
-        )
-      } catch (err) {
-        setError(err?.response?.data?.detail || err.message)
+  const deleteVisualization = async (vizId) => {
+    if (!window.confirm('Delete this visualization?')) return
+    try {
+      await visualizationApi.remove(vizId)
+      setVisualizations((prev) => prev.filter((v) => v.viz_id !== vizId))
+      if (activeViz?.viz_id === vizId) {
+        setActiveViz(null)
+        setPlotHtml('')
+        setTilePreview(null)
+        setStatusMessage('Select data to begin')
       }
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Failed to delete visualization')
+    }
+  }
+
+  /* ================= tiles ================= */
+  const loadTileData = useCallback(
+    async (seriesIndex, level) => {
+      if (!activeViz?.viz_id) return
+      const data = await visualizationApi.tileData(activeViz.viz_id, { series: seriesIndex, level })
+      setTilePreview(data)
     },
     [activeViz?.viz_id]
   )
 
+  /* ================= plot meta ================= */
+  const plotMeta = useMemo(() => {
+    const on = enabledSeries.filter((s) => s.jobId && s.xAxis && s.yAxis)
+    if (!on.length) return null
+    return {
+      chartType,
+      count: on.length,
+      items: on.map((s) => ({
+        label: (s.label || '').trim() || buildAutoLabel(s),
+      })),
+    }
+  }, [enabledSeries, chartType])
+
+  /* ================= UI ================= */
   return (
-    <div className="project-card" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div>
-          <p className="summary-label" style={{ margin: 0 }}>
-            Data Visualisation
-          </p>
-          <h2 style={{ margin: '4px 0 8px 0' }}>{project?.project_name || 'Project'} Charts</h2>
-          <p className="summary-label" style={{ margin: 0 }}>
-            Pick a dataset from your repository, choose X/Y axes and generate a Plotly visual in the
-            background.
-          </p>
-        </div>
+    <div className="CardWapper">
+      {/* ================= TOP: SETTINGS (old UI classes) ================= */}
+      <form onSubmit={handleSubmit} className="plot-settings">
+        <div className="tableHeader">Plot Setting</div>
 
-        {error && <div className="project-shell__error">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="viz-form">
-          <label className="summary-label">X Axis Dataset</label>
-          <select
-            className="input-control"
-            value={xJobId}
-            onChange={(e) => {
-              setXJobId(e.target.value)
-              setXAxis('')
-            }}
-          >
-            <option value="">Select a file to plot</option>
-            {jobs.map((job) => (
-              <option key={job.job_id} value={job.job_id}>
-                {job.filename} ({job.columns?.length || 0} columns)
-              </option>
-            ))}
-          </select>
-
-          <div className="viz-grid">
-            <div>
-              <label className="summary-label">X Axis</label>
-              <select className="input-control" value={xAxis} onChange={(e) => setXAxis(e.target.value)}>
-                <option value="">Select column</option>
-                {xColumns.map((col) => (
-                  <option key={col} value={col}>
-                    {col}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {error && (
+          <div className="project-shell__error" style={{ marginBottom: 10 }}>
+            {error}
           </div>
+        )}
 
-          <div className="project-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-              <div>
-                <p className="summary-label" style={{ margin: 0 }}>
-                  Y Axis Series ({series.length})
-                </p>
-                <h4 style={{ margin: 0 }}>Add one or more columns to plot</h4>
-              </div>
-              <button type="button" className="project-shell__nav-link" onClick={addSeriesRow}>
-                Add series
-              </button>
-            </div>
-
-            {series.map((item, index) => {
-              const columns = getColumnsForJob(item.jobId)
-              return (
-                <div key={`series-${index}`} className="viz-grid" style={{ alignItems: 'flex-end' }}>
-                  <div>
-                    <label className="summary-label">Dataset</label>
-                    <select
-                      className="input-control"
-                      value={item.jobId}
-                      onChange={(e) => {
-                        updateSeriesItem(index, 'jobId', e.target.value)
-                        updateSeriesItem(index, 'yAxis', '')
-                      }}
-                    >
-                      <option value="">Select a file</option>
-                      {jobs.map((job) => (
-                        <option key={job.job_id} value={job.job_id}>
-                          {job.filename} ({job.columns?.length || 0} columns)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="summary-label">Y Axis</label>
-                    <select
-                      className="input-control"
-                      value={item.yAxis}
-                      onChange={(e) => updateSeriesItem(index, 'yAxis', e.target.value)}
-                    >
-                      <option value="">Select column</option>
-                      {columns.map((col) => (
-                        <option key={col} value={col}>
-                          {col}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="summary-label">Legend label (optional)</label>
-                    <input
-                      type="text"
-                      className="input-control"
-                      value={item.label}
-                      onChange={(e) => updateSeriesItem(index, 'label', e.target.value)}
-                      placeholder="Defaults to column name"
-                    />
-                  </div>
-
-                  {series.length > 1 && (
-                    <button
-                      type="button"
-                      className="project-shell__nav-link"
-                      onClick={() => removeSeriesRow(index)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          <div>
-            <label className="summary-label">Chart type</label>
-            <div className="tablist">
-              {chartTypes.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={chartType === opt.value ? 'active' : ''}
-                  onClick={() => setChartType(opt.value)}
-                >
-                  {opt.label}
-                </button>
+        
+        {/* ===== Editor (aligned with old UI grid) ===== */}
+        <div className="ps-row">
+          <div className="ps-field">
+            <label>Dataset</label>
+            <select
+              value={activeSeries?.datasetType || 'wind'}
+              onChange={(e) =>
+                updateActiveSeries({
+                  datasetType: e.target.value,
+                  tag: '',
+                  jobId: '',
+                  xAxis: '',
+                  yAxis: '',
+                })
+              }
+            >
+              {DATASET_TYPES.map((d) => (
+                <option key={d.key} value={d.key}>
+                  {d.label}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
-          <button type="submit" className="project-shell__nav-link" disabled={loading}>
-            {loading ? 'Starting…' : 'Generate Plot'}
-          </button>
-        </form>
+          <div className="ps-field">
+            <label>Tag</label>
+            <select
+              value={activeSeries?.tag || ''}
+              onChange={(e) =>
+                updateActiveSeries({
+                  tag: e.target.value,
+                  jobId: '',
+                  xAxis: '',
+                  yAxis: '',
+                })
+              }
+            >
+              <option value="">Select</option>
+              {getTags(activeSeries?.datasetType).map((t) => (
+                <option key={t.tag_name} value={t.tag_name}>
+                  {t.tag_name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="project-card" style={{ padding: 14 }}>
-          <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <p className="summary-label" style={{ margin: 0 }}>
-                Latest visualizations ({visualizations.length})
-              </p>
-              <h4 style={{ margin: 0 }}>Saved plots</h4>
+          <div className="ps-field">
+            <label>File</label>
+            <select
+              value={activeSeries?.jobId || ''}
+              onChange={(e) =>
+                updateActiveSeries({
+                  jobId: e.target.value,
+                  xAxis: '',
+                  yAxis: '',
+                })
+              }
+              disabled={!activeSeries?.tag}
+            >
+              <option value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
+              {activeFiles.map((f) => (
+                <option key={f.job_id} value={f.job_id}>
+                  {f.filename}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ps-field">
+            <label>Chart Type</label>
+            <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
+              {CHART_TYPES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="ps-field">
+            <label>X Axis</label>
+            <select
+              value={activeSeries?.xAxis || ''}
+              onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
+              disabled={!activeSeries?.jobId}
+            >
+              <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+              {activeColumns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
+          </div>
+
+
+        {/* ===== Y Axis (old CSS row style) ===== */}
+          <div className="ps-field">
+          <label className="viz-label">Y Axis</label>
+
+         
+            <select
+              className="viz-select"
+              value={activeSeries?.yAxis || ''}
+              onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+              disabled={!activeSeries?.jobId}
+              style={{ flex: 1 }}
+            >
+              <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+              {activeColumns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
             </div>
-            <button className="project-shell__nav-link" type="button" onClick={fetchVisualizations}>
-              Refresh
+
+            
+          <div className="ps-field" >
+            <label className="viz-label">Plot Name(Optional)</label>
+            <input
+              placeholder="Defaults to Dataset | X → Y"
+              value={activeSeries?.label || ''}
+              onChange={(e) => updateActiveSeries({ label: e.target.value })}
+            />
+          </div>
+      
+          <div className="ps-field" >
+            {/* Generate button (old UI position) */}
+            <button type="submit" className="plot-btn" disabled={loading}>
+              <img src={ChartLine1} alt="chart" />
+              {loading ? 'Generating…' : `Generate Plot`}
             </button>
+            </div>
+         
           </div>
-          {visualizations.length === 0 && <div className="empty-state">No visualizations yet.</div>}
-          <div className="viz-list">
-            {visualizations.map((viz) => (
-              <div key={viz.viz_id} className="viz-item">
-                <div>
-                  <p className="data-card__name" style={{ margin: 0 }}>{primaryFilename(viz)}</p>
-                  <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
-                    {viz.chart_type} · {viz.x_axis} vs {summarizeSeries(viz)}
-                  </p>
-                  <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
-                    Status: {viz.status}
-                  </p>
-                </div>
-                <div className="viz-actions">
-                  <button className="project-shell__nav-link" type="button" onClick={() => loadVisualization(viz.viz_id)}>
-                    View
-                  </button>
-                  {viz.html_url && (
-                    <button
-                      className="project-shell__nav-link"
-                      type="button"
-                      onClick={() => window.open(viz.html_url, '_blank')}
-                    >
-                      Download
-                    </button>
-                  )}
-                  <button
-                    className="project-shell__nav-link"
-                    type="button"
-                    onClick={() => deleteVisualization(viz.viz_id)}
-                    style={{ background: '#fff1f2', color: '#b91c1c', borderColor: '#fecdd3' }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      <div className="project-card" style={{ minHeight: 520, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-          <div>
-            <p className="summary-label" style={{ margin: 0 }}>Render preview</p>
-            <h3 style={{ margin: '2px 0 0 0' }}>{primaryFilename(activeViz) || 'Awaiting selection'}</h3>
-            <p className="summary-label" style={{ margin: 0 }}>{statusMessage}</p>
-          </div>
-          {activeViz?.status && (
-            <span className="badge" style={{ textTransform: 'capitalize' }}>
-              {activeViz.status.toLowerCase()}
-            </span>
-          )}
-        </div>
-        <div className="viz-preview">
-          {plotHtml ? (
-            <iframe title="plot" srcDoc={plotHtml} style={{ width: '100%', height: '100%', border: 'none' }} />
-          ) : (
-            <div className="empty-state">Generate or open a visualization to preview it here.</div>
-          )}
-        </div>
-        {activeViz?.tiles?.length > 0 && (
-          <div className="project-card" style={{ marginTop: 10 }}>
-            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-              <div>
-                <p className="summary-label" style={{ margin: 0 }}>Materialized tiles</p>
-                <h4 style={{ margin: '4px 0 0 0' }}>Multi-resolution parquet outputs</h4>
-              </div>
+          {/* ===== Series Manager (KEPT) ===== */}
+        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="ps-field" style={{ gridColumn: 'span 4' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <label style={{ marginBottom: 0 }}>Series ({seriesList.length})</label>
+
               <button
                 type="button"
                 className="project-shell__nav-link"
-                onClick={() => loadTileData(0)}
-                disabled={!activeViz?.viz_id}
+                onClick={addSeriesSlot}
+                style={{ height: 36, padding: '0 12px' }}
               >
-                Load overview tile
+                + Add series
               </button>
             </div>
-            {activeViz.tiles.map((item, idx) => (
-              <div key={`series-tiles-${idx}`} style={{ marginTop: 8 }}>
-                <p className="summary-label" style={{ margin: 0 }}>
-                  Series {idx + 1}: {item?.series?.label || item?.series?.y_axis}
-                </p>
-                <div className="viz-scroll" role="list">
-                  {item.tiles.map((tile) => (
-                    <LazyTileCard
-                      key={`tile-${tile.level}`}
-                      tile={tile}
-                      seriesIndex={idx}
-                      onLoadTile={loadTileData}
-                    >
-                      <div>
-                        <p className="data-card__name" style={{ margin: 0 }}>
-                          Level {tile.level} · {tile.rows} rows
-                        </p>
-                        <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
-                          Range {formatRangeValue(tile.x_min)} – {formatRangeValue(tile.x_max)}
-                        </p>
-                        <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
-                          Scroll to auto-preview tile data in order of the X axis.
-                        </p>
-                      </div>
-                      <div className="viz-actions">
-                        {tile.url && (
-                          <button
-                            className="project-shell__nav-link"
-                            type="button"
-                            onClick={() => window.open(tile.url, '_blank')}
-                          >
-                            Download tile
-                          </button>
-                        )}
-                        <button
-                          className="project-shell__nav-link"
-                          type="button"
-                          onClick={() => loadTileData(idx, tile.level)}
-                        >
-                          Load
-                        </button>
-                      </div>
-                    </LazyTileCard>
+
+            {/* series chips list */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
+              {seriesList.map((s, idx) => {
+                const active = s.id === activeSeriesId
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => setActiveSeriesId(s.id)}
+                    style={{
+                      border: active ? '2px solid #1976D2' : '1px solid #d1d5db',
+                      background: active ? '#eef6ff' : '#fff',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      cursor: 'pointer',
+                      minWidth: 220,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600 }}>Series {idx + 1}</div>
+
+                      <label className="toggle" style={{ margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={!!s.enabled}
+                          onChange={(e) => setSeriesEnabled(s.id, e.target.checked)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="slider" />
+                        <span className="toggle-text">{s.enabled ? 'ON' : 'OFF'}</span>
+                      </label>
+                    </div>
+
+                    <div className="summarylabel2" style={{ marginTop: 8, alignItems: 'flex-start' }}>
+                      {seriesSummary(s)}
+                    </div>
+
+                    {seriesList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
+                        }}
+                        style={{
+                          marginTop: 8,
+                          height: 32,
+                          width: '100%',
+                          borderRadius: 4,
+                          border: '1px solid #fecdd3',
+                          background: '#fff1f2',
+                          color: '#b91c1c',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+       
+      </form>
+
+      {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
+      <div className="project-card">
+        <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <p className="summarylabel">{statusMessage}</p>
+
+            {/* meta (kept) */}
+            {plotMeta && (
+              <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
+                <div><b>Chart:</b> {plotMeta.chartType}</div>
+                <div><b>Series:</b> {plotMeta.count}</div>
+                <div style={{ marginTop: 6 }}>
+                  {plotMeta.items.map((it, i) => (
+                    <div key={i}>• {it.label}</div>
                   ))}
-                </div>
-              </div>
-            ))}
-            {tilePreview && (
-              <div style={{ marginTop: 12 }}>
-                <p className="summary-label" style={{ margin: 0 }}>
-                  Loaded tile level {tilePreview.level} ({tilePreview.rows} rows)
-                </p>
-                <div className="viz-preview" style={{ minHeight: 120, padding: 8, overflow: 'auto' }}>
-                  {tilePreview.data?.length ? (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          {Object.keys(tilePreview.data[0] || {}).map((key) => (
-                            <th key={key}>{key}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tilePreview.data.slice(0, 10).map((row, idx) => (
-                          <tr key={`tile-row-${idx}`}>
-                            {Object.keys(tilePreview.data[0] || {}).map((key) => (
-                              <td key={`${idx}-${key}`}>{row[key]}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="empty-state">No tile rows returned.</div>
-                  )}
                 </div>
               </div>
             )}
           </div>
-        )}
+
+          {activeViz?.status && (
+            <span className="badge">{activeViz.status.toLowerCase()}</span>
+          )}
+        </div>
+
+        <div className="Plot-preview" style={{ height: 520 }}>
+          {plotHtml ? (
+            <iframe
+              title="plot"
+              srcDoc={plotHtml}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          ) : (
+            <div className="emptystate">No plot generated</div>
+          )}
+        </div>
+
+        {/* ===== Tiles (KEPT) ===== */}
+
+
+        {/* {activeViz?.tiles?.length > 0 && (
+          
+            {activeViz.tiles.map((item, idx) => (
+              <div key={idx} style={{ marginBottom: 16 }}>
+                <p className="summarylabel1">
+                  Series {idx + 1}: {item?.series?.label || item?.series?.y_axis}
+                </p>
+                <div className="viz-scroll">
+                  {item.tiles.map((tile) => (
+                    <LazyTileCard
+                      key={tile.level}
+                      tile={tile}
+                      seriesIndex={idx}
+                      onLoadTile={loadTileData}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))} */}
+            <div className="projectcard1">
+            {tilePreview && (
+              <div style={{ marginTop: 12 }}>
+                <p className="summarylabel1">
+                  Tile level {tilePreview.level} ({tilePreview.rows} rows)
+                </p>
+                <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                  <table className="datatable">
+                    <thead>
+                      <tr>
+                        {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
+                          <th key={k}>{k}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    
+                    <tbody>
+                      {(tilePreview.data || []).slice(0, 12).map((row, i) => (
+                        <tr key={i}>
+                          {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
+                            <td key={`${i}-${k}`}>{row[k]}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        
+
+        {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
+        <div className="projectcard1">
+          <div className="actionsrow actionsrow--header">
+            <label className="text">Saved visualizations ({visualizations.length})</label>
+
+            <div className="actionsrow__right">
+              <button
+                type="button"
+                className="expand-btn"
+                onClick={() => setIsExpanded((p) => !p)}
+                aria-expanded={isExpanded}
+              >
+                <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
+                {isExpanded ? 'Collapse' : 'Expand'}
+              </button>
+
+              <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
+            <div className="expand-inner">
+              {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>}
+
+              <div className="viz-list">
+                {visualizations.map((viz) => (
+                  <div key={viz.viz_id} className="viz-item">
+                    <div>
+                      <p className="data-card__name">{viz.filename || 'dataset'}</p>
+                      <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
+                    </div>
+
+                    <div className="viz-actions">
+                      <button type="button" onClick={() => loadVisualization(viz.viz_id)}>
+                        <img className="actionBtn" src={ViewIcon} alt="view" />
+                      </button>
+
+                      {viz.html_url && (
+                        <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                          <img className="actionBtn" src={DownloadSimple} alt="download" />
+                        </button>
+                      )}
+
+                      <button type="button" className="danger" onClick={() => deleteVisualization(viz.viz_id)}>
+                        <img className="actionBtn" src={Delete} alt="delete" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

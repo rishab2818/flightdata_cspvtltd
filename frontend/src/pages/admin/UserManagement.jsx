@@ -79,8 +79,10 @@ export default function UserManagement() {
           width: "min(1080px, 100%)",
           borderRadius: 3,
           boxShadow: "0 16px 40px rgba(15,23,42,0.08)",
+          padding:"20px",
         }}
       >
+        <label sx={{marginTop:"10px",color:"#000000", fontSize:"24px", fontWeight:"400"}}>Manage User Login</label>
         <CardContent sx={{ p: 2, display: "grid", gridTemplateRows: "auto 1fr", gap: 1 }}>
           <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
             <TextField
