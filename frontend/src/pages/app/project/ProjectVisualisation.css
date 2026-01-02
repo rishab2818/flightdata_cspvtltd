@@ -210,6 +210,7 @@
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
+  margin-top: 23px;
 }
 
 .plot-btn:disabled {
@@ -225,7 +226,7 @@
 .plot-settings button[type="submit"] {
   height: 38px;
   padding: 0 18px;
-  background: #5b8cff;
+  background: #1976D2;
   color: #ffffff;
   font-size: 14px;
   font-weight: 500;
@@ -268,9 +269,17 @@
   border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-
+  gap: 12px;
 }
 
+.projectcard1 {
+   background: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin-top: 20px;
+   border: 1px solid #00000026;
+}
 .actions-row {
   display: flex;
   align-items: center;
@@ -389,7 +398,7 @@
   align-items: center;
   margin: 0;
   font-family: "Inter-Regular",Helvetica;
-  margin-top: -20px;
+  
 }
 
 .viz-list {
@@ -411,7 +420,16 @@
 .data-card__name {
   font-size: 14px;
   font-weight: 600;
-  margin: 0;
+   margin: 0;
+   font-size: 14px;
+  font-weight: 400;
+  color: #000000;
+   font-family: "Inter-Regular",Helvetica;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
 }
 
 .actionsrow--header {
@@ -494,7 +512,7 @@
 
 
 .project-shell__nav-link {
-  background: #2563eb ;
+  background: #1976D2;
   border: none;
   border-radius: 4px;
   color: #ffffff;

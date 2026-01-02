@@ -4,11 +4,11 @@ import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { LazyTileCard } from '../../../components/viz/LazyTileCard'
 import './ProjectVisualisation.css'
+
 import ChartLine1 from '../../../assets/ChartLine1.svg'
 import DownloadSimple from '../../../assets/DownloadSimple.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
-
 
 const DATASET_TYPES = [
   { key: 'cfd', label: 'CFD' },
@@ -49,8 +49,8 @@ export default function ProjectVisualisation() {
   const [chartType, setChartType] = useState('scatter')
 
   /* ================= data caches ================= */
-  const [tagsByDataset, setTagsByDataset] = useState({}) // { datasetType: [tags...] }
-  const [filesByDatasetTag, setFilesByDatasetTag] = useState({}) // { `${ds}::${tag}`: [files...] }
+  const [tagsByDataset, setTagsByDataset] = useState({})
+  const [filesByDatasetTag, setFilesByDatasetTag] = useState({})
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
@@ -62,6 +62,7 @@ export default function ProjectVisualisation() {
   const [error, setError] = useState(null)
 
   const pollTimer = useRef(null)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   /* ================= helpers ================= */
   const activeSeries = useMemo(
@@ -69,7 +70,7 @@ export default function ProjectVisualisation() {
     [seriesList, activeSeriesId]
   )
 
-  // ensure activeSeriesId always valid
+  // keep activeSeriesId always valid
   useEffect(() => {
     if (!seriesList.length) {
       const s = newSeries(1)
@@ -96,11 +97,10 @@ export default function ProjectVisualisation() {
   const addSeriesSlot = () => {
     setSeriesList((prev) => {
       const s = newSeries(prev.length + 1)
-      // default dataset same as currently selected series (nice UX)
       s.datasetType = activeSeries?.datasetType || 'wind'
       return [...prev, s]
     })
-    // select the new one
+
     setTimeout(() => {
       setSeriesList((prev) => {
         const last = prev[prev.length - 1]
@@ -112,9 +112,9 @@ export default function ProjectVisualisation() {
 
   const removeSeriesSlot = (id) => {
     if (seriesList.length === 1) return
-    setSeriesList((prev) => prev.filter((s) => s.id !== id))
+    const remaining = seriesList.filter((s) => s.id !== id)
+    setSeriesList(remaining)
     if (activeSeriesId === id) {
-      const remaining = seriesList.filter((s) => s.id !== id)
       setActiveSeriesId(remaining[0]?.id)
     }
   }
@@ -123,8 +123,8 @@ export default function ProjectVisualisation() {
     const ds = datasetLabel(s.datasetType)
     const x = s.xAxis || '-'
     const y = s.yAxis || '-'
-    const file = s.jobId ? 'file✅' : 'file❌'
-    return `${ds} • ${file} • ${x} → ${y}`
+    const f = s.jobId ? 'file✅' : 'file❌'
+    return `${ds} • ${f} • ${x} → ${y}`
   }
 
   const getTags = (datasetType) => tagsByDataset[datasetType] || []
@@ -134,8 +134,6 @@ export default function ProjectVisualisation() {
   useEffect(() => {
     const ds = activeSeries?.datasetType
     if (!ds) return
-
-    // if cached, skip
     if (tagsByDataset[ds]) return
 
     ingestionApi
@@ -161,7 +159,6 @@ export default function ProjectVisualisation() {
     ingestionApi
       .listFilesInTag(projectId, ds, tag)
       .then((list) => {
-        // processed only (since visualization needs columns)
         const processed = (list || []).filter((f) => f.processed_key && f.columns?.length)
         setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }))
       })
@@ -172,7 +169,7 @@ export default function ProjectVisualisation() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, activeSeries?.datasetType, activeSeries?.tag])
 
-  /* ================= load saved visualizations ================= */
+  /* ================= saved visualizations ================= */
   const fetchVisualizations = async () => {
     try {
       const list = await visualizationApi.listForProject(projectId)
@@ -202,10 +199,7 @@ export default function ProjectVisualisation() {
   const activeColumns = useMemo(() => activeJob?.columns || [], [activeJob])
 
   /* ================= submit ================= */
-  const enabledSeries = useMemo(
-    () => seriesList.filter((s) => s.enabled),
-    [seriesList]
-  )
+  const enabledSeries = useMemo(() => seriesList.filter((s) => s.enabled), [seriesList])
 
   const buildAutoLabel = (s) => {
     const ds = datasetLabel(s.datasetType)
@@ -253,7 +247,6 @@ export default function ProjectVisualisation() {
     }
   }
 
-  /* ================= poll ================= */
   const pollVisualization = async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
@@ -271,7 +264,6 @@ export default function ProjectVisualisation() {
     }
   }
 
-  /* ================= load saved viz ================= */
   const loadVisualization = async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
@@ -304,16 +296,13 @@ export default function ProjectVisualisation() {
   const loadTileData = useCallback(
     async (seriesIndex, level) => {
       if (!activeViz?.viz_id) return
-      const data = await visualizationApi.tileData(activeViz.viz_id, {
-        series: seriesIndex,
-        level,
-      })
+      const data = await visualizationApi.tileData(activeViz.viz_id, { series: seriesIndex, level })
       setTilePreview(data)
     },
     [activeViz?.viz_id]
   )
 
-  /* ================= plot meta summary ================= */
+  /* ================= plot meta ================= */
   const plotMeta = useMemo(() => {
     const on = enabledSeries.filter((s) => s.jobId && s.xAxis && s.yAxis)
     if (!on.length) return null
@@ -322,22 +311,16 @@ export default function ProjectVisualisation() {
       count: on.length,
       items: on.map((s) => ({
         label: (s.label || '').trim() || buildAutoLabel(s),
-        x: s.xAxis,
-        y: s.yAxis,
       })),
     }
   }, [enabledSeries, chartType])
 
-  /* ========================================================= */
-
+  /* ================= UI ================= */
   return (
-    <div className="project-card" style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: 16 }}>
-      {/* ================= LEFT PANEL ================= */}
-      <div className="project-card" style={{ padding: 14 }}>
-        <div style={{ marginBottom: 10 }}>
-          <p className="summary-label" style={{ margin: 0 }}>Data Visualisation</p>
-          <h2 style={{ margin: '4px 0 0 0' }}>{project?.project_name || 'Project'} – Plot Builder</h2>
-        </div>
+    <div className="CardWapper">
+      {/* ================= TOP: SETTINGS (old UI classes) ================= */}
+      <form onSubmit={handleSubmit} className="plot-settings">
+        <div className="tableHeader">Plot Setting</div>
 
         {error && (
           <div className="project-shell__error" style={{ marginBottom: 10 }}>
@@ -345,80 +328,210 @@ export default function ProjectVisualisation() {
           </div>
         )}
 
-        {/* 2-column inside left: series manager + editor */}
-        <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 12 }}>
-          {/* ===== Series Manager ===== */}
-          <div className="project-card" style={{ padding: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <div>
-                <div style={{ fontWeight: 700 }}>Series</div>
-                <div className="summary-label" style={{ marginTop: 2 }}>
-                  {seriesList.length} total
-                </div>
-              </div>
+        
+        {/* ===== Editor (aligned with old UI grid) ===== */}
+        <div className="ps-row">
+          <div className="ps-field">
+            <label>Dataset</label>
+            <select
+              value={activeSeries?.datasetType || 'wind'}
+              onChange={(e) =>
+                updateActiveSeries({
+                  datasetType: e.target.value,
+                  tag: '',
+                  jobId: '',
+                  xAxis: '',
+                  yAxis: '',
+                })
+              }
+            >
+              {DATASET_TYPES.map((d) => (
+                <option key={d.key} value={d.key}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ps-field">
+            <label>Tag</label>
+            <select
+              value={activeSeries?.tag || ''}
+              onChange={(e) =>
+                updateActiveSeries({
+                  tag: e.target.value,
+                  jobId: '',
+                  xAxis: '',
+                  yAxis: '',
+                })
+              }
+            >
+              <option value="">Select</option>
+              {getTags(activeSeries?.datasetType).map((t) => (
+                <option key={t.tag_name} value={t.tag_name}>
+                  {t.tag_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ps-field">
+            <label>File</label>
+            <select
+              value={activeSeries?.jobId || ''}
+              onChange={(e) =>
+                updateActiveSeries({
+                  jobId: e.target.value,
+                  xAxis: '',
+                  yAxis: '',
+                })
+              }
+              disabled={!activeSeries?.tag}
+            >
+              <option value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
+              {activeFiles.map((f) => (
+                <option key={f.job_id} value={f.job_id}>
+                  {f.filename}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ps-field">
+            <label>Chart Type</label>
+            <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
+              {CHART_TYPES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="ps-field">
+            <label>X Axis</label>
+            <select
+              value={activeSeries?.xAxis || ''}
+              onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
+              disabled={!activeSeries?.jobId}
+            >
+              <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+              {activeColumns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
+          </div>
+
+
+        {/* ===== Y Axis (old CSS row style) ===== */}
+          <div className="ps-field">
+          <label className="viz-label">Y Axis</label>
+
+         
+            <select
+              className="viz-select"
+              value={activeSeries?.yAxis || ''}
+              onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+              disabled={!activeSeries?.jobId}
+              style={{ flex: 1 }}
+            >
+              <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+              {activeColumns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
+            </div>
+
+            
+          <div className="ps-field" >
+            <label className="viz-label">Plot Name(Optional)</label>
+            <input
+              placeholder="Defaults to Dataset | X → Y"
+              value={activeSeries?.label || ''}
+              onChange={(e) => updateActiveSeries({ label: e.target.value })}
+            />
+          </div>
+      
+          <div className="ps-field" >
+            {/* Generate button (old UI position) */}
+            <button type="submit" className="plot-btn" disabled={loading}>
+              <img src={ChartLine1} alt="chart" />
+              {loading ? 'Generating…' : `Generate Plot`}
+            </button>
+            </div>
+         
+          </div>
+
+          {/* ===== Series Manager (KEPT) ===== */}
+        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="ps-field" style={{ gridColumn: 'span 4' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <label style={{ marginBottom: 0 }}>Series ({seriesList.length})</label>
 
               <button
                 type="button"
                 className="project-shell__nav-link"
-                style={{ padding: '6px 10px' }}
                 onClick={addSeriesSlot}
-                title="Add a new series slot"
+                style={{ height: 36, padding: '0 12px' }}
               >
-                + Add
+                + Add series
               </button>
             </div>
 
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* series chips list */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
               {seriesList.map((s, idx) => {
-                const isActive = s.id === activeSeriesId
+                const active = s.id === activeSeriesId
                 return (
                   <div
                     key={s.id}
-                    className="project-card"
-                    style={{
-                      padding: 8,
-                      border: isActive ? '2px solid #1d4ed8' : '1px solid #e5e7eb',
-                      background: isActive ? '#eff6ff' : '#fff',
-                      cursor: 'pointer',
-                    }}
                     onClick={() => setActiveSeriesId(s.id)}
-                    role="button"
-                    tabIndex={0}
+                    style={{
+                      border: active ? '2px solid #1976D2' : '1px solid #d1d5db',
+                      background: active ? '#eef6ff' : '#fff',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      cursor: 'pointer',
+                      minWidth: 220,
+                    }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13 }}>Series {idx + 1}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600 }}>Series {idx + 1}</div>
 
-                      {/* Toggle ON/OFF */}
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <label className="toggle" style={{ margin: 0 }}>
                         <input
                           type="checkbox"
                           checked={!!s.enabled}
                           onChange={(e) => setSeriesEnabled(s.id, e.target.checked)}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <span className="summary-label" style={{ margin: 0 }}>
-                          {s.enabled ? 'ON' : 'OFF'}
-                        </span>
+                        <span className="slider" />
+                        <span className="toggle-text">{s.enabled ? 'ON' : 'OFF'}</span>
                       </label>
                     </div>
 
-                    <div className="summary-label" style={{ marginTop: 6, lineHeight: 1.2 }}>
+                    <div className="summarylabel2" style={{ marginTop: 8, alignItems: 'flex-start' }}>
                       {seriesSummary(s)}
                     </div>
 
-                    {/* Remove (optional) */}
                     {seriesList.length > 1 && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (window.confirm('Remove this series slot?')) removeSeriesSlot(s.id)
+                          if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
                         }}
                         style={{
                           marginTop: 8,
+                          height: 32,
                           width: '100%',
-                          padding: '6px 8px',
-                          borderRadius: 8,
+                          borderRadius: 4,
                           border: '1px solid #fecdd3',
                           background: '#fff1f2',
                           color: '#b91c1c',
@@ -432,183 +545,26 @@ export default function ProjectVisualisation() {
                 )
               })}
             </div>
-
-            <div className="summary-label" style={{ marginTop: 10 }}>
-              Tip: You can also toggle traces in the Plotly legend.
-            </div>
           </div>
-
-          {/* ===== Single Editor ===== */}
-          <form onSubmit={handleSubmit} className="viz-form" style={{ margin: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-              <div>
-                <div style={{ fontWeight: 800 }}>Edit selected series</div>
-                <div className="summary-label" style={{ marginTop: 2 }}>
-                  Dataset → Tag → File → X → Y
-                </div>
-              </div>
-              <div className="summary-label" style={{ margin: 0 }}>
-                {activeSeries?.enabled ? 'Enabled ✅' : 'Disabled ⛔'}
-              </div>
-            </div>
-
-            <div className="viz-grid" style={{ marginTop: 10 }}>
-              <div>
-                <label className="summary-label">Dataset Type</label>
-                <select
-                  className="input-control"
-                  value={activeSeries?.datasetType || 'wind'}
-                  onChange={(e) => {
-                    // keep values, but dataset change invalidates dependent fields
-                    updateActiveSeries({
-                      datasetType: e.target.value,
-                      tag: '',
-                      jobId: '',
-                      xAxis: '',
-                      yAxis: '',
-                    })
-                  }}
-                >
-                  {DATASET_TYPES.map((d) => (
-                    <option key={d.key} value={d.key}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="summary-label">Tag</label>
-                <select
-                  className="input-control"
-                  value={activeSeries?.tag || ''}
-                  onChange={(e) => {
-                    updateActiveSeries({
-                      tag: e.target.value,
-                      jobId: '',
-                      xAxis: '',
-                      yAxis: '',
-                    })
-                  }}
-                >
-                  <option value="">Select tag</option>
-                  {getTags(activeSeries?.datasetType).map((t) => (
-                    <option key={t.tag_name} value={t.tag_name}>
-                      {t.tag_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="summary-label">File (processed)</label>
-                <select
-                  className="input-control"
-                  value={activeSeries?.jobId || ''}
-                  onChange={(e) => {
-                    updateActiveSeries({
-                      jobId: e.target.value,
-                      xAxis: '',
-                      yAxis: '',
-                    })
-                  }}
-                  disabled={!activeSeries?.tag}
-                >
-                  <option value="">{activeSeries?.tag ? 'Select file' : 'Select tag first'}</option>
-                  {activeFiles.map((f) => (
-                    <option key={f.job_id} value={f.job_id}>
-                      {f.filename}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="summary-label">X Column</label>
-                <select
-                  className="input-control"
-                  value={activeSeries?.xAxis || ''}
-                  onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
-                  disabled={!activeSeries?.jobId}
-                >
-                  <option value="">{activeSeries?.jobId ? 'Select X' : 'Select file first'}</option>
-                  {activeColumns.map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="summary-label">Y Column</label>
-                <select
-                  className="input-control"
-                  value={activeSeries?.yAxis || ''}
-                  onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
-                  disabled={!activeSeries?.jobId}
-                >
-                  <option value="">{activeSeries?.jobId ? 'Select Y' : 'Select file first'}</option>
-                  {activeColumns.map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 10 }}>
-              <label className="summary-label">Legend label (optional)</label>
-              <input
-                className="input-control"
-                placeholder="Defaults to Dataset | X → Y"
-                value={activeSeries?.label || ''}
-                onChange={(e) => updateActiveSeries({ label: e.target.value })}
-              />
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <label className="summary-label">Chart type</label>
-              <div className="tablist">
-                {CHART_TYPES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    className={chartType === c.value ? 'active' : ''}
-                    onClick={() => setChartType(c.value)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button type="submit" className="project-shell__nav-link" style={{ width: '100%', marginTop: 12 }} disabled={loading}>
-              {loading ? 'Generating…' : `Generate Plot (${enabledSeries.filter(s => s.enabled).length} series enabled)`}
-            </button>
-          </form>
         </div>
-      </div>
 
-      {/* ================= RIGHT PANEL ================= */}
-      <div className="project-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+       
+      </form>
+
+      {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
+      <div className="project-card">
         <div className="actions-row" style={{ justifyContent: 'space-between' }}>
           <div>
-            <p className="summary-label" style={{ margin: 0 }}>Render preview</p>
-            <h3 style={{ margin: '2px 0 0 0' }}>{activeViz?.filename || 'dataset'}</h3>
-            <p className="summary-label" style={{ margin: 0 }}>{statusMessage}</p>
+            <p className="summarylabel">{statusMessage}</p>
 
-            {/* Plot meta */}
+            {/* meta (kept) */}
             {plotMeta && (
-              <div className="summary-label" style={{ marginTop: 6 }}>
+              <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
                 <div><b>Chart:</b> {plotMeta.chartType}</div>
                 <div><b>Series:</b> {plotMeta.count}</div>
-                <div style={{ marginTop: 4 }}>
+                <div style={{ marginTop: 6 }}>
                   {plotMeta.items.map((it, i) => (
-                    <div key={`${it.label}-${i}`}>
-                      • {it.label}
-                    </div>
+                    <div key={i}>• {it.label}</div>
                   ))}
                 </div>
               </div>
@@ -616,27 +572,30 @@ export default function ProjectVisualisation() {
           </div>
 
           {activeViz?.status && (
-            <span className="badge" style={{ textTransform: 'capitalize' }}>
-              {activeViz.status.toLowerCase()}
-            </span>
+            <span className="badge">{activeViz.status.toLowerCase()}</span>
           )}
         </div>
 
-        <div className="viz-preview" style={{ height: 440 }}>
+        <div className="Plot-preview" style={{ height: 520 }}>
           {plotHtml ? (
-            <iframe title="plot" srcDoc={plotHtml} style={{ width: '100%', height: '100%', border: 'none' }} />
+            <iframe
+              title="plot"
+              srcDoc={plotHtml}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
           ) : (
-            <div className="empty-state">Generate or open a visualization to preview it here.</div>
+            <div className="emptystate">No plot generated</div>
           )}
         </div>
 
-        {/* ===== Tiles ===== */}
-        {activeViz?.tiles?.length > 0 && (
-          <div className="project-card" style={{ padding: 12 }}>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>Materialized tiles</div>
+        {/* ===== Tiles (KEPT) ===== */}
+
+
+        {/* {activeViz?.tiles?.length > 0 && (
+          
             {activeViz.tiles.map((item, idx) => (
-              <div key={idx} style={{ marginTop: 10 }}>
-                <p className="summary-label" style={{ margin: 0 }}>
+              <div key={idx} style={{ marginBottom: 16 }}>
+                <p className="summarylabel1">
                   Series {idx + 1}: {item?.series?.label || item?.series?.y_axis}
                 </p>
                 <div className="viz-scroll">
@@ -650,16 +609,15 @@ export default function ProjectVisualisation() {
                   ))}
                 </div>
               </div>
-            ))}
-
-            {/* ===== Tile preview ===== */}
+            ))} */}
+            <div className="projectcard1">
             {tilePreview && (
               <div style={{ marginTop: 12 }}>
-                <p className="summary-label" style={{ margin: 0 }}>
+                <p className="summarylabel1">
                   Tile level {tilePreview.level} ({tilePreview.rows} rows)
                 </p>
-                <div style={{ maxHeight: 220, overflow: 'auto', marginTop: 6 }}>
-                  <table className="data-table">
+                <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                  <table className="datatable">
                     <thead>
                       <tr>
                         {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
@@ -667,6 +625,7 @@ export default function ProjectVisualisation() {
                         ))}
                       </tr>
                     </thead>
+                    
                     <tbody>
                       {(tilePreview.data || []).slice(0, 12).map((row, i) => (
                         <tr key={i}>
@@ -681,52 +640,62 @@ export default function ProjectVisualisation() {
               </div>
             )}
           </div>
-        )}
+        
 
-        {/* ===== Saved visualizations ===== */}
-        <div className="project-card" style={{ padding: 12 }}>
-          <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontWeight: 800 }}>Saved plots</div>
-              <div className="summary-label">Latest visualizations ({visualizations.length})</div>
+        {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
+        <div className="projectcard1">
+          <div className="actionsrow actionsrow--header">
+            <label className="text">Saved visualizations ({visualizations.length})</label>
+
+            <div className="actionsrow__right">
+              <button
+                type="button"
+                className="expand-btn"
+                onClick={() => setIsExpanded((p) => !p)}
+                aria-expanded={isExpanded}
+              >
+                <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
+                {isExpanded ? 'Collapse' : 'Expand'}
+              </button>
+
+              <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
+                Refresh
+              </button>
             </div>
-
-            <button className="project-shell__nav-link" type="button" onClick={fetchVisualizations}>
-              Refresh
-            </button>
           </div>
 
-          {visualizations.length === 0 && <div className="empty-state">No visualizations yet.</div>}
+          <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
+            <div className="expand-inner">
+              {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>}
 
-          <div className="viz-list">
-            {visualizations.map((viz) => (
-              <div key={viz.viz_id} className="viz-item">
-                <div>
-                  <p className="data-card__name" style={{ margin: 0 }}>{viz.filename || 'dataset'}</p>
-                  <p className="summary-label" style={{ margin: '2px 0 0 0' }}>
-                    {viz.chart_type} · {viz.status}
-                  </p>
-                </div>
-                <div className="viz-actions">
-                  <button className="project-shell__nav-link" type="button" onClick={() => loadVisualization(viz.viz_id)}>
-                    View
-                  </button>
-                  {viz.html_url && (
-                    <button className="project-shell__nav-link" type="button" onClick={() => window.open(viz.html_url, '_blank')}>
-                      Download
-                    </button>
-                  )}
-                  <button
-                    className="project-shell__nav-link"
-                    type="button"
-                    onClick={() => deleteVisualization(viz.viz_id)}
-                    style={{ background: '#fff1f2', color: '#b91c1c', borderColor: '#fecdd3' }}
-                  >
-                    Delete
-                  </button>
-                </div>
+              <div className="viz-list">
+                {visualizations.map((viz) => (
+                  <div key={viz.viz_id} className="viz-item">
+                    <div>
+                      <p className="data-card__name">{viz.filename || 'dataset'}</p>
+                      <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
+                    </div>
+
+                    <div className="viz-actions">
+                      <button type="button" onClick={() => loadVisualization(viz.viz_id)}>
+                        <img className="actionBtn" src={ViewIcon} alt="view" />
+                      </button>
+
+                      {viz.html_url && (
+                        <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                          <img className="actionBtn" src={DownloadSimple} alt="download" />
+                        </button>
+                      )}
+
+                      <button type="button" className="danger" onClick={() => deleteVisualization(viz.viz_id)}>
+                        <img className="actionBtn" src={Delete} alt="delete" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+
+            </div>
           </div>
         </div>
 
