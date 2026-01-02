@@ -9,58 +9,6 @@ import ViewIcon from '../../../assets/ViewIcon.svg'
 import './ProjectVisualisation.css'
 
 
-const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt'])
-const INLINE_EXTENSIONS = new Set([
-  '.pdf',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.svg',
-  '.txt',
-  '.csv',
-])
-
-const getExtension = (name = '') => {
-  const idx = name.lastIndexOf('.')
-  return idx >= 0 ? name.slice(idx).toLowerCase() : ''
-}
-
-const isTabularFile = (file) => TABULAR_EXTENSIONS.has(getExtension(file?.filename || ''))
-
-const canInlinePreview = (file) => {
-  const type = (file?.content_type || '').toLowerCase()
-  if (type.startsWith('image/') || type.startsWith('text/') || type === 'application/pdf') {
-    return true
-  }
-  return INLINE_EXTENSIONS.has(getExtension(file?.filename || ''))
-}
-
-const triggerDownload = (url, filename) => {
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename || 'download'
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-}
-
-const forceDownloadFromUrl = async (url, filename) => {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Download failed')
-  const blob = await res.blob()
-  const objectUrl = window.URL.createObjectURL(blob)
-  try {
-    const link = document.createElement('a')
-    link.href = objectUrl
-    link.download = filename || 'download'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-  } finally {
-    window.URL.revokeObjectURL(objectUrl)
-  }
-}
 
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {

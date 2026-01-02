@@ -14,6 +14,9 @@ import PencilSimple from '../../../../assets/PencilSimple.svg'
 import ArrowRight from '../../../../assets/ArrowRight.svg'
 
 
+
+
+
 const DATASET_TABS = [
   { key: 'cfd', label: 'CFD data' },
   { key: 'wind', label: 'Wind Tunnel Data' },
@@ -160,6 +163,18 @@ export default function ProjectUpload() {
   return (
    
     <div className="UploadWapper">
+   
+    <div className="UploadWapper">
+      {/* Header */}
+      
+        <div className='statscard'>
+          <label className='projectTitle'>{project?.project_name}</label>
+             <span className='projectActive' >
+                      Active
+                    </span>
+          
+        </div>
+        
       {/* Header */}
       
         <div className='statscard'>
@@ -170,8 +185,6 @@ export default function ProjectUpload() {
           
         </div>
        
-        
-
       {/* Dataset tabs */}
       {!selectedTag && (
       <div className="UploadCard">
@@ -201,6 +214,7 @@ export default function ProjectUpload() {
           Upload File
         </button>
       </div>
+
 
       {/* ================= TAG LIST ================= */}
       
@@ -332,5 +346,8 @@ export default function ProjectUpload() {
     </div>
     
    
+    
+   
+
   )
 }

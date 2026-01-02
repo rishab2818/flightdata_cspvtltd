@@ -63,7 +63,7 @@ export default function ProjectShell() {
               end={item.to === ''}
               className={({ isActive }) =>
                 (isActive || location.pathname.endsWith(`/${item.to}`))
-                  ? 'project-shell__nav-link'
+                  ? 'project-shell_link'
                   : 'project-not-active'
               }
             >
