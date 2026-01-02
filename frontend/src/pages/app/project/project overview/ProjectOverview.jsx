@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 
-
 import UploadModal from './../ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../../api/ingestionApi'
 import './ProjectOverview.css'
@@ -12,6 +11,8 @@ import CalendarBlank from '../../../../assets/CalendarBlank.svg'
 import Delete from '../../../../assets/Delete.svg'
 import PencilSimple from '../../../../assets/PencilSimple.svg'
 import ArrowRight from '../../../../assets/ArrowRight.svg'
+import ConfirmationModal from "../../../../components/common/ConfirmationModal";
+
 
 
 
@@ -41,6 +42,14 @@ export default function ProjectUpload() {
 
   /* ================= Polling helpers ================= */
   const pollingRef = useRef(new Map()) // jobId -> intervalId
+
+  const [confirmDelete, setConfirmDelete] = useState({
+  open: false,
+  tagName: null,
+})
+
+// const date = project?.created_at
+// const members = project?.members?.length || 0
 
   const stopPolling = (jobId) => {
     const t = pollingRef.current.get(jobId)
@@ -126,32 +135,73 @@ export default function ProjectUpload() {
   }, [projectId, activeDataset])
 
   /* ================= Delete tag ================= */
+  // const handleDeleteTag = async (tagName) => {
+  //   if (!window.confirm(`Delete "${tagName}" and all files inside it? This cannot be undone.`)) return
+
+  //   setDeletingTag(tagName)
+  //   try {
+  //     const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tagName)
+  //     await Promise.all(
+  //       (files || []).map((file) =>
+  //         file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
+  //       )
+  //     )
+
+  //     setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
+  //     setTagJobMap((prev) => {
+  //       const copy = { ...prev }
+  //       delete copy[tagName]
+  //       return copy
+  //     })
+
+  //     if (selectedTag === tagName) setSelectedTag(null)
+  //   } catch (err) {
+  //     window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
+  //   } finally {
+  //     setDeletingTag(null)
+  //   }
+  // }
+
+  // const onCloseModal = async () => {
+  //   setModal({ open: false, mode: 'create', tag: '' })
+  //   await refreshTagsAndAttachProgress()
+  //   setTimeout(refreshTagsAndAttachProgress, 1500)
+  // }
+
   const handleDeleteTag = async (tagName) => {
-    if (!window.confirm(`Delete "${tagName}" and all files inside it? This cannot be undone.`)) return
+  setDeletingTag(tagName)
 
-    setDeletingTag(tagName)
-    try {
-      const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tagName)
-      await Promise.all(
-        (files || []).map((file) =>
-          file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
-        )
+  try {
+    const files = await ingestionApi.listFilesInTag(
+      projectId,
+      activeDataset,
+      tagName
+    )
+
+    await Promise.all(
+      (files || []).map((file) =>
+        file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
       )
+    )
 
-      setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
-      setTagJobMap((prev) => {
-        const copy = { ...prev }
-        delete copy[tagName]
-        return copy
-      })
+    setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
 
-      if (selectedTag === tagName) setSelectedTag(null)
-    } catch (err) {
-      window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
-    } finally {
-      setDeletingTag(null)
-    }
+    setTagJobMap((prev) => {
+      const copy = { ...prev }
+      delete copy[tagName]
+      return copy
+    })
+
+    if (selectedTag === tagName) setSelectedTag(null)
+  } catch (err) {
+    window.alert(
+      err?.response?.data?.detail || err.message || "Delete failed"
+    )
+  } finally {
+    setDeletingTag(null)
+    setConfirmDelete({ open: false, tagName: null })
   }
+}
 
   const onCloseModal = async () => {
     setModal({ open: false, mode: 'create', tag: '' })
@@ -172,19 +222,10 @@ export default function ProjectUpload() {
              <span className='projectActive' >
                       Active
                     </span>
-          
-        </div>
-        
-      {/* Header */}
-      
-        <div className='statscard'>
-          <label className='projectTitle'>{project?.project_name}</label>
-             <span className='projectActive' >
-                      Active
-                    </span>
-          
-        </div>
-       
+        </div>  
+                
+              
+
       {/* Dataset tabs */}
       {!selectedTag && (
       <div className="UploadCard">
@@ -296,7 +337,9 @@ export default function ProjectUpload() {
                     <button
                       style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',marginLeft: 8}}
                       type="button"
-                      onClick={() => handleDeleteTag(tag.tag_name)}
+                      // onClick={() => handleDeleteTag(tag.tag_name)}
+                      onClick={() =>setConfirmDelete({ open: true, tagName: tag.tag_name })}
+
                       disabled={deletingTag === tag.tag_name}
                     >
                       {deletingTag === tag.tag_name ? '...' : ''}
@@ -311,7 +354,7 @@ export default function ProjectUpload() {
                       type="button"
                       onClick={() => setSelectedTag(tag.tag_name)}
                     >
-                      <img className="actionBtn" src={ArrowRight} alt="arrow"/>
+                      <img style={{width:'24px', height:'24px'}} className="actionBtn" src={ArrowRight} alt="arrow"/>
                     </button>
                   </td>
                 </tr>
@@ -343,6 +386,19 @@ export default function ProjectUpload() {
           initialDatasetType={activeDataset}
         />
       )}
+
+      {confirmDelete.open && (
+  <ConfirmationModal
+    title={`Delete "${confirmDelete.tagName}"?`}
+    onCancel={() =>
+      setConfirmDelete({ open: false, tagName: null })
+    }
+    onConfirm={() =>
+      handleDeleteTag(confirmDelete.tagName)
+    }
+  />
+)}
+
     </div>
     
    

@@ -5,15 +5,17 @@ import TopBarActions from '../../../components/layout/TopBarActions'
 import '../../../styles/project.css'
 
 import Database2 from "../../../assets/Database2.svg";
-import TrendUp from "../../../assets/TrendUp.svg";
 import GearFine from "../../../assets/GearFine.svg";
+import Report2 from "../../../assets/Report2.svg";
+import digital from "../../../assets/digital.svg";
+import chartLine from "../../../assets/ChartLine.svg";
 import reply from "../../../assets/reply.svg";
-import chartLine from "../../../assets/ChartLine.svg"
 
 const navItems = [
   { key: 'data', to: 'data', label: 'Project Overview', icon: Database2 },
   { key: 'visualisation', to: 'visualisation', label: 'Visualize', icon: chartLine },
-  { key: 'report', to: 'report', label: 'Report Generation', icon: TrendUp },
+  { key: 'report', to: 'report', label: 'Technical Reports', icon: Report2 },
+  { key: 'digital', to: 'digital', label: 'Digital Library', icon: digital },
   { key: 'settings', to: 'settings', label: 'Settings', icon: GearFine },
 ]
 

@@ -67,6 +67,8 @@ export default function App() {
           <Route path="data" element={<ProjectOverview />} />
           <Route index element={<ProjectOverview />} />
           <Route path="visualisation" element={<ProjectVisualisation />} />
+          <Route path="report" element={<TechnicalReports />} />
+          <Route path="digital" element={<DigitalLibrary />} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
       </Route>

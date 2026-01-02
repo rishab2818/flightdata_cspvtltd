@@ -7,13 +7,75 @@ import DownloadSimple from '../../../assets/DownloadSimple.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import './ProjectVisualisation.css'
+import ConfirmationModal from "../../../components/common/ConfirmationModal";
 
 
+
+const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt'])
+const INLINE_EXTENSIONS = new Set([
+  '.pdf',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg',
+  '.txt',
+  '.csv',
+])
+
+ 
+
+const getExtension = (name = '') => {
+  const idx = name.lastIndexOf('.')
+  return idx >= 0 ? name.slice(idx).toLowerCase() : ''
+}
+
+const isTabularFile = (file) => TABULAR_EXTENSIONS.has(getExtension(file?.filename || ''))
+
+const canInlinePreview = (file) => {
+  const type = (file?.content_type || '').toLowerCase()
+  if (type.startsWith('image/') || type.startsWith('text/') || type === 'application/pdf') {
+    return true
+  }
+  return INLINE_EXTENSIONS.has(getExtension(file?.filename || ''))
+}
+
+const triggerDownload = (url, filename) => {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename || 'download'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+const forceDownloadFromUrl = async (url, filename) => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Download failed')
+  const blob = await res.blob()
+  const objectUrl = window.URL.createObjectURL(blob)
+  try {
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = filename || 'download'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } finally {
+    window.URL.revokeObjectURL(objectUrl)
+  }
+}
 
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
     const [files, setFiles] = useState([])
     const [tab, setTab] = useState('raw')
+
+    const [confirmDelete, setConfirmDelete] = useState({
+  open: false,
+  file: null,
+})
+
 
     useEffect(() => {
         ingestionApi
@@ -58,15 +120,33 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
         }
       }
     
-      const handleDelete = async (file) => {
-        if (!window.confirm(`Delete "${file.filename}"? This cannot be undone.`)) return
-        try {
-          await ingestionApi.remove(file.job_id)
-          setFiles((prev) => prev.filter((item) => item.job_id !== file.job_id))
-        } catch (err) {
-          window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
-        }
-      }
+      // const handleDelete = async (file) => {
+      //   if (!window.confirm(`Delete "${file.filename}"? This cannot be undone.`)) return
+      //   try {
+      //     await ingestionApi.remove(file.job_id)
+      //     setFiles((prev) => prev.filter((item) => item.job_id !== file.job_id))
+      //   } catch (err) {
+      //     window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
+      //   }
+      // }
+
+      const handleDeleteFile = async () => {
+  if (!confirmDelete.file) return
+
+  try {
+    await ingestionApi.remove(confirmDelete.file.job_id)
+
+    setFiles(prev =>
+      prev.filter(f => f.job_id !== confirmDelete.file.job_id)
+    )
+  } catch (err) {
+    window.alert(
+      err?.response?.data?.detail || err.message || 'Delete failed'
+    )
+  } finally {
+    setConfirmDelete({ open: false, file: null })
+  }
+}
 
     return (
         <div style={{background:'#ffffff',gap:'10px', padding:'20px', width:'100%', height:'100%', border:'1px solid #00000026', borderRadius:'4px'}}>
@@ -139,7 +219,9 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                  style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}>
                                     <img style={{width:'20px', height:'20px'}} src={DownloadSimple} alt="download"/>
                                     </button>
-                                <button onClick={() => handleDelete(f)} title="Delete"
+                                <button  onClick={() =>
+    setConfirmDelete({ open: true, file: f })
+  } title="Delete"
                                  style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}>
                                     <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
                                     </button>
@@ -148,6 +230,20 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     ))}
                 </tbody>
             </table>
+            
+            {confirmDelete.open && (
+  <ConfirmationModal
+    title={`Delete "${confirmDelete.file?.filename}"?`}
+    description="This action cannot be undone."
+    onCancel={() =>
+      setConfirmDelete({ open: false, file: null })
+    }
+    onConfirm={handleDeleteFile}
+  />
+)}
+
         </div>
+
+        
     )
 }

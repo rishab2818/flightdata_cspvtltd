@@ -328,7 +328,7 @@ export default function UploadModal({
 
                            <div className="UploadBox">
                                 <label className="uploadTile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
-                                    <p className='button'>
+                                    <p className='button'style={{width:'200px'}}>
                                         <img src={Plus} ait="Browse" className='icon'/>
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
@@ -392,14 +392,14 @@ export default function UploadModal({
                             )} */}
 
                             {/* In edit mode we keep category display (still uses datasetType state) */}
-                            {mode === 'edit' && (
+                            {/* {mode === 'edit' && (
                                 <div style={{ marginBottom: 10 }}>
                                     <div className="summaryLabel">Data Type</div>
                                     <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 10 }}>
                                         {DATASET_OPTIONS.find(d => d.key === datasetType)?.label || datasetType}
                                     </div>
                                 </div>
-                            )}
+                            )} */}
 
                             
 
@@ -436,7 +436,7 @@ export default function UploadModal({
 
                                 {headerMode === 'custom' && (
                                     <div className="header-options__inputs">
-                                        <label style={{marginTop:10}} className="summary-label">Comma separated headers</label>
+                                        <label style={{marginTop:'5px',color:'#000000',fontSize:'13px',fontWeight:'600',fontFamily:'inter-regular,Helvetica'}} className="summary-label">Comma separated headers</label>
                                         <input
                                             className="input-data"
                                             placeholder="e.g. time, alpha, mach"

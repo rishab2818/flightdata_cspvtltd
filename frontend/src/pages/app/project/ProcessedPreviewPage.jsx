@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { ingestionApi } from "../../../api/ingestionApi"
+import "../../../styles/project.css"
 
 export default function ProcessedPreviewPage() {
     const { jobId } = useParams()
@@ -80,7 +81,7 @@ export default function ProcessedPreviewPage() {
     }
 
     return (
-        <div className="project-card" style={{ maxWidth: 1200, margin: "18px auto" }}>
+        <div className="project-card" style={{  width: "100%", margin: "0px auto", background: "#fff", padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <div>
                     <h2 style={{ margin: 0 }}>Processed Preview</h2>
@@ -91,7 +92,7 @@ export default function ProcessedPreviewPage() {
                     <label className="summary-label" style={{ margin: 0 }}>Rows</label>
                     <select
                         className="input-control"
-                        style={{ width: 90 }}
+                        style={{ width: 90 , borderRadius: 4, height: 37, padding: '8px' }}
                         value={limit}
                         onChange={(e) => setLimit(parseInt(e.target.value, 10))}
                     >
@@ -121,13 +122,13 @@ export default function ProcessedPreviewPage() {
             {loading && <div className="empty-state" style={{ marginTop: 12 }}>Loading preview…</div>}
 
             {!loading && !error && (
-                <div className="excel-preview" style={{ marginTop: 12, overflow: "auto" }}>
+                <div className="excel-preview" style={{ marginTop: 12, overflow: "auto",width:"100%" }}>
                     <table className="data-table">
                         <thead>
                             <tr>
                                 {originalCols.map((oldCol, idx) => (
                                     <th key={oldCol} style={{ minWidth: 160 }}>
-                                        <div className="summary-label" style={{ marginBottom: 6 }}>Original: {oldCol}</div>
+                                        <div className="summary-label" style={{ marginBottom: 6, marginTop:6 }}>Original: {oldCol}</div>
                                         <input
                                             className="input-control"
                                             value={renameMap?.[oldCol] ?? oldCol}
