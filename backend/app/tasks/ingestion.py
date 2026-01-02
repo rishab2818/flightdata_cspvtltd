@@ -344,7 +344,10 @@ def _wind_txt_to_parquet(
             break
 
         # collect header tokens (words)
-        toks = ln.split()
+        # toks = ln.split()
+        toks = [t.strip().lstrip('%') for t in ln.split(',') if t.strip()]
+
+
         # keep everything (including %Dyn itself)
         header_tokens.extend(toks)
 
