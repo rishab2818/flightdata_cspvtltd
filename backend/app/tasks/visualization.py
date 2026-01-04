@@ -79,6 +79,58 @@ def _iter_chunks(url: str, ext: str, x_axis: str, y_axis: str | None):
     yield from iterator
 
 
+## for the other plots 
+def _sample_xy(
+    url: str,
+    ext: str,
+    x_axis: str | None,
+    y_axis: str | None,
+    max_points: int = 120_000,
+) -> pd.DataFrame:
+    """
+    Stream chunks and return up to max_points rows for chart types
+    that need raw points (histogram/box/violin/heatmap/polar).
+    """
+    cols = [c for c in [x_axis, y_axis] if c]
+    if not cols:
+        return pd.DataFrame()
+
+    kept = []
+    kept_n = 0
+
+    for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis):
+        # Keep only needed cols
+        chunk = chunk[cols].copy()
+
+        # numeric coerce (common for excel/csv mixed types)
+        for c in cols:
+            chunk[c] = pd.to_numeric(chunk[c], errors="coerce")
+
+        chunk = chunk.dropna(subset=cols)
+        if chunk.empty:
+            continue
+
+        remaining = max_points - kept_n
+        if remaining <= 0:
+            break
+
+        if len(chunk) > remaining:
+            # random sample to fit budget
+            chunk = chunk.sample(n=remaining, random_state=42)
+
+        kept.append(chunk)
+        kept_n += len(chunk)
+
+        if kept_n >= max_points:
+            break
+
+    if not kept:
+        return pd.DataFrame(columns=cols)
+
+    return pd.concat(kept, ignore_index=True)
+
+
+
 def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, int]:
     x_min = np.inf
     x_max = -np.inf
@@ -202,7 +254,9 @@ def _materialize_tiles(
 
 
 
-# def _build_figure(series_frames: list[dict], chart_type: str):
+
+## For ploar 
+# def _build_figure(series_frames: list[dict], chart_type: str , show_error_bars: bool = False):
 #     chart_type = (chart_type or "scatter").lower()
 #     fig = go.Figure()
 
@@ -218,42 +272,6 @@ def _materialize_tiles(
 #         max_col = f"{y_col}_max"
 
 #         error_y = None
-#         if {min_col, max_col}.issubset(set(df.columns)):
-#             error_y = {
-#                 "type": "data",
-#                 "symmetric": False,
-#                 "array": (df[max_col] - df[y_col]).tolist(),
-#                 "arrayminus": (df[y_col] - df[min_col]).tolist(),
-#                 "thickness": 0.8,
-#             }
-
-#         if chart_type == "bar":
-#             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
-#         elif chart_type == "line":
-#             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
-#         else:
-#             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
-
-#     fig.update_layout(
-#         template="plotly_white",
-#         title="Overplot",
-#         legend_title_text="Series",
-#     )
-#     return fig
-
-# def _build_figure(series_frames: list[dict], chart_type: str, show_error_bars: bool = False):
-#     chart_type = (chart_type or "scatter").lower()
-#     fig = go.Figure()
-
-#     for item in series_frames:
-#         series = item["series"]
-#         df = item["frame"]
-
-#         label = series.get("label") or series.get("y_axis") or "Series"
-#         x_col = series["x_axis"]
-#         y_col = series["y_axis"]
-
-#         error_y = None
 #         if show_error_bars:
 #             min_col = f"{y_col}_min"
 #             max_col = f"{y_col}_max"
@@ -266,28 +284,45 @@ def _materialize_tiles(
 #                     thickness=0.8,
 #                 )
 
+#         # ✅ POLAR
+#         if chart_type == "polar":
+#             fig.add_trace(
+#                 go.Scatterpolar(
+#                     name=label,
+#                     theta=df[x_col],   # angle
+#                     r=df[y_col],       # radius
+#                     mode="lines+markers",
+#                 )
+#             )
+#             continue
+
+#         # ✅ CARTESIAN (existing)
 #         if chart_type == "bar":
 #             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
 #         elif chart_type == "line":
 #             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
-#         elif chart_type =='ploar':
-#             fig.add_trace(go.Scatterpolar(
-#                 name = label,
-#                 theta=df['x_col'],
-#                 r = df['y_col'],
-#                 mode="markers+lines"
-#             ))
-#             fig.update_layout(polar =dict(radialaxis=dict(visible =True)))
 #         else:
 #             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
 
-#     fig.update_layout(template="plotly_white", title="plot", legend_title_text="Series")
+#     fig.update_layout(
+#         template="plotly_white",
+#         title="Overplot",
+#         legend_title_text="Series",
+#     )
+
+#     # ✅ Add polar layout if polar
+#     if chart_type == "polar":
+#         fig.update_layout(
+#             polar=dict(
+#                 angularaxis=dict(direction="counterclockwise"),  # optional
+#                 radialaxis=dict(visible=True),
+#             )
+#         )
+
 #     return fig
 
-
-## For ploar 
-def _build_figure(series_frames: list[dict], chart_type: str , show_error_bars: bool = False):
-    chart_type = (chart_type or "scatter").lower()
+def _build_figure(series_frames: list[dict], chart_type: str):
+    chart_type = (chart_type or "scatter").lower().strip()
     fig = go.Figure()
 
     for item in series_frames:
@@ -295,61 +330,128 @@ def _build_figure(series_frames: list[dict], chart_type: str , show_error_bars: 
         df = item["frame"]
 
         label = series.get("label") or series.get("y_axis") or "Series"
-        x_col = series["x_axis"]
-        y_col = series["y_axis"]
+        x_col = series.get("x_axis")
+        y_col = series.get("y_axis")
 
-        min_col = f"{y_col}_min"
-        max_col = f"{y_col}_max"
-
+        # ---------- Error bars (only when we have min/max columns) ----------
         error_y = None
-        if show_error_bars:
-            min_col = f"{y_col}_min"
-            max_col = f"{y_col}_max"
-            if {min_col, max_col}.issubset(df.columns):
-                error_y = dict(
-                    type="data",
-                    symmetric=False,
-                    array=(df[max_col] - df[y_col]).tolist(),
-                    arrayminus=(df[y_col] - df[min_col]).tolist(),
-                    thickness=0.8,
-                )
+        if y_col and f"{y_col}_min" in df.columns and f"{y_col}_max" in df.columns and y_col in df.columns:
+            error_y = {
+                "type": "data",
+                "symmetric": False,
+                "array": (df[f"{y_col}_max"] - df[y_col]).tolist(),
+                "arrayminus": (df[y_col] - df[f"{y_col}_min"]).tolist(),
+                "thickness": 0.8,
+            }
 
-        # ✅ POLAR
-        if chart_type == "polar":
+        # ---------- Chart Types ----------
+        if chart_type == "bar":
+            fig.add_bar(name=label, x=df[x_col], y=df[y_col])
+
+        elif chart_type == "line":
+            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
+
+        elif chart_type == "scatter":
+            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers", opacity=0.8)
+
+        # elif chart_type == "scatterline":
+        #     # optional: if you want explicit scatter+line
+        #     fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
+
+        elif chart_type == "polar":
+            # x -> theta, y -> r
             fig.add_trace(
                 go.Scatterpolar(
                     name=label,
-                    theta=df[x_col],   # angle
-                    r=df[y_col],       # radius
+                    theta=df[x_col],
+                    r=df[y_col],
                     mode="lines+markers",
                 )
             )
-            continue
 
-        # ✅ CARTESIAN (existing)
-        if chart_type == "bar":
-            fig.add_bar(name=label, x=df[x_col], y=df[y_col])
-        elif chart_type == "line":
-            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
+        ## for the contour plot 
+        elif chart_type == "contour":
+            fig.add_trace(
+                go.Histogram2dContour(
+                    x=df[x_col],
+                    y=df[y_col],
+                    contours=dict(
+                        coloring="lines",   # lines-only contour
+                        showlabels=True
+                    ),
+                    line=dict(width=1),
+                    showscale=False,       # keep legend clean
+                    name=label,
+                )
+            )
+
+
+        elif chart_type == "histogram":
+            # histogram of Y values per series
+            fig.add_trace(
+                go.Histogram(
+                    name=label,
+                    x=df[y_col],
+                    opacity=0.75,
+                )
+            )
+
+        elif chart_type == "box":
+            fig.add_trace(go.Box(name=label, y=df[y_col], boxpoints="outliers"))
+
+        elif chart_type == "violin":
+            fig.add_trace(
+                go.Violin(
+                    name=label,
+                    y=df[y_col],
+                    box_visible=True,
+                    meanline_visible=True,
+                    points="outliers",
+                )
+            )
+
+        elif chart_type == "heatmap":
+            # 2D density heatmap (x vs y)
+            fig.add_trace(
+                go.Histogram2d(
+                    name=label,
+                    x=df[x_col],
+                    y=df[y_col],
+                    nbinsx=80,
+                    nbinsy=80,
+                    showscale=True,
+                )
+            )
+
         else:
+            # fallback to a safe default
             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
 
+    # ---------- Layout ----------
     fig.update_layout(
         template="plotly_white",
         title="Overplot",
         legend_title_text="Series",
     )
 
-    # ✅ Add polar layout if polar
+    # Polar layout enhancement
     if chart_type == "polar":
         fig.update_layout(
             polar=dict(
-                angularaxis=dict(direction="counterclockwise"),  # optional
-                radialaxis=dict(visible=True),
+                radialaxis=dict(showgrid=True),
+                angularaxis=dict(showgrid=True),
             )
         )
+    
+    if chart_type == "contour":
+        fig.update_layout(
+            xaxis_title=x_col,
+            yaxis_title=y_col,
+        )
+
 
     return fig
+
 
 
 
@@ -443,11 +545,51 @@ def generate_visualization(self, viz_id: str):
                 ext = os.path.splitext(job.get("filename", "").lower())[-1]
 
 
-            _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
-            base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
+            # _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
+            # base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
+            # x_axis = item["series"]["x_axis"]
+            # y_axis = item["series"]["y_axis"]
+            # overview, tiles, stats = _materialize_tiles(
+            #         minio,
+            #         bucket,
+            #         base_key,
+            #         data_url,
+            #         ext,
+            #         x_axis,
+            #         y_axis,
+                
+            # )
+
+           
+            # x_col = item["series"]["x_axis"]
+            # y_col = item["series"]["y_axis"]
+
+            # display_frame = overview.rename(
+            #     columns={
+            #         "y_mean": y_col,
+            #         "y_min": f"{y_col}_min",
+            #         "y_max": f"{y_col}_max",
+            #     }
+            # )
+
+
+            # series_frames.append({"series": item["series"], "frame": display_frame})
+            # tile_metadata.append({"series": item["series"], "tiles": tiles})
+            # stats_metadata.append({"series": item["series"], "stats": stats})
+
+            chart_type = (doc.get("chart_type") or "scatter").lower().strip()
+
+            RAW_TYPES = {"polar", "histogram", "box", "violin", "heatmap" , "contour"}
+            TILED_TYPES = {"scatter", "line", "bar", }
+
             x_axis = item["series"]["x_axis"]
             y_axis = item["series"]["y_axis"]
-            overview, tiles, stats = _materialize_tiles(
+
+            if chart_type in TILED_TYPES:
+                _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
+                base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
+
+                overview, tiles, stats = _materialize_tiles(
                     minio,
                     bucket,
                     base_key,
@@ -455,32 +597,46 @@ def generate_visualization(self, viz_id: str):
                     ext,
                     x_axis,
                     y_axis,
-                
-            )
+                )
 
-            # display_frame = overview.rename(
-            #     columns=
-            #     {
-            #         "y_mean": item["series"]["y_axis"],
-            #         "y_min": f"{item['series']['y_axis']}_min",
-            #         "y_max": f"{item['series']['y_axis']}_max",
-            #     }
-            # )
-            x_col = item["series"]["x_axis"]
-            y_col = item["series"]["y_axis"]
+                display_frame = overview.rename(
+                    columns={
+                        "y_mean": y_axis,
+                        "y_min": f"{y_axis}_min",
+                        "y_max": f"{y_axis}_max",
+                    }
+                )
 
-            display_frame = overview.rename(
-                columns={
-                    "y_mean": y_col,
-                    "y_min": f"{y_col}_min",
-                    "y_max": f"{y_col}_max",
-                }
-            )
+                series_frames.append({"series": item["series"], "frame": display_frame})
+                tile_metadata.append({"series": item["series"], "tiles": tiles})
+                stats_metadata.append({"series": item["series"], "stats": stats})
+
+            else:
+                _set_status(redis, viz_id, states.STARTED, 30, f"Sampling points for series {idx}")
+
+                raw_df = _sample_xy(
+                    data_url,
+                    ext,
+                    x_axis,
+                    y_axis,
+                    max_points=120_000,
+                )
+
+                if raw_df.empty:
+                    _update_db_status(
+                        db,
+                        viz_id,
+                        status=states.FAILURE,
+                        progress=100,
+                        message=f"No usable numeric data for series {idx}",
+                    )
+                    return
+
+                series_frames.append({"series": item["series"], "frame": raw_df})
+                tile_metadata.append({"series": item["series"], "tiles": []})
+                stats_metadata.append({"series": item["series"], "stats": {"note": "raw_chart_no_tiles"}})
 
 
-            series_frames.append({"series": item["series"], "frame": display_frame})
-            tile_metadata.append({"series": item["series"], "tiles": tiles})
-            stats_metadata.append({"series": item["series"], "stats": stats})
 
         _set_status(redis, viz_id, states.STARTED, 60, "Building Plotly figure")
         fig = _build_figure(series_frames, doc.get("chart_type", "scatter"))

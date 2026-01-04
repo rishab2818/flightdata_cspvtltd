@@ -24,6 +24,12 @@ const CHART_TYPES = [
   { value: 'bar', label: 'Bar' },
   // Add plaor 
   { value: 'polar', label: 'Polar' },
+  { value: 'histogram', label: 'Histogram' },
+  { value: 'box', label: 'Box' },
+  { value: 'violin', label: 'Violin' },
+  { value: 'heatmap', label: 'Heatmap (X vs Y)' },
+  { value: 'contour', label: 'Contour' }
+
 ]
 
 const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
