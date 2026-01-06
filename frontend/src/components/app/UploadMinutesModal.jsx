@@ -391,9 +391,9 @@ export default function UploadMinutesModal({
         placeholder="CFD analysis to be conducted for Airbus 320"
         value={actionPointDescription}
         onChange={(e) => setActionPointDescription(e.target.value)}
-        onKeyDown={handleActionPointKeyDown}
-        className="textInput"
-        autoComplete="off"
+        className="TextInput"
+        // onKeyDown={handleActionPointKeyDown}
+        // autoComplete="off"
       />
     </div>
 
@@ -408,7 +408,7 @@ export default function UploadMinutesModal({
             setActionPointAssignee(e.target.value);
             setAssigneeQuery(e.target.value);
           }}
-          className="textInput"
+          className="TextInput"
         />
 
         <button
@@ -545,7 +545,7 @@ export default function UploadMinutesModal({
                 placeholder="e.g., Strategy Planning, Team Sync"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
-                className="textInput"
+                className="TextInput"
                 autoComplete="off"
               />
             </div>

@@ -14,7 +14,7 @@ export default function Header() {
   const meta = useMemo(() => PAGE_META[normalizedPath] ?? DEFAULT_PAGE_META, [normalizedPath]);
 
   return (
-    <header className={`app-shell__header ${isDashboard ? "app-shell__header--dashboard" : ""}`}>
+    <header className={"app-shell__header--dashboard"}>
       <div className="header__titles">
         <h1 className="header__title">{meta.title}</h1>
         {meta.subtitle ? <p className="header__subtitle">{meta.subtitle}</p> : null}

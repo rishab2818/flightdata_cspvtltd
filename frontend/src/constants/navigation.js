@@ -2,10 +2,10 @@ import dashboardIcon from "../assets/Dashboard.svg";
 import minutesIcon from "../assets/PresentationChart.svg";
 import studentIcon from "../assets/UsersThree.svg";
 import inventoryIcon from "../assets/Truck.svg";
-import divisionalIcon from "../assets/divisonal.svg";
+import divisionalIcon from "../assets/Newspaper1.svg";
 import customerIcon from "../assets/customer.svg";
 import trainingIcon from "../assets/reports.svg";
-import technicalIcon from "../assets/reports.svg";
+import technicalIcon from "../assets/Report3.svg";
 import settingsIcon from "../assets/GearFine.svg";
 import usersIcon from "../assets/UsersThree.svg";
 import digitalLibIcon from "../assets/digital.svg";
@@ -20,7 +20,7 @@ export const ROLE_MENUS = {
   ],
   GD: [
     { path: "/app", label: "Dashboard Overview", icon: dashboardIcon, end: true },
-    { path: "/app/minutes", label: "Minutes of meeting", icon: minutesIcon },
+    { path: "/app/minutes", label: "Minutes of the Meeting", icon: minutesIcon },
     { path: "/app/student-engagement", label: "Student Engagement", icon: studentIcon },
     { path: "/app/inventory-records", label: "Procurement Records", icon: inventoryIcon },
     { path: "/app/budget-estimation", label: "Budget Estimation", icon: Currency },

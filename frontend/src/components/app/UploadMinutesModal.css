@@ -101,7 +101,7 @@
   display: block;
 }
 
-.textInput,
+.TextInput,
 .dateInput,
 select {
   width: 100%;
@@ -113,11 +113,11 @@ select {
    background: #F3F3F5;
 }
 
-.textInput::placeholder {
+.TextInput::placeholder {
   color: #9ca3af;
 }
 
-.textInput:focus,
+.TextInput:focus,
 .dateInput:focus,
 select:focus {
   outline: none;

@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/Swathi_dev
 import UploadModal from './../ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../../api/ingestionApi'
 import './ProjectOverview.css'
@@ -14,6 +17,11 @@ import PencilSimple from '../../../../assets/PencilSimple.svg'
 import ArrowRight from '../../../../assets/ArrowRight.svg'
 import ConfirmationModal from "../../../../components/common/ConfirmationModal";
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> origin/Swathi_dev
 const DATASET_TABS = [
   { key: 'cfd', label: 'CFD data' },
   { key: 'wind', label: 'Wind Tunnel Data' },
@@ -38,13 +46,22 @@ export default function ProjectUpload() {
 
   /* ================= Polling helpers ================= */
   const pollingRef = useRef(new Map()) // jobId -> intervalId
+<<<<<<< HEAD
   
+=======
+>>>>>>> origin/Swathi_dev
 
   const [confirmDelete, setConfirmDelete] = useState({
   open: false,
   tagName: null,
 })
 
+<<<<<<< HEAD
+=======
+// const date = project?.created_at
+// const members = project?.members?.length || 0
+
+>>>>>>> origin/Swathi_dev
   const stopPolling = (jobId) => {
     const t = pollingRef.current.get(jobId)
     if (t) clearInterval(t)
@@ -214,10 +231,16 @@ export default function ProjectUpload() {
              <span className='projectActive' >
                       Active
                     </span>
+<<<<<<< HEAD
           
         </div>
        
         
+=======
+        </div>  
+                
+              
+>>>>>>> origin/Swathi_dev
 
       {/* Dataset tabs */}
       {!selectedTag && (
@@ -331,6 +354,10 @@ export default function ProjectUpload() {
                       type="button"
                       // onClick={() => handleDeleteTag(tag.tag_name)}
                       onClick={() =>setConfirmDelete({ open: true, tagName: tag.tag_name })}
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/Swathi_dev
                       disabled={deletingTag === tag.tag_name}
                     >
                       {deletingTag === tag.tag_name ? '...' : ''}
@@ -345,7 +372,11 @@ export default function ProjectUpload() {
                       type="button"
                       onClick={() => setSelectedTag(tag.tag_name)}
                     >
+<<<<<<< HEAD
                       <img className="actionBtn" src={ArrowRight} alt="arrow"/>
+=======
+                      <img style={{width:'24px', height:'24px'}} className="actionBtn" src={ArrowRight} alt="arrow"/>
+>>>>>>> origin/Swathi_dev
                     </button>
                   </td>
                 </tr>
@@ -389,6 +420,10 @@ export default function ProjectUpload() {
     }
   />
 )}
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/Swathi_dev
     </div>
     
    
