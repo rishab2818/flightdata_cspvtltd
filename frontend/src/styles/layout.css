@@ -56,7 +56,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 10px 12px;
   text-decoration: none;
   color: #111827;
@@ -96,9 +96,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 24px 10px 24px;
-  padding-left: 95px;
-  padding-right: 95px;
+  padding: 20px 32px 5px 32px;
+  /* padding-left: 95px;
+  padding-right: 95px; */
 }
 
 .header__titles {
@@ -324,7 +324,7 @@
 .app-shell__main {
   flex: 1;
   overflow: auto;
-  padding: 12px 24px 28px 24px;
+  padding: 12px 32px 28px 32px;
   min-width: 0;
 }
 
@@ -332,6 +332,13 @@
   font-size: 28px;
 }
 
+.app-shell__header--dashboard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 35px 9px 32px;
+}
 @media (max-width: 1200px) {
   .app-shell__header {
     flex-direction: column;
