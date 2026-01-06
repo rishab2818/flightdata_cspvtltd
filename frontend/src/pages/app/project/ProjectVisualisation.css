@@ -1,0 +1,521 @@
+.CardWapper {
+   width: 100%;
+   gap: 16px;
+   margin: 0 auto;
+   height: 100%;
+   display: flex;
+   flex-direction: column;
+}
+
+.tableHeader {
+    color: #000000;
+    font-family: "Inter-semiBold",Helvetica;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.plot-settings {
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  font-family: "Inter-semiBold",Helvetica;
+  border: 1px solid #00000026;
+
+}
+
+/* ===============================
+   ROW LAYOUT
+================================ */
+.ps-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* ===============================
+   FIELD
+================================ */
+.ps-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-field label {
+  font-size: 14px;
+  font-weight: 400;
+  font-family: "Inter-Regular", Helvetica;
+  color: #0a0a0a;
+  margin-bottom: 6px;
+}
+
+/* ===============================
+   INPUTS / SELECTS
+================================ */
+.ps-field select,
+.inputcontrol {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: 2px;
+  border: 0.67px solid transparent;
+  background-color: #f3f3f5;
+  color: #000000;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.ps-field input {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: 2px;
+  border: 0.67px solid transparent;
+  background-color: #f3f3f5;
+  color: #000000;
+  outline: none;  
+}
+/* .ps-field select:focus,
+.ps-field input:focus,
+.inputcontrol:focus {
+  border-color: #5b8cff;
+  background-color: #ffffff;
+} */
+
+/* Disabled */
+/* .ps-field select:disabled {
+  background: #ececf0;
+  color: #9a9aa6;
+  cursor: not-allowed;
+} */
+
+/* ===============================
+   LEGEND INPUT ALIGNMENT
+================================ */
+.ps-field .inputcontrol {
+  margin-top: 25px; /* aligns with selects */
+   height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: 2px;
+  border: 0.67px solid transparent;
+  background-color: #f3f3f5;
+  color: #000000;
+}
+
+/* ===============================
+   TOGGLE (OVERPLOT)
+================================ */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #2e2f33;
+  margin: 8px 0 16px;
+  cursor: pointer;
+   white-space: nowrap;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  cursor: pointer; 
+}
+
+.toggle .slider {
+  width: 39px;
+  height: 24px;
+  background: #d3d6de;
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  pointer-events: none;
+}
+
+.toggle .slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.toggle input:checked + .slider {
+  background: rgb(29, 196, 29);
+  
+}
+
+.toggle input:checked + .slider::before {
+  transform: translateX(15px);
+}
+
+.yseries-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-select {
+  min-width: 160px;
+  padding: 0 10px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: 2px;
+  border: 0.67px solid transparent;
+  background-color: #f3f3f5;
+  color: #000000;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.viz-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.yseries-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plot-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 14px;
+  background: #1976D2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-top: 23px;
+}
+
+.plot-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* ===============================
+   SUBMIT BUTTON
+================================ */
+
+.plot-settings button[type="submit"] {
+  height: 38px;
+  padding: 0 18px;
+  background: #1976D2;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.plot-settings button[type="submit"]:hover {
+  background: #4a7af0;
+}
+
+.plot-settings button[type="submit"]:disabled {
+  background: #b8c6ff;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   RESPONSIVE
+================================ */
+@media (max-width: 1100px) {
+  .ps-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .ps-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+/*====================PLOTTING HEADER================*/
+
+.project-card {
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  gap: 12px;
+}
+
+.projectcard1 {
+   background: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin-top: 20px;
+   border: 1px solid #00000026;
+}
+.actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  margin-top: -5px;
+}
+
+.summarylabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0;
+  font-family: "Inter-semiBold",Helvetica;
+}
+
+.badge {
+  padding: 2px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  text-transform: capitalize;
+}
+
+/*=========================PLOT PREVIEW=================*/
+
+.Plot-preview {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptystate {
+  font-size: 14px;
+  color: #000000;
+}
+
+/*=========================TILES SECTION=================*/
+/* .viz-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.viz-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.viz-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+} */
+
+/*=========================TILE PREVIEW TABLE=================*/
+
+.datatable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.datatable th,
+.datatable td {
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.datatable th {
+  background: #f3f3f5;
+  color: #000000;
+  font-weight: 600;
+}
+
+.summarylabel1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0;
+  font-family: "Inter-semiBold",Helvetica;
+  margin-bottom: 10px;
+}
+
+/*=========================SAVED VISUALISATION=================*/
+
+.actionsrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -5px;
+}
+
+.text{
+  color: #000000;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "Inter-semiBold",Helvetica;
+  margin-bottom: -10px;
+}
+
+.summarylabel2 {
+  font-size: 14px;
+  font-weight: 400;
+  color: #000000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  font-family: "Inter-Regular",Helvetica;
+  
+}
+
+.viz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.viz-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.data-card__name {
+  font-size: 14px;
+  font-weight: 600;
+   margin: 0;
+   font-size: 14px;
+  font-weight: 400;
+  color: #000000;
+   font-family: "Inter-Regular",Helvetica;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+}
+
+.actionsrow--header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.actionsrow__right {
+  display: flex;
+  gap: 12px;
+}
+
+/* Expand button */
+.expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #000000;
+}
+
+/* Chevron animation */
+.chevron {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Expand animation */
+.expand-container {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+
+.expand-container.open {
+  max-height: 2000px; /* large enough */
+}
+
+.expand-inner {
+  margin-top: 12px;
+}
+
+/* Danger button */
+.viz-actions .danger {
+  color: #b91c1c;
+}
+
+.actionBtn {
+  width: 16px;
+  height: 16px;
+}
+/*=========================VISUALISATION ACTION=================*/
+
+.viz-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.viz-actions button {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.viz-actions button:hover {
+  background: #f3f4f6;
+}
+
+
+.project-shell__nav-link {
+  background: #1976D2;
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}

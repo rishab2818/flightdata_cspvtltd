@@ -1,0 +1,367 @@
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f9ff;
+  color: #0f172a;
+}
+
+.app-shell__sidebar {
+  width: clamp(240px, 20vw, 300px);
+  min-width: clamp(220px, 18vw, 280px);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-sizing: border-box;
+  z-index: 5;
+}
+
+.sidebar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sidebar__brand img {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+.sidebar__menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar__item {
+  display: flex;
+}
+
+.sidebar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: #111827;
+  transition: all 0.2s ease;
+}
+
+.sidebar__link:hover {
+  background: #f3f4f6;
+}
+
+.sidebar__link--active {
+  background: #1976d2;
+  color: #f3f4f6;
+}
+
+.sidebar__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.sidebar__empty {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 12px 8px;
+}
+
+.app-shell__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-shell__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 10px 24px;
+  padding-left: 95px;
+  padding-right: 95px;
+}
+
+.header__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.header__title {
+  font-size: 26px;
+  font-weight: 500;
+  margin: 0;
+  color: #1976D2;
+}
+
+.header__subtitle {
+  font-size: 14px;
+  color: #000000;
+  margin: 0;
+}
+
+.header__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  position: relative;
+  margin-right: -5px;
+}
+
+.notification {
+  position: relative;
+}
+
+.notification__button {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 4px;
+  width: 55px;
+  height: 55px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #0f172a;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.notification__badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notification__panel {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  width: 340px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.notification__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.notification__title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.notification__meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notification__link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification__list {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.notification__item {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: #ffffff;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.notification__item:last-child {
+  border-bottom: none;
+}
+
+.notification__item--unread {
+  background: #f8fafc;
+}
+
+.notification__item-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.notification__item-message {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.notification__item-time {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+.notification__empty {
+  padding: 18px 14px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.header__profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.header__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #D9D9D9;
+  flex-shrink: 0;
+}
+
+.header__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header__name {
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.2;
+}
+
+.header__role {
+  font-size: 13px;
+  color: #000000;
+}
+
+.header__toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+}
+
+.header__menu {
+  position: absolute;
+  right: 0;
+  top: 110%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  min-width: 160px;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.header__menu button {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 600;
+  color: #000000;
+}
+
+.header__menu button:hover {
+  background: #fef2f2;
+}
+
+.app-shell__main {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 24px 28px 24px;
+  min-width: 0;
+}
+
+.app-shell__header--dashboard .header__title {
+  font-size: 28px;
+}
+
+@media (max-width: 1200px) {
+  .app-shell__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell__sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 20;
+    transform: translateX(0);
+  }
+
+  .app-shell__header {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .header__titles {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .header__profile {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

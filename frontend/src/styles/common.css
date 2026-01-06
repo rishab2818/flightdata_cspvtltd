@@ -1,0 +1,48 @@
+/* ---------- Common Global Styles ---------- */
+
+/* Center helper */
+.cell-center {
+    text-align: center;
+}
+
+/* Table action icons container */
+.doc-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Reusable style for clickable icon buttons */
+.icon-btn {
+    width: 36px;
+    height: 36px;
+
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.icon-btn:hover {
+    background: #EFF7FF;
+}
+
+.icon-btn:active {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+/* Tag pills */
+.tag-pill {
+    padding: 4px 10px;
+    background: #e5f3ff;
+    color: #0369a1;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}

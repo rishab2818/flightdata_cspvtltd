@@ -1,0 +1,441 @@
+.UploadWapper {
+width: 100%;
+   gap: 16px;
+   margin: 0 auto;
+   height: 100%;
+   display: flex;
+   flex-direction: column;
+}
+
+.projectTitle {
+  color: #000000;
+  font-size: 16px;
+  font-family: "SF-pro Bold", Helvetica;
+  font-weight: 700;
+
+}
+.statscard {
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px solid #00000026;
+  display: flex;
+  padding: 20px;
+  gap: 10px;
+}
+.UploadCard {
+ width: 100%;
+   gap: 16px;
+   margin: 0 auto;
+   height: 100%;
+   display: flex;
+   flex-direction: column;
+   padding: 20px;
+   background: #ffffff;
+   border-radius: 4px;
+   border: 1px solid #00000026;
+}
+
+.projectActive{
+      border: 1px solid #016630;
+      border-Radius: 999px;
+      background: #DEFFF0;
+      color: #000000;
+      font-Size: 14;
+      width: 56px;
+      display:flex;
+      align-Items:center;
+      justify-Content:center;
+}
+
+.tablist {
+  display: flex;
+  gap: 30px;
+  margin: 16px 0;
+  padding-bottom: 6px;
+}
+
+.tablist button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 0;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: "Inter-Regular", Helvetica;
+  cursor: pointer;
+  border-radius: 0;          /* remove curve */
+  outline: none;             /* remove focus ring */
+}
+
+.tablist button.active {
+  background: #ffffff;
+  color: #1976D2;
+  font-weight: 600;
+  border-bottom: 2px solid #1976D2; /* straight line */
+}
+
+
+
+.projectUploadLink {
+  background: #1976D2;
+  color: #ffffff;
+  border-radius: 4px;
+  border: none;
+  width: 130px;
+  height: 44px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+/* Backdrop */
+.fd-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+  z-index: 999999;
+  /* increase */
+}
+
+.fd-modal__panel {
+  width: min(1100px, 96vw);
+  height: min(760px, 92vh);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+
+/* Header */
+.fd-modal__header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.fd-modal__close {
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.fd-modal__close:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+/* Content grid */
+.fd-modal__grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  /* important to allow inner scrolling */
+}
+
+/* Scroll columns */
+.fd-modal__left,
+.fd-modal__right {
+  overflow: auto;
+  min-height: 0;
+  padding-right: 6px;
+}
+
+/* Responsive: stack columns */
+@media (max-width: 980px) {
+  .fd-modal__panel {
+    height: min(860px, 94vh);
+  }
+
+  .fd-modal__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   Selected file list
+   ========================= */
+
+.fd-filelist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.fd-fileitem {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  background: #ffffff;
+}
+
+.fd-fileitem:hover {
+  background: #f8fafc;
+}
+
+.fd-fileitem--active {
+  border-color: #0284c7;
+  background: #e0f2fe;
+}
+
+.fd-fileitem__name {
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 380px;
+}
+
+/* =========================
+   Toggle Switch
+   ========================= */
+
+.fd-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 46px;
+  height: 26px;
+}
+
+.fd-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.fd-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: #0808e2;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.fd-slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  background: #ffffff;
+  border-radius: 999px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(2, 6, 23, 0.2);
+}
+
+.fd-switch input:checked+.fd-slider {
+  background: #1976d2;
+}
+
+.fd-switch input:checked+.fd-slider::before {
+  transform: translateX(20px);
+}
+
+/* disabled switch look */
+.fd-switch input:disabled+.fd-slider {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Preview area
+   ========================= */
+
+.fd-preview {
+  margin-top: 10px;
+}
+
+.excel-preview {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: auto;
+}
+
+/* Data table used in preview */
+.DataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.DataTable th,
+.DataTable td {
+  border-bottom: 1px solid #00000026;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.DataTable th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: "Inter-SemiBold", Helvetica;
+  color: #000000;
+  
+}
+
+/* .actions {
+  background: #ffffff;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #00000026;
+} */
+
+.actionBtn{
+ width: 16px;
+  height: 16px;
+}
+
+.projectlink {
+  width:60px;
+  height: 32px;
+  background: #1976D2;
+  border: 0.67px solid #0000001A;
+  border-radius: 4px;
+  color: #ffffff;
+  
+}
+.th-content {
+   display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Empty state helper */
+.empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  color: #475569;
+  background: #f8fafc;
+}
+
+/* =========================
+   Keep your existing shared UI
+   (project-card / tablist / etc.)
+   ========================= */
+
+/* (You can keep these as-is, but ensure they exist somewhere) */
+
+.summary-label {
+  font-size: 14px;
+  color: #64748b;
+}
+
+
+
+.header-options {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.input-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.upload-tile {
+  border: 1px solid transparent;
+  background: #f8fafc;
+  border-radius: 12px;
+  text-align: center;
+  padding: 38px 16px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+/* .upload-tile:hover {
+  background: #f1f5f9;
+  border-color: #0284c7;
+} */
+
+.project-shell__nav-link {
+  background: #1976d2;
+  border: none;
+  color: #ffffff;
+  padding: 10px 18px;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.project-shell__nav-link:hover {
+  background: #0e60b2;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar__value {
+  background: #1976d2;
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.project-shell__error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+}
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-bar__value {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 999px;
+  transition: width 300ms ease;
+}

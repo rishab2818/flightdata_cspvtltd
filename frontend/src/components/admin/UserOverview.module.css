@@ -1,0 +1,106 @@
+.card {
+  width: clamp(420px, 36vw, 510px);
+  height: clamp(640px, 72vh, 788px);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-left: 50px;
+}
+
+.body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.headerTitle {
+  font-weight: 500;
+  color:#333333;
+  font-size: 24px;
+  font-family: 'Inter';
+}
+
+.totalWrap {
+  padding: 6px 0 12px;
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.totalNum {
+  font-family: 'Inter';
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 48px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  text-align: center;
+  color: #1976D2;
+}
+
+.totalLabel {
+  color: #000000;
+  font-weight: 400;
+  font-style: Regular;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
+}
+
+.scroll {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* each row in the list */
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+}
+
+.itemLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.itemCount {
+
+font-weight: 500;
+font-style: Medium;
+font-size: 32px;
+line-height: 100%;
+letter-spacing: 0%;
+text-align: center;
+
+}
+
+.itemLabel {
+width: 120;
+height: 19;
+gap: 4px;
+opacity: 1;
+}
+
+/* thin divider like your mock */
+.hr {
+  height: 1px;
+  background: #E5E7EB;
+  border: 0;
+  margin: 0;
+}

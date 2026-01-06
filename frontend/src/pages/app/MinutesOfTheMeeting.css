@@ -1,0 +1,515 @@
+.Container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  border: 1px solid;
+  border-color: #0000001A;
+  border-radius: 4px;
+  height: 100%;
+}
+
+.Cardcontainer {
+  width: 100%;
+  background: #fff;
+  border-radius: 4;
+  padding: 35px 25px;
+  height: 100%;
+}
+
+.TabsRow {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding-bottom: 4px;
+  font-weight: 700;
+}
+
+.TabButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  padding-bottom: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.activeTab {
+  border-bottom: 1px solid #1976d2;
+  font-weight: 500;
+}   
+
+.Banner {
+  background: #fff3e1;
+  border: 1px solid #f6a623;
+  padding: 10px 16px;
+  width: 100%;
+}
+
+.BannerContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 15px;
+}
+
+.BannerInfo {
+  display: flex;
+  align-items: center;
+  gap: 24px; /* spacing between Title, Date, Day, Time */
+}
+
+/* Title looks same as screenshot */
+.BannerTitle {
+  font-weight: 400;
+  font-size: 16px;
+  color: #222;
+  align-items: center;
+  font-family: "inter-regular", Helvetica;
+}
+
+/* Meta row items */
+.metaItem,
+.timeMeta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  font-size: 16px;
+  float: "inter-regular", Helvetica;
+  color: #222;
+}
+
+/* Edit button like screenshot (icon only) */
+.BannerEdit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.BannerEdit:hover {
+  opacity: 0.7;
+}
+
+.ProjectSelector {
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+
+.label {
+   font-weight: 400;
+  font-size: 16px;
+  color: #222;
+  font-family: "inter-semi-bold", Helvetica;
+}
+
+.textInput {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+ 
+}
+
+.ProjectRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.helperText {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.Header {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 1480px;
+  max-width: 100%;
+}
+
+.Header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0a0a0a;
+  font-family: inter-semi-bold, Helvetica;
+  margin: 0;
+}
+
+.UploadButton {
+  width: 157px;
+  height: 39px;
+  border-radius: 4px;
+  background: #1976d2;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inter-regular, Helvetica;
+}
+
+.TableGrid {
+  margin-top: 25px;
+  width: 100%;
+  overflow-x: auto;     /* enables horizontal scroll */
+  overflow-y: auto;
+  border-radius: 6px;
+  display: block;
+  flex-direction: column;
+  height: 80%;
+}
+
+.Table {
+  width: 1480px;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid #00000026;
+  border-radius: 8px;
+  border-color: #0000001A;
+  overflow-y: auto;
+  z-index: 60;
+}
+
+.Table th {
+  width: 1480px;
+  max-width: 100%;
+  padding: 12px 16px;
+  text-align: center;
+  border-radius: 2px;
+  color: #0a0a0a;
+  font-family: "inter-regular", Helvetica;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  background: #EFF7FF;
+
+}
+
+.Table tr {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #000000cc;
+  font-family: "inter-regular", Helvetica;
+  border-bottom: 1px solid #e5e7eb;
+  height: 100%;
+}
+
+.TableEmpty {
+  padding: 18px 4px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 13px;
+  color: #000000cc;
+  height: 100%;
+}
+
+.TableLoading {
+  padding: 18px 4px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.TableError {
+  padding: 18px 4px;
+  text-align: center;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.ActionButton {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin: 0 4px;
+
+}
+
+/* Row */
+.minutes-row {
+  border-bottom: 1px solid #E2E8F0;
+  /* BORDER */
+}
+
+/* Table cell padding */
+.cell {
+  padding: 10px 4px;
+}
+
+/* Text cells */
+.text {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+/* File wrapper (icon + name) */
+.file-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-name {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+/*cell with text */
+.cell-text {
+  padding: 10px 4px;
+  font-size: 13px;
+  color: #717182;
+}
+
+/* Tag pill */
+.tag-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #E2E8F0;
+  background: #F1F5F9;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+/* Icons row */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Icon badge */
+.icon-badge {
+  width: 37.33px;
+  height: 32px;
+  border-radius: 8px;
+  border: 0.67px solid #E2E8F0;
+  /* BORDER */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F9FAFB;
+  cursor: default;
+}
+
+/* Clickable icon */
+.icon-badge.clickable {
+  cursor: pointer;
+}
+
+.LightModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+}
+
+.LightModalCard {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  width: 520px;
+  max-width: 92vw;
+  box-shadow: 0px 20px 50px rgba(15, 23, 42, 0.12);
+}
+
+.ActionModalCard {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  width: 720px;
+  max-width: 95vw;
+  box-shadow: 0px 20px 50px rgba(15, 23, 42, 0.14);
+  border: 2px solid #d7e9ff;
+}
+
+.ModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.CloseButton {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.ModalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+   overflow-y: auto;
+}
+
+.ModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ActionTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tabBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.tabBtn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.ActionView {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.detailLabel {
+  color: #6b7280;
+}
+
+.detailValue {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.actionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toggleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.ActionEditForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ActionEditList {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ActionEditHeader {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ActionEditItem {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.ActionAddRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.EmptyText {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.ActionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ActionListItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.ActionDescription {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+/* Align center for View Action and Actions columns */
+.cell.center {
+  text-align: center;
+  justify-content: center;
+}
+
+/* Ensure vertical alignment is consistent */
+.minutes-row td {
+  vertical-align: middle;
+}
+
+/* Make icon badges aligned properly */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

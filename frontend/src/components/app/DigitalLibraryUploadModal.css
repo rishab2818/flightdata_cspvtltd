@@ -1,0 +1,105 @@
+.upload-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+  margin: 0 auto;
+}
+
+.upload-card {
+  width:580px;
+  background:#fff;
+  border-radius:10px;
+  padding:24px;
+  margin-top: -50px;
+}
+
+.upload-title {
+  font-size:22px;
+  font-weight:600;
+  margin-bottom:20px;
+}
+
+.upload-box {
+  border:1px solid #b2b2b2;
+  padding:40px;
+  text-align:center;
+  
+  margin-bottom:20px;
+}
+
+.upload-add {
+  font-size:40px;
+  font-weight:300;
+  opacity:.6;
+}
+
+.upload-browse {
+  background:#1976f2;
+  font-size:16px;
+  color:#fff;
+  padding:15px 50px;
+  border-radius:4px;
+  cursor:pointer;
+  display:inline-block;
+  margin:15px 0;
+}
+
+.upload-support {
+  font-size:16px;
+  color:#777;
+}
+
+.upload-field {
+  display:flex;
+  flex-direction:column;
+  margin-top: 15px;
+  margin-bottom:15px;
+  gap: 8px;
+}
+
+.upload-field input,
+.upload-field textarea {
+
+  background-color: #F3F3F5;
+  border: none;
+  padding:10px;
+  border-radius:8px;
+}
+
+.upload-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:15px;
+  margin-top:10px;
+}
+
+.upload-cancel {
+  padding:10px 22px;
+  border-radius:4px;
+  border: 1px solid #1976D2;
+  background:white;
+  width:100px;
+}
+
+.upload-submit {
+  background:#1976f2;
+  border: 1px solid #aaa;
+  color:#fff;
+  padding:10px 25px;
+  border-radius:4px;
+  width:"100px";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.upload-error {
+  color:red;
+  margin-top:6px;
+}
+

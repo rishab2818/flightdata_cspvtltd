@@ -1,0 +1,297 @@
+/* ---------- Overlay & Modal ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalBox {
+  width: 720px;
+  max-width: 95%;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 24px 28px 28px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+   display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  margin-top: 0px;
+}
+
+/* ---------- Form ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---------- Upload Box ---------- */
+.uploadRoot {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.uploadBox {
+  border: 1px dashed #cfd4dc;
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.uploadIcon {
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.uploadTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.uploadText {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.plusIcon {
+  font-size: 18px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.uploadHint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ---------- Labels & Inputs ---------- */
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.textInput,
+.dateInput,
+select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+   background: #F3F3F5;
+}
+
+.textInput::placeholder {
+  color: #9ca3af;
+}
+
+.textInput:focus,
+.dateInput:focus,
+select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+/* ---------- Layout Helpers ---------- */
+.row {
+  display: flex;
+}
+
+.gap16 {
+  gap: 16px;
+}
+
+.flex1 {
+  flex: 1;
+}
+
+/* ---------- Action Points ---------- */
+.actionGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+}
+
+.assigneeInputBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.iconButton {
+  position: absolute;
+  right: 6px;
+  height: 28px;
+  width: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: #e5e7eb;
+}
+
+/* ---------- Suggestions ---------- */
+.suggestionsBox {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.suggestionItem {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestionItem:hover {
+  background: #f3f4f6;
+}
+
+/* ---------- Added Action Points List ---------- */
+.actionPointList {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionPointCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.actionPointText {
+  white-space: nowrap;
+}
+
+.assigneeTag {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.chipRemove {
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* ---------- Date ---------- */
+.dateWrap {
+  width: 260px;
+}
+
+.dateBox {
+  position: relative;
+}
+
+.dateIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+}
+
+.dateInput {
+  padding-left: 36px;
+}
+
+/* ---------- Errors ---------- */
+.errorText {
+  color: #d32f2f;
+  font-size: 13px;
+}
+
+/* ---------- Footer ---------- */
+.footerButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cancelBtn {
+  background: #fff;
+  border: 1px solid #1976d2;
+  color: #1976d2;
+  padding: 10px; 
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100px;
+}
+
+.submitBtn {
+  display:flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  padding: 10px; 
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  
+}
+
+.submitBtn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
