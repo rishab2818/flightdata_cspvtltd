@@ -58,75 +58,31 @@ export default function StatsCardsImproved({ className = 'stats-grid' }) {
   ];
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-        gap: SPACING.md,
-        width: "100%",
-        marginTop: SPACING.lg,
-        paddingRight:"-50px",
-         maxwidth: "1580px",
-      }}
-    >
-      {stats.map((s, i) => (
-        <div
-          key={i}
-          className="frame-item"
-          style={{
-            minHeight: 120,
-            borderRadius: 8,
-            background: COLORS.background,
-            border: `1px solid ${COLORS.border}`,
-            padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* icon + label */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
-              justifyContent: "center",
-            }}
-          >
-            <div className="icon-box">
-              <img
-                className="icon"
-                src={s.icon}
-                alt={s.title}
-                style={{ width: 30, height: 30 }}
-              />
-            </div>
-
-            <div className="texts">
-              <div
-                className="label"
-                style={{ fontSize: 13, color: COLORS.textSecondary }}
-              >
-                {s.title}
-              </div>
-            </div>
-          </div>
-
-          {/* number */}
-          <div
-            className="value"
-            style={{
-              fontSize: 24,
-              fontWeight: 700,
-              color: COLORS.textPrimary,
-              textAlign: "center",
-              marginTop: 10,
-            }}
-          >
-            {s.value}
-          </div>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+      gap: SPACING.md,
+      width: "100%",
+      marginTop: SPACING.lg,
+      maxWidth: "1580px",
+    }}
+  >
+    {stats.map((s, i) => (
+      <div key={i} className="StatCard">
+        
+        {/* icon */}
+        <div className="IconLeft">
+          <img className='Icon' src={s.icon} alt={""} />
         </div>
-      ))}
-    </div>
-  );
-}
+
+        {/* text */}
+        <div className="content">
+          <p className="title">{s.title}</p>
+          <h2 className="count">{s.value}</h2>
+        </div>
+
+      </div>
+    ))}
+  </div>
+)};

@@ -61,7 +61,7 @@ export default function CreateUserCard({ onCreated }) {
         role,
         is_active: true,
       });
-      setOk('User created');
+      setOk('The user has been created successfully and is now available in the User Management section.');
       setUserName(''); setEmail(''); setPassword(''); setRole('DH');
       onCreated?.();
     } catch (e) {
@@ -94,6 +94,7 @@ export default function CreateUserCard({ onCreated }) {
           <div>
             <div className={styles.fieldLabel}>User Name</div>
             <TextField
+              className={styles.fieldSelect}
               fullWidth size="medium" placeholder="John Doe"
               value={userName} onChange={(e) => setUserName(e.target.value)}
               inputProps={{ maxLength: 80 }}
@@ -104,6 +105,7 @@ export default function CreateUserCard({ onCreated }) {
           <div>
             <div className={styles.fieldLabel}>Role</div>
             <TextField
+              className={styles.fieldSelect}
               fullWidth size="medium" select value={role}
               onChange={(e) => setRole(e.target.value)}
             >
@@ -117,6 +119,7 @@ export default function CreateUserCard({ onCreated }) {
           <div>
             <div className={styles.fieldLabel}>Login ID</div>
             <TextField
+              className={styles.fieldSelect}
               fullWidth size="medium" type="email" placeholder="admin@example.com"
               value={email} onChange={(e) => setEmail(e.target.value)}
             />
@@ -126,6 +129,7 @@ export default function CreateUserCard({ onCreated }) {
           <div>
             <div className={styles.fieldLabel}>Password</div>
             <TextField
+              className={styles.fieldSelect}
               fullWidth size="medium"
               type={showPw ? 'text' : 'password'}
               placeholder="••••••••"

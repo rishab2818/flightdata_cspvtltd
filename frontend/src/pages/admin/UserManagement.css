@@ -1,0 +1,145 @@
+/* Page background */
+.user-management-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 0px 24px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Main card */
+.user-management-card {
+  width: 100%;
+  max-width: 1600px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Page title */
+.user-management-title {
+  padding: 20px 24px;
+  font-size: 24px;
+  font-weight: 500;
+  color:#333333;
+  font-family: 'Inter-Medium',Helvetica;
+}
+
+/* Content area */
+.user-management-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Toolbar */
+.user-management-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.user-management-search {
+ border: none;
+  outline: none;
+  min-width: 350px;
+  background: transparent;
+  flex: 1;
+  font-size: 14px;
+  color: #0f172a;
+ 
+}
+.searchBox {
+  flex: 1;
+  max-width: 700px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0px;
+  padding: 12px 24px;
+}
+
+.user-management-spacer {
+  flex: 1;
+}
+
+.RefreshButton {
+    display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Table wrapper */
+.user-management-table-wrapper {
+  /* border: 1px solid #e5e7eb;
+  border-radius: 8px; */
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+/* Table header */
+.user-management-table-head th {
+  background-color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Inter-Medium',Helvetica;
+}
+
+/* Table rows */
+.user-management-table-row td {
+  font-size: 13px;
+  font-weight: 400;
+  color: #000000;
+  font-family: 'Inter-Medium',Helvetica;
+}
+
+/* Hover effect */
+.user-management-table-row:hover {
+  background-color: #f8fafc;
+}
+
+/* Chips */
+.chip-active {
+  color: #15803d;
+  border: 1px solid #15803d;
+}
+
+.chip-inactive {
+  color: #64748b;
+  border: 1px solid #cbd5f5;
+}
+
+/* Action buttons */
+.action-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-left: 6px;
+}
+
+.action-btn.delete {
+  color: #dc2626;
+  border: 1px solid #e5e7eb;
+
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-management-search {
+    width: 100%;
+  }
+}

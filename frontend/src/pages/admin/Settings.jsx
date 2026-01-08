@@ -3,24 +3,17 @@ import { Box, Card, CardContent, Typography } from "@mui/material";
 
 export default function Settings() {
   return (
-    <Box sx={{ display: "flex", justifyContent: "center" }}>
-      <Card
-        sx={{
-          width: "min(960px, 100%)",
-          borderRadius: 3,
-          boxShadow: "0 16px 40px rgba(15,23,42,0.08)",
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+    <div style={{display:"flex", justifyContent:"center",padding:"24px", width:"100%", background:"#f8fafc", height:"100%"}}>
+      <div style={{ marginTop:"-24px",width:"100%", background:"#ffffff", borderRadius:"8px", overflow:"hidden", border: "1px solid #e2e8f0"}}>
+        <div style={{ padding: "20px 24px", fontSize: "24px", fontFamily:"Inter-Regular, Helvetica",fontWeight:500, color:"#000000"}}>
             Settings
-          </Typography>
-          <Typography color="text.secondary">
+           </div>
+         <div style={{ padding:"0px 24px", fontSize: "14px", fontFamily:"Inter-Regular, Helvetica",fontWeight:400, color:"#000000"}}>
             Configure administrative preferences here. Add fields as needed to manage profile,
             notifications, and platform defaults.
-          </Typography>
-        </CardContent>
-      </Card>
-    </Box>
+         </div>
+        </div>
+    </div>
+   
   );
 }

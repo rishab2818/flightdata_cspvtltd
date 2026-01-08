@@ -1,12 +1,13 @@
 .card {
   width: clamp(420px, 36vw, 510px);
   height: clamp(640px, 72vh, 788px);
-  border-radius: 16px;
-  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
+  border-radius: 8px;
+  border: 1px solid #0000001A;
+  /* box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08); */
   display: flex;
   flex-direction: column;
   gap: 36px;
-  margin-left: 50px;
+  margin-left: 0px;
 }
 
 .body {
@@ -27,11 +28,11 @@
   font-weight: 500;
   color:#333333;
   font-size: 24px;
-  font-family: 'Inter';
+  font-family: 'Inter-Medium',Helvetica;
 }
 
 .totalWrap {
-  padding: 6px 0 12px;
+  padding: 6px 0 20px;
 }
 
 .totalRow {
@@ -41,9 +42,8 @@
 }
 
 .totalNum {
-  font-family: 'Inter';
+  font-family: 'Inter-Medium',Helvetica ;
   font-weight: 500;
-  font-style: Medium;
   font-size: 48px;
   line-height: 100%;
   letter-spacing: 0%;
@@ -54,13 +54,21 @@
 .totalLabel {
   color: #000000;
   font-weight: 400;
-  font-style: Regular;
+  font-family: 'Inter-Medium',Helvetica ;
   font-size: 16px;
   line-height: 100%;
   letter-spacing: 0%;
 }
 
+.totalIcon {
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+}
 .scroll {
+  display: flex;
+  flex-direction: column;
+ 
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -70,7 +78,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 0;
+  padding: 20px 0;
+  gap: 36px;
 }
 
 .itemLeft {
@@ -80,17 +89,19 @@
 }
 
 .itemCount {
-
+font-family: 'Inter-Medium',Helvetica ;
 font-weight: 500;
 font-style: Medium;
 font-size: 32px;
 line-height: 100%;
 letter-spacing: 0%;
 text-align: center;
-
 }
 
 .itemLabel {
+  font-family: 'Inter-Medium',Helvetica ;
+  font-size: 16px;
+  font-weight: 400;
 width: 120;
 height: 19;
 gap: 4px;

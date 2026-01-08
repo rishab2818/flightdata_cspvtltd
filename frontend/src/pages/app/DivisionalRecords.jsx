@@ -474,10 +474,19 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
             <Input className={styles.input} label="Rating" type="number" min={0} step={0.1} value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
 
-            <label className={styles.inputBox}>
-              <span className={styles.inputLabel}>Remarks</span>
-              <textarea rows={3} value={form.remarks} onChange={(e) => onChange("remarks", e.target.value)} className={styles.textarea} />
-            </label>
+            {/* <label className={styles.inputBox}> */}
+              {/* <span className={styles.inputLabel}>Remarks</span>
+              <textarea rows={3} value={form.remarks} onChange={(e) => onChange("remarks", e.target.value)} className={styles.textarea} /> */}
+            {/* </label> */}
+
+            <label className={`${styles.textAreaLabel} ${styles.fullWidth}`}>
+                <span>Notes</span>
+                <textarea
+                  rows={3}
+                  value={form.notes}
+                  onChange={(e) => onChange("notes", e.target.value)}
+                />
+              </label>
 
             {error && <p className={styles.errorText}>{error}</p>}
 
