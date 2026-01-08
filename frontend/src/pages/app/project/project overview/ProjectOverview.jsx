@@ -41,12 +41,12 @@ export default function ProjectUpload() {
   const pollingRef = useRef(new Map()) // jobId -> intervalId
 
   const [confirmDelete, setConfirmDelete] = useState({
-  open: false,
-  tagName: null,
-})
+    open: false,
+    tagName: null,
+  })
 
-// const date = project?.created_at
-// const members = project?.members?.length || 0
+  // const date = project?.created_at
+  // const members = project?.members?.length || 0
 
   const stopPolling = (jobId) => {
     const t = pollingRef.current.get(jobId)
@@ -113,16 +113,16 @@ export default function ProjectUpload() {
   useEffect(() => {
     let cancelled = false
 
-    ;(async () => {
-      if (cancelled) return
-      stopAllPolling()
-      setJobProgress({})
-      setTagJobMap({})
-      await refreshTagsAndAttachProgress()
+      ; (async () => {
+        if (cancelled) return
+        stopAllPolling()
+        setJobProgress({})
+        setTagJobMap({})
+        await refreshTagsAndAttachProgress()
 
-      // second refresh handles race after upload
-      setTimeout(refreshTagsAndAttachProgress, 2000)
-    })()
+        // second refresh handles race after upload
+        setTimeout(refreshTagsAndAttachProgress, 2000)
+      })()
 
     return () => {
       cancelled = true
@@ -166,39 +166,39 @@ export default function ProjectUpload() {
   // }
 
   const handleDeleteTag = async (tagName) => {
-  setDeletingTag(tagName)
+    setDeletingTag(tagName)
 
-  try {
-    const files = await ingestionApi.listFilesInTag(
-      projectId,
-      activeDataset,
-      tagName
-    )
-
-    await Promise.all(
-      (files || []).map((file) =>
-        file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
+    try {
+      const files = await ingestionApi.listFilesInTag(
+        projectId,
+        activeDataset,
+        tagName
       )
-    )
 
-    setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
+      await Promise.all(
+        (files || []).map((file) =>
+          file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
+        )
+      )
 
-    setTagJobMap((prev) => {
-      const copy = { ...prev }
-      delete copy[tagName]
-      return copy
-    })
+      setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
 
-    if (selectedTag === tagName) setSelectedTag(null)
-  } catch (err) {
-    window.alert(
-      err?.response?.data?.detail || err.message || "Delete failed"
-    )
-  } finally {
-    setDeletingTag(null)
-    setConfirmDelete({ open: false, tagName: null })
+      setTagJobMap((prev) => {
+        const copy = { ...prev }
+        delete copy[tagName]
+        return copy
+      })
+
+      if (selectedTag === tagName) setSelectedTag(null)
+    } catch (err) {
+      window.alert(
+        err?.response?.data?.detail || err.message || "Delete failed"
+      )
+    } finally {
+      setDeletingTag(null)
+      setConfirmDelete({ open: false, tagName: null })
+    }
   }
-}
 
   const onCloseModal = async () => {
     setModal({ open: false, mode: 'create', tag: '' })
@@ -208,154 +208,154 @@ export default function ProjectUpload() {
 
   /* ================= Render ================= */
   return (
-   
+
     <div className="UploadWapper">
       {/* Header */}
-      
-        <div className='statscard'>
-          <label className='projectTitle'>{project?.project_name}</label>
-             <span className='projectActive' >
-                      Active
-                    </span>
-        </div>  
-                
-              
+
+      <div className='statscard'>
+        <label className='projectTitle'>{project?.project_name}</label>
+        <span className='projectActive' >
+          Active
+        </span>
+      </div>
+
+
 
       {/* Dataset tabs */}
       {!selectedTag && (
-      <div className="UploadCard">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div className="tablist">
-        {DATASET_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className={activeDataset === tab.key ? 'active' : ''}
-            onClick={() => {
-              setActiveDataset(tab.key)
-              setSelectedTag(null)
-            }}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        <div className="UploadCard">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="tablist">
+              {DATASET_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  className={activeDataset === tab.key ? 'active' : ''}
+                  onClick={() => {
+                    setActiveDataset(tab.key)
+                    setSelectedTag(null)
+                  }}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-         <button
-          className="projectUploadLink"
-          type="button"
-          onClick={() => setModal({ open: true, mode: 'create', tag: '' })}
-        >
-          <img className="actionBtn" src={Plus} alt="plus"/>
-          Upload File
-        </button>
-      </div>
+            <button
+              className="projectUploadLink"
+              type="button"
+              onClick={() => setModal({ open: true, mode: 'create', tag: '' })}
+            >
+              <img className="actionBtn" src={Plus} alt="plus" />
+              Upload File
+            </button>
+          </div>
 
-      {/* ================= TAG LIST ================= */}
-      
-        <table className="DataTable">
-          <thead>
-            <tr>
-              <th className="tablehead">
-                <span className="th-content">
-                 <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>Tag/Folder Name
-                 </span>
-                 </th>
-              <th className="tablehead">
-                <span className="th-content">
-                <img style={{width:'20px', height:'20px'}} src={CalendarBlank} alt="calendar" />Created Date
-                </span>
+          {/* ================= TAG LIST ================= */}
+
+          <table className="DataTable">
+            <thead>
+              <tr>
+                <th className="tablehead">
+                  <span className="th-content">
+                    <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />Tag/Folder Name
+                  </span>
                 </th>
-                
-              <th >Action</th>
-              <th>Go to</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tags.map((tag) => {
-              const jobId = tagJobMap[tag.tag_name]
-              const jp = jobId ? jobProgress[jobId] : null
-              const status = (jp?.status || '').toLowerCase()
-              const showProgress = jp && !['success', 'failure'].includes(status)
+                <th className="tablehead">
+                  <span className="th-content">
+                    <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />Created Date
+                  </span>
+                </th>
 
-              return (
-                <tr key={tag.tag_name}>
-                  <td>
-                    <div style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
-                      <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
-                                                      <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
-                      {tag.tag_name}
-                      </div>
-                      </div>
+                <th >Action</th>
+                <th>Go to</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tags.map((tag) => {
+                const jobId = tagJobMap[tag.tag_name]
+                const jp = jobId ? jobProgress[jobId] : null
+                const status = (jp?.status || '').toLowerCase()
+                const showProgress = jp && !['success', 'failure'].includes(status)
 
-                    {showProgress && (
-                      <div style={{ marginTop: 8, maxWidth: 360 }}>
-                        <div className="progress-bar">
-                          <div
-                            className="progress-bar__value"
-                            style={{ width: `${jp.progress ?? 5}%` }}
-                          />
+                return (
+                  <tr key={tag.tag_name}>
+                    <td>
+                      <div style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
+                        <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+                          <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />
+                          {tag.tag_name}
                         </div>
+                      </div>
+
+                      {showProgress && (
+                        <div style={{ marginTop: 8, maxWidth: 360 }}>
+                          <div className="progress-bar">
+                            <div
+                              className="progress-bar__value"
+                              style={{ width: `${jp.progress ?? 5}%` }}
+                            />
+                          </div>
+                          <div className="summary-label" style={{ marginTop: 6 }}>
+                            {jp.message || jp.status} ({jp.progress ?? 0}%)
+                          </div>
+                        </div>
+                      )}
+
+                      {!showProgress && jp && (
                         <div className="summary-label" style={{ marginTop: 6 }}>
-                          {jp.message || jp.status} ({jp.progress ?? 0}%)
+                          {status === 'success'
+                            ? 'Processed ✅'
+                            : `Failed ❌ (${jp.message || 'error'})`}
                         </div>
+                      )}
+                    </td>
+
+                    <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
+                      <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+                        <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
+                        {tag.latest_created_at
+                          ? new Date(tag.latest_created_at).toLocaleDateString()
+                          : '-'}
                       </div>
-                    )}
+                    </td>
 
-                    {!showProgress && jp && (
-                      <div className="summary-label" style={{ marginTop: 6 }}>
-                        {status === 'success'
-                          ? 'Processed ✅'
-                          : `Failed ❌ (${jp.message || 'error'})`}
-                      </div>
-                    )}
-                  </td>
+                    <td >
+                      <button
+                        style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+                        type="button"
+                        onClick={() => setModal({ open: true, mode: 'edit', tag: tag.tag_name })}
+                      >
+                        <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="pencil" />
+                      </button>
+                      <button
+                        style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center', marginLeft: 8 }}
+                        type="button"
+                        // onClick={() => handleDeleteTag(tag.tag_name)}
+                        onClick={() => setConfirmDelete({ open: true, tagName: tag.tag_name })}
 
-                  <td style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
-                    <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
-                    <img style={{width:'20px', height:'20px'}} src={CalendarBlank} alt="calendar" />
-                    {tag.latest_created_at
-                      ? new Date(tag.latest_created_at).toLocaleDateString()
-                      : '-'}
-                    </div>
-                  </td>
-                 
-                  <td >
-                    <button
-                    style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}
-                      type="button"
-                      onClick={() => setModal({ open: true, mode: 'edit', tag: tag.tag_name })}
-                    >
-                      <img style={{width:'20px', height:'20px'}} src={PencilSimple} alt="pencil"/>
-                    </button>
-                    <button
-                      style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',marginLeft: 8}}
-                      type="button"
-                      // onClick={() => handleDeleteTag(tag.tag_name)}
-                      onClick={() =>setConfirmDelete({ open: true, tagName: tag.tag_name })}
+                        disabled={deletingTag === tag.tag_name}
+                      >
+                        {deletingTag === tag.tag_name ? '...' : ''}
+                        <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
 
-                      disabled={deletingTag === tag.tag_name}
-                    >
-                      {deletingTag === tag.tag_name ? '...' : ''}
-                      <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
-                      
-                    </button>
-                  </td>
-                 
-                  <td>
-                    <button
-                      className="projectlink"
-                      type="button"
-                      onClick={() => setSelectedTag(tag.tag_name)}
-                    >
-                      <img style={{width:'24px', height:'24px'}} className="actionBtn" src={ArrowRight} alt="arrow"/>
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                      </button>
+                    </td>
+
+                    <td>
+                      <button
+                        className="projectlink"
+                        type="button"
+                        onClick={() => setSelectedTag(tag.tag_name)}
+                      >
+                        <img style={{ width: '24px', height: '24px' }} className="actionBtn" src={ArrowRight} alt="arrow" />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -382,17 +382,19 @@ export default function ProjectUpload() {
       )}
 
       {confirmDelete.open && (
-  <ConfirmationModal
-    title={`Delete "${confirmDelete.tagName}"?`}
-    onCancel={() =>
-      setConfirmDelete({ open: false, tagName: null })
-    }
-    onConfirm={() =>
-      handleDeleteTag(confirmDelete.tagName)
-    }
-  />
-)}
+        <ConfirmationModal
+          title={`Delete "${confirmDelete.tagName}"?`}
+          onCancel={() =>
+            setConfirmDelete({ open: false, tagName: null })
+          }
+          onConfirm={() =>
+            handleDeleteTag(confirmDelete.tagName)
+          }
+        />
+      )}
 
     </div>
+
+
   )
 }

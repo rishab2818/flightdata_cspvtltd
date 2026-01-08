@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
-import { LazyTileCard } from '../../../components/viz/LazyTileCard'
+
 import './ProjectVisualisation.css'
 
 import ChartLine1 from '../../../assets/ChartLine1.svg'
-import DownloadSimple from '../../../assets/DownloadSimple.svg'
+
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import blackPloticon from '../../../assets/ChartLine.svg'
@@ -34,6 +34,8 @@ const CHART_TYPES = [
 ]
 
 const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
+window.__FD_API_BASE__ = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 
 const newSeries = (n = 1) => ({
   id: `s-${Date.now()}-${n}`,
@@ -48,6 +50,10 @@ const newSeries = (n = 1) => ({
 })
 
 export default function ProjectVisualisation() {
+  useEffect(() => {
+    window.__FD_API_BASE__ = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  }, [])
+
   const { projectId } = useParams()
   const { project } = useOutletContext()
 
