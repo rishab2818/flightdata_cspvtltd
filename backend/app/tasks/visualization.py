@@ -1,6 +1,8 @@
+
 import io
 import os
 import tempfile
+import json
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -19,6 +21,7 @@ from app.repositories.notifications import create_sync_notification
 
 CHUNK_SIZE = 250_000
 LOD_LEVELS = (256, 1024, 4096)
+
 
 
 def _set_status(redis, viz_id: str, status: str, progress: int, message: str):
@@ -54,9 +57,7 @@ def _iter_chunks(url: str, ext: str, x_axis: str, y_axis: str | None):
     read_kwargs = {"usecols": columns, "on_bad_lines": "skip"}
 
     if ext in {".csv"}:
-        iterator = pd.read_csv(
-            url, chunksize=CHUNK_SIZE, low_memory=False, **read_kwargs
-        )
+        iterator = pd.read_csv(url, chunksize=CHUNK_SIZE, low_memory=False, **read_kwargs)
     elif ext in {".txt", ".dat"}:
         iterator = pd.read_csv(
             url,
@@ -69,7 +70,6 @@ def _iter_chunks(url: str, ext: str, x_axis: str, y_axis: str | None):
     elif ext in {".parquet", ".pq", ".feather", ".arrow"}:
         iterator = _iter_parquet_batches(url, columns)
     elif ext in {".xlsx", ".xls", ".xlsm"}:
-        # pandas does not support streaming Excel reads; fall back to a single frame.
         frame = pd.read_excel(url, usecols=columns, engine="openpyxl")
         yield frame
         return
@@ -79,7 +79,6 @@ def _iter_chunks(url: str, ext: str, x_axis: str, y_axis: str | None):
     yield from iterator
 
 
-## for the other plots 
 def _sample_xy(
     url: str,
     ext: str,
@@ -87,10 +86,6 @@ def _sample_xy(
     y_axis: str | None,
     max_points: int = 120_000,
 ) -> pd.DataFrame:
-    """
-    Stream chunks and return up to max_points rows for chart types
-    that need raw points (histogram/box/violin/heatmap/polar).
-    """
     cols = [c for c in [x_axis, y_axis] if c]
     if not cols:
         return pd.DataFrame()
@@ -99,10 +94,8 @@ def _sample_xy(
     kept_n = 0
 
     for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis):
-        # Keep only needed cols
         chunk = chunk[cols].copy()
 
-        # numeric coerce (common for excel/csv mixed types)
         for c in cols:
             chunk[c] = pd.to_numeric(chunk[c], errors="coerce")
 
@@ -115,7 +108,6 @@ def _sample_xy(
             break
 
         if len(chunk) > remaining:
-            # random sample to fit budget
             chunk = chunk.sample(n=remaining, random_state=42)
 
         kept.append(chunk)
@@ -130,21 +122,18 @@ def _sample_xy(
     return pd.concat(kept, ignore_index=True)
 
 
-
 def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, int]:
     x_min = np.inf
     x_max = -np.inf
     rows = 0
 
     for chunk in _iter_chunks(url, ext, x_axis, None):
-        series = chunk[x_axis].dropna()
-        if series.empty:
+        s = pd.to_numeric(chunk[x_axis], errors="coerce").dropna()
+        if s.empty:
             continue
-        chunk_min = series.min()
-        chunk_max = series.max()
-        x_min = min(x_min, chunk_min)
-        x_max = max(x_max, chunk_max)
-        rows += len(series)
+        x_min = min(x_min, float(s.min()))
+        x_max = max(x_max, float(s.max()))
+        rows += len(s)
 
     if not np.isfinite(x_min) or not np.isfinite(x_max):
         raise ValueError("Unable to detect range for x-axis")
@@ -162,10 +151,12 @@ class LevelAccumulator:
         self.maxs = np.full(bins, -np.inf)
 
     def ingest(self, x: pd.Series, y: pd.Series):
+        # x/y are expected numeric already
         bin_index = np.digitize(x.to_numpy(), self.edges) - 1
         valid = (bin_index >= 0) & (bin_index < self.bins)
         if not np.any(valid):
             return
+
         df = pd.DataFrame({"bin": bin_index[valid], "y": y.to_numpy()[valid]})
         grouped = df.groupby("bin")["y"].agg(["count", "sum", "min", "max"])
 
@@ -209,33 +200,47 @@ def _materialize_tiles(
     x_min, x_max, rows = _scan_axis_bounds(url, ext, x_axis)
     if x_min == x_max:
         x_max = x_min + 1e-9
+
     accumulators = {bins: LevelAccumulator(bins, x_min, x_max) for bins in levels}
 
     tiles = []
     partitions = 0
 
     for chunk in _iter_chunks(url, ext, x_axis, y_axis):
+        # IMPORTANT: numeric coerce to avoid category-axis and digitize errors
+        chunk[x_axis] = pd.to_numeric(chunk[x_axis], errors="coerce")
+        chunk[y_axis] = pd.to_numeric(chunk[y_axis], errors="coerce")
         chunk = chunk.dropna(subset=[x_axis, y_axis])
         if chunk.empty:
             continue
+
         partitions += 1
         for acc in accumulators.values():
             acc.ingest(chunk[x_axis], chunk[y_axis])
 
     os.makedirs(tempfile.gettempdir(), exist_ok=True)
+
     for level, acc in accumulators.items():
         frame = acc.to_frame(x_axis, y_axis)
+        # Keep y_axis column name for zoom swaps (y_mean is the representative value).
+        frame = frame.rename(columns={"y_mean": y_axis})
+
         buffer = io.BytesIO()
         frame.to_parquet(buffer, index=False)
         buffer.seek(0)
+
         object_name = f"{base_key}/level_{level}.parquet"
+        # avoid buffer.getvalue() copy
+        length = buffer.getbuffer().nbytes
+
         minio.put_object(
             bucket_name=bucket,
             object_name=object_name,
             data=buffer,
-            length=len(buffer.getvalue()),
+            length=length,
             content_type="application/octet-stream",
         )
+
         tiles.append(
             {
                 "level": level,
@@ -249,77 +254,9 @@ def _materialize_tiles(
     overview_level = min(levels)
     overview_frame = accumulators[overview_level].to_frame(x_axis, y_axis)
 
-    return overview_frame, tiles, {"x_min": x_min, "x_max": x_max, "rows": rows, "partitions": partitions}
+    stats = {"x_min": x_min, "x_max": x_max, "rows": rows, "partitions": partitions}
+    return overview_frame, tiles, stats
 
-
-
-
-
-## For ploar 
-# def _build_figure(series_frames: list[dict], chart_type: str , show_error_bars: bool = False):
-#     chart_type = (chart_type or "scatter").lower()
-#     fig = go.Figure()
-
-#     for item in series_frames:
-#         series = item["series"]
-#         df = item["frame"]
-
-#         label = series.get("label") or series.get("y_axis") or "Series"
-#         x_col = series["x_axis"]
-#         y_col = series["y_axis"]
-
-#         min_col = f"{y_col}_min"
-#         max_col = f"{y_col}_max"
-
-#         error_y = None
-#         if show_error_bars:
-#             min_col = f"{y_col}_min"
-#             max_col = f"{y_col}_max"
-#             if {min_col, max_col}.issubset(df.columns):
-#                 error_y = dict(
-#                     type="data",
-#                     symmetric=False,
-#                     array=(df[max_col] - df[y_col]).tolist(),
-#                     arrayminus=(df[y_col] - df[min_col]).tolist(),
-#                     thickness=0.8,
-#                 )
-
-#         # ✅ POLAR
-#         if chart_type == "polar":
-#             fig.add_trace(
-#                 go.Scatterpolar(
-#                     name=label,
-#                     theta=df[x_col],   # angle
-#                     r=df[y_col],       # radius
-#                     mode="lines+markers",
-#                 )
-#             )
-#             continue
-
-#         # ✅ CARTESIAN (existing)
-#         if chart_type == "bar":
-#             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
-#         elif chart_type == "line":
-#             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", error_y=error_y)
-#         else:
-#             fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
-
-#     fig.update_layout(
-#         template="plotly_white",
-#         title="Overplot",
-#         legend_title_text="Series",
-#     )
-
-#     # ✅ Add polar layout if polar
-#     if chart_type == "polar":
-#         fig.update_layout(
-#             polar=dict(
-#                 angularaxis=dict(direction="counterclockwise"),  # optional
-#                 radialaxis=dict(visible=True),
-#             )
-#         )
-
-#     return fig
 
 def _build_figure(series_frames: list[dict], chart_type: str):
     chart_type = (chart_type or "scatter").lower().strip()
@@ -333,44 +270,35 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         x_col = series.get("x_axis")
         y_col = series.get("y_axis")
 
-        # ---------- Error bars (only when we have min/max columns) ----------
-        error_y = None
-        if y_col and f"{y_col}_min" in df.columns and f"{y_col}_max" in df.columns and y_col in df.columns:
-            error_y = {
-                "type": "data",
-                "symmetric": False,
-                "array": (df[f"{y_col}_max"] - df[y_col]).tolist(),
-                "arrayminus": (df[y_col] - df[f"{y_col}_min"]).tolist(),
-                "thickness": 0.8,
-            }
+        # For safety: avoid category axes when numeric
+        if x_col in df.columns:
+            df[x_col] = pd.to_numeric(df[x_col], errors="ignore")
+        if y_col in df.columns:
+            df[y_col] = pd.to_numeric(df[y_col], errors="ignore")
 
-        # ---------- Chart Types ----------
         if chart_type == "bar":
             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
 
         elif chart_type == "line":
-            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="lines", )
+            # Scattergl is faster even for lines in many cases
+            fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="lines"))
 
         elif chart_type == "scatter":
-            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers", opacity=0.8)
+            fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers", opacity=0.8))
+
         elif chart_type == "scatterline":
-            fig.add_scatter(
-                name=label,
-                x=df[x_col],
-                y=df[y_col],
-                mode="markers+lines",
-                marker=dict(color="red" ,),
-                line=dict(color='#1976D2',width=0.5)
-                
+            fig.add_trace(
+                go.Scattergl(
+                    name=label,
+                    x=df[x_col],
+                    y=df[y_col],
+                    mode="markers+lines",
+                    marker=dict(color="red"),
+                    line=dict(color="#1976D2", width=0.5),
                 )
-
-
-        # elif chart_type == "scatterline":
-        #     # optional: if you want explicit scatter+line
-        #     fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, error_y=error_y)
+            )
 
         elif chart_type == "polar":
-            # x -> theta, y -> r
             fig.add_trace(
                 go.Scatterpolar(
                     name=label,
@@ -380,32 +308,20 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 )
             )
 
-        ## for the contour plot 
         elif chart_type == "contour":
             fig.add_trace(
                 go.Histogram2dContour(
                     x=df[x_col],
                     y=df[y_col],
-                    contours=dict(
-                        coloring="lines",   # lines-only contour
-                        showlabels=True
-                    ),
+                    contours=dict(coloring="lines", showlabels=True),
                     line=dict(width=1),
-                    showscale=False,       # keep legend clean
+                    showscale=False,
                     name=label,
                 )
             )
-
 
         elif chart_type == "histogram":
-            # histogram of Y values per series
-            fig.add_trace(
-                go.Histogram(
-                    name=label,
-                    x=df[y_col],
-                    opacity=0.75,
-                )
-            )
+            fig.add_trace(go.Histogram(name=label, x=df[y_col], opacity=0.75))
 
         elif chart_type == "box":
             fig.add_trace(go.Box(name=label, y=df[y_col], boxpoints="outliers"))
@@ -422,7 +338,6 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
 
         elif chart_type == "heatmap":
-            # 2D density heatmap (x vs y)
             fig.add_trace(
                 go.Histogram2d(
                     name=label,
@@ -435,17 +350,14 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
 
         else:
-            # fallback to a safe default
-            fig.add_scatter(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8, )
+            fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8))
 
-    # ---------- Layout ----------
     fig.update_layout(
         template="plotly_white",
         title="Overplot",
         legend_title_text="Series",
     )
 
-    # Polar layout enhancement
     if chart_type == "polar":
         fig.update_layout(
             polar=dict(
@@ -453,17 +365,179 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 angularaxis=dict(showgrid=True),
             )
         )
-    
-    if chart_type == "contour":
-        fig.update_layout(
-            xaxis_title=x_col,
-            yaxis_title=y_col,
-        )
 
+    if chart_type == "contour":
+        # best-effort titles (from last series)
+        fig.update_layout(xaxis_title=x_col, yaxis_title=y_col)
 
     return fig
 
+def _build_zoom_loader_script(
+    viz_id: str,
+    chart_type: str,
+    series_meta: list[dict],
+    series_stats: list[dict],
+):
+    """
+    Injected into HTML. On x-zoom, swaps trace data:
+    - zoomed out: /tiles with LOD 256/1024/4096
+    - deep zoom: /raw (true points in view)
 
+    IMPORTANT:
+    - Uses absolute API base to avoid Vite (5173) returning index.html (<!doctype ...>) for /api calls.
+    - Reads API base from:
+        1) window.__FD_API_BASE__ inside iframe (if you set it), else
+        2) window.parent.__FD_API_BASE__ (from React), else
+        3) http://localhost:8000 (fallback)
+    """
+    if chart_type not in {"scatter", "scatterline", "line", "bar"}:
+        return ""
+
+    payload = {
+        "vizId": viz_id,
+        "levels": list(LOD_LEVELS),
+        "seriesMeta": series_meta,
+        "seriesStats": series_stats,
+    }
+
+    return f"""
+(function() {{
+  const cfg = {json.dumps(payload)};
+  const gd = document.querySelector('.plotly-graph-div');
+  if (!gd || !window.Plotly) return;
+
+  // ✅ Resolve API base (avoid hitting Vite index.html)
+  const API_BASE =
+    (window.__FD_API_BASE__ && String(window.__FD_API_BASE__)) ||
+    (window.parent && window.parent.__FD_API_BASE__ && String(window.parent.__FD_API_BASE__)) ||
+    "http://localhost:8000";
+
+  function joinUrl(base, path) {{
+    const b = base.endsWith("/") ? base.slice(0, -1) : base;
+    const p = path.startsWith("/") ? path : ("/" + path);
+    return b + p;
+  }}
+
+  // debounce relayout storms
+  let timer = null;
+  function debounce(fn) {{
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(fn, 250);
+  }}
+
+  function chooseMode(stat, xmin, xmax) {{
+    const total = Math.abs(
+      (stat && stat.x_max !== undefined ? stat.x_max : NaN) -
+      (stat && stat.x_min !== undefined ? stat.x_min : NaN)
+    );
+    const span = Math.abs(xmax - xmin);
+
+    if (!isFinite(total) || total <= 0 || !isFinite(span) || span <= 0) {{
+      return {{ mode: "tile", level: cfg.levels[1] }};
+    }}
+
+    const ratio = span / total;
+    const totalRows = Number(stat && stat.rows ? stat.rows : 0);
+    const expected = totalRows ? (totalRows * ratio) : Infinity;
+
+    const RAW_BUDGET = 2000000;
+
+    // ✅ Switch to raw when expected points are manageable
+    if (expected <= RAW_BUDGET) {{
+      return {{ mode: "raw" }};
+    }}
+
+    // otherwise tiles by zoom
+    if (ratio > 0.40) return {{ mode: "tile", level: cfg.levels[0] }};
+    if (ratio > 0.12) return {{ mode: "tile", level: cfg.levels[1] }};
+    return {{ mode: "tile", level: cfg.levels[2] }};
+  }}
+
+  function getToken() {{
+    try {{
+      if (window.localStorage) {{
+        const t = window.localStorage.getItem("token");
+        if (t) return t;
+      }}
+    }} catch (e) {{}}
+    try {{
+      if (window.parent && window.parent.localStorage) {{
+        const t = window.parent.localStorage.getItem("token");
+        if (t) return t;
+      }}
+    }} catch (e) {{}}
+    return null;
+  }}
+
+  async function updateTrace(i, xmin, xmax) {{
+    const meta = cfg.seriesMeta[i] || {{}};
+    const stat = cfg.seriesStats[i] || {{}};
+    const mode = chooseMode(stat, xmin, xmax);
+
+    const xAxis = meta.x_axis;
+    const yAxis = meta.y_axis;
+    if (!xAxis || !yAxis) return;
+
+    let path = "";
+    if (mode.mode === "raw") {{
+      path = `/api/visualizations/${{cfg.vizId}}/raw?series=${{i}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}&max_points=2000000`;
+    }} else {{
+      path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{mode.level}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}`;
+    }}
+
+    const url = joinUrl(API_BASE, path);
+
+    let res;
+    try {{
+      const token = getToken();
+      const headers = token ? {{ Authorization: `Bearer ${{token}}` }} : {{}};
+      res = await fetch(url, {{ credentials: "include", headers }});
+    }} catch (e) {{
+      console.warn("zoom-fetch failed", e);
+      return;
+    }}
+
+    // ✅ If backend returned HTML (<!doctype...), log and stop (prevents JSON parse crash)
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+    if (!res.ok) {{
+      const txt = await res.text();
+      console.warn("zoom-api error", res.status, txt.slice(0, 200));
+      return;
+    }}
+    if (!contentType.includes("application/json")) {{
+      const txt = await res.text();
+      console.warn("zoom-api non-json", contentType, txt.slice(0, 200));
+      return;
+    }}
+
+    const js = await res.json();
+    const rows = js.data || [];
+    if (!rows.length) return;
+
+    const xs = rows.map(r => r[xAxis]);
+    const ys = rows.map(r => r[yAxis]);
+
+    Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
+  }}
+
+  gd.on('plotly_relayout', (ev) => {{
+    const r0 = ev["xaxis.range[0]"];
+    const r1 = ev["xaxis.range[1]"];
+    if (r0 === undefined || r1 === undefined) return;
+
+    const xmin = Number(r0);
+    const xmax = Number(r1);
+    if (!isFinite(xmin) || !isFinite(xmax)) return;
+
+    debounce(() => {{
+      const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+      for (let i = 0; i < n; i++) {{
+        updateTrace(i, xmin, xmax);
+      }}
+    }});
+  }});
+}})();
+"""
 
 
 
@@ -471,16 +545,21 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 def generate_visualization(self, viz_id: str):
     redis = get_sync_redis()
     db = get_sync_db()
+
+    owner_email = None
     try:
         doc = db.visualizations.find_one({"_id": ObjectId(viz_id)})
         if not doc:
             return
+
         owner_email = doc.get("owner_email")
+
         series_list = doc.get("series") or []
         if not series_list and doc.get("y_axis"):
             series_list = [
                 {
                     "job_id": doc.get("job_id"),
+                    "x_axis": doc.get("x_axis"),
                     "y_axis": doc.get("y_axis"),
                     "label": doc.get("y_axis"),
                     "filename": doc.get("filename", "dataset"),
@@ -500,14 +579,15 @@ def generate_visualization(self, viz_id: str):
         series_jobs: list[dict] = []
         for series in series_list:
             job_id = series.get("job_id")
+            x_axis = series.get("x_axis")
             y_axis = series.get("y_axis")
-            if not job_id or not y_axis:
+            if not job_id or not x_axis or not y_axis:
                 _update_db_status(
                     db,
                     viz_id,
                     status=states.FAILURE,
                     progress=100,
-                    message="Series missing dataset or Y axis",
+                    message="Series missing dataset or X/Y axis",
                 )
                 return
 
@@ -531,14 +611,25 @@ def generate_visualization(self, viz_id: str):
         bucket = settings.visualization_bucket
         if not minio.bucket_exists(bucket):
             minio.make_bucket(bucket)
+
         series_frames = []
         tile_metadata = []
         stats_metadata = []
+        series_meta_for_js = []
+        stats_for_js = []
+
+        chart_type = (doc.get("chart_type") or "scatter").lower().strip()
+
+        RAW_TYPES = {"polar", "histogram", "box", "violin", "heatmap", "contour"}
+        TILED_TYPES = {"scatter", "scatterline", "line", "bar"}
 
         for idx, item in enumerate(series_jobs, start=1):
             job = item["job"]
+            series = item["series"]
+            x_axis = series["x_axis"]
+            y_axis = series["y_axis"]
 
-            # ✅ Prefer processed parquet if available
+            # Prefer processed parquet (best for /raw endpoint too)
             if job.get("processed_key"):
                 data_url = minio.presigned_get_object(
                     bucket_name=settings.ingestion_bucket,
@@ -547,7 +638,6 @@ def generate_visualization(self, viz_id: str):
                 )
                 ext = ".parquet"
             else:
-                # fallback only if processed not available
                 data_url = minio.presigned_get_object(
                     bucket_name=settings.ingestion_bucket,
                     object_name=job["storage_key"],
@@ -555,46 +645,7 @@ def generate_visualization(self, viz_id: str):
                 )
                 ext = os.path.splitext(job.get("filename", "").lower())[-1]
 
-
-            # _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
-            # base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
-            # x_axis = item["series"]["x_axis"]
-            # y_axis = item["series"]["y_axis"]
-            # overview, tiles, stats = _materialize_tiles(
-            #         minio,
-            #         bucket,
-            #         base_key,
-            #         data_url,
-            #         ext,
-            #         x_axis,
-            #         y_axis,
-                
-            # )
-
-           
-            # x_col = item["series"]["x_axis"]
-            # y_col = item["series"]["y_axis"]
-
-            # display_frame = overview.rename(
-            #     columns={
-            #         "y_mean": y_col,
-            #         "y_min": f"{y_col}_min",
-            #         "y_max": f"{y_col}_max",
-            #     }
-            # )
-
-
-            # series_frames.append({"series": item["series"], "frame": display_frame})
-            # tile_metadata.append({"series": item["series"], "tiles": tiles})
-            # stats_metadata.append({"series": item["series"], "stats": stats})
-
-            chart_type = (doc.get("chart_type") or "scatter").lower().strip()
-
-            RAW_TYPES = {"polar", "histogram", "box", "violin", "heatmap" , "contour"}
-            TILED_TYPES = {"scatter", "line", "bar", }
-
-            x_axis = item["series"]["x_axis"]
-            y_axis = item["series"]["y_axis"]
+            series_meta_for_js.append({"x_axis": x_axis, "y_axis": y_axis})
 
             if chart_type in TILED_TYPES:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
@@ -618,21 +669,15 @@ def generate_visualization(self, viz_id: str):
                     }
                 )
 
-                series_frames.append({"series": item["series"], "frame": display_frame})
-                tile_metadata.append({"series": item["series"], "tiles": tiles})
-                stats_metadata.append({"series": item["series"], "stats": stats})
+                series_frames.append({"series": series, "frame": display_frame})
+                tile_metadata.append({"series": series, "tiles": tiles})
+                stats_metadata.append({"series": series, "stats": stats})
+                stats_for_js.append(stats)
 
             else:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Sampling points for series {idx}")
 
-                raw_df = _sample_xy(
-                    data_url,
-                    ext,
-                    x_axis,
-                    y_axis,
-                    max_points=120_000,
-                )
-
+                raw_df = _sample_xy(data_url, ext, x_axis, y_axis, max_points=120_000)
                 if raw_df.empty:
                     _update_db_status(
                         db,
@@ -643,21 +688,37 @@ def generate_visualization(self, viz_id: str):
                     )
                     return
 
-                series_frames.append({"series": item["series"], "frame": raw_df})
-                tile_metadata.append({"series": item["series"], "tiles": []})
-                stats_metadata.append({"series": item["series"], "stats": {"note": "raw_chart_no_tiles"}})
-
-
+                series_frames.append({"series": series, "frame": raw_df})
+                tile_metadata.append({"series": series, "tiles": []})
+                stats_metadata.append({"series": series, "stats": {"note": "raw_chart_no_tiles"}})
+                stats_for_js.append({})  # no LOD switching for these charts
 
         _set_status(redis, viz_id, states.STARTED, 60, "Building Plotly figure")
-        fig = _build_figure(series_frames, doc.get("chart_type", "scatter"))
-        # fig = _build_figure(series_frames, doc["x_axis"], doc.get("chart_type", "scatter"))
-        html = pio.to_html(fig, include_plotlyjs=True, full_html=True)
-        # html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
+        fig = _build_figure(series_frames, chart_type)
+
+        # Ensure numeric-style x-axis zoom (prevents category zoom weirdness)
+        if chart_type in {"scatter", "scatterline", "line", "bar"}:
+            fig.update_xaxes(type="linear")
+
+        post_script = _build_zoom_loader_script(
+            viz_id=viz_id,
+            chart_type=chart_type,
+            series_meta=series_meta_for_js,
+            series_stats=stats_for_js,
+        )
+
+        # Use CDN to keep HTML smaller (faster)
+        html = pio.to_html(
+            fig,
+            include_plotlyjs="cdn",
+            full_html=True,
+            post_script=post_script,
+        )
 
         _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")
         html_bytes = html.encode("utf-8")
         html_key = f"projects/{doc['project_id']}/visualizations/{viz_id}.html"
+
         minio.put_object(
             bucket_name=bucket,
             object_name=html_key,
@@ -678,14 +739,16 @@ def generate_visualization(self, viz_id: str):
             tiles=tile_metadata,
             series_stats=stats_metadata,
         )
+
         if owner_email:
             create_sync_notification(
                 owner_email,
-                f"Visualization ready for {doc.get('chart_type', 'chart')} on {doc.get('x_axis')}",
+                f"Visualization ready for {doc.get('chart_type', 'chart')}",
                 title="Visualization complete",
                 category="visualization",
                 link=f"/app/projects/{doc.get('project_id')}/visualisation" if doc.get("project_id") else None,
             )
+
     except Exception as exc:  # noqa: BLE001
         _set_status(redis, viz_id, states.FAILURE, 100, str(exc))
         _update_db_status(db, viz_id, status=states.FAILURE, progress=100, message=str(exc))
