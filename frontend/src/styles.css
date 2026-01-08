@@ -1,8 +1,8 @@
-:root{
-  --bg:#F3F7FF;
-  --primary:#1E63E9;
-  --input-border:#DCE4F0;
-  --radius:10px;
+:root {
+  --bg: #F3F7FF;
+  --primary: #1E63E9;
+  --input-border: #DCE4F0;
+  --radius: 10px;
 
   /* Positioning knobs (percentages relative to the SVG container) */
   --email-top: 50%;
@@ -21,48 +21,102 @@
   --button-height: 5.2%;
 }
 
-*{box-sizing:border-box}
-html,body,#root{height:100%}
-body{
-  margin:0;
-  font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  color:#0F172A;
-  background:#ffffff; /* same blue as inside your SVG */
+* {
+  box-sizing: border-box
 }
-.stage{position:relative; height:100vh; width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden}
-.art{position:relative; width:min(1200px, 92vw);}
-.art img.bg{display:block; width:100%; height:auto;}
 
-.svg-form{position:absolute; inset:0;}
+html,
+body,
+#root {
+  height: 100%
+}
+
+body {
+  margin: 0;
+  font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color: #0F172A;
+  background: #1976d2;
+  /* same blue as inside your SVG */
+}
+
+.stage {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden
+}
+
+.art {
+  position: relative;
+  width: min(1200px, 92vw);
+}
+
+.art img.bg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.svg-form {
+  position: absolute;
+  inset: 0;
+}
+
 .svg-form input,
-.svg-form button{position:absolute; border-radius: var(--radius); outline:none}
-
-.svg-form input{border:1px solid var(--input-border); padding:10px 12px; background:#fff; font-size:14px}
-.svg-form input:focus{border-color:var(--primary); box-shadow:0 0 0 3px rgba(30,99,233,.12)}
-
-.svg-form .email{
-  top: var(--email-top); left: var(--email-left);
-  width: var(--email-width); height: var(--email-height);
-  transform: translate(0,-50%);
-}
-.svg-form .password{
-  top: var(--pass-top); left: var(--pass-left);
-  width: var(--pass-width); height: var(--pass-height);
-  transform: translate(0,-50%);
+.svg-form button {
+  position: absolute;
+  border-radius: var(--radius);
+  outline: none
 }
 
-.svg-form .submit{
-  top: var(--button-top); left: var(--button-left);
-  width: var(--button-width); height: var(--button-height);
-  background: var(--primary); color:#fff; border:0; font-weight:700; cursor:pointer;
-  transform: translate(0,-50%);
+.svg-form input {
+  border: 1px solid var(--input-border);
+  padding: 10px 12px;
+  background: #fff;
+  font-size: 14px
+}
+
+.svg-form input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(30, 99, 233, .12)
+}
+
+.svg-form .email {
+  top: var(--email-top);
+  left: var(--email-left);
+  width: var(--email-width);
+  height: var(--email-height);
+  transform: translate(0, -50%);
+}
+
+.svg-form .password {
+  top: var(--pass-top);
+  left: var(--pass-left);
+  width: var(--pass-width);
+  height: var(--pass-height);
+  transform: translate(0, -50%);
+}
+
+.svg-form .submit {
+  top: var(--button-top);
+  left: var(--button-left);
+  width: var(--button-width);
+  height: var(--button-height);
+  background: var(--primary);
+  color: #fff;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+  transform: translate(0, -50%);
 }
 
 /* make the real button invisible but clickable */
-.svg-form .submit{
+.svg-form .submit {
   background: transparent !important;
   color: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
 }
-
