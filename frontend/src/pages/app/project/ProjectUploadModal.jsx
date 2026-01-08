@@ -347,7 +347,7 @@ export default function UploadModal({
 
                             <div className="form-field">
 
-                            <label className="summaryLabel" style={{ marginTop: 8 }}>File Name/Tag</label>
+                            <label className="summaryLabel" style={{ marginTop: 8 }}>Folder / Tag Name</label>
                             <input
                                 className="input"
                                 placeholder="Write File Name/Tag"

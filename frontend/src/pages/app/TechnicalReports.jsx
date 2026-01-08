@@ -654,7 +654,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
             <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Description</span>
+            <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
             <textarea
               value={form.description}
               onChange={(e) => onChange("description", e.target.value)}

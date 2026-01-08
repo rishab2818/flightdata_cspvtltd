@@ -765,9 +765,6 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
       <div className="ActionModalCard">
         <div className="ModalHeader">
           <h3>My Action</h3>
-          <button type="button" className="CloseButton" onClick={onClose}>
-            X
-          </button>
         </div>
 
         <div className="ActionTabs">
@@ -841,7 +838,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                   type="text"
                   value={tag}
                   onChange={(e) => setTag(e.target.value)}
-                  className="textInput"
+                  className="TextInput"
                   required
                 />
               </div>
@@ -851,7 +848,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                   type="date"
                   value={meetingDate}
                   onChange={(e) => setMeetingDate(e.target.value)}
-                  className="textInput"
+                  className="TextIn"
                   required
                 />
               </div>
@@ -865,7 +862,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                     type="text"
                     value={actionOnInput}
                     onChange={(e) => setActionOnInput(e.target.value)}
-                    className="textInput"
+                    className="TextInput"
                     placeholder="Add new action owner"
                   />
                   <button
@@ -906,7 +903,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                       onChange={(e) =>
                         handleUpdateActionPoint(idx, "description", e.target.value)
                       }
-                      className="textInput"
+                      className="TextInput"
                     />
                   </div>
                   <div className="flex1">
@@ -917,7 +914,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                       onChange={(e) =>
                         handleUpdateActionPoint(idx, "assigned_to", e.target.value)
                       }
-                      className="textInput"
+                      className="TextInput"
                     />
                   </div>
                   <label className="toggleWrap">
@@ -947,14 +944,14 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                   value={apDescription}
                   onChange={(e) => setApDescription(e.target.value)}
                   placeholder="New action point"
-                  className="textInput"
+                  className="TextInput"
                 />
                 <input
                   type="text"
                   value={apAssignee}
                   onChange={(e) => setApAssignee(e.target.value)}
                   placeholder="Assign to"
-                  className="textInput"
+                  className="TextInput"
                 />
                 <button type="button" className="icon-btn" onClick={handleAddActionPoint}>
                   <FiPlus size={16} />

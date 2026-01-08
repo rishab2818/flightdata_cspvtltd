@@ -707,14 +707,31 @@ export default function StudentEngagement() {
     </select>
   </label>
 
-  {/* Notes – full width */}
-  <label className={`${styles.textAreaLabel} ${styles.fullWidth}`}>
+   <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
+            <textarea
+              value={form.remarks}
+              onChange={(e) => onChange("remarks", e.target.value)}
+              rows={3}
+              style={{
+                width:"100%",
+                borderRadius: "8px",
+                 border: "1px solid #e2e8f0",
+                padding: 10,
+                background: "#F3F3F5",
+                resize: "none",
+              }}
+            />
+          </label>
+
+ 
+  {/* <label className={`${styles.textAreaLabel} ${styles.fullWidth}`}>
     <span>Notes</span>
     <textarea
       value={form.notes}
       onChange={(e) => onChange("notes", e.target.value)}
     />
-  </label>
+  </label> */}
 
 </div>
 
