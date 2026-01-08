@@ -18,10 +18,10 @@ import styles from './UserOverview.module.css';
  *
  * Top 'Total Users' is all users length.
  */
-const Rocket = () => <img src={RocketIcon} alt="RocketIcon" style={{ width: 22.5, height: 16.53 }} />;
-const User3 = () => <img src={Usersthreeicon} alt="Usersthreeicon" style={{ width: 22.5, height: 16.53 }}/>;
-const Medal = () => <img src={medalicon} alt="medalicon" style={{ width: 22.5, height: 16.53 }} />;
-const Book = () => <img src={bookicon} alt="bookicon" style={{ width: 22.5, height: 16.53 }}/>;
+const Rocket = () => <img src={RocketIcon} alt="RocketIcon" style={{ width: 24, height: 24 }} />;
+const User3 = () => <img src={Usersthreeicon} alt="Usersthreeicon" style={{ width: 24, height:24 }}/>;
+const Medal = () => <img src={medalicon} alt="medalicon" style={{ width: 24, height: 24 }} />;
+const Book = () => <img src={bookicon} alt="bookicon" style={{ width: 24, height: 24 }}/>;
 const ROWS = [
   { role: 'GD', label: 'Group Directors', icon: <Medal /> },
   { role: 'TL', label: 'Team Leads', icon: <Rocket /> },
@@ -69,7 +69,7 @@ export default function UserOverview() {
       <CardContent className={styles.body}>
         {/* Header */}
 <div className={styles.header}>
-  <img src={SpeedometerIcon} alt="Speedometer Icon" style={{ color: '#0F172A', width: '24px', height: '24px' }} />
+  <img src={SpeedometerIcon} alt="Speedometer Icon" style={{ color: '#0F172A', width: '32px', height: '32px' }} />
   <div className={styles.headerTitle}>User Overview</div>
 </div>
 
@@ -97,7 +97,7 @@ export default function UserOverview() {
                   <div className={styles.itemCount}>{pad2(totals.byRole[row.role])}</div>
                   <div className={styles.itemLabel}>
                     {row.label}{' '}
-                    <span style={{ marginLeft: 8, verticalAlign: 'middle', color: '#0F172A' }}>
+                    <span className={styles.totalIcon}>
                       {row.icon}
                     </span>
                   </div>

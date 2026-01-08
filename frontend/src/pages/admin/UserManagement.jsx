@@ -1,9 +1,7 @@
 // src/pages/admin/UserManagement.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { FiSearch} from "react-icons/fi";
 import {
-  Box,
-  Card,
-  CardContent,
   TextField,
   IconButton,
   Tooltip,
@@ -20,10 +18,12 @@ import {
   DialogActions,
   Alert,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
+// import DeleteIcon from "@mui/icons-material/Delete";
 import KeyIcon from "@mui/icons-material/VpnKey";
 import { usersApi } from "../../api/usersApi";
+import "./UserManagement.css";
 import ChangePasswordDialog from "../../components/admin/ChangePasswordDialog";
+import Delete from '../../assets/Delete.svg'
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -50,7 +50,7 @@ export default function UserManagement() {
     load();
   }, []);
 
-  const filtered = React.useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter(
@@ -70,39 +70,50 @@ export default function UserManagement() {
   const removeUser = async (email) => {
     await usersApi.remove(email);
     await load();
+    setConfirm({ open: false, email: null });
   };
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center" }}>
-      <Card
-        sx={{
-          width: "min(1080px, 100%)",
-          borderRadius: 3,
-          boxShadow: "0 16px 40px rgba(15,23,42,0.08)",
-          padding:"20px",
-        }}
-      >
-        <label sx={{marginTop:"10px",color:"#000000", fontSize:"24px", fontWeight:"400"}}>Manage User Login</label>
-        <CardContent sx={{ p: 2, display: "grid", gridTemplateRows: "auto 1fr", gap: 1 }}>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-            <TextField
-              placeholder="Enter name"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+    <div className="user-management-page">
+      <div className="user-management-card">
+
+        <div className="user-management-title">
+          Manage User Login
+        </div>
+
+        <div className="user-management-content">
+          <div className="user-management-toolbar">
+            <div className="searchBox">
+         
+                                    <FiSearch size={16} color="#64748b" />
+                                    <input
+                                      className="user-management-search"
+                                      placeholder="Search by name, email or role"
+                                      value={search}
+                                      onChange={(e) => setSearch(e.target.value)}
+                                    />
+                    </div>
+
+            <div className="user-management-spacer" />
+
+            <Button
+              variant="outlined"
               size="small"
-              sx={{ width: { xs: "100%", sm: 320 } }}
-            />
-            <Box sx={{ flex: 1 }} />
-            <Button variant="outlined" size="small" onClick={load} disabled={busy}>
+              onClick={load}
+              disabled={busy}
+              className="RefreshButton"
+            >
               Refresh
             </Button>
-          </Box>
+          </div>
 
-          <Box sx={{ overflow: "auto", border: "1px solid #E2E8F0", borderRadius: 2 }}>
+          {/* Table */}
+          <div className="user-management-table-wrapper">
             {error && <Alert severity="error">{error}</Alert>}
+
             <Table size="small" stickyHeader>
               <TableHead>
-                <TableRow>
+                <TableRow className="user-management-table-head">
                   <TableCell>Name</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Email</TableCell>
@@ -113,86 +124,85 @@ export default function UserManagement() {
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
+
               <TableBody>
-                {filtered.map((u) => {
-                  const name = [u.first_name, u.last_name].filter(Boolean).join(" ");
-                  const created = u.created_at?.replace("T", " ").slice(0, 19);
-                  const last = u.last_login_at
-                    ? u.last_login_at.replace("T", " ").slice(0, 19)
-                    : "—";
-                  return (
-                    <TableRow key={u.email} hover>
-                      <TableCell>{name || "—"}</TableCell>
-                      <TableCell>
-                        <Chip size="small" label={u.role} />
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>{u.access_level_value}</TableCell>
-                      <TableCell>
-                        <Chip
+                {filtered.map((u) => (
+                  <TableRow key={u.email} className="user-management-table-row">
+                    <TableCell>{u.first_name} {u.last_name}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={u.role} />
+                    </TableCell>
+                    <TableCell>{u.email}</TableCell>
+                    <TableCell>{u.access_level_value}</TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={u.is_active ? "Yes" : "No"}
+                        className={u.is_active ? "chip-active" : "chip-inactive"}
+                      />
+                    </TableCell>
+                    <TableCell>{u.created_at}</TableCell>
+                    <TableCell>{u.last_login_at || "—"}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Change password">
+                        <IconButton
                           size="small"
-                          label={u.is_active ? "Yes" : "No"}
-                          color={u.is_active ? "success" : "default"}
-                        />
-                      </TableCell>
-                      <TableCell>{created}</TableCell>
-                      <TableCell>{last}</TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Change password">
-                          <IconButton
-                            onClick={() => setPwdDlg({ open: true, email: u.email })}
-                            size="small"
-                          >
-                            <KeyIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete user">
-                          <IconButton
-                            onClick={() => setConfirm({ open: true, email: u.email })}
-                            size="small"
-                            sx={{ ml: 0.5 }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {!busy && filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      No users
+                          className="action-btn"
+                          onClick={() =>
+                            setPwdDlg({ open: true, email: u.email })
+                          }
+                        >
+                          <KeyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="Delete user">
+                        <IconButton
+                          size="small"
+                          className="action-btn delete"
+                          onClick={() =>
+                            setConfirm({ open: true, email: u.email })
+                          }
+                        > 
+                          <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
+                          {/* <DeleteIcon fontSize="small" /> */}
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
-          </Box>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
 
+      {/* Change Password Dialog */}
       <ChangePasswordDialog
         open={pwdDlg.open}
         email={pwdDlg.email}
         onClose={() => setPwdDlg({ open: false, email: null })}
-        onSubmit={(newPwd) => changePassword(pwdDlg.email, newPwd)}
+        onSubmit={(pwd) => changePassword(pwdDlg.email, pwd)}
       />
 
+      {/* Delete Confirmation */}
       <Dialog
         open={confirm.open}
         onClose={() => setConfirm({ open: false, email: null })}
-        aria-labelledby="confirm-delete"
       >
-        <DialogTitle id="confirm-delete">Delete user</DialogTitle>
-        <DialogContent>Are you sure you want to delete this user?</DialogContent>
+        <DialogTitle>Delete user</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this user?
+        </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirm({ open: false, email: null })}>Cancel</Button>
+          <Button onClick={() => setConfirm({ open: false, email: null })}>
+            Cancel
+          </Button>
           <Button color="error" onClick={() => removeUser(confirm.email)}>
             Delete
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

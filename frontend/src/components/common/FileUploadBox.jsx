@@ -30,7 +30,7 @@ export default function FileUploadBox({
       <div
         style={{
           borderRadius: 8,
-          border: `1px dashed ${BORDER}`,
+          // border: `1px dashed ${BORDER}`,
           padding: "32px 16px 28px",
           textAlign: "center",
         }}

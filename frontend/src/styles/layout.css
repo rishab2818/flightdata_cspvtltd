@@ -135,31 +135,47 @@
   position: relative;
 }
 
-.notification__button {
+.notification-btn {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+/* 🔔 Bell wrapper */
+.bell-container {
   position: relative;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  border-radius: 4px;
-  width: 55px;
-  height: 55px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  color: #0f172a;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
-.notification__badge {
+/* Bell icon */
+.bell-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 28px;
+  color: #0f172a;
+}
+
+/* 🔴 Perfect badge */
+.badge {
   position: absolute;
-  top: -6px;
+  top: -4px;
   right: -4px;
-  background: #ef4444;
-  color: #fff;
-  border-radius: 999px;
-  padding: 2px 6px;
+  width: 16px;
+  height: 16px;
+  background-color: #ff3b30 !important;
+  color: #ffffff;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  line-height: 1;
 }
 
 .notification__panel {
@@ -324,8 +340,9 @@
 .app-shell__main {
   flex: 1;
   overflow: auto;
-  padding: 12px 32px 28px 32px;
-  min-width: 0;
+  margin: 0 auto;
+  padding: 12px 12px 12px 12px;
+  width: 100%;
 }
 
 .app-shell__header--dashboard .header__title {
