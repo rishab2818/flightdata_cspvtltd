@@ -406,6 +406,9 @@ async def create_visualization(
             detail="Please include at least one Y axis series",
         )
 
+    chart_type = (payload.chart_type or "scatter").lower().strip()
+    requires_z = chart_type == "contour"
+
     series_docs = []
     for idx, item in enumerate(payload.series, start=1):
         job = await ingestions.get_job(item.job_id)
@@ -414,10 +417,16 @@ async def create_visualization(
                 status_code=404, detail=f"Dataset not found for series {idx}"
             )
 
+        if requires_z and not item.z_axis:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Z axis is required for contour plots (series {idx})",
+            )
+
         if job.get("columns"):
             missing = [
                 col
-                for col in [item.x_axis, item.y_axis]
+                for col in [item.x_axis, item.y_axis, item.z_axis if requires_z else None]
                 if col and col not in job["columns"]
             ]
             if missing:
@@ -431,6 +440,7 @@ async def create_visualization(
                 "job_id": item.job_id,
                 "x_axis": item.x_axis,
                 "y_axis": item.y_axis,
+                "z_axis": item.z_axis,
                 "label": item.label or item.y_axis,
                 "filename": job.get("filename", "dataset"),
             }
@@ -440,7 +450,7 @@ async def create_visualization(
 
     viz_id = await repo.create(
         payload.project_id,
-        payload.chart_type,
+        chart_type,
         user.email,
         series_docs,
         filename=primary_filename,

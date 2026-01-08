@@ -62,6 +62,7 @@ class VisualizationSeriesInput(BaseModel):
     job_id: str = Field(..., description="Ingestion job ID for this series")
     x_axis: str = Field(..., description="Column to plot on X axis for this series")
     y_axis: str = Field(..., description="Column to plot on Y axis for this series")
+    z_axis: Optional[str] = Field(None, description="Column to plot on Z axis (contour)")
     label: Optional[str] = Field(None, description="Optional legend label override")
 
 

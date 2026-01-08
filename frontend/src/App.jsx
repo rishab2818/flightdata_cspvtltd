@@ -31,6 +31,7 @@ import ProjectVisualisation from './pages/app/project/ProjectVisualisation'
 import ProjectSettings from './pages/app/project/ProjectSettings'
 import ProjectTagView from './pages/app/project/ProjectTagView'
 import ProcessedPreviewPage from './pages/app/project/ProcessedPreviewPage'
+import ProjectVisualisationFullScreen from './pages/app/project/ProjectVisualisationFullScreen'
 export default function App() {
   return (
     <Routes>
@@ -79,6 +80,11 @@ export default function App() {
         element={<ProjectTagView />}
       />
       <Route path="/processed-preview/:jobId" element={<ProcessedPreviewPage />} />
+      <Route
+        path="/app/projects/:projectId/visualisation/full/:vizId"
+        element={<ProjectVisualisationFullScreen />}
+      />
+
 
 
     </Routes>

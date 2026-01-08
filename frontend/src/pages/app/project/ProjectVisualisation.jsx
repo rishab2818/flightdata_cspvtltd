@@ -46,6 +46,7 @@ const newSeries = (n = 1) => ({
   jobId: '',
   xAxis: '',
   yAxis: '',
+  zAxis: '',
   label: '',
 })
 
@@ -139,7 +140,9 @@ export default function ProjectVisualisation() {
     const ds = datasetLabel(s.datasetType)
     const x = s.xAxis || '-'
     const y = s.yAxis || '-'
+    const z = s.zAxis || '-'
     const f = s.jobId ? 'file✅' : 'file❌'
+    if (chartType === 'contour') return `${ds} • ${f} • ${x} → ${y} → ${z}`
     return `${ds} • ${f} • ${x} → ${y}`
   }
 
@@ -221,6 +224,11 @@ export default function ProjectVisualisation() {
     const ds = datasetLabel(s.datasetType)
     const x = s.xAxis || ''
     const y = s.yAxis || ''
+    const z = s.zAxis || ''
+    if (chartType === 'contour') {
+      if (!x || !y || !z) return ds
+      return `${ds} | ${x} → ${y} → ${z}`
+    }
     if (!x || !y) return ds
     return `${ds} | ${x} → ${y}`
   }
@@ -228,17 +236,23 @@ export default function ProjectVisualisation() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    const requiresZ = chartType === 'contour'
     const payloadSeries = enabledSeries
-      .filter((s) => s.jobId && s.xAxis && s.yAxis)
+      .filter((s) => s.jobId && s.xAxis && s.yAxis && (!requiresZ || s.zAxis))
       .map((s) => ({
         job_id: s.jobId,
         x_axis: s.xAxis,
         y_axis: s.yAxis,
+        z_axis: requiresZ ? s.zAxis : undefined,
         label: (s.label || '').trim() || buildAutoLabel(s),
       }))
 
     if (payloadSeries.length === 0) {
-      setError('Please configure at least one enabled series with File, X and Y selected.')
+      setError(
+        requiresZ
+          ? 'Please configure at least one enabled series with File, X, Y and Z selected.'
+          : 'Please configure at least one enabled series with File, X and Y selected.'
+      )
       return
     }
 
@@ -358,6 +372,7 @@ export default function ProjectVisualisation() {
                   jobId: '',
                   xAxis: '',
                   yAxis: '',
+                  zAxis: '',
                 })
               }
             >
@@ -379,6 +394,7 @@ export default function ProjectVisualisation() {
                   jobId: '',
                   xAxis: '',
                   yAxis: '',
+                  zAxis: '',
                 })
               }
             >
@@ -400,6 +416,7 @@ export default function ProjectVisualisation() {
                   jobId: e.target.value,
                   xAxis: '',
                   yAxis: '',
+                  zAxis: '',
                 })
               }
               disabled={!activeSeries?.tag}
@@ -425,7 +442,13 @@ export default function ProjectVisualisation() {
           </div>
         </div>
 
-        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+        <div
+          className="ps-row"
+          style={{
+            gridTemplateColumns:
+              chartType === 'contour' ? 'repeat(5, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+          }}
+        >
           <div className="ps-field">
             <label>X Axis</label>
             <select
@@ -463,6 +486,26 @@ export default function ProjectVisualisation() {
               ))}
             </select>
           </div>
+
+          {chartType === 'contour' && (
+            <div className="ps-field">
+              <label className="viz-label">Z Axis</label>
+              <select
+                className="viz-select"
+                value={activeSeries?.zAxis || ''}
+                onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
+                disabled={!activeSeries?.jobId}
+                style={{ flex: 1 }}
+              >
+                <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                {activeColumns.map((col) => (
+                  <option key={col} value={col}>
+                    {col}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
 
           <div className="ps-field" >
@@ -698,7 +741,10 @@ export default function ProjectVisualisation() {
                       </button>
 
                       {viz.html_url && (
-                        <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                        // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                        //   <img className="actionBtn" src={blackPloticon} alt="download" />
+                        // </button>
+                        <button type="button" onClick={() => window.open(`/app/projects/${projectId}/visualisation/full/${viz.viz_id}`, '_blank')}>
                           <img className="actionBtn" src={blackPloticon} alt="download" />
                         </button>
                       )}

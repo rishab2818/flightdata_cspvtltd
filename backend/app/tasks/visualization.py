@@ -52,8 +52,14 @@ def _iter_parquet_batches(url: str, columns: list[str]):
         yield frame
 
 
-def _iter_chunks(url: str, ext: str, x_axis: str, y_axis: str | None):
-    columns = [col for col in [x_axis, y_axis] if col]
+def _iter_chunks(
+    url: str,
+    ext: str,
+    x_axis: str,
+    y_axis: str | None,
+    z_axis: str | None = None,
+):
+    columns = [col for col in [x_axis, y_axis, z_axis] if col]
     read_kwargs = {"usecols": columns, "on_bad_lines": "skip"}
 
     if ext in {".csv"}:
@@ -93,7 +99,51 @@ def _sample_xy(
     kept = []
     kept_n = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis):
+    for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis, None):
+        chunk = chunk[cols].copy()
+
+        for c in cols:
+            chunk[c] = pd.to_numeric(chunk[c], errors="coerce")
+
+        chunk = chunk.dropna(subset=cols)
+        if chunk.empty:
+            continue
+
+        remaining = max_points - kept_n
+        if remaining <= 0:
+            break
+
+        if len(chunk) > remaining:
+            chunk = chunk.sample(n=remaining, random_state=42)
+
+        kept.append(chunk)
+        kept_n += len(chunk)
+
+        if kept_n >= max_points:
+            break
+
+    if not kept:
+        return pd.DataFrame(columns=cols)
+
+    return pd.concat(kept, ignore_index=True)
+
+
+def _sample_xyz(
+    url: str,
+    ext: str,
+    x_axis: str | None,
+    y_axis: str | None,
+    z_axis: str | None,
+    max_points: int = 200_000,
+) -> pd.DataFrame:
+    cols = [c for c in [x_axis, y_axis, z_axis] if c]
+    if len(cols) < 3:
+        return pd.DataFrame()
+
+    kept = []
+    kept_n = 0
+
+    for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis, z_axis):
         chunk = chunk[cols].copy()
 
         for c in cols:
@@ -127,7 +177,7 @@ def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, in
     x_max = -np.inf
     rows = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis, None):
+    for chunk in _iter_chunks(url, ext, x_axis, None, None):
         s = pd.to_numeric(chunk[x_axis], errors="coerce").dropna()
         if s.empty:
             continue
@@ -206,7 +256,7 @@ def _materialize_tiles(
     tiles = []
     partitions = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis, y_axis):
+    for chunk in _iter_chunks(url, ext, x_axis, y_axis, None):
         # IMPORTANT: numeric coerce to avoid category-axis and digitize errors
         chunk[x_axis] = pd.to_numeric(chunk[x_axis], errors="coerce")
         chunk[y_axis] = pd.to_numeric(chunk[y_axis], errors="coerce")
@@ -256,6 +306,118 @@ def _materialize_tiles(
 
     stats = {"x_min": x_min, "x_max": x_max, "rows": rows, "partitions": partitions}
     return overview_frame, tiles, stats
+
+
+# def _build_contour_grid(
+#     df: pd.DataFrame,
+#     x_axis: str,
+#     y_axis: str,
+#     z_axis: str,
+#     bins: int = 80,
+# ):
+#     if not {x_axis, y_axis, z_axis}.issubset(df.columns):
+#         return None
+
+#     work = df[[x_axis, y_axis, z_axis]].copy()
+#     work[x_axis] = pd.to_numeric(work[x_axis], errors="coerce")
+#     work[y_axis] = pd.to_numeric(work[y_axis], errors="coerce")
+#     work[z_axis] = pd.to_numeric(work[z_axis], errors="coerce")
+#     work = work.dropna(subset=[x_axis, y_axis, z_axis])
+#     if work.empty:
+#         return None
+
+#     x_min, x_max = float(work[x_axis].min()), float(work[x_axis].max())
+#     y_min, y_max = float(work[y_axis].min()), float(work[y_axis].max())
+#     if x_min == x_max:
+#         x_max = x_min + 1e-9
+#     if y_min == y_max:
+#         y_max = y_min + 1e-9
+
+#     bins = max(10, int(bins))
+#     x_edges = np.linspace(x_min, x_max, num=bins + 1)
+#     y_edges = np.linspace(y_min, y_max, num=bins + 1)
+
+#     work["x_bin"] = pd.cut(work[x_axis], bins=x_edges, labels=False, include_lowest=True)
+#     work["y_bin"] = pd.cut(work[y_axis], bins=y_edges, labels=False, include_lowest=True)
+#     work = work.dropna(subset=["x_bin", "y_bin"])
+#     if work.empty:
+#         return None
+
+#     pivot = work.pivot_table(
+#         index="y_bin",
+#         columns="x_bin",
+#         values=z_axis,
+#         aggfunc="mean",
+#     )
+#     pivot = pivot.reindex(index=range(bins), columns=range(bins))
+
+#     x_centers = (x_edges[:-1] + x_edges[1:]) / 2
+#     y_centers = (y_edges[:-1] + y_edges[1:]) / 2
+#     z_grid = pivot.to_numpy()
+
+#     return x_centers, y_centers, z_grid
+def _build_contour_grid(
+    df: pd.DataFrame,
+    x_axis: str,
+    y_axis: str,
+    z_axis: str,
+    bins: int = 80,
+    method: str = "linear",   # "linear" or "cubic" (cubic needs scipy)
+):
+    if not {x_axis, y_axis, z_axis}.issubset(df.columns):
+        return None
+
+    work = df[[x_axis, y_axis, z_axis]].copy()
+    for c in [x_axis, y_axis, z_axis]:
+        work[c] = pd.to_numeric(work[c], errors="coerce")
+    work = work.dropna(subset=[x_axis, y_axis, z_axis])
+    if work.empty:
+        return None
+
+    # --- Case A: data already forms a grid (best case) ---
+    x_unique = np.sort(work[x_axis].unique())
+    y_unique = np.sort(work[y_axis].unique())
+
+    # Heuristic: if unique counts are "reasonable" and product ~ rows -> grid-like
+    # (allow some duplicates)
+    grid_like = (len(x_unique) * len(y_unique)) <= (len(work) * 1.2)
+
+    if grid_like and len(x_unique) >= 3 and len(y_unique) >= 3:
+        pivot = work.pivot_table(index=y_axis, columns=x_axis, values=z_axis, aggfunc="mean")
+        pivot = pivot.reindex(index=y_unique, columns=x_unique)
+        z_grid = pivot.to_numpy()
+        return x_unique, y_unique, z_grid
+
+    # --- Case B: scattered points -> interpolate onto a regular grid ---
+    try:
+        from scipy.interpolate import griddata
+    except Exception:
+        # If scipy isn't available, fallback to bin-mean (your old approach)
+        # but this will be less accurate for true contour surfaces.
+        x_min, x_max = float(work[x_axis].min()), float(work[x_axis].max())
+        y_min, y_max = float(work[y_axis].min()), float(work[y_axis].max())
+        x_edges = np.linspace(x_min, x_max, bins + 1)
+        y_edges = np.linspace(y_min, y_max, bins + 1)
+        work["x_bin"] = pd.cut(work[x_axis], bins=x_edges, labels=False, include_lowest=True)
+        work["y_bin"] = pd.cut(work[y_axis], bins=y_edges, labels=False, include_lowest=True)
+        pivot = work.pivot_table(index="y_bin", columns="x_bin", values=z_axis, aggfunc="mean")
+        pivot = pivot.reindex(index=range(bins), columns=range(bins))
+        x_centers = (x_edges[:-1] + x_edges[1:]) / 2
+        y_centers = (y_edges[:-1] + y_edges[1:]) / 2
+        return x_centers, y_centers, pivot.to_numpy()
+
+    x_min, x_max = float(work[x_axis].min()), float(work[x_axis].max())
+    y_min, y_max = float(work[y_axis].min()), float(work[y_axis].max())
+    xi = np.linspace(x_min, x_max, bins)
+    yi = np.linspace(y_min, y_max, bins)
+    Xi, Yi = np.meshgrid(xi, yi)
+
+    points = work[[x_axis, y_axis]].to_numpy()
+    values = work[z_axis].to_numpy()
+
+    Zi = griddata(points, values, (Xi, Yi), method=method)
+    return xi, yi, Zi
+
 
 
 def _build_figure(series_frames: list[dict], chart_type: str):
@@ -309,16 +471,32 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
 
         elif chart_type == "contour":
-            fig.add_trace(
-                go.Histogram2dContour(
-                    x=df[x_col],
-                    y=df[y_col],
-                    contours=dict(coloring="lines", showlabels=True),
-                    line=dict(width=1),
-                    showscale=False,
-                    name=label,
+            z_col = series.get("z_axis")
+            grid = _build_contour_grid(df, x_col, y_col, z_col) if z_col else None
+            if grid:
+                x_vals, y_vals, z_grid = grid
+                fig.add_trace(
+                    go.Contour(
+                        x=x_vals,
+                        y=y_vals,
+                        z=z_grid,
+                        contours=dict(coloring="heatmap", showlabels=True),
+                        line=dict(width=1),
+                        showscale=True,
+                        name=label,
+                    )
                 )
-            )
+            else:
+                fig.add_trace(
+                    go.Histogram2dContour(
+                        x=df[x_col],
+                        y=df[y_col],
+                        contours=dict(coloring="heatmap", showlabels=True),
+                        line=dict(width=1),
+                        showscale=False,
+                        name=label,
+                    )
+                )
 
         elif chart_type == "histogram":
             fig.add_trace(go.Histogram(name=label, x=df[y_col], opacity=0.75))
@@ -369,6 +547,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
     if chart_type == "contour":
         # best-effort titles (from last series)
         fig.update_layout(xaxis_title=x_col, yaxis_title=y_col)
+        
 
     return fig
 
@@ -469,6 +648,70 @@ def _build_zoom_loader_script(
     return null;
   }}
 
+  // ✅ Robust JSON fetch (handles Vite index.html / non-json responses)
+  async function fetchJson(url) {{
+    let res;
+    try {{
+      const token = getToken();
+      const headers = token ? {{ Authorization: `Bearer ${{token}}` }} : {{}};
+      res = await fetch(url, {{ credentials: "include", headers }});
+    }} catch (e) {{
+      console.warn("zoom-fetch failed", e);
+      return null;
+    }}
+
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+
+    if (!res.ok) {{
+      const txt = await res.text();
+      console.warn("zoom-api error", res.status, txt.slice(0, 200));
+      return null;
+    }}
+
+    if (!contentType.includes("application/json")) {{
+      const txt = await res.text();
+      console.warn("zoom-api non-json", contentType, txt.slice(0, 200));
+      return null;
+    }}
+
+    try {{
+      return await res.json();
+    }} catch (e) {{
+      console.warn("zoom-api json parse failed", e);
+      return null;
+    }}
+  }}
+
+  // ✅ Restore full-range overview (tiles at default LOD)
+  async function restoreOverview() {{
+    const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+    if (!n) return;
+
+    // choose a good default LOD (256 = cfg.levels[0])
+    const level = cfg.levels[0];
+
+    for (let i = 0; i < n; i++) {{
+      const meta = cfg.seriesMeta[i] || {{}};
+      const xAxis = meta.x_axis;
+      const yAxis = meta.y_axis;
+      if (!xAxis || !yAxis) continue;
+
+      const path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{level}}`;
+      const url = joinUrl(API_BASE, path);
+
+      const js = await fetchJson(url);
+      if (!js) continue;
+
+      const rows = js.data || [];
+      if (!rows.length) continue;
+
+      const xs = rows.map(r => r[xAxis]);
+      const ys = rows.map(r => r[yAxis]);
+
+      Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
+    }}
+  }}
+
   async function updateTrace(i, xmin, xmax) {{
     const meta = cfg.seriesMeta[i] || {{}};
     const stat = cfg.seriesStats[i] || {{}};
@@ -486,31 +729,9 @@ def _build_zoom_loader_script(
     }}
 
     const url = joinUrl(API_BASE, path);
+    const js = await fetchJson(url);
+    if (!js) return;
 
-    let res;
-    try {{
-      const token = getToken();
-      const headers = token ? {{ Authorization: `Bearer ${{token}}` }} : {{}};
-      res = await fetch(url, {{ credentials: "include", headers }});
-    }} catch (e) {{
-      console.warn("zoom-fetch failed", e);
-      return;
-    }}
-
-    // ✅ If backend returned HTML (<!doctype...), log and stop (prevents JSON parse crash)
-    const contentType = (res.headers.get("content-type") || "").toLowerCase();
-    if (!res.ok) {{
-      const txt = await res.text();
-      console.warn("zoom-api error", res.status, txt.slice(0, 200));
-      return;
-    }}
-    if (!contentType.includes("application/json")) {{
-      const txt = await res.text();
-      console.warn("zoom-api non-json", contentType, txt.slice(0, 200));
-      return;
-    }}
-
-    const js = await res.json();
     const rows = js.data || [];
     if (!rows.length) return;
 
@@ -520,9 +741,22 @@ def _build_zoom_loader_script(
     Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
   }}
 
+  // ✅ When autoscale/reset happens, Plotly sends xaxis.autorange=true
+  // Also handle double-click reset gesture.
+  gd.on('plotly_doubleclick', () => {{
+    debounce(() => restoreOverview());
+  }});
+
   gd.on('plotly_relayout', (ev) => {{
-    const r0 = ev["xaxis.range[0]"];
-    const r1 = ev["xaxis.range[1]"];
+    // ✅ Autoscale button / reset autorange
+    if (ev && ev["xaxis.autorange"] === true) {{
+      debounce(() => restoreOverview());
+      return;
+    }}
+
+    // Normal zoom: needs explicit range values
+    const r0 = ev ? ev["xaxis.range[0]"] : undefined;
+    const r1 = ev ? ev["xaxis.range[1]"] : undefined;
     if (r0 === undefined || r1 === undefined) return;
 
     const xmin = Number(r0);
@@ -538,6 +772,7 @@ def _build_zoom_loader_script(
   }});
 }})();
 """
+
 
 
 
@@ -576,18 +811,22 @@ def generate_visualization(self, viz_id: str):
             )
             return
 
+        chart_type = (doc.get("chart_type") or "scatter").lower().strip()
+        requires_z = chart_type == "contour"
+
         series_jobs: list[dict] = []
         for series in series_list:
             job_id = series.get("job_id")
             x_axis = series.get("x_axis")
             y_axis = series.get("y_axis")
-            if not job_id or not x_axis or not y_axis:
+            z_axis = series.get("z_axis")
+            if not job_id or not x_axis or not y_axis or (requires_z and not z_axis):
                 _update_db_status(
                     db,
                     viz_id,
                     status=states.FAILURE,
                     progress=100,
-                    message="Series missing dataset or X/Y axis",
+                    message="Series missing dataset or axis selection",
                 )
                 return
 
@@ -618,8 +857,6 @@ def generate_visualization(self, viz_id: str):
         series_meta_for_js = []
         stats_for_js = []
 
-        chart_type = (doc.get("chart_type") or "scatter").lower().strip()
-
         RAW_TYPES = {"polar", "histogram", "box", "violin", "heatmap", "contour"}
         TILED_TYPES = {"scatter", "scatterline", "line", "bar"}
 
@@ -628,6 +865,7 @@ def generate_visualization(self, viz_id: str):
             series = item["series"]
             x_axis = series["x_axis"]
             y_axis = series["y_axis"]
+            z_axis = series.get("z_axis")
 
             # Prefer processed parquet (best for /raw endpoint too)
             if job.get("processed_key"):
@@ -677,7 +915,17 @@ def generate_visualization(self, viz_id: str):
             else:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Sampling points for series {idx}")
 
-                raw_df = _sample_xy(data_url, ext, x_axis, y_axis, max_points=120_000)
+                if chart_type == "contour":
+                    raw_df = _sample_xyz(
+                        data_url,
+                        ext,
+                        x_axis,
+                        y_axis,
+                        z_axis,
+                        max_points=200_000,
+                    )
+                else:
+                    raw_df = _sample_xy(data_url, ext, x_axis, y_axis, max_points=120_000)
                 if raw_df.empty:
                     _update_db_status(
                         db,
