@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { IoNotificationsOutline } from 'react-icons/io5'
 import { useNotifications } from '../../context/NotificationContext'
 import { formatDistanceToNow } from '../../lib/time'
+import BellSimple from "../../assets/BellSimple.svg"
+
 
 export default function NotificationBell() {
   const { notifications = [], unreadCount, markAsRead, markAllAsRead, refresh, loading } = useNotifications()
@@ -39,9 +41,10 @@ export default function NotificationBell() {
   onClick={toggleOpen}
 >
   <span className="bell-container">
-    <IoNotificationsOutline className="bell-icon" />
+    <img src={BellSimple} alt="bell"/>
+    {/* <IoNotificationsOutline className="bell-icon" /> */}
     {unreadCount > 0 && (
-      <span className="badge">{unreadCount}</span>
+      <span className="Badge">{unreadCount}</span>
     )}
   </span>
 </button>

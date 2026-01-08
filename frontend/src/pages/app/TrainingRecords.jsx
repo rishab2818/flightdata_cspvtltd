@@ -1351,7 +1351,7 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
           </div>
 
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Remarks</span>
+            <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
             <textarea
               value={form.remarks}
               onChange={(e) => onChange("remarks", e.target.value)}

@@ -126,21 +126,31 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 32px;
   position: relative;
   margin-right: -5px;
 }
 
 .notification {
   position: relative;
+   background-color: transparent;
+  border: none;
 }
 
 .notification-btn {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 10px;
+  background: transparent;
+  border: none;
+  padding: 0;
   cursor: pointer;
+}
+
+.notification-btn:hover,
+.notification-btn:active {
+  background: transparent;
+}
+
+.notification-btn:focus {
+  outline: none;
 }
 
 /* 🔔 Bell wrapper */
@@ -149,6 +159,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background-color: transparent;
+  border: none;
 }
 
 /* Bell icon */
@@ -160,12 +172,12 @@
 }
 
 /* 🔴 Perfect badge */
-.badge {
+.Badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   background-color: #ff3b30 !important;
   color: #ffffff;
   font-size: 11px;
@@ -267,11 +279,11 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  /* padding: 10px 12px;
   border-radius: 4px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); */
 }
 
 .header__avatar {

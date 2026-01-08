@@ -26,8 +26,9 @@ export default function TopBarActions() {
     navigate('/login', { replace: true })
   }
 
-  const userId = user?.email || user?.username || user?.name || 'User'
-  const roleLabel = user?.role || ''
+  // const userId =  user?.username ||user?.name || user?.email || 'User'
+  const userId = user?.username || ''
+  // const roleLabel = user?.role || ''
 
   return (
     <div className="header__actions" ref={menuRef}>
@@ -39,7 +40,7 @@ export default function TopBarActions() {
 
         <div className="header__info">
           <span className="header__name">{userId}</span>
-          <span className="header__role">{roleLabel}</span>
+          {/* <span className="header__role">{roleLabel}</span> */}
         </div>
         <button
           type="button"

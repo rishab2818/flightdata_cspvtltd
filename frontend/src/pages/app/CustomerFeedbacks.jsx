@@ -892,7 +892,7 @@ export default function CustomerFeedbacks() {
                   background: "#EFF7FF",
                 }}
               >
-                {["Project Name", "Division", "Feedback", "Ratings", "Feedback Date", "Action"].map(
+                {["Project Name", "Division", "Note", "Ratings", "Feedback Date", "Action"].map(
                   (col) => (
                     <th
                       key={col}
@@ -1232,7 +1232,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
             <Input label="Feedback Date" type="date" value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Feedback Text</span>
+            <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
             <textarea
               value={form.feedback_text}
               onChange={(e) => onChange("feedback_text", e.target.value)}

@@ -27,17 +27,41 @@ export function AuthProvider({ children }){
     timerRef.current = setTimeout(logout, delay)
   }, [logout])
 
-  const login = useCallback((payload)=>{
-    const token = payload.access_token
-    const user = {
-      email: payload.email,
-      role: payload.role,
-      accessLevel: payload.access_level_value,
-      tokenType: payload.token_type || 'bearer',
-    }
-    storage.setToken(token); storage.setUser(user)
-    setAuth({ token, user }); scheduleLogout(token)
-  }, [scheduleLogout])
+  // const login = useCallback((payload)=>{
+  //   const token = payload.access_token
+  //   const user = {
+  //     email: payload.email,
+  //     role: payload.role,
+  //     accessLevel: payload.access_level_value,
+  //     tokenType: payload.token_type || 'bearer',
+  //   }
+  //   storage.setToken(token); storage.setUser(user)
+  //   setAuth({ token, user }); scheduleLogout(token)
+  // }, [scheduleLogout])
+
+  const login = useCallback((payload) => {
+  const token = payload.access_token
+
+  const user = {
+    // ✅ ALWAYS set username
+    username:
+      payload.username ||
+      payload.name ||
+      payload.email?.split('@')[0], // fallback
+
+    email: payload.email,
+    role: payload.role,
+    accessLevel: payload.access_level_value,
+    tokenType: payload.token_type || 'bearer',
+  }
+
+  storage.setToken(token)
+  storage.setUser(user)
+  setAuth({ token, user })
+  scheduleLogout(token)
+}, [scheduleLogout])
+
+
 
   useEffect(()=>{ if(auth.token) scheduleLogout(auth.token) }, [])
   useEffect(()=>{ attachUnauthorizedHandler(()=>logout()) }, [logout])

@@ -10,8 +10,10 @@ width: 100%;
 .projectTitle {
   color: #000000;
   font-size: 16px;
-  font-family: "SF-pro Bold", Helvetica;
+  font-family: "Inter-Medium", Helvetica;
   font-weight: 700;
+  letter-spacing: 0.4px;
+  line-height: normal;
 
 }
 .statscard {
