@@ -39,6 +39,32 @@ body {
   /* same blue as inside your SVG */
 }
 
+.stage {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden
+}
+
+.art {
+  position: relative;
+  width: min(1200px, 92vw);
+}
+
+.art img.bg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.svg-form {
+  position: absolute;
+  inset: 0;
+}
+
 .svg-form input,
 .svg-form button {
   position: absolute;
