@@ -28,10 +28,24 @@ export default function NotificationBell() {
 
   return (
     <div className="notification" ref={menuRef}>
-      <button type="button" className="notification__button" aria-label="Notifications" onClick={toggleOpen}>
+      {/* <button type="button" className="notification__button" aria-label="Notifications" onClick={toggleOpen}>
         <IoNotificationsOutline size={32} />
         {unreadCount ? <span className="notification__badge">{unreadCount}</span> : null}
-      </button>
+      </button> */}
+     <button
+  type="button"
+  className="notification-btn"
+  aria-label="Notifications"
+  onClick={toggleOpen}
+>
+  <span className="bell-container">
+    <IoNotificationsOutline className="bell-icon" />
+    {unreadCount > 0 && (
+      <span className="badge">{unreadCount}</span>
+    )}
+  </span>
+</button>
+
 
       {open && (
         <div className="notification__panel">

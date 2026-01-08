@@ -15,7 +15,7 @@ export default function AdminDashboard() {
         sx={{
           flexGrow: 1,
           padding: 3,
-          backgroundColor: "#F1F6FF",
+          backgroundColor: "#F5f9ff",
           display: "flex",
           flexDirection: "column",
           gap: 3,

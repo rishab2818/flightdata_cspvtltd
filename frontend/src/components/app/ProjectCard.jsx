@@ -11,6 +11,7 @@ import Button from '../common/Button';
 import Airplane from '../../assets/Airplane.svg';
 import Windmill from '../../assets/Windmill.svg';
 import Wind from '../../assets/Wind.svg';
+import SeeMoreText from '../common/SeeMoreButton';
 
 
 const TYPE_ICONS = {
@@ -25,7 +26,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       style={{
         width: '100%',
         minHeight: 215,
-        gap: SPACING.md,
+        // gap: '6px',
         borderTop: `1px solid ${COLORS.border}`,
         borderBottom: `1px solid ${COLORS.border}`,
         background: COLORS.background,
@@ -36,7 +37,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
     >
       {/* title + chips */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.sm }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: "12px" }}>
           <h3
             style={{ fontSize: 16, fontWeight: 600, color: "#000000", margin: 0, fontFamily: "inter-semi-bold, Helvetica" }}
           >
@@ -79,16 +80,19 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
       </div>
       {/* description */}
       <p
-        style={{
-          fontSize: 13,
-          color: "#514F4F",
-          marginTop: SPACING.sm,
-          marginRight: SPACING.lg,
-          lineHeight: 1.5,
-          flexGrow: 1,
-        }}
+      style={{
+  fontSize: "12px",
+  fontWeight: 400,
+  color: "#514F4F",
+  fontFamily: "SF Pro, Helvetica, Arial, sans-serif",
+  letterSpacing: "0px",
+  lineHeight: "normal",   
+  flexGrow: 1,
+}}
+
       >
-        {desc}
+       <SeeMoreText text={desc} />
+
       </p>
       {/* bottom row: created + members + button all in one line */}
       <div
@@ -96,7 +100,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginTop: SPACING.md,
+          // marginTop: SPACING.md,
           fontSize: 14,
           color: COLORS.textMuted,
         }}
