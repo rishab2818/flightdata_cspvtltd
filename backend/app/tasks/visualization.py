@@ -1,4 +1,3 @@
-
 import io
 import os
 import tempfile
@@ -455,8 +454,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                     x=df[x_col],
                     y=df[y_col],
                     mode="markers+lines",
-                    marker=dict(color="red"),
-                    line=dict(color="#1976D2", width=0.5),
+                    
                 )
             )
 
@@ -503,6 +501,135 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
         elif chart_type == "box":
             fig.add_trace(go.Box(name=label, y=df[y_col], boxpoints="outliers"))
+
+        ## For the 3d plot 
+        elif chart_type == "scatter3d":
+            z_col = series.get("z_axis")
+
+            # ---- Validate axes ----
+            if not x_col or not y_col or not z_col:
+                raise ValueError("3D Scatter requires X, Y, and Z axes")
+
+            for col in (x_col, y_col, z_col):
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found in data")
+
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            tmp = df[[x_col, y_col, z_col]].dropna()
+
+            if tmp.empty:
+                raise ValueError("No valid numeric data available for 3D scatter")
+
+            # ---- Performance guard (LOD) ----
+            MAX_POINTS = 200_000
+            if len(tmp) > MAX_POINTS:
+                tmp = tmp.sample(MAX_POINTS, random_state=42)
+
+            fig.add_trace(
+                go.Scatter3d(
+                    x=tmp[x_col],
+                    y=tmp[y_col],
+                    z=tmp[z_col],
+                    mode="markers",
+                    name=label,
+                    marker=dict(
+                        size=3,
+                        opacity=0.7,
+                    ),
+                )
+            )
+
+            fig.update_layout(
+                scene=dict(
+                    xaxis_title=x_col,
+                    yaxis_title=y_col,
+                    zaxis_title=z_col,
+                )
+            )
+
+        elif chart_type == "surface":
+            z_col = series.get("z_axis")
+
+            # validate axes
+            if not x_col or not y_col or not z_col:
+                raise ValueError("Surface requires X, Y, and Z axes")
+
+            for col in (x_col, y_col, z_col):
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found in data")
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            tmp = df[[x_col, y_col, z_col]].dropna()
+            if tmp.empty:
+                raise ValueError("No valid numeric data available for Surface")
+
+            # Build grid (IMPORTANT)
+            x_vals = np.sort(tmp[x_col].unique())
+            y_vals = np.sort(tmp[y_col].unique())
+
+            Z = (
+                tmp.pivot_table(index=y_col, columns=x_col, values=z_col, aggfunc="mean")
+                .reindex(index=y_vals, columns=x_vals)
+                .to_numpy()
+            )
+
+            # Optional: handle missing grid cells
+            if np.isnan(Z).any():
+                # simplest: fill gaps (or raise error if you want strict grids)
+                Z = pd.DataFrame(Z).interpolate(axis=0).interpolate(axis=1).to_numpy()
+
+            fig.add_trace(
+                go.Surface(
+                    x=x_vals,      # 1D
+                    y=y_vals,      # 1D
+                    z=Z,           # 2D matrix
+                    name=label,
+                    showscale=True,
+                    
+                )
+            )
+
+            fig.update_layout(
+                autosize=True,
+                scene=dict(
+                    xaxis_title=x_col,
+                    yaxis_title=y_col,
+                    zaxis_title=z_col,
+                )
+            )
+
+        elif chart_type == "line3d":
+            z_col = series.get("z_axis")
+
+            if not x_col or not y_col or not z_col:
+                raise ValueError("3D Line requires X, Y, and Z axes")
+
+            for col in (x_col, y_col, z_col):
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found in data")
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            tmp = df[[x_col, y_col, z_col]].dropna()
+
+            if tmp.empty:
+                raise ValueError("No valid numeric data for 3D line")
+
+            # IMPORTANT: sort so the line connects meaningfully
+            tmp = tmp.sort_values(by=[x_col])
+
+            fig.add_trace(
+                go.Scatter3d(
+                    x=tmp[x_col],
+                    y=tmp[y_col],
+                    z=tmp[z_col],
+                    mode="lines",     # 👈 this is the key difference
+                    name=label,
+                    line=dict(width=3),
+                )
+            )
+
+
 
         elif chart_type == "violin":
             fig.add_trace(
@@ -812,7 +939,8 @@ def generate_visualization(self, viz_id: str):
             return
 
         chart_type = (doc.get("chart_type") or "scatter").lower().strip()
-        requires_z = chart_type == "contour"
+        # 3D/contour charts require a Z axis
+        requires_z = chart_type in {"contour", "scatter3d", "line3d", "surface"}
 
         series_jobs: list[dict] = []
         for series in series_list:
@@ -857,7 +985,7 @@ def generate_visualization(self, viz_id: str):
         series_meta_for_js = []
         stats_for_js = []
 
-        RAW_TYPES = {"polar", "histogram", "box", "violin", "heatmap", "contour"}
+        RAW_TYPES = {"polar", "histogram", "box", "violin", "heatmap", "contour", "scatter3d", "line3d", "surface"}
         TILED_TYPES = {"scatter", "scatterline", "line", "bar"}
 
         for idx, item in enumerate(series_jobs, start=1):
@@ -883,8 +1011,8 @@ def generate_visualization(self, viz_id: str):
                 )
                 ext = os.path.splitext(job.get("filename", "").lower())[-1]
 
-            series_meta_for_js.append({"x_axis": x_axis, "y_axis": y_axis})
-
+            series_meta_for_js.append({"x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis})
+#
             if chart_type in TILED_TYPES:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
                 base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
@@ -915,7 +1043,8 @@ def generate_visualization(self, viz_id: str):
             else:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Sampling points for series {idx}")
 
-                if chart_type == "contour":
+                # Use XYZ sampling for contour and 3D/surface charts; XY sampling otherwise
+                if chart_type in {"contour", "scatter3d", "line3d", "surface"}:
                     raw_df = _sample_xyz(
                         data_url,
                         ext,

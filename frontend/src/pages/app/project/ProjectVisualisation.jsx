@@ -31,7 +31,10 @@ const CHART_TYPES = [
   { value: 'violin', label: 'Violin' },
   { value: 'heatmap', label: 'Heatmap (X vs Y)' },
   { value: 'contour', label: 'Contour' },
-  { value: 'scatterline', label: 'Scatter Line' }
+  { value: 'scatterline', label: 'Scatter Line' },
+  { value: 'scatter3d', label: '3D Scatter' },
+  { value: 'line3d', label: '3D Line' },
+  { value: 'surface', label: '3D Surface' },
 
 ]
 
@@ -60,12 +63,17 @@ export default function ProjectVisualisation() {
   const { projectId } = useParams()
   const { project } = useOutletContext()
 
+
+
   /* ================= series manager ================= */
   const [seriesList, setSeriesList] = useState([newSeries(1)])
   const [activeSeriesId, setActiveSeriesId] = useState(seriesList[0]?.id)
 
   /* ================= global plot config ================= */
   const [chartType, setChartType] = useState('scatter')
+
+  // whether the selected chart type requires a Z axis (used in render and submit)
+  const requiresZ = ['contour', 'scatter3d', 'line3d', 'surface'].includes(chartType)
 
   /* ================= data caches ================= */
   const [tagsByDataset, setTagsByDataset] = useState({})
@@ -238,7 +246,9 @@ export default function ProjectVisualisation() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const requiresZ = chartType === 'contour'
+    // const requiresZ = chartType === 'contour'
+    // uses component-level `requiresZ`
+
     const payloadSeries = enabledSeries
       .filter((s) => s.jobId && s.xAxis && s.yAxis && (!requiresZ || s.zAxis))
       .map((s) => ({
@@ -489,7 +499,8 @@ export default function ProjectVisualisation() {
             </select>
           </div>
 
-          {chartType === 'contour' && (
+
+          {/* {chartType === 'contour' && (
             <div className="ps-field">
               <label className="viz-label">Z Axis</label>
               <select
@@ -507,7 +518,24 @@ export default function ProjectVisualisation() {
                 ))}
               </select>
             </div>
+          )} */}
+
+          {requiresZ && (
+            <div className="ps-field">
+              <label>Z Axis</label>
+              <select
+                value={activeSeries?.zAxis || ''}
+                onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
+                disabled={!activeSeries?.jobId}
+              >
+                <option value="">Select</option>
+                {activeColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
           )}
+
 
 
           <div className="ps-field" >
