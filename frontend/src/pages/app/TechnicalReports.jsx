@@ -294,9 +294,9 @@ export default function TechnicalReports() {
                   position: "sticky",
                   top: 0,
                   zIndex: 10,
-                  textAlign: "center",
+                  textAlign: "left",
                   fontWeight: 400,
-                  fontSize: 12,
+                  fontSize: "14px",
                   background: "#EFF7FF",
                 }}
               >
@@ -317,7 +317,7 @@ export default function TechnicalReports() {
                 )}
               </tr>
             </thead>
-            <tbody style={{ textAlign: "center" }}>
+            <tbody style={{textAlign: "left",fontSize:"12px",fontWeight:400,textAlign: "left", color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>

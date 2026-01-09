@@ -591,7 +591,7 @@ const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB
 function StatusBadge({ status }) {
   const palette = {
     Completed: { bg: "#DCFCE7", text: "#15803D" },
-    Ongoing: { bg: "#FEF3C7", text: "#92400E" },
+    Ongoing: { bg: "#E0F2FE", text: "#0369A1" },
     Planned: { bg: "#DBEAFE", text: "#1D4ED8" },
   }[status] || { bg: "#E5E7EB", text: "#4B5563" };
 
@@ -938,9 +938,9 @@ export default function TrainingRecords() {
                 style={{
                   color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
-                  textAlign: "center",
+                  textAlign: "left",
                   fontWeight: 400,
-                  fontSize: 12,
+                  fontSize: "14px",
                   background: "#EFF7FF"
                 }}
               >
@@ -970,7 +970,7 @@ export default function TrainingRecords() {
               </tr>
             </thead>
 
-            <tbody style={{ textAlign: "center" }}>
+            <tbody style={{ textAlign: "left",fontSize:"12px",fontWeight:400,textAlign: "left", color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
               {/* Conditional rendering for loading, error, and no results */}
               {loading && (
                 <tr><td colSpan={8} style={{ padding: 16, textAlign: "center" }}>Loading...</td></tr>

@@ -886,10 +886,11 @@ export default function CustomerFeedbacks() {
                 style={{
                   color: "#000000",
                   borderBottom: `1px solid ${BORDER}`,
-                  textAlign: "center",
+                  textAlign: "left",
                   fontWeight: 400,
-                  fontSize: 12,
+                  fontSize: 14,
                   background: "#EFF7FF",
+                  fontFamily:"Inter-Regular, Helvetica",
                 }}
               >
                 {["Project Name", "Division", "Note", "Ratings", "Feedback Date", "Action"].map(
@@ -899,7 +900,7 @@ export default function CustomerFeedbacks() {
                       style={{
                         padding: "12px 16px",
                         fontWeight: 600,
-                        textAlign: "center",
+                        textAlign: "left",
                         borderBottom: `1px solid ${BORDER}`, // Header separator
                       }}
                     >
@@ -909,7 +910,7 @@ export default function CustomerFeedbacks() {
                 )}
               </tr>
             </thead>
-            <tbody style={{ textAlign: "center" }}>
+            <tbody style={{ fontSize:"12px",fontWeight:400,textAlign: "left", color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
@@ -1229,7 +1230,15 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
             <Input label="Division" value={form.division} onChange={(e) => onChange("division", e.target.value)} />
             {/* <Input label="Feedback Received" value={form.feedback_from} onChange={(e) => onChange("feedback_from", e.target.value)} /> */}
             <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
-            <Input label="Feedback Date" type="date" value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} />
+            <Input  
+              style={{
+    fontSize: "14px",
+    fontFamily: "Inter-Regular, Helvetica",
+    fontWeight: 500
+  }}
+            label="Feedback Date" 
+            type="date" 
+            value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ color: "#475569", fontSize: 13 }}>Note</span>

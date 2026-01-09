@@ -9,7 +9,9 @@ import ChartLine1 from '../../../assets/ChartLine1.svg'
 
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
-import blackPloticon from '../../../assets/ChartLine.svg'
+import linechart from "../../../assets/LineChart.svg";
+// import linechart25 from "../../assets/linechart25.svg";
+
 
 const DATASET_TYPES = [
   { key: 'cfd', label: 'CFD' },
@@ -531,7 +533,7 @@ export default function ProjectVisualisation() {
         <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
           <div className="ps-field" style={{ gridColumn: 'span 4' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <label style={{ marginBottom: 0 }}>Series ({seriesList.length})</label>
+              <label style={{ marginBottom: 0 }}>Plot ({seriesList.length})</label>
 
               <button
                 type="button"
@@ -539,7 +541,7 @@ export default function ProjectVisualisation() {
                 onClick={addSeriesSlot}
                 style={{ height: 36, padding: '0 12px' }}
               >
-                + Add series
+                + Add Plot
               </button>
             </div>
 
@@ -561,7 +563,7 @@ export default function ProjectVisualisation() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                      <div style={{ fontWeight: 600 }}>Series {idx + 1}</div>
+                      <div style={{ fontSize: "14px",fontWeight: 400, fontFamily: "Inter-Regular, Helvetica" }}>Plot {idx + 1}</div>
 
                       <label className="toggle" style={{ margin: 0 }}>
                         <input
@@ -635,13 +637,14 @@ export default function ProjectVisualisation() {
           )}
         </div>
 
-        <div className="Plot-preview" style={{ height: 520 }}>
+        <div className="Plot-preview" >
           {plotHtml ? (
             <iframe
               title="plot"
               srcDoc={plotHtml}
               style={{ width: '100%', height: '100%', border: 'none' }}
             />
+            
           ) : (
             <div className="emptystate">No plot generated</div>
           )}
@@ -745,7 +748,7 @@ export default function ProjectVisualisation() {
                         //   <img className="actionBtn" src={blackPloticon} alt="download" />
                         // </button>
                         <button type="button" onClick={() => window.open(`/app/projects/${projectId}/visualisation/full/${viz.viz_id}`, '_blank')}>
-                          <img className="actionBtn" src={blackPloticon} alt="download" />
+                          <img className="actionBtn" src={linechart} alt="download" />
                         </button>
                       )}
 
