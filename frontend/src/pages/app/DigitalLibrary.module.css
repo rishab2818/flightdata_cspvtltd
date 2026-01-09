@@ -149,23 +149,27 @@
 }
 
 .table th {
-  text-align: center;
+  text-align: left;
   padding: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 400;
   color: #0f172a;
   background: #EFF7FF;
   border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
+   font-family: "Inter-regular", Helvetica;
    z-index: 10; 
 }
 
 .table td {
-  text-align: center;
+  text-align: left;
+  color:#717182;
   padding: 12px;
-  font-size: 13px;
-  color: #111827;
+  font-size: 12px;
+  font-weight: 400;
+  font-weight: 400;
   border-bottom: 1px solid #f1f5f9;
+   font-family: "Inter-regular", Helvetica;
 }
 
 .typeBadge {
@@ -179,16 +183,10 @@
   color: #0057b8;
 }
 
-.actionCell {
-  display: flex;
-  align-items: center;      /* vertical center */
-  justify-content: center;  /* horizontal center */
-  gap: 12px;
-}
 
 .table td:last-child,
 .table th:last-child {
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
 }
 

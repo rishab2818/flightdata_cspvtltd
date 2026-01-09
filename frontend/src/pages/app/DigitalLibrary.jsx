@@ -262,7 +262,7 @@ const confirmDelete = async () => {
                 <th>Type</th>
                 <th>Size</th>
                 <th>Created Date</th>
-                <th>Action</th>
+                <th style={{alignItems:"left"}}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -311,7 +311,7 @@ const confirmDelete = async () => {
                     <td>{formatBytes(doc.size)}</td>
                     <td>{formatDate(doc.createdAt)}</td>
                     <td>
-                      <div className={styles.actionCell}>
+                      <div className={styles.docactions}>
                         <button
                           type="button"
                           className="icon-btn"
