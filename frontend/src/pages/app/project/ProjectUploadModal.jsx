@@ -58,6 +58,11 @@ export default function UploadModal({
     const [error, setError] = useState(null)
     const [result, setResult] = useState(null)
 
+    const [excelSheets, setExcelSheets] = useState([])   // ['Sheet1', 'Sheet2']
+const [activeSheet, setActiveSheet] = useState(null)
+const [excelWb, setExcelWb] = useState(null)         // cached workbook
+
+
     // lock background scroll
     useEffect(() => {
         const prev = document.body.style.overflow
@@ -133,7 +138,81 @@ export default function UploadModal({
         if (ext === '.xlsx' || ext === '.xls') {
             const buf = await file.arrayBuffer()
             const wb = XLSX.read(buf, { type: 'array' })
-            const sheetName = wb.SheetNames?.[0]
+            // const sheetName = wb.SheetNames?.[0]
+            if (ext === '.xlsx' || ext === '.xls') {
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+
+    if (!wb.SheetNames?.length) {
+        setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
+        return
+    }
+
+    const parseExcelSheet = (wb, sheetName, fileName) => {
+    const ws = wb.Sheets[sheetName]
+    if (!ws) return
+
+    const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+    const rowsRaw = (json || []).slice(0, 15)
+
+    if (!rowsRaw.length) {
+        setPreview({ type: 'message', message: 'Selected sheet is empty.' })
+        return
+    }
+
+    let headers = []
+    let dataRows = []
+
+    if (headerMode === 'file') {
+        headers = rowsRaw[0].map((h) => String(h || '').trim())
+        dataRows = rowsRaw.slice(1)
+    } else if (headerMode === 'none') {
+        headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
+        dataRows = rowsRaw
+    } else {
+        headers = headersList?.length
+            ? headersList
+            : rowsRaw[0].map((_, i) => `column_${i + 1}`)
+        dataRows = rowsRaw
+    }
+
+    const rows = dataRows.slice(0, 10).map((r) => {
+        const obj = {}
+        headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
+        return obj
+    })
+
+    setPreview({
+        type: 'table',
+        headers,
+        rows,
+        name: `${fileName} — ${sheetName}`
+    })
+}
+
+const onSelectSheet = (sheetName) => {
+    setActiveSheet(sheetName)
+    if (excelWb) {
+        parseExcelSheet(excelWb, sheetName, selectedFile.name)
+    }
+}
+
+
+    // store workbook + sheets
+    setExcelWb(wb)
+    setExcelSheets(wb.SheetNames)
+
+    // default sheet (first one OR previously selected)
+    const sheetToUse = activeSheet && wb.SheetNames.includes(activeSheet)
+        ? activeSheet
+        : wb.SheetNames[0]
+
+    setActiveSheet(sheetToUse)
+
+    parseExcelSheet(wb, sheetToUse, file.name)
+    return
+}
+
             if (!sheetName) return setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
 
             const ws = wb.Sheets[sheetName]
@@ -168,6 +247,8 @@ export default function UploadModal({
 
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
     }
+
+    
 
     const onPickFiles = async (fileList) => {
         const incoming = Array.from(fileList || [])
@@ -216,6 +297,10 @@ export default function UploadModal({
     }
 
     const onSelectFile = async (idx) => {
+        setExcelSheets([])
+setActiveSheet(null)
+setExcelWb(null)
+
         setSelectedIdx(idx)
         await loadPreview(files[idx]?.file)
     }
@@ -545,6 +630,22 @@ export default function UploadModal({
                             <div className="summaryLabel" >
                                 {selectedFile ? selectedFile.name : 'Select a file to preview'}
                             </div>
+
+                            {excelSheets.length > 0 && (
+    <div className="sheet-tabs">
+        {excelSheets.map((sheet) => (
+            <button
+                key={sheet}
+                type="button"
+                className={sheet === activeSheet ? 'sheet-btn active' : 'sheet-btn'}
+                onClick={() => onSelectSheet(sheet)}
+            >
+                {sheet}
+            </button>
+        ))}
+    </div>
+)}
+
 
                             <div className="fd-preview">
                                 {preview.type === 'none' && <div className="EmptyState">No preview</div>}
