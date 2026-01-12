@@ -307,54 +307,6 @@ def _materialize_tiles(
     return overview_frame, tiles, stats
 
 
-# def _build_contour_grid(
-#     df: pd.DataFrame,
-#     x_axis: str,
-#     y_axis: str,
-#     z_axis: str,
-#     bins: int = 80,
-# ):
-#     if not {x_axis, y_axis, z_axis}.issubset(df.columns):
-#         return None
-
-#     work = df[[x_axis, y_axis, z_axis]].copy()
-#     work[x_axis] = pd.to_numeric(work[x_axis], errors="coerce")
-#     work[y_axis] = pd.to_numeric(work[y_axis], errors="coerce")
-#     work[z_axis] = pd.to_numeric(work[z_axis], errors="coerce")
-#     work = work.dropna(subset=[x_axis, y_axis, z_axis])
-#     if work.empty:
-#         return None
-
-#     x_min, x_max = float(work[x_axis].min()), float(work[x_axis].max())
-#     y_min, y_max = float(work[y_axis].min()), float(work[y_axis].max())
-#     if x_min == x_max:
-#         x_max = x_min + 1e-9
-#     if y_min == y_max:
-#         y_max = y_min + 1e-9
-
-#     bins = max(10, int(bins))
-#     x_edges = np.linspace(x_min, x_max, num=bins + 1)
-#     y_edges = np.linspace(y_min, y_max, num=bins + 1)
-
-#     work["x_bin"] = pd.cut(work[x_axis], bins=x_edges, labels=False, include_lowest=True)
-#     work["y_bin"] = pd.cut(work[y_axis], bins=y_edges, labels=False, include_lowest=True)
-#     work = work.dropna(subset=["x_bin", "y_bin"])
-#     if work.empty:
-#         return None
-
-#     pivot = work.pivot_table(
-#         index="y_bin",
-#         columns="x_bin",
-#         values=z_axis,
-#         aggfunc="mean",
-#     )
-#     pivot = pivot.reindex(index=range(bins), columns=range(bins))
-
-#     x_centers = (x_edges[:-1] + x_edges[1:]) / 2
-#     y_centers = (y_edges[:-1] + y_edges[1:]) / 2
-#     z_grid = pivot.to_numpy()
-
-#     return x_centers, y_centers, z_grid
 def _build_contour_grid(
     df: pd.DataFrame,
     x_axis: str,
@@ -541,11 +493,17 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
 
             fig.update_layout(
-                scene=dict(
-                    xaxis_title=x_col,
-                    yaxis_title=y_col,
-                    zaxis_title=z_col,
-                )
+                autosize=True,
+            height=700,
+            
+            margin=dict(l=0, r=0, t=0, b=60, pad=5),  # 👈 key: increase b + add pad
+            scene=dict(
+                domain=dict(x=[0, 1], y=[0, 1]),
+                xaxis_title=x_col,
+                yaxis_title=y_col,
+                zaxis_title=z_col,
+            ),
+            scene_camera=dict(eye=dict(x=1.1, y=1.1, z=0.7))
             )
 
         elif chart_type == "surface":
@@ -591,13 +549,19 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
 
             fig.update_layout(
-                autosize=True,
-                scene=dict(
-                    xaxis_title=x_col,
-                    yaxis_title=y_col,
-                    zaxis_title=z_col,
-                )
-            )
+            autosize=True,
+            height=700,
+            
+            margin=dict(l=0, r=0, t=0, b=60, pad=5),  # 👈 key: increase b + add pad
+            scene=dict(
+                domain=dict(x=[0, 1], y=[0, 1]),
+                xaxis_title=x_col,
+                yaxis_title=y_col,
+                zaxis_title=z_col,
+            ),
+            scene_camera=dict(eye=dict(x=1.1, y=1.1, z=0.7))
+        )
+
 
         elif chart_type == "line3d":
             z_col = series.get("z_axis")
@@ -628,6 +592,21 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                     line=dict(width=3),
                 )
             )
+
+            fig.update_layout(
+            autosize=True,
+            height=700,
+            
+            margin=dict(l=0, r=0, t=0, b=60, pad=5),  # 👈 key: increase b + add pad
+            scene=dict(
+                domain=dict(x=[0, 1], y=[0, 1]),
+                xaxis_title=x_col,
+                yaxis_title=y_col,
+                zaxis_title=z_col,
+            ),
+            scene_camera=dict(eye=dict(x=1.1, y=1.1, z=0.7))
+        )
+
 
 
 

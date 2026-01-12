@@ -687,7 +687,7 @@ const deleteVisualization = async (vizId) => {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                      <div style={{ fontSize: "14px",fontWeight: 400, fontFamily: "Inter-Regular, Helvetica" }}>Plot {idx + 1}</div>
+                      <div style={{ fontSize: "14px", fontWeight: 400, fontFamily: "Inter-Regular, Helvetica" }}>Plot {idx + 1}</div>
 
                       <label className="toggle" style={{ margin: 0 }}>
                         <input
@@ -790,7 +790,7 @@ const deleteVisualization = async (vizId) => {
               srcDoc={plotHtml}
               style={{ width: '100%', height: '100%', border: 'none' }}
             />
-            
+
           ) : (
             <div className="emptystate">No plot generated</div>
           )}
