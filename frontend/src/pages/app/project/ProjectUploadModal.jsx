@@ -24,14 +24,6 @@ const getExt = (name = '') => {
 const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
 
-// const onSelectSheet = (sheetName) => {
-//     setActiveSheet(sheetName)
-//     if (excelWb && selectedFile) {
-//         parseExcelSheet(excelWb, sheetName, selectedFile.name)
-//     }
-// }
-
-
 function sanitizeTag(tag) {
     return (tag || '').trim()
 }
@@ -101,7 +93,60 @@ const [excelWb, setExcelWb] = useState(null)         // cached workbook
         return files[selectedIdx]?.file || null
     }, [files, selectedIdx])
 
+    const loadPreview = async (file) => {
+        if (!file) return
+        const ext = getExt(file.name)
 
+        if (isImage(file)) {
+            const url = URL.createObjectURL(file)
+            setPreview({ type: 'image', url, name: file.name })
+            return
+        }
+
+        if (ext === '.csv') {
+            const text = await file.text()
+            const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 15)
+            if (!lines.length) return setPreview({ type: 'message', message: 'CSV appears empty.' })
+
+            const delimiter = lines[0].includes('\t') ? '\t' : ','
+            const rawRows = lines.map((ln) => ln.split(delimiter))
+
+            let headers = []
+            let dataRows = []
+
+            if (headerMode === 'file') {
+                headers = rawRows[0].map((h) => (h || '').trim())
+                dataRows = rawRows.slice(1)
+            } else if (headerMode === 'none') {
+                headers = rawRows[0].map((_, i) => `column_${i + 1}`)
+                dataRows = rawRows
+            } else {
+                headers = headersList?.length ? headersList : rawRows[0].map((_, i) => `column_${i + 1}`)
+                dataRows = rawRows
+            }
+
+            const rows = dataRows.slice(0, 10).map((r) => {
+                const obj = {}
+                headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
+                return obj
+            })
+
+            setPreview({ type: 'table', headers, rows, name: file.name })
+            return
+        }
+
+        if (ext === '.xlsx' || ext === '.xls') {
+            const buf = await file.arrayBuffer()
+            const wb = XLSX.read(buf, { type: 'array' })
+            // const sheetName = wb.SheetNames?.[0]
+            if (ext === '.xlsx' || ext === '.xls') {
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+
+    if (!wb.SheetNames?.length) {
+        setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
+        return
+    }
 
     const parseExcelSheet = (wb, sheetName, fileName) => {
     const ws = wb.Sheets[sheetName]
@@ -147,183 +192,26 @@ const [excelWb, setExcelWb] = useState(null)         // cached workbook
 
 const onSelectSheet = (sheetName) => {
     setActiveSheet(sheetName)
-    if (excelWb && selectedFile) {
+    if (excelWb) {
         parseExcelSheet(excelWb, sheetName, selectedFile.name)
     }
 }
 
 
-const loadPreview = async (file) => {
-    if (!file) return
-    const ext = getExt(file.name)
-
-    if (isImage(file)) {
-        const url = URL.createObjectURL(file)
-        setPreview({ type: 'image', url, name: file.name })
-        return
-    }
-
-    if (ext === '.csv') {
-        const text = await file.text()
-        const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 15)
-
-        if (!lines.length) {
-            setPreview({ type: 'message', message: 'CSV appears empty.' })
-            return
-        }
-
-        const delimiter = lines[0].includes('\t') ? '\t' : ','
-        const rawRows = lines.map((ln) => ln.split(delimiter))
-
-        let headers = []
-        let dataRows = []
-
-        if (headerMode === 'file') {
-            headers = rawRows[0].map((h) => (h || '').trim())
-            dataRows = rawRows.slice(1)
-        } else if (headerMode === 'none') {
-            headers = rawRows[0].map((_, i) => `column_${i + 1}`)
-            dataRows = rawRows
-        } else {
-            headers = headersList?.length
-                ? headersList
-                : rawRows[0].map((_, i) => `column_${i + 1}`)
-            dataRows = rawRows
-        }
-
-        const rows = dataRows.slice(0, 10).map((r) => {
-            const obj = {}
-            headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-            return obj
-        })
-
-        setPreview({ type: 'table', headers, rows, name: file.name })
-        return
-    }
-
-    if (ext === '.xlsx' || ext === '.xls') {
-        const buf = await file.arrayBuffer()
-        const wb = XLSX.read(buf, { type: 'array' })
-
-        if (!wb.SheetNames?.length) {
-            setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-            return
-        }
-
-        setExcelWb(wb)
-        setExcelSheets(wb.SheetNames)
-
-        const defaultSheet = wb.SheetNames[0]
-        setActiveSheet(defaultSheet)
-
-        parseExcelSheet(wb, defaultSheet, file.name)
-        return
-    }
-
-    setPreview({ type: 'message', message: 'Preview not supported for this file type.' })
-}
-
-
-//     const loadPreview = async (file) => {
-//         if (!file) return
-//         const ext = getExt(file.name)
-
-//         if (isImage(file)) {
-//             const url = URL.createObjectURL(file)
-//             setPreview({ type: 'image', url, name: file.name })
-//             return
-//         }
-
-//         if (ext === '.csv') {
-//             const text = await file.text()
-//             const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 15)
-//             if (!lines.length) return setPreview({ type: 'message', message: 'CSV appears empty.' })
-
-//             const delimiter = lines[0].includes('\t') ? '\t' : ','
-//             const rawRows = lines.map((ln) => ln.split(delimiter))
-
-//             let headers = []
-//             let dataRows = []
-
-//             if (headerMode === 'file') {
-//                 headers = rawRows[0].map((h) => (h || '').trim())
-//                 dataRows = rawRows.slice(1)
-//             } else if (headerMode === 'none') {
-//                 headers = rawRows[0].map((_, i) => `column_${i + 1}`)
-//                 dataRows = rawRows
-//             } else {
-//                 headers = headersList?.length ? headersList : rawRows[0].map((_, i) => `column_${i + 1}`)
-//                 dataRows = rawRows
-//             }
-
-//             const rows = dataRows.slice(0, 10).map((r) => {
-//                 const obj = {}
-//                 headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-//                 return obj
-//             })
-
-//             setPreview({ type: 'table', headers, rows, name: file.name })
-//             return
-//         }
-
-//         if (ext === '.xlsx' || ext === '.xls') {
-//     const buf = await file.arrayBuffer()
-//     const wb = XLSX.read(buf, { type: 'array' })
-
-//     if (!wb.SheetNames?.length) {
-//         setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-//         return
-//     }
-
-//     setExcelWb(wb)
-//     setExcelSheets(wb.SheetNames)
-
-//     const defaultSheet = wb.SheetNames[0]
-//     setActiveSheet(defaultSheet)
-
-//     parseExcelSheet(wb, defaultSheet, file.name)
-//     return
-// }
-    
-
-
-    //     if (ext === '.xlsx' || ext === '.xls') {
-    //         const buf = await file.arrayBuffer()
-    //         const wb = XLSX.read(buf, { type: 'array' })
-    //         // const sheetName = wb.SheetNames?.[0]
-    //         if (ext === '.xlsx' || ext === '.xls') {
-    // const buf = await file.arrayBuffer()
-    // const wb = XLSX.read(buf, { type: 'array' })
-
-    // if (!wb.SheetNames?.length) {
-    //     setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-    //     return
-    // }
-
-    
-
-// const onSelectSheet = (sheetName) => {
-//     setActiveSheet(sheetName)
-//     if (excelWb) {
-//         parseExcelSheet(excelWb, sheetName, selectedFile.name)
-//     }
-// }
-
-
     // store workbook + sheets
-    // setExcelWb(wb)
-    // setExcelSheets(wb.SheetNames)
+    setExcelWb(wb)
+    setExcelSheets(wb.SheetNames)
 
-    // // default sheet (first one OR previously selected)
-    // const sheetToUse = activeSheet && wb.SheetNames.includes(activeSheet)
-    //     ? activeSheet
-    //     : wb.SheetNames[0]
+    // default sheet (first one OR previously selected)
+    const sheetToUse = activeSheet && wb.SheetNames.includes(activeSheet)
+        ? activeSheet
+        : wb.SheetNames[0]
 
-    // setActiveSheet(sheetToUse)
+    setActiveSheet(sheetToUse)
 
-    // parseExcelSheet(wb, sheetToUse, file.name)
-//     return
-// }
+    parseExcelSheet(wb, sheetToUse, file.name)
+    return
+}
 
             if (!sheetName) return setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
 
@@ -358,7 +246,7 @@ const loadPreview = async (file) => {
         }
 
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
-    
+    }
 
     
 
@@ -803,4 +691,4 @@ setExcelWb(null)
     )
 
     return createPortal(modalUi, document.body)
-
+}
