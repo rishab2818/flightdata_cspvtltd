@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
+import ConfirmationModal from "../../../components/common/ConfirmationModal";
 
 import './ProjectVisualisation.css'
 
@@ -35,6 +36,26 @@ const CHART_TYPES = [
   { value: 'scatter3d', label: '3D Scatter' },
   { value: 'line3d', label: '3D Line' },
   { value: 'surface', label: '3D Surface' },
+]
+
+const plotTypes2D = [
+  { value: 'scatter', label: 'Scatter' },
+  { value: 'line', label: 'Line' },
+  { value: 'bar', label: 'Bar' },
+  // Add plaor 
+  { value: 'polar', label: 'Polar' },
+  { value: 'histogram', label: 'Histogram' },
+  { value: 'box', label: 'Box' },
+  { value: 'violin', label: 'Violin' },
+  { value: 'heatmap', label: 'Heatmap (X vs Y)' },
+  { value: 'contour', label: 'Contour' },
+  { value: 'scatterline', label: 'Scatter Line' },
+]
+
+const plotTypes3D = [
+  { value: 'scatter3d', label: '3D Scatter' },
+  { value: 'line3d', label: '3D Line' },
+  { value: 'surface', label: '3D Surface' },
 
 ]
 
@@ -63,6 +84,17 @@ export default function ProjectVisualisation() {
   const { projectId } = useParams()
   const { project } = useOutletContext()
 
+  const [confirmDelete, setConfirmDelete] = useState({
+    open: false,
+    vizId: null,
+  })
+
+  const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
+    open: false,
+    seriesId: null,
+  });
+
+  const [deletingViz, setDeletingViz] = useState(null)
 
 
   /* ================= series manager ================= */
@@ -96,6 +128,13 @@ export default function ProjectVisualisation() {
     () => seriesList.find((s) => s.id === activeSeriesId) || seriesList[0],
     [seriesList, activeSeriesId]
   )
+
+  const [dimension, setDimension] = useState('2d')
+  // const [plotType, setPlotType] = useState('')
+
+  const plotOptions =
+    dimension === '2d' ? plotTypes2D : plotTypes3D
+
 
   // keep activeSeriesId always valid
   useEffect(() => {
@@ -318,23 +357,50 @@ export default function ProjectVisualisation() {
     }
   }
 
+  // const deleteVisualization = async (vizId) => {
+  //   if (!window.confirm('Delete this visualization?')) return
+  //   try {
+  //     await visualizationApi.remove(vizId)
+  //     setVisualizations((prev) => prev.filter((v) => v.viz_id !== vizId))
+  //     if (activeViz?.viz_id === vizId) {
+  //       setActiveViz(null)
+  //       setPlotHtml('')
+  //       setTilePreview(null)
+  //       setStatusMessage('Select data to begin')
+  //     }
+  //   } catch (e) {
+  //     setError(e?.response?.data?.detail || e.message || 'Failed to delete visualization')
+  //   }
+  // }
   const deleteVisualization = async (vizId) => {
-    if (!window.confirm('Delete this visualization?')) return
+    setDeletingViz(vizId)
     try {
       await visualizationApi.remove(vizId)
-      setVisualizations((prev) => prev.filter((v) => v.viz_id !== vizId))
+
+      setVisualizations((prev) =>
+        prev.filter((v) => v.viz_id !== vizId)
+      )
+
       if (activeViz?.viz_id === vizId) {
         setActiveViz(null)
         setPlotHtml('')
-        setTilePreview(null)
         setStatusMessage('Select data to begin')
       }
     } catch (e) {
-      setError(e?.response?.data?.detail || e.message || 'Failed to delete visualization')
+      setError(
+        e?.response?.data?.detail ||
+        e.message ||
+        'Failed to delete visualization'
+      )
+    } finally {
+      setDeletingViz(null)
+      setConfirmDelete({ open: false, tagName: null })
     }
   }
 
-  /* ================= tiles ================= */
+  /* =============
+  
+  ==== tiles ================= */
   const loadTileData = useCallback(
     async (seriesIndex, level) => {
       if (!activeViz?.viz_id) return
@@ -443,6 +509,35 @@ export default function ProjectVisualisation() {
           </div>
 
           <div className="ps-field">
+            <label>Plot Type</label>
+            <select
+              value={dimension}
+              onChange={(e) => {
+                setDimension(e.target.value)
+              }}
+            >
+              <option value="2d">2D</option>
+              <option value="3d">3D</option>
+            </select>
+          </div>
+
+          <div className="ps-field">
+            <label>Chart Type</label>
+            <select
+              value={chartType}
+              onChange={(e) => setChartType(e.target.value)}
+            >
+              <option value="">Select Chart Type</option>
+              {plotOptions.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+
+          {/* <div className="ps-field">
             <label>Chart Type</label>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
               {CHART_TYPES.map((c) => (
@@ -451,14 +546,15 @@ export default function ProjectVisualisation() {
                 </option>
               ))}
             </select>
-          </div>
+          </div>  */}
+
         </div>
 
         <div
           className="ps-row"
           style={{
             gridTemplateColumns:
-              chartType === 'contour' ? 'repeat(5, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+              chartType === 'contour' ? 'repeat(6, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))',
           }}
         >
           <div className="ps-field">
@@ -569,7 +665,7 @@ export default function ProjectVisualisation() {
                 onClick={addSeriesSlot}
                 style={{ height: 36, padding: '0 12px' }}
               >
-                + Add Plot
+                + Over Plot
               </button>
             </div>
 
@@ -591,7 +687,7 @@ export default function ProjectVisualisation() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                      <div style={{ fontSize: "14px",fontWeight: 400, fontFamily: "Inter-Regular, Helvetica" }}>Plot {idx + 1}</div>
+                      <div style={{ fontSize: "14px", fontWeight: 400, fontFamily: "Inter-Regular, Helvetica" }}>Plot {idx + 1}</div>
 
                       <label className="toggle" style={{ margin: 0 }}>
                         <input
@@ -610,11 +706,12 @@ export default function ProjectVisualisation() {
                     </div>
 
                     {seriesList.length > 1 && (
+
                       <button
                         type="button"
                         onClick={(e) => {
-                          e.stopPropagation()
-                          if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
+                          e.stopPropagation();
+                          setConfirmRemoveSeries({ open: true, seriesId: s.id });
                         }}
                         style={{
                           marginTop: 8,
@@ -629,7 +726,28 @@ export default function ProjectVisualisation() {
                       >
                         Remove
                       </button>
+                      // <button
+                      //   type="button"
+                      //   onClick={(e) => {
+                      //     e.stopPropagation()
+                      //     if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
+                      //   }}
+
+                      //   style={{
+                      //     marginTop: 8,
+                      //     height: 32,
+                      //     width: '100%',
+                      //     borderRadius: 4,
+                      //     border: '1px solid #fecdd3',
+                      //     background: '#fff1f2',
+                      //     color: '#b91c1c',
+                      //     cursor: 'pointer',
+                      //   }}
+                      // >
+                      //   Remove
+                      // </button>
                     )}
+
                   </div>
                 )
               })}
@@ -672,7 +790,7 @@ export default function ProjectVisualisation() {
               srcDoc={plotHtml}
               style={{ width: '100%', height: '100%', border: 'none' }}
             />
-            
+
           ) : (
             <div className="emptystate">No plot generated</div>
           )}
@@ -780,7 +898,19 @@ export default function ProjectVisualisation() {
                         </button>
                       )}
 
-                      <button type="button" className="danger" onClick={() => deleteVisualization(viz.viz_id)}>
+                      <button
+                        type="button"
+                        className="danger"
+                        // onClick={() => deleteVisualization(viz.viz_id)}
+                        onClick={() =>
+                          setConfirmDelete({
+                            open: true,
+                            vizId: viz.viz_id
+                          })
+                        }
+                        disabled={deletingViz === viz.viz_id}
+
+                      >
                         <img className="actionBtn" src={Delete} alt="delete" />
                       </button>
                     </div>
@@ -793,6 +923,32 @@ export default function ProjectVisualisation() {
         </div>
 
       </div>
+      {confirmDelete.open && (
+        <ConfirmationModal
+          title="Delete this visualization?"
+          onCancel={() =>
+            setConfirmDelete({ open: false, vizId: null })
+          }
+          onConfirm={() =>
+            deleteVisualization(confirmDelete.vizId)
+          }
+        />
+      )}
+
+      {confirmRemoveSeries.open && confirmRemoveSeries.seriesId && (
+        <ConfirmationModal
+          title="Remove this series?"
+          onCancel={() =>
+            setConfirmRemoveSeries({ open: false, seriesId: null })
+          }
+          onConfirm={() => {
+            removeSeriesSlot(confirmRemoveSeries.seriesId);
+            setConfirmRemoveSeries({ open: false, seriesId: null });
+          }}
+        />
+      )}
+
+
     </div>
   )
 }

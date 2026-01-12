@@ -1,25 +1,25 @@
 .CardWapper {
-   width: 100%;
-   gap: 16px;
-   margin: 0 auto;
-   height: 100%;
-   display: flex;
-   flex-direction: column;
+  width: 100%;
+  gap: 16px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .tableHeader {
-    color: #000000;
-    font-family: "Inter-semiBold",Helvetica;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 10px;
+  color: #000000;
+  font-family: "Inter-semiBold", Helvetica;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 
 .plot-settings {
   background: #ffffff;
   border-radius: 4px;
   padding: 20px;
-  font-family: "Inter-semiBold",Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
   border: 1px solid #00000026;
 
 }
@@ -29,7 +29,7 @@
 ================================ */
 .ps-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 14px;
 }
@@ -79,8 +79,9 @@
   border: 0.67px solid transparent;
   background-color: #f3f3f5;
   color: #000000;
-  outline: none;  
+  outline: none;
 }
+
 /* .ps-field select:focus,
 .ps-field input:focus,
 .inputcontrol:focus {
@@ -99,8 +100,9 @@
    LEGEND INPUT ALIGNMENT
 ================================ */
 .ps-field .inputcontrol {
-  margin-top: 25px; /* aligns with selects */
-   height: 36px;
+  margin-top: 25px;
+  /* aligns with selects */
+  height: 36px;
   padding: 0 12px;
   font-size: 14px;
   border-radius: 2px;
@@ -120,14 +122,14 @@
   color: #2e2f33;
   margin: 8px 0 16px;
   cursor: pointer;
-   white-space: nowrap;
+  white-space: nowrap;
 }
 
 .toggle input {
   opacity: 0;
   width: 0;
   height: 0;
-  cursor: pointer; 
+  cursor: pointer;
 }
 
 .toggle .slider {
@@ -153,12 +155,12 @@
   transition: transform 0.2s ease;
 }
 
-.toggle input:checked + .slider {
+.toggle input:checked+.slider {
   background: rgb(29, 196, 29);
-  
+
 }
 
-.toggle input:checked + .slider::before {
+.toggle input:checked+.slider::before {
   transform: translateX(15px);
 }
 
@@ -236,6 +238,7 @@
   cursor: pointer;
   transition: background 0.2s ease;
 }
+
 /* 
 .plot-settings button[type="submit"]:hover {
   background: #4a7af0;
@@ -274,13 +277,14 @@
 }
 
 .projectcard1 {
-   background: #ffffff;
+  background: #ffffff;
   border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   margin-top: 20px;
-   border: 1px solid #00000026;
+  border: 1px solid #00000026;
 }
+
 .actions-row {
   display: flex;
   align-items: center;
@@ -294,7 +298,7 @@
   font-weight: 600;
   color: #000000;
   margin: 0;
-  font-family: "Inter-semiBold",Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
 }
 
 .badge {
@@ -371,7 +375,7 @@
   font-weight: 600;
   color: #000000;
   margin: 0;
-  font-family: "Inter-semiBold",Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
   margin-bottom: 10px;
 }
 
@@ -384,11 +388,11 @@
   margin-top: -5px;
 }
 
-.text{
+.text {
   color: #000000;
   font-size: 16px;
   font-weight: 600;
-  font-family: "Inter-semiBold",Helvetica;
+  font-family: "Inter-semiBold", Helvetica;
   margin-bottom: -10px;
 }
 
@@ -401,8 +405,8 @@
   justify-content: center;
   align-items: center;
   margin: 0;
-  font-family: "Inter-Regular",Helvetica;
-  
+  font-family: "Inter-Regular", Helvetica;
+
 }
 
 .viz-list {
@@ -424,11 +428,11 @@
 .data-card__name {
   font-size: 14px;
   font-weight: 600;
-   margin: 0;
-   font-size: 14px;
+  margin: 0;
+  font-size: 14px;
   font-weight: 400;
   color: #000000;
-   font-family: "Inter-Regular",Helvetica;
+  font-family: "Inter-Regular", Helvetica;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -477,7 +481,8 @@
 }
 
 .expand-container.open {
-  max-height: 2000px; /* large enough */
+  max-height: 2000px;
+  /* large enough */
 }
 
 .expand-inner {
@@ -493,6 +498,7 @@
   width: 16px;
   height: 16px;
 }
+
 /*=========================VISUALISATION ACTION=================*/
 
 .viz-actions {
@@ -516,7 +522,7 @@
 
 
 .project-shell__nav-link {
-   display: flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   background: #1976D2;
@@ -525,12 +531,10 @@
   color: #ffffff;
   font-size: 14px;
   font-weight: 400;
-  font-family: "Inter-Regular",Helvetica;
+  font-family: "Inter-Regular", Helvetica;
   cursor: pointer;
   width: 150px;
-   gap: 10px;
+  gap: 10px;
   height: 36px;
   padding: 0 14px;
 }
-
- 
