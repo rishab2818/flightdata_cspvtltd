@@ -970,7 +970,7 @@ export default function TrainingRecords() {
               </tr>
             </thead>
 
-            <tbody style={{ textAlign: "left",fontSize:"12px",fontWeight:400,textAlign: "left", color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
+            <tbody style={{ textAlign: "left",fontSize:"12px",fontWeight:400, color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
               {/* Conditional rendering for loading, error, and no results */}
               {loading && (
                 <tr><td colSpan={8} style={{ padding: 16, textAlign: "center" }}>Loading...</td></tr>
