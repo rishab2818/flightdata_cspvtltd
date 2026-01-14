@@ -8,6 +8,10 @@ import uploadbutton from "../../assets/uploadbutton.svg";
 import load from "../../assets/load.svg";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import Delete from '../../assets/Delete.svg'
+import PencilSimple from '../../assets/PencilSimple.svg'
+import ViewIcon from '../../assets/ViewIcon.svg'
+import DownloadSimple from '../../assets/DownloadSimple.svg'
 
 
 
@@ -311,38 +315,39 @@ const confirmDelete = async () => {
                     <td>{formatBytes(doc.size)}</td>
                     <td>{formatDate(doc.createdAt)}</td>
                     <td>
-                      <div className={styles.docactions}>
+                      <div  style={{display:'inline-flex', justifyContent:'center',alignItems:'center', gap:8}}>
+                       
                         <button
                           type="button"
-                          className="icon-btn"
-                          onClick={() => openEdit(doc)}
-                          aria-label="Edit"
-                        >
-                          <FiEdit2 size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-btn"
+                         style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                           onClick={() => handleView(doc.id)}
                           aria-label="View"
                         >
-                          <FiEye size={16} />
+                         <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
+                        </button>
+                         <button
+                          type="button"
+                         style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+                          onClick={() => openEdit(doc)}
+                          aria-label="Edit"
+                        >
+                         <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="edit" />
                         </button>
                         <button
                           type="button"
-                          className="icon-btn"
+                          style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                           onClick={() => handleDownload(doc.id, doc.name)}
                           aria-label="Download"
                         >
-                          <FiDownload size={16} />
+                           <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
                         </button>
                         <button
                           type="button"
-                          className="icon-btn"
+                          style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                           onClick={() => handleDelete(doc)}
                           aria-label="Delete"
                         >
-                          <FiTrash2 size={16} />
+                          <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                         </button>
                       </div>
                     </td>

@@ -1,5 +1,9 @@
 import React from 'react';
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from 'react-icons/fi';
+import Delete from '../../../../assets/Delete.svg'
+import PencilSimple from '../../../../assets/PencilSimple.svg'
+import ViewIcon from '../../../../assets/ViewIcon.svg'
+import DownloadSimple from '../../../../assets/DownloadSimple.svg'
 import styles from '../BudgetEstimation.module.css';
 // import EmptySection from "../../components/common/EmptyProject";
 
@@ -84,39 +88,40 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
                 )}
               </td>
               <td>
-                <div className={styles.actionBar}>
+                <div style={{display:'inline-flex', justifyContent:'center',alignItems:'center', gap:8}}>
                   <button
-                    className={styles.actionButton}
+                    style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                     title="View"
                     type="button"
                     onClick={() => onView?.(row)}
                   >
-                    <FiEye size={16} />
+                 <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
+                  </button>
+                  
+                  <button
+                     style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+                    title="Edit"
+                    type="button"
+                    onClick={() => onEdit?.(row)}
+                  >
+                  <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="edit" />
                   </button>
                   <button
-                    className={styles.actionButton}
+                     style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                     title="Download"
                     type="button"
                     onClick={() => onDownload?.(row)}
                     disabled={!row.storage_key}
                   >
-                    <FiDownload size={16} />
+                    <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
                   </button>
                   <button
-                    className={styles.actionButton}
-                    title="Edit"
-                    type="button"
-                    onClick={() => onEdit?.(row)}
-                  >
-                    <FiEdit2 size={15} />
-                  </button>
-                  <button
-                    className={styles.actionButton}
+                     style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                     title="Delete"
                     type="button"
                     onClick={() => onDelete?.(row)}
                   >
-                    <FiTrash2 size={16} />
+                     <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                   </button>
                 </div>
               </td>

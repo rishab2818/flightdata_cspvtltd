@@ -302,15 +302,15 @@
 
 /* Icon badge */
 .icon-badge {
-  width: 37.33px;
-  height: 32px;
+  width: 40px;
+  height: 35px;
   border-radius: 8px;
-  border: 0.67px solid #E2E8F0;
+  border: 0.67px solid #0000001A;
   /* BORDER */
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #F9FAFB;
+  background: #ffffff;
   cursor: default;
 }
 

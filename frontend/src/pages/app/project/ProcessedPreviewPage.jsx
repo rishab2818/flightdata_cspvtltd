@@ -91,8 +91,23 @@ export default function ProcessedPreviewPage() {
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <label className="summary-label" style={{ margin: 0 }}>Rows</label>
                     <select
-                        className="input-control"
-                        style={{ width: 90 , borderRadius: 4, height: 37, padding: '8px' }}
+                        style={{
+                width: '100px',
+                height: '37px',
+                padding: '8px 32px 8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                backgroundColor: '#fff',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+                outline: 'none',
+              }}
                         value={limit}
                         onChange={(e) => setLimit(parseInt(e.target.value, 10))}
                     >

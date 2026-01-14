@@ -526,7 +526,7 @@ export default function UploadMinutesModal({
           <div className="dateWrap">
             <label className="label">Meeting Date</label>
             <div className="dateBox">
-              <FiCalendar size={16} className="dateIcon" />
+              {/* <FiCalendar size={16} className="dateIcon" /> */}
               <input
                 type="date"
                 value={meetingDate}

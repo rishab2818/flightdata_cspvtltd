@@ -282,34 +282,36 @@ export default function ProjectUpload() {
                   <tr key={tag.tag_name}>
                     <td>
                       <div style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
-                        <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+                        <div style={{ gap: '10px', display: 'flex', alignItems: 'center' }}>
                           <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />
                           {tag.tag_name}
-                        </div>
-                      </div>
+                    
 
                       {showProgress && (
-                        <div style={{ marginTop: 8, maxWidth: 360 }}>
-                          <div className="progress-bar">
+                        <div style={{  maxWidth: 360,fontFamily: 'inter-regular,Helvetica' }}>
+                          {/* <div className="progress-bar">
                             <div
                               className="progress-bar__value"
                               style={{ width: `${jp.progress ?? 5}%` }}
                             />
-                          </div>
-                          <div className="summary-label" style={{ marginTop: 6 }}>
+                          </div> */}
+                          <div className="summary-label" style={{ marginTop:0, display:'flex', alignItems:'center'}}>
                             {jp.message || jp.status} ({jp.progress ?? 0}%)
                           </div>
                         </div>
                       )}
 
                       {!showProgress && jp && (
-                        <div className="summary-label" style={{ marginTop: 6 }}>
+                        <div className="summary-label" style={{ marginTop: 1,fontFamily: 'inter-regular,Helvetica' }}>
                           {status === 'success'
                             ? 'Processed ✅'
                             : `Failed ❌ (${jp.message || 'error'})`}
                         </div>
                       )}
+                          </div>
+                      </div>
                     </td>
+                    
 
                     <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
                       <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
