@@ -142,7 +142,7 @@ export default function TechnicalReports() {
 
 
   return (
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto",height:"100%", gap:"10px",borderRadius: "8px" }}>
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto",height:"100%", gap:"10px",borderRadius: "8px" }}>
 
       <div
         style={{

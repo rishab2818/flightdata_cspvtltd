@@ -130,8 +130,6 @@ export default function MinutesOfTheMeeting() {
   }
 };
 
-
-
   /* ---------------- data loaders ---------------- */
 
   const loadProjects = useCallback(async () => {

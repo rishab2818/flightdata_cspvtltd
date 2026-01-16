@@ -113,6 +113,12 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
+  const PAGE_SIZE = 10;
+
+const [vizPage, setVizPage] = useState(1);
+const [hasMoreViz, setHasMoreViz] = useState(true);
+const [loadingViz, setLoadingViz] = useState(false);
+
   const [activeViz, setActiveViz] = useState(null)
   const [plotHtml, setPlotHtml] = useState('')
   const [tilePreview, setTilePreview] = useState(null)
@@ -238,20 +244,55 @@ const plotOptions =
   }, [projectId, activeSeries?.datasetType, activeSeries?.tag])
 
   /* ================= saved visualizations ================= */
-  const fetchVisualizations = async () => {
-    try {
-      const list = await visualizationApi.listForProject(projectId)
-      setVisualizations(list || [])
-    } catch (e) {
-      setError(e?.response?.data?.detail || e.message || 'Failed to load visualizations')
-    }
-  }
+  // const fetchVisualizations = async () => {
+  //   try {
+  //     const list = await visualizationApi.listForProject(projectId)
+  //     setVisualizations(list || [])
+  //   } catch (e) {
+  //     setError(e?.response?.data?.detail || e.message || 'Failed to load visualizations')
+  //   }
+  // }
 
-  useEffect(() => {
-    fetchVisualizations()
-    return () => pollTimer.current && clearTimeout(pollTimer.current)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId])
+  // useEffect(() => {
+  //   fetchVisualizations()
+  //   return () => pollTimer.current && clearTimeout(pollTimer.current)
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [projectId])
+
+const fetchVisualizations = async (page = 1, reset = false) => {
+  if (loadingViz) return;
+
+  setLoadingViz(true);
+  try {
+    const res = await visualizationApi.listForProject(projectId, {
+      page,
+      limit: PAGE_SIZE,
+    });
+
+    const list = res || [];
+
+    setVisualizations((prev) =>
+      reset ? list : [...prev, ...list]
+    );
+
+    // ✅ ONLY update hasMore when loading next page
+    if (!reset) {
+      setHasMoreViz(list.length >= PAGE_SIZE);
+    }
+
+    setVizPage(page);
+  } catch (e) {
+    setError(
+      e?.response?.data?.detail ||
+      e.message ||
+      'Failed to load visualizations'
+    );
+  } finally {
+    setLoadingViz(false);
+  }
+};
+
+
 
   /* ================= columns for active series ================= */
   const activeFiles = useMemo(() => {
@@ -856,25 +897,76 @@ const deleteVisualization = async (vizId) => {
             <label className="text">Saved visualizations ({visualizations.length})</label>
 
             <div className="actionsrow__right">
-              <button
+              {/* <button
                 type="button"
                 className="expand-btn"
                 onClick={() => setIsExpanded((p) => !p)}
                 aria-expanded={isExpanded}
-              >
+              > */}
+              <button
+  type="button"
+  className="expand-btn"
+  // onClick={() => {
+  //   setIsExpanded((prev) => {
+  //     const next = !prev;
+  //     if (next && visualizations.length === 0) {
+  //       fetchVisualizations(1, true);
+  //     }
+  //     return next;
+  //   });
+  // }}
+ onClick={() => {
+  setIsExpanded((prev) => {
+    const next = !prev;
+
+    if (next && visualizations.length === 0) {
+      fetchVisualizations(1, true);
+    }
+
+    return next;
+  });
+}}
+>
                 <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
                 {isExpanded ? 'Collapse' : 'Expand'}
               </button>
 
-              <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
+              {/* {isExpanded && hasMoreViz && (
+  <div style={{ textAlign: 'center', marginTop: 12 }}>
+    <button
+      type="button"
+      className="project-shell__nav-link"
+      disabled={loadingViz}
+      onClick={() => fetchVisualizations(vizPage + 1)}
+    >
+      {loadingViz ? 'Loading…' : 'Load more'}
+    </button>
+  </div>
+)} */}
+
+
+              {/* <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
                 Refresh
-              </button>
+              </button> */}
+
+              <button
+  type="button"
+  className="project-shell__nav-link"
+  onClick={() => fetchVisualizations(1, true)}
+>
+  Refresh
+</button>
+
             </div>
           </div>
 
           <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
             <div className="expand-inner">
-              {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>}
+              {/* {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>} */}
+              {!loadingViz && visualizations.length === 0 && (
+  <div className="emptystate">No visualizations yet</div>
+)}
+
 
               <div className="viz-list">
                 {visualizations.map((viz) => (
@@ -910,6 +1002,8 @@ const deleteVisualization = async (vizId) => {
 }
 disabled={deletingViz === viz.viz_id}
 
+
+
                       >
                         <img className="actionBtn" src={Delete} alt="delete" />
                       </button>                                        
@@ -917,6 +1011,19 @@ disabled={deletingViz === viz.viz_id}
                   </div>
                 ))}
               </div>
+
+              {isExpanded && hasMoreViz && (
+  <div style={{ textAlign: 'center', marginTop: 12 }}>
+    <button
+      type="button"
+      className="project-shell__nav-link"
+      disabled={loadingViz}
+      onClick={() => fetchVisualizations(vizPage + 1)}
+    >
+      {loadingViz ? 'Loading…' : 'Load more'}
+    </button>
+  </div>
+)}
 
             </div>
           </div>

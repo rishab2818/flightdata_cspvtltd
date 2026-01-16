@@ -753,7 +753,7 @@ export default function CustomerFeedbacks() {
 
   return (
     /* Card UI */
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%", marginTop:"-18px" }}>
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto", height:"100%", marginTop:"-18px" }}>
       {/* Stat Cards */}
       <div
         style={{

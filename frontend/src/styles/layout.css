@@ -85,6 +85,8 @@
 
 .app-shell__body {
   flex: 1;
+  padding: 24px 28px 40px 28px;
+  /* padding: 24px; */
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -353,7 +355,7 @@
   flex: 1;
   overflow: auto;
   margin: 0 auto;
-  padding: 12px 12px 12px 12px;
+  padding: 12px 0px 12px 0px;
   width: 100%;
 }
 
@@ -366,7 +368,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 35px 9px 32px;
+  padding: 15px 0px 9px 0px;
 }
 @media (max-width: 1200px) {
   .app-shell__header {

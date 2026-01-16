@@ -749,7 +749,7 @@ export default function TrainingRecords() {
 
   /* --------------------- Rendering --------------------- */
   return (
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%" }}>
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto", height:"100%" }}>
       {/* Stat Cards */}
       <div
         style={{

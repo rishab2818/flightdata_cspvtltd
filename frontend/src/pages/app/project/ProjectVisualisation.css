@@ -481,8 +481,9 @@
 }
 
 .expand-container.open {
-  max-height: 2000px;
-  /* large enough */
+  /* max-height: 2000px; */
+   max-height: 100vh;   /* or large value */
+  overflow-y: auto;
 }
 
 .expand-inner {

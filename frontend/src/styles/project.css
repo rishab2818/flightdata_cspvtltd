@@ -65,17 +65,27 @@
 }
 
 .project-shell__nav-link {
-  display: block;
+  /* display: block;
   padding: 12px 14px;
   align-items: center;
   /* vertically center text & icon */
-  display: flex;
+  /* display: flex;
   gap: 5px;
   text-decoration: none;
   color: #0f172a;
 
   font-weight: 600;
   border: 1px solid transparent;
+  transition: all 0.2s ease; */ 
+
+    display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border-radius: 2px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: #111827;
   transition: all 0.2s ease;
 }
 
