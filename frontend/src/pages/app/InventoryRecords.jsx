@@ -774,6 +774,13 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
                 type="date"
                 value={form.start_date}
                 onChange={(e) => onChange("start_date", e.target.value)}
+                 style={{
+    fontSize: "14px",
+    fontFamily: "Inter, Helvetica, Arial, sans-serif",
+    fontWeight: 500,
+    color:"#717182",
+    
+  }}
               />
 
               <Input
@@ -781,6 +788,13 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
                 type="date"
                 value={form.delivery_date}
                 onChange={(e) => onChange("delivery_date", e.target.value)}
+                 style={{
+    fontSize: "14px",
+    fontFamily: "Inter, Helvetica, Arial, sans-serif",
+    fontWeight: 500,
+    color:"#717182",
+    
+  }}
               />
               <Input
                 label="Duration(Months)"

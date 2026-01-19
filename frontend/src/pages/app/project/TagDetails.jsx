@@ -86,24 +86,36 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     ? files.filter(f => !f.processed_key && !f.visualize_enabled)
                     : []
 
-     const handleView = async (file, canEdit) => {
-        if (isTabularFile(file) && file.processed_key) {
-          const editFlag = canEdit ? '1' : '0'
-          window.open(`/processed-preview/${file.job_id}?edit=${editFlag}`, '_blank', 'noopener,noreferrer')
-          return
-        }
+    //  const handleView = async (file, canEdit) => {
+    //     if (isTabularFile(file) && file.processed_key) {
+    //       const editFlag = canEdit ? '1' : '0'
+    //       window.open(`/processed-preview/${file.job_id}?edit=${editFlag}`, '_blank', 'noopener,noreferrer')
+    //       return
+    //     }
     
-        try {
-          const { url } = await ingestionApi.download(file.job_id)
-          if (canInlinePreview(file)) {
-            window.open(url, '_blank', 'noopener,noreferrer')
-          } else {
-            triggerDownload(url, file.filename)
-          }
-        } catch (err) {
-          window.alert(err?.response?.data?.detail || err.message || 'View failed')
-        }
-      }
+    //     try {
+    //       const { url } = await ingestionApi.download(file.job_id)
+    //       if (canInlinePreview(file)) {
+    //         window.open(url, '_blank', 'noopener,noreferrer')
+    //       } else {
+    //         triggerDownload(url, file.filename)
+    //       }
+    //     } catch (err) {
+    //       window.alert(err?.response?.data?.detail || err.message || 'View failed')
+    //     }
+    //   }
+
+    const handleView = (file, tabName) => {
+  if (tabName === 'processed' && file.processed_key) {
+    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
+  } else if (tabName === 'raw') {
+    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
+  } else {
+    // fallback for files that cannot be previewed
+    ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
+  }
+}
+
     
       const handleDownload = async (file) => {
         try {
@@ -193,7 +205,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                 </div>
                                 </td>
                             <td style={{display:'flex',gap:'8px', alignItems:'center'}}>
-                                <button
+                                {/* <button
                                 onClick={() => handleView(f, tab === 'processed')} title="View"
                                     // onClick={() => {
                                     //     if (tab === 'processed') {
@@ -206,7 +218,22 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                      style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px'}}
                                 >
                                     <img style={{width:'20px', height:'20px'}} src={ViewIcon} alt="view"/>
-                                </button>
+                                </button> */}
+
+                                <button
+  onClick={() => handleView(f, tab)} // pass 'raw' or 'processed'
+  title="View"
+  style={{
+    background:'#ffffff',
+    border:'0.67px solid #0000001A',
+    width:'40px',
+    height:'35px',
+    borderRadius:'8px'
+  }}
+>
+  <img style={{width:'20px', height:'20px'}} src={ViewIcon} alt="view"/>
+</button>
+
 
 
                                 <button 

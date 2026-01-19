@@ -142,7 +142,7 @@ export default function TechnicalReports() {
 
 
   return (
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto",height:"100%", gap:"10px",borderRadius: "8px" }}>
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto",height:"100%", gap:"10px",borderRadius: "8px" }}>
 
       <div
         style={{
@@ -317,7 +317,7 @@ export default function TechnicalReports() {
                 )}
               </tr>
             </thead>
-            <tbody style={{textAlign: "left",fontSize:"12px",fontWeight:400,textAlign: "left", color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
+            <tbody style={{textAlign: "left",fontSize:"12px",fontWeight:400, color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
@@ -450,10 +450,28 @@ export default function TechnicalReports() {
 }
 
 /* --------------------- Input Component --------------------- */
-function Input({ label,style, ...rest }) {
+// function Input({ label,style, ...rest }) {
+//   return (
+//     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+//       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
+//       <input
+//         {...rest}
+//         style={{
+//           height: 40,
+//           borderRadius: "8px",
+//           border: `1px solid ${BORDER}`,
+//           padding: "0 12px",
+//           background: "#F3F3F5",
+//         }}
+//       />
+//     </label>
+//   );
+// }
+
+function Input({ label, style, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
+      <span style={{ color: "#475569", fontSize: 14 }}>{label}</span>
       <input
         {...rest}
         style={{
@@ -462,6 +480,7 @@ function Input({ label,style, ...rest }) {
           border: `1px solid ${BORDER}`,
           padding: "0 12px",
           background: "#F3F3F5",
+          ...style, // ✅ APPLY IT
         }}
       />
     </label>
@@ -650,7 +669,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 <option value="Other">Other</option>
               </select>
             </label >
-            <Input label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5",color:"#717182"}}label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
             <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>

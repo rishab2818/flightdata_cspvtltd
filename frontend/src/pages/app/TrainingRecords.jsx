@@ -749,7 +749,7 @@ export default function TrainingRecords() {
 
   /* --------------------- Rendering --------------------- */
   return (
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%" }}>
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto", height:"100%" }}>
       {/* Stat Cards */}
       <div
         style={{
@@ -1115,23 +1115,44 @@ export default function TrainingRecords() {
 }
 
 /* --------------------- Input Component --------------------- */
-function Input({ label,style, ...rest }) {
+// function Input({ label,style, ...rest }) {
+//   return (
+//     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+//       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
+//       <input
+//         {...rest}
+//         style={{
+//           height: 40,
+//           borderRadius: "8px",
+//           border: `1px solid ${BORDER}`,
+//           padding: "0 12px",
+//           background: "#F3F3F5",
+//         }}
+//       />
+//     </label>
+//   );
+// }
+
+function Input({ label, style, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
+      <span style={{ color: "#475569", fontSize: 14 }}>{label}</span>
       <input
         {...rest}
         style={{
           height: 40,
+          fontSize:14,
           borderRadius: "8px",
           border: `1px solid ${BORDER}`,
           padding: "0 12px",
           background: "#F3F3F5",
+          ...style, // ✅ APPLY IT
         }}
       />
     </label>
   );
 }
+
 
 /* --------------------- Modal Component (Updated for Edit) --------------------- */
 function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
@@ -1322,8 +1343,8 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 <option value="Other">Other</option>
               </select>
             </label>
-            <Input style={{borderRadius: "8px",background:"#F3F3F5"}} label="Start Date" type="date" value={form.start_date} onChange={(e) => onChange("start_date", e.target.value)} />
-            <Input style={{borderRadius: "8px",background:"#F3F3F5"}} label="End Date" type="date" value={form.end_date} onChange={(e) => onChange("end_date", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5",color:"#717182"}} label="Start Date" type="date" value={form.start_date} onChange={(e) => onChange("start_date", e.target.value)} />
+            <Input style={{borderRadius: "8px",background:"#F3F3F5",color:"#717182"}} label="End Date" type="date" value={form.end_date} onChange={(e) => onChange("end_date", e.target.value)} />
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={{ color: "#475569", fontSize: 13 }}>Status</span>
               <select

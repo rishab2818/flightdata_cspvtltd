@@ -447,6 +447,7 @@ setExcelWb(null)
     className="input-data"
     value={datasetType}
     onChange={(e) => setDatasetType(e.target.value)}
+     disabled={mode === 'edit'} // ✅ disable in edit mode
   >
     <option value="" disabled>Select Data Category</option>
     {DATASET_OPTIONS.map((opt) => (

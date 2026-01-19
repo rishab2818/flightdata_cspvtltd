@@ -623,6 +623,7 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 
 
+
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
@@ -752,7 +753,7 @@ export default function CustomerFeedbacks() {
 
   return (
     /* Card UI */
-    <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", height:"100%", marginTop:"-18px" }}>
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto", height:"100%", marginTop:"-18px" }}>
       {/* Stat Cards */}
       <div
         style={{
@@ -1050,7 +1051,25 @@ export default function CustomerFeedbacks() {
 }
 
 /* --------------------- Input Component --------------------- */
-function Input({ label,style, ...rest }) {
+// function Input({ label,style, ...rest }) {
+//   return (
+//     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+//       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
+//       <input
+//         {...rest}
+//         style={{
+//           height: 40,
+//           borderRadius: "8px",
+//           border: `1px solid ${BORDER}`,
+//           padding: "0 12px",
+//           background: "#F3F3F5",
+//         }}
+//       />
+//     </label>
+//   );
+// }
+
+function Input({ label, style, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
@@ -1062,6 +1081,7 @@ function Input({ label,style, ...rest }) {
           border: `1px solid ${BORDER}`,
           padding: "0 12px",
           background: "#F3F3F5",
+          ...style, // ✅ APPLY IT
         }}
       />
     </label>
@@ -1230,7 +1250,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
             <Input label="Division" value={form.division} onChange={(e) => onChange("division", e.target.value)} />
             {/* <Input label="Feedback Received" value={form.feedback_from} onChange={(e) => onChange("feedback_from", e.target.value)} /> */}
             <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
-            <Input  
+            {/* <Input  
               style={{
     fontSize: "14px",
     fontFamily: "Inter-Regular, Helvetica",
@@ -1238,7 +1258,22 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
   }}
             label="Feedback Date" 
             type="date" 
-            value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} />
+            value={form.feedback_date} onChange={(e) => onChange("feedback_date", e.target.value)} /> */}
+     <Input
+  style={{
+    fontSize: "14px",
+    fontFamily: "Inter, Helvetica, Arial, sans-serif",
+    fontWeight: 500,
+    color:"#717182",
+    
+  }}
+  label="Feedback Date"
+  type="date"
+  value={form.feedback_date}
+  onChange={(e) => onChange("feedback_date", e.target.value)}
+/>
+
+
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ color: "#475569", fontSize: 13 }}>Note</span>

@@ -1,7 +1,7 @@
 /* ---------- Layout ---------- */
 .wrapper {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1640px;
   margin: 0 auto;
   height:100%; 
   
@@ -222,8 +222,15 @@ font-weight: 400;
     font-size: 13px;
     color: #6b7280;
 }
-
-
+                  
+/* .icon-btn {
+background: #ffffff;
+border: 0.67px solid #0000001a;
+width: 40px;
+height: 35px;
+border-radius: 8px;
+align-items: center;
+} */
 
 
 /* ---------- Modal ---------- */

@@ -12,6 +12,10 @@ import styles from "./StudentEngagement.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import Delete from '../../assets/Delete.svg'
+import PencilSimple from '../../assets/PencilSimple.svg'
+import ViewIcon from '../../assets/ViewIcon.svg'
+import DownloadSimple from '../../assets/DownloadSimple.svg'
 
 
 const BADGE_COLORS = {
@@ -541,34 +545,35 @@ export default function StudentEngagement() {
                   </td>
 
                   <td>
-                    <div className="doc-actions">
+                    <div style={{display:'inline-flex', justifyContent:'center',alignItems:'center', gap:8}}>
+                       <button
+                            type="button"
+                             style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+                            onClick={() => handleViewDocument(row)}
+                            title="View Document"
+                          >
+                             <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
+                          </button>
                       <button
                         type="button"
-                        className="icon-btn"
+                         style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                         onClick={() => openEditModal(row)}
                         title="Edit"
                       >
-                        <FiEdit2 size={16} />
+                        <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="edit" />
                       </button>
 
                       {row.storage_key && (
                         <>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => handleViewDocument(row)}
-                            title="View Document"
-                          >
-                            <FiEye size={16} />
-                          </button>
+                         
 
                           <button
                             type="button"
-                            className="icon-btn"
+                             style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                             onClick={() => handleDownloadDocument(row)}
                             title="Download Document"
                           >
-                            <FiDownload size={16} />
+                           <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
                           </button>
                         </>
                       )}
@@ -576,14 +581,14 @@ export default function StudentEngagement() {
                       {/* 🔴 OPEN DELETE CONFIRM MODAL */}
                       <button
                         type="button"
-                        className="icon-btn"
+                         style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
                         onClick={() => {
                           setRecordToDelete(row);
                           setShowDeleteModal(true);
                         }}
                         title="Delete"
                       >
-                        <FiTrash2 size={16} />
+                      <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                       </button>
                     </div>
                   </td>
