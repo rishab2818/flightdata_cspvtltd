@@ -543,7 +543,7 @@ const deleteVisualization = async (vizId) => {
               <option value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
               {activeFiles.map((f) => (
                 <option key={f.job_id} value={f.job_id}>
-                  {f.filename}
+                  {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
                 </option>
               ))}
             </select>

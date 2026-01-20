@@ -23,6 +23,7 @@ const getExt = (name = '') => {
 }
 const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
+const isExcel = (file) => ['.xlsx', '.xls'].includes(getExt(file?.name))
 
 function sanitizeTag(tag) {
     return (tag || '').trim()
@@ -30,6 +31,10 @@ function sanitizeTag(tag) {
 
 function fileKey(f) {
     return `${f.name}__${f.size}__${f.lastModified}`
+}
+
+function getSelectedSheets(item) {
+    return Object.keys(item?.selectedSheets || {}).filter((name) => item.selectedSheets?.[name])
 }
 
 export default function UploadModal({
@@ -49,7 +54,7 @@ export default function UploadModal({
     const [headerMode, setHeaderMode] = useState('file')
     const [customHeadersText, setCustomHeadersText] = useState('')
 
-    const [files, setFiles] = useState([]) // [{ file, visualize }]
+    const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet }]
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
 
@@ -80,6 +85,9 @@ const [excelWb, setExcelWb] = useState(null)         // cached workbook
         setPreview({ type: 'none' })
         setError(null)
         setResult(null)
+        setExcelSheets([])
+        setActiveSheet(null)
+        setExcelWb(null)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialTag, mode]) // intentionally NOT depending on initialDatasetType to avoid overriding user clicks
 
@@ -93,9 +101,60 @@ const [excelWb, setExcelWb] = useState(null)         // cached workbook
         return files[selectedIdx]?.file || null
     }, [files, selectedIdx])
 
-    const loadPreview = async (file) => {
+    const selectedFileEntry = useMemo(() => {
+        if (selectedIdx == null) return null
+        return files[selectedIdx] || null
+    }, [files, selectedIdx])
+
+    const parseExcelSheet = React.useCallback(
+        (wb, sheetName, fileName) => {
+            const ws = wb?.Sheets?.[sheetName]
+            if (!ws) return
+
+            const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+            const rowsRaw = (json || []).slice(0, 15)
+
+            if (!rowsRaw.length) {
+                setPreview({ type: 'message', message: 'Selected sheet is empty.' })
+                return
+            }
+
+            let headers = []
+            let dataRows = []
+
+            if (headerMode === 'file') {
+                headers = rowsRaw[0].map((h) => String(h || '').trim())
+                dataRows = rowsRaw.slice(1)
+            } else if (headerMode === 'none') {
+                headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
+                dataRows = rowsRaw
+            } else {
+                headers = headersList?.length
+                    ? headersList
+                    : rowsRaw[0].map((_, i) => `column_${i + 1}`)
+                dataRows = rowsRaw
+            }
+
+            const rows = dataRows.slice(0, 10).map((r) => {
+                const obj = {}
+                headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
+                return obj
+            })
+
+            setPreview({
+                type: 'table',
+                headers,
+                rows,
+                name: sheetName ? `${fileName} — ${sheetName}` : fileName
+            })
+        },
+        [headerMode, headersList]
+    )
+
+    const loadPreview = async (file, idx) => {
         if (!file) return
         const ext = getExt(file.name)
+        const targetIdx = idx ?? selectedIdx
 
         if (isImage(file)) {
             const url = URL.createObjectURL(file)
@@ -138,7 +197,51 @@ const [excelWb, setExcelWb] = useState(null)         // cached workbook
         if (ext === '.xlsx' || ext === '.xls') {
             const buf = await file.arrayBuffer()
             const wb = XLSX.read(buf, { type: 'array' })
-            // const sheetName = wb.SheetNames?.[0]
+
+            if (!wb.SheetNames?.length) {
+                setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
+                return
+            }
+
+            const sheetNames = wb.SheetNames
+            const existingItem = targetIdx != null ? files[targetIdx] : null
+            const existingSelected = existingItem?.selectedSheets || {}
+            const nextSelectedSheets = {}
+            sheetNames.forEach((name, i) => {
+                if (Object.prototype.hasOwnProperty.call(existingSelected, name)) {
+                    nextSelectedSheets[name] = existingSelected[name]
+                } else {
+                    nextSelectedSheets[name] = i === 0
+                }
+            })
+
+            const nextActiveSheet =
+                existingItem?.activeSheet && sheetNames.includes(existingItem.activeSheet)
+                    ? existingItem.activeSheet
+                    : sheetNames[0]
+
+            setExcelWb(wb)
+            setExcelSheets(sheetNames)
+            setActiveSheet(nextActiveSheet)
+
+            if (targetIdx != null) {
+                setFiles((prev) => {
+                    const clone = [...prev]
+                    const item = clone[targetIdx]
+                    if (!item) return prev
+                    clone[targetIdx] = {
+                        ...item,
+                        sheetNames,
+                        selectedSheets: nextSelectedSheets,
+                        activeSheet: nextActiveSheet,
+                    }
+                    return clone
+                })
+            }
+
+            parseExcelSheet(wb, nextActiveSheet, file.name)
+            return
+            /* legacy preview block (kept for reference)
             if (ext === '.xlsx' || ext === '.xls') {
     const buf = await file.arrayBuffer()
     const wb = XLSX.read(buf, { type: 'array' })
@@ -243,6 +346,7 @@ const onSelectSheet = (sheetName) => {
 
             setPreview({ type: 'table', headers, rows, name: file.name })
             return
+            */
         }
 
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
@@ -271,7 +375,7 @@ const onSelectSheet = (sheetName) => {
 
             if (selectedIdx == null && next.length) {
                 setSelectedIdx(0)
-                loadPreview(next[0].file)
+                loadPreview(next[0].file, 0)
             }
 
             return next
@@ -298,11 +402,45 @@ const onSelectSheet = (sheetName) => {
 
     const onSelectFile = async (idx) => {
         setExcelSheets([])
-setActiveSheet(null)
-setExcelWb(null)
+        setActiveSheet(null)
+        setExcelWb(null)
 
         setSelectedIdx(idx)
-        await loadPreview(files[idx]?.file)
+        await loadPreview(files[idx]?.file, idx)
+    }
+
+    const onSelectSheet = (sheetName) => {
+        setActiveSheet(sheetName)
+        if (selectedIdx != null) {
+            setFiles((prev) => {
+                const clone = [...prev]
+                const item = clone[selectedIdx]
+                if (!item) return prev
+                clone[selectedIdx] = { ...item, activeSheet: sheetName }
+                return clone
+            })
+        }
+        if (excelWb && selectedFile) {
+            parseExcelSheet(excelWb, sheetName, selectedFile.name)
+        }
+    }
+
+    const toggleSheetSelection = (sheetName) => {
+        if (selectedIdx == null) return
+        setFiles((prev) => {
+            const clone = [...prev]
+            const item = clone[selectedIdx]
+            if (!item) return prev
+            const current = item.selectedSheets || {}
+            clone[selectedIdx] = {
+                ...item,
+                selectedSheets: {
+                    ...current,
+                    [sheetName]: !current[sheetName],
+                },
+            }
+            return clone
+        })
     }
 
     // ✅ Rename only (edit mode)
@@ -351,11 +489,30 @@ setExcelWb(null)
             visualize: isTabular(it.file) ? !!it.visualize : false,
         }))
 
+        const missingSheet = finalItems.find(
+            (it) =>
+                it.visualize &&
+                isExcel(it.file) &&
+                Array.isArray(it.sheetNames) &&
+                it.sheetNames.length > 0 &&
+                getSelectedSheets(it).length === 0
+        )
+        if (missingSheet) {
+            return setError(`Select at least one sheet to plot for "${missingSheet.file.name}".`)
+        }
+
         setUploading(true)
         setUploadProgress(0)
 
         try {
-            const manifest = finalItems.map((it) => ({ visualize: it.visualize }))
+            const manifest = finalItems.map((it) => {
+                const entry = { visualize: it.visualize }
+                if (it.visualize && isExcel(it.file) && Array.isArray(it.sheetNames) && it.sheetNames.length) {
+                    const sheets = getSelectedSheets(it)
+                    if (sheets.length) entry.sheets = sheets
+                }
+                return entry
+            })
             const res = await ingestionApi.startBatch(
                 projectId,
                 finalItems.map((it) => it.file),
@@ -633,19 +790,35 @@ setExcelWb(null)
                             </div>
 
                             {excelSheets.length > 0 && (
-    <div className="sheet-tabs">
-        {excelSheets.map((sheet) => (
-            <button
-                key={sheet}
-                type="button"
-                className={sheet === activeSheet ? 'sheet-btn active' : 'sheet-btn'}
-                onClick={() => onSelectSheet(sheet)}
-            >
-                {sheet}
-            </button>
-        ))}
-    </div>
-)}
+                                <>
+                                    <div className="summaryLabel" style={{ marginTop: 10 }}>Excel Sheets</div>
+                                    <div className="sheet-list">
+                                        {excelSheets.map((sheet) => {
+                                            const isActive = sheet === activeSheet
+                                            const isSelected = !!selectedFileEntry?.selectedSheets?.[sheet]
+                                            return (
+                                                <div key={sheet} className={`sheet-row ${isActive ? 'active' : ''}`}>
+                                                    <button
+                                                        type="button"
+                                                        className="sheet-name"
+                                                        onClick={() => onSelectSheet(sheet)}
+                                                    >
+                                                        {sheet}
+                                                    </button>
+                                                    <label className="toggle" onClick={(e) => e.stopPropagation()}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => toggleSheetSelection(sheet)}
+                                                        />
+                                                        <span className="slider" />
+                                                    </label>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </>
+                            )}
 
 
                             <div className="fd-preview">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import * as XLSX from 'xlsx'
@@ -9,9 +9,11 @@ export default function RawPreviewPage() {
 
   const [file, setFile] = useState(null)
   const [previewData, setPreviewData] = useState(null)
+  const [activeSheet, setActiveSheet] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [rowLimit, setRowLimit] = useState(20)
+  const workbookRef = useRef(null)
 
   useEffect(() => {
     if (!jobId) {
@@ -59,9 +61,13 @@ export default function RawPreviewPage() {
         else if (['xls', 'xlsx'].includes(ext)) {
           const buffer = await blob.arrayBuffer()
           const workbook = XLSX.read(buffer)
-          const sheet = workbook.Sheets[workbook.SheetNames[0]]
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
-          setPreviewData({ type: 'table', data: rows })
+          const sheetNames = workbook.SheetNames || []
+          workbookRef.current = workbook
+          const initialSheet = sheetNames[0] || ''
+          const sheet = initialSheet ? workbook.Sheets[initialSheet] : null
+          const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { header: 1 }) : []
+          setActiveSheet(initialSheet)
+          setPreviewData({ type: 'excel', sheetNames, data: rows })
         }
 
         // PDF
@@ -106,8 +112,8 @@ export default function RawPreviewPage() {
           {file?.filename && <p className="summary-label">File: {file.filename}</p>}
         </div>
 
-        {/* Row limit dropdown only for table */}
-        {previewData?.type === 'table' && (
+        {/* Row limit dropdown only for Excel */}
+        {previewData?.type === 'excel' && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <label className="summary-label" style={{ margin: 0 }}>Rows</label>
             <select
@@ -139,7 +145,7 @@ export default function RawPreviewPage() {
 
       {/* STATES */}
       {error && <div className="project-shell__error" style={{ marginTop: 12 }}>{error}</div>}
-      {loading && <div className="empty-state" style={{ marginTop: 12 }}>Loading preview…</div>}
+      {loading && <div className="empty-state" style={{ marginTop: 12 }}>Loading preview...</div>}
 
       {/* CONTENT */}
       {!loading && !error && (
@@ -162,33 +168,70 @@ export default function RawPreviewPage() {
           )}
 
           {/* TABLE */}
-          {previewData?.type === 'table' && (
-            <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
-              <tbody>
-                {previewData.data.slice(0, rowLimit).map((row, i) => (
-                  <tr
-                    key={i}
+          {previewData?.type === 'excel' && (
+            <>
+              {previewData.sheetNames.length > 1 && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                  <label className="summary-label" style={{ margin: 0 }}>Sheet</label>
+                  <select
                     style={{
-                      backgroundColor: i === 0 ? '#f0f4f8' : 'transparent',
-                      fontWeight: i === 0 ? 'bold' : 'normal',
+                      width: '220px',
+                      height: '37px',
+                      padding: '8px 32px 8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      backgroundColor: '#fff',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center',
+                      cursor: 'pointer',
+                    }}
+                    value={activeSheet}
+                    onChange={(e) => {
+                      const nextSheet = e.target.value
+                      setActiveSheet(nextSheet)
+                      const workbook = workbookRef.current
+                      const next = workbook?.Sheets?.[nextSheet]
+                      const rows = next ? XLSX.utils.sheet_to_json(next, { header: 1 }) : []
+                      setPreviewData((prev) => (prev ? { ...prev, data: rows } : prev))
                     }}
                   >
-                    {row.map((cell, j) => (
-                      <td
-                        key={j}
-                        style={{
-                          border: '1px solid #ddd',
-                          padding: '8px',
-                          textAlign: 'left',
-                        }}
-                      >
-                        {String(cell ?? '')}
-                      </td>
+                    {previewData.sheetNames.map((name) => (
+                      <option key={name} value={name}>{name}</option>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </select>
+                </div>
+              )}
+              <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                <tbody>
+                  {previewData.data.slice(0, rowLimit).map((row, i) => (
+                    <tr
+                      key={i}
+                      style={{
+                        backgroundColor: i === 0 ? '#f0f4f8' : 'transparent',
+                        fontWeight: i === 0 ? 'bold' : 'normal',
+                      }}
+                    >
+                      {row.map((cell, j) => (
+                        <td
+                          key={j}
+                          style={{
+                            border: '1px solid #ddd',
+                            padding: '8px',
+                            textAlign: 'left',
+                          }}
+                        >
+                          {String(cell ?? '')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
 
           {/* PDF */}

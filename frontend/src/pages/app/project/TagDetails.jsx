@@ -194,7 +194,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                             <td style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
                                 <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
                                 <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
-                                {f.filename}
+                                {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
                                 </div>
                                 </td>
                             <td 

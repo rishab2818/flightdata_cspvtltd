@@ -24,6 +24,7 @@ class IngestionRepository:
         processed_key: str | None = None,
         content_type: str | None = None,
         size_bytes: int | None = None,
+        sheet_name: str | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
@@ -37,6 +38,7 @@ class IngestionRepository:
             "visualize_enabled": visualize_enabled,
             "content_type": content_type,
             "size_bytes": size_bytes,
+            "sheet_name": sheet_name,
             "header_mode": header_mode,
             "custom_headers": custom_headers,
             "status": "queued",

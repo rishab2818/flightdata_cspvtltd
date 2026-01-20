@@ -51,6 +51,7 @@ class IngestionJobOut(BaseModel):
     filename: str
     storage_key: str
     processed_key: Optional[str] = None
+    sheet_name: Optional[str] = None
 
     dataset_type: Optional[str] = None  # cfd/wind/flight
     tag_name: Optional[str] = None
@@ -84,6 +85,7 @@ class IngestionCreateResponse(BaseModel):
     tag_name: Optional[str] = None
     visualize_enabled: bool = False
     header_mode: Optional[str] = None
+    sheet_name: Optional[str] = None
     status: str
     autoscale: dict
 
