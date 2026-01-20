@@ -21,6 +21,7 @@ from app.tasks.ingestion import ingest_file
 import pyarrow as pa
 import pyarrow.parquet as pq
 import io
+import pandas as pd
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
@@ -154,15 +155,61 @@ async def start_ingestion_batch(
             content_type=file.content_type or "application/octet-stream",
         )
         size_bytes = getattr(file, "size", None)
+
+        excel_exts = {".xlsx", ".xls"}
+        all_sheets: list[str] = []
+        if ext in excel_exts:
+            try:
+                await file.seek(0)
+                workbook = pd.ExcelFile(file.file)
+                all_sheets = [s for s in workbook.sheet_names if isinstance(s, str) and s.strip()]
+            except Exception:
+                all_sheets = []
         await file.close()
 
         # Decide which sheets to process for Excel
-        excel_exts = {".xlsx", ".xls"}
         sheet_queue: list[str | None]
         if visualize_enabled and ext in excel_exts:
             sheet_queue = requested_sheets or [None]
         else:
             sheet_queue = [None]
+
+        if not visualize_enabled and ext in excel_exts and len(all_sheets) > 1:
+            sheet_queue = []
+
+        # Store the full workbook as a raw-only entry for multi-sheet Excel
+        if ext in excel_exts and len(all_sheets) > 1:
+            full_job_id = await repo.create_job(
+                project_id=project_id,
+                filename=original_name,
+                storage_key=raw_key,
+                owner_email=user.email,
+                dataset_type=dataset_type,
+                header_mode=header_mode,
+                custom_headers=parsed_headers,
+                tag_name=tag_folder,
+                visualize_enabled=False,
+                processed_key=None,
+                content_type=file.content_type,
+                size_bytes=size_bytes,
+                sheet_name=None,
+            )
+            await repo.update_job(full_job_id, status="stored", progress=100)
+            responses.append(
+                IngestionCreateResponse(
+                    job_id=full_job_id,
+                    project_id=project_id,
+                    filename=original_name,
+                    storage_key=raw_key,
+                    dataset_type=dataset_type,
+                    tag_name=tag_folder,
+                    visualize_enabled=False,
+                    header_mode=header_mode,
+                    status="stored",
+                    autoscale=describe_autoscale(),
+                    sheet_name=None,
+                )
+            )
 
         for sheet_name in sheet_queue:
             processed_key = None
@@ -225,6 +272,44 @@ async def start_ingestion_batch(
                     sheet_name=sheet_name,
                 )
             )
+
+        # Store raw-only entries for any sheets not selected for visualization
+        if ext in excel_exts and all_sheets:
+            selected_set = {s for s in sheet_queue if isinstance(s, str)}
+            for sheet_name in all_sheets:
+                if sheet_name in selected_set:
+                    continue
+                raw_sheet_job_id = await repo.create_job(
+                    project_id=project_id,
+                    filename=original_name,
+                    storage_key=raw_key,
+                    owner_email=user.email,
+                    dataset_type=dataset_type,
+                    header_mode=header_mode,
+                    custom_headers=parsed_headers,
+                    tag_name=tag_folder,
+                    visualize_enabled=False,
+                    processed_key=None,
+                    content_type=file.content_type,
+                    size_bytes=size_bytes,
+                    sheet_name=sheet_name,
+                )
+                await repo.update_job(raw_sheet_job_id, status="stored", progress=100)
+                responses.append(
+                    IngestionCreateResponse(
+                        job_id=raw_sheet_job_id,
+                        project_id=project_id,
+                        filename=original_name,
+                        storage_key=raw_key,
+                        dataset_type=dataset_type,
+                        tag_name=tag_folder,
+                        visualize_enabled=False,
+                        header_mode=header_mode,
+                        status="stored",
+                        autoscale=describe_autoscale(),
+                        sheet_name=sheet_name,
+                    )
+                )
 
     return IngestionBatchCreateResponse(
         batch_id=batch_id,
