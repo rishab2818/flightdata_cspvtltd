@@ -148,7 +148,7 @@ export default function ProjectTagView() {
         <tbody>
           {rows.map((f) => (
             <tr key={f._id}>
-              <td>{f.filename}</td>
+              <td>{f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}</td>
               <td>{new Date(f.created_at).toLocaleDateString()}</td>
               <td>
                 <button onClick={() => handleView(f, activeTab === "processed")} title="View">👁</button>

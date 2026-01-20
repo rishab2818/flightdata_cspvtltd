@@ -322,6 +322,47 @@
   transform: translateX(15px);
 }
  
+/* =========================
+   Sheet Selection
+========================= */
+.sheet-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.sheet-row.active {
+  border-color: #1976D2;
+}
+
+.sheet-row .toggle {
+  margin: 0;
+}
+
+.sheet-name {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: left;
+  font-family: "Inter-semiBold", Helvetica;
+}
+
 
 
 /* =========================

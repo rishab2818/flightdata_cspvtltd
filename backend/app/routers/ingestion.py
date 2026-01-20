@@ -129,18 +129,20 @@ async def start_ingestion_batch(
         original_name = file.filename or f"file_{idx}"
         ext = os.path.splitext(original_name.lower())[-1]
         requested_visualize = False
+        requested_sheets: list[str] = []
 
         if manifest_items:
-            requested_visualize = bool((manifest_items[idx] or {}).get("visualize", False))
+            item = manifest_items[idx] if idx < len(manifest_items) else None
+            if isinstance(item, dict):
+                requested_visualize = bool(item.get("visualize", False))
+                sheets = item.get("sheets")
+                if isinstance(sheets, list):
+                    requested_sheets = [s.strip() for s in sheets if isinstance(s, str) and s.strip()]
 
         # force OFF for non-tabular
         visualize_enabled = bool(requested_visualize and ext in TABULAR_EXTS)
 
         raw_key = f"{project_folder}/{dataset_folder}/{tag_folder}/raw/{uuid4()}_{original_name}"
-        processed_key = None
-        if visualize_enabled:
-            stem = os.path.splitext(original_name)[0]
-            processed_key = f"{project_folder}/{dataset_folder}/{tag_folder}/processed/{uuid4()}_{stem}.parquet"
 
         await file.seek(0)
         minio.put_object(
@@ -154,55 +156,75 @@ async def start_ingestion_batch(
         size_bytes = getattr(file, "size", None)
         await file.close()
 
-        job_id = await repo.create_job(
-            project_id=project_id,
-            filename=original_name,
-            storage_key=raw_key,
-            owner_email=user.email,
-            dataset_type=dataset_type,
-            header_mode=header_mode,
-            custom_headers=parsed_headers,
-            tag_name=tag_folder,
-            visualize_enabled=visualize_enabled,
-            processed_key=processed_key,
-            content_type=file.content_type,
-            size_bytes=size_bytes,
-        )
-
-        # If visualize enabled, materialize parquet during ingestion
-        if visualize_enabled:
-            ingest_file.delay(
-                job_id,
-                bucket,
-                raw_key,
-                processed_key,
-                original_name,
-                header_mode,
-                parsed_headers,
-                dataset_type,
-                tag_folder,
-            )
-            status_value = "queued"
+        # Decide which sheets to process for Excel
+        excel_exts = {".xlsx", ".xls"}
+        sheet_queue: list[str | None]
+        if visualize_enabled and ext in excel_exts:
+            sheet_queue = requested_sheets or [None]
         else:
-            # stored raw only
-            await repo.update_job(job_id, status="stored", progress=100)
+            sheet_queue = [None]
 
-            status_value = "stored"
+        for sheet_name in sheet_queue:
+            processed_key = None
+            if visualize_enabled:
+                stem = os.path.splitext(original_name)[0]
+                if sheet_name:
+                    sheet_slug = _safe_slug(sheet_name)
+                    processed_key = f"{project_folder}/{dataset_folder}/{tag_folder}/processed/{uuid4()}_{stem}__{sheet_slug}.parquet"
+                else:
+                    processed_key = f"{project_folder}/{dataset_folder}/{tag_folder}/processed/{uuid4()}_{stem}.parquet"
 
-        responses.append(
-            IngestionCreateResponse(
-                job_id=job_id,
+            job_id = await repo.create_job(
                 project_id=project_id,
                 filename=original_name,
                 storage_key=raw_key,
+                owner_email=user.email,
                 dataset_type=dataset_type,
+                header_mode=header_mode,
+                custom_headers=parsed_headers,
                 tag_name=tag_folder,
                 visualize_enabled=visualize_enabled,
-                header_mode=header_mode,
-                status=status_value,
-                autoscale=describe_autoscale(),
+                processed_key=processed_key,
+                content_type=file.content_type,
+                size_bytes=size_bytes,
+                sheet_name=sheet_name,
             )
-        )
+
+            # If visualize enabled, materialize parquet during ingestion
+            if visualize_enabled:
+                ingest_file.delay(
+                    job_id,
+                    bucket,
+                    raw_key,
+                    processed_key,
+                    original_name,
+                    header_mode,
+                    parsed_headers,
+                    dataset_type,
+                    tag_folder,
+                    sheet_name,
+                )
+                status_value = "queued"
+            else:
+                # stored raw only
+                await repo.update_job(job_id, status="stored", progress=100)
+                status_value = "stored"
+
+            responses.append(
+                IngestionCreateResponse(
+                    job_id=job_id,
+                    project_id=project_id,
+                    filename=original_name,
+                    storage_key=raw_key,
+                    dataset_type=dataset_type,
+                    tag_name=tag_folder,
+                    visualize_enabled=visualize_enabled,
+                    header_mode=header_mode,
+                    status=status_value,
+                    autoscale=describe_autoscale(),
+                    sheet_name=sheet_name,
+                )
+            )
 
     return IngestionBatchCreateResponse(
         batch_id=batch_id,

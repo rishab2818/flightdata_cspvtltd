@@ -20,4 +20,5 @@ openpyxl==3.1.5
 sse-starlette==2.1.2
 pyarrow==17.0.0
 plotly==5.24.1
+xlrd==2.0.1
 

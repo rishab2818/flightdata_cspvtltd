@@ -135,9 +135,15 @@ def _csv_to_parquet(csv_path: str, parquet_path: str, header_mode: str, custom_h
     return columns or [], rows, sample_rows or [], stats
 
 
-def _excel_to_parquet(xls_path: str, parquet_path: str, header_mode: str, custom_headers: list[str] | None):
-    # Always first sheet
-    read_kwargs = {"sheet_name": 0}
+def _excel_to_parquet(
+    xls_path: str,
+    parquet_path: str,
+    header_mode: str,
+    custom_headers: list[str] | None,
+    sheet_name: str | int | None = None,
+):
+    # Default to first sheet when not specified.
+    read_kwargs = {"sheet_name": 0 if sheet_name is None else sheet_name}
     if header_mode in ("none", "custom"):
         read_kwargs["header"] = None
     else:
@@ -169,6 +175,7 @@ def ingest_file(
     custom_headers: list[str] | None = None,
     dataset_type: str | None = None,
     tag_name: str | None = None,
+    sheet_name: str | None = None,
 ):
     redis = get_sync_redis()
     db = get_sync_db()
@@ -238,7 +245,11 @@ def ingest_file(
             )
         else:
             columns, row_count, sample_rows, stats = _excel_to_parquet(
-                raw_path, parquet_path, header_mode, custom_headers
+                raw_path,
+                parquet_path,
+                header_mode,
+                custom_headers,
+                sheet_name=sheet_name,
             )
 
 

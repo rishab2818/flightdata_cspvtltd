@@ -58,7 +58,8 @@ export default function ProjectDataManagement() {
   const filtered = useMemo(() => {
     return jobs.filter((job) => {
       const matchesTab = activeTab === 'all' || (job.dataset_type || '').toLowerCase() === activeTab
-      const matchesSearch = !search || job.filename.toLowerCase().includes(search.toLowerCase())
+      const searchText = [job.filename, job.sheet_name].filter(Boolean).join(' ')
+      const matchesSearch = !search || searchText.toLowerCase().includes(search.toLowerCase())
       return matchesTab && matchesSearch
     })
   }, [jobs, activeTab, search])
@@ -192,7 +193,9 @@ export default function ProjectDataManagement() {
       <div className="data-grid">
         {filtered.map((job) => (
           <div className="data-card" key={job.job_id}>
-            <p className="data-card__name">{job.filename}</p>
+            <p className="data-card__name">
+              {job.sheet_name ? `${job.filename} — ${job.sheet_name}` : job.filename}
+            </p>
             <div className="data-card__meta">Status: {job.status}</div>
             <div className="data-card__meta">Dataset: {job.dataset_type || 'Unspecified'}</div>
             <div className="data-card__meta">Columns: {job.columns?.length || 0}</div>
@@ -219,7 +222,9 @@ export default function ProjectDataManagement() {
         <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div className="actions-row" style={{ justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ margin: '0 0 4px 0' }}>{selected.filename}</h3>
+              <h3 style={{ margin: '0 0 4px 0' }}>
+                {selected.sheet_name ? `${selected.filename} — ${selected.sheet_name}` : selected.filename}
+              </h3>
               <p className="summary-label" style={{ margin: 0 }}>
                 {selected.columns?.length || 0} columns · {selected.rows_seen || 0} rows inspected
               </p>
