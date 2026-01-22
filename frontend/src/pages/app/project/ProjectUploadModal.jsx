@@ -754,7 +754,7 @@ const onSelectSheet = (sheetName) => {
                                                     {item.file.type || 'unknown'} · {Math.round(item.file.size / 1024)} KB · {visualizeInfo(item.file, item.visualize)}
                                                 </div>
                                             </div>
-
+{/* 
                                             <label className="toggle" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
@@ -763,7 +763,7 @@ const onSelectSheet = (sheetName) => {
                                                     disabled={!isTabular(item.file)}
                                                 />
                                                 <span className="slider" />
-                                            </label>
+                                            </label> */}
                                         </div>
                                     ))}
                                 </div>
@@ -784,7 +784,7 @@ const onSelectSheet = (sheetName) => {
                     <div className="fd-modal__right">
                         <div className="project-card1" >
                             <div className='card'>
-                            <h3>Preview</h3>
+                            <h3 style={{marginTop:"20px"}}>Preview</h3>
                             <div className="summaryLabel" >
                                 {selectedFile ? selectedFile.name : 'Select a file to preview'}
                             </div>

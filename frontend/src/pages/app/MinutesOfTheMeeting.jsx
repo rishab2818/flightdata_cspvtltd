@@ -761,11 +761,11 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
   return (
     <div className="LightModalOverlay">
       <div className="ActionModalCard">
-        <div className="ModalHeader">
+        <div className="ModalHeader1">
           <h3>My Action</h3>
         </div>
 
-        <div className="ActionTabs">
+        <div className="ActionTabs1">
           <button
             type="button"
             className={`tabBtn ${activeTab === "view" ? "active" : ""}`}
@@ -1055,32 +1055,32 @@ function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
         </div>
 
         <form className="ModalForm" onSubmit={handleSubmit}>
-          <label className="label">Meeting title</label>
+          <label className="Meetinglabel" style={{marginBottom:"-10px", marginTop:"10px"}}>Meeting title</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="textInput"
+            className="textInput1"
             placeholder={`Next ${initialMeeting?.sectionLabel || "Meeting"}`}
           />
 
           <div className="row gap16">
             <div className="flex1">
-              <label className="label">Meeting date</label>
+              <label className="Meetinglabel">Meeting date</label>
               <input
                 type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
-                className="textInput"
+                className="textInput2"
               />
             </div>
             <div className="flex1">
-              <label className="label">Time</label>
+              <label className="Meetinglabel">Time</label>
               <input
                 type="time"
                 value={meetingTime}
                 onChange={(e) => setMeetingTime(e.target.value)}
-                className="textInput"
+                className="textInput2"
               />
             </div>
           </div>
