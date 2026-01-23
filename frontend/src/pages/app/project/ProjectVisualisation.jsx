@@ -103,6 +103,9 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 
   /* ================= global plot config ================= */
   const [chartType, setChartType] = useState('scatter')
+  const [xScale, setXScale] = useState('linear')
+  const [yScale, setYScale] = useState('linear')
+
 
   // whether the selected chart type requires a Z axis (used in render and submit)
   const requiresZ = ['contour', 'scatter3d', 'line3d', 'surface'].includes(chartType)
@@ -336,6 +339,8 @@ const fetchVisualizations = async (page = 1, reset = false) => {
         x_axis: s.xAxis,
         y_axis: s.yAxis,
         z_axis: requiresZ ? s.zAxis : undefined,
+        x_scale : xScale,
+        y_scale :yScale,
         label: (s.label || '').trim() || buildAutoLabel(s),
       }))
 
@@ -578,6 +583,24 @@ const deleteVisualization = async (vizId) => {
 </div>
 
 
+<div className="ps-field">
+  <label>X Scale</label>
+  <select value={xScale} onChange={(e) => setXScale(e.target.value)}>
+    <option value="linear">Linear</option>
+    <option value="log">Log</option>
+  </select>
+</div>
+
+<div className="ps-field">
+  <label>Y Scale</label>
+  <select value={yScale} onChange={(e) => setYScale(e.target.value)}>
+    <option value="linear">Linear</option>
+    <option value="log">Log</option>
+  </select>
+</div>
+
+
+
            {/* <div className="ps-field">
             <label>Chart Type</label>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
@@ -595,7 +618,7 @@ const deleteVisualization = async (vizId) => {
           className="ps-row"
           style={{
             gridTemplateColumns:
-              chartType === 'contour' ? 'repeat(6, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))',
+              chartType === 'contour' ? 'repeat(8, minmax(0, 1fr))' : 'repeat(7, minmax(0, 1fr))',
           }}
         >
           <div className="ps-field">
