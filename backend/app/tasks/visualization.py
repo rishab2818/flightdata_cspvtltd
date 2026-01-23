@@ -39,6 +39,21 @@ def _update_db_status(db, viz_id: str, **fields):
     )
 
 
+def _apply_scale_filters(df: pd.DataFrame, x_col: str, y_col: str, x_scale: str, y_scale: str) -> pd.DataFrame:
+    # coerce numeric
+    df = df.copy()
+    df[x_col] = pd.to_numeric(df[x_col], errors="coerce")
+    df[y_col] = pd.to_numeric(df[y_col], errors="coerce")
+    df = df.dropna(subset=[x_col, y_col])
+
+    if x_scale == "log":
+        df = df[df[x_col] > 0]
+    if y_scale == "log":
+        df = df[df[y_col] > 0]
+    return df
+
+
+
 def _iter_parquet_batches(url: str, columns: list[str]):
     try:
         import pyarrow.parquet as pq
@@ -89,6 +104,8 @@ def _sample_xy(
     ext: str,
     x_axis: str | None,
     y_axis: str | None,
+    x_scale: str ="linear",
+    y_scale:str ="linear",
     max_points: int = 120_000,
 ) -> pd.DataFrame:
     cols = [c for c in [x_axis, y_axis] if c]
@@ -107,6 +124,12 @@ def _sample_xy(
         chunk = chunk.dropna(subset=cols)
         if chunk.empty:
             continue
+
+        # For the log log and semi log 
+        chunk = _apply_scale_filters(chunk, cols[0], cols[1] if len(cols) > 1 else cols[0], x_scale, y_scale)
+        if chunk.empty:
+            continue
+
 
         remaining = max_points - kept_n
         if remaining <= 0:
@@ -171,9 +194,10 @@ def _sample_xyz(
     return pd.concat(kept, ignore_index=True)
 
 
-def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, int]:
+def _scan_axis_bounds(url: str, ext: str, x_axis: str, x_scale: str = "linear") -> tuple[float, float, int]:
     x_min = np.inf
     x_max = -np.inf
+
     rows = 0
 
     for chunk in _iter_chunks(url, ext, x_axis, None, None):
@@ -182,6 +206,8 @@ def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, in
             continue
         x_min = min(x_min, float(s.min()))
         x_max = max(x_max, float(s.max()))
+        if x_scale == "log" and x_min <= 0:
+            raise ValueError("Log x scale selected but x contains <= 0  value ")
         rows += len(s)
 
     if not np.isfinite(x_min) or not np.isfinite(x_max):
@@ -191,13 +217,20 @@ def _scan_axis_bounds(url: str, ext: str, x_axis: str) -> tuple[float, float, in
 
 
 class LevelAccumulator:
-    def __init__(self, bins: int, x_min: float, x_max: float):
+    def __init__(self, bins: int, x_min: float, x_max: float, x_scale: str = "linear"):
         self.bins = bins
-        self.edges = np.linspace(x_min, x_max, num=bins + 1)
+        if x_scale == "log":
+            if x_min <= 0 or x_max <= 0:
+                raise ValueError("Log scale requires x_min and x_max > 0")
+            self.edges = np.logspace(np.log10(x_min), np.log10(x_max), num=bins + 1)
+        else:
+            self.edges = np.linspace(x_min, x_max, num=bins + 1)
+
         self.counts = np.zeros(bins, dtype=np.int64)
         self.sums = np.zeros(bins, dtype=float)
         self.mins = np.full(bins, np.inf)
         self.maxs = np.full(bins, -np.inf)
+
 
     def ingest(self, x: pd.Series, y: pd.Series):
         # x/y are expected numeric already
@@ -244,13 +277,16 @@ def _materialize_tiles(
     ext: str,
     x_axis: str,
     y_axis: str,
+    x_scale: str ='linear',
+    y_scale: str ='linear',
     levels: tuple[int, ...] = LOD_LEVELS,
 ):
-    x_min, x_max, rows = _scan_axis_bounds(url, ext, x_axis)
+    x_min, x_max, rows = _scan_axis_bounds(url, ext, x_axis, x_scale=x_scale)
     if x_min == x_max:
         x_max = x_min + 1e-9
 
-    accumulators = {bins: LevelAccumulator(bins, x_min, x_max) for bins in levels}
+    accumulators = {bins: LevelAccumulator(bins, x_min, x_max, x_scale=x_scale) for bins in levels}
+
 
     tiles = []
     partitions = 0
@@ -262,6 +298,11 @@ def _materialize_tiles(
         chunk = chunk.dropna(subset=[x_axis, y_axis])
         if chunk.empty:
             continue
+        ## For the log log and semi log 
+        chunk = _apply_scale_filters(chunk, x_axis, y_axis, x_scale, y_scale)
+        if chunk.empty:
+            continue
+
 
         partitions += 1
         for acc in accumulators.values():
@@ -374,9 +415,13 @@ def _build_contour_grid(
 def _build_figure(series_frames: list[dict], chart_type: str):
     chart_type = (chart_type or "scatter").lower().strip()
     fig = go.Figure()
-
+    # for the log log and semi log 
+    requested_x_scales = set()
+    requested_y_scales = set()
     for item in series_frames:
         series = item["series"]
+        requested_x_scales.add(series.get("x_scale" , "linear"))
+        requested_y_scales.add(series.get("y_scale","linear"))
         df = item["frame"]
 
         label = series.get("label") or series.get("y_axis") or "Series"
@@ -635,7 +680,16 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
         else:
             fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8))
+    
+    # for the log log and semi log 
+    if(len(requested_x_scales) >1 or len(requested_y_scales)>1):
+        raise ValueError("All series must use the same x_scale /y_scale (linear/log) .")
+    
+    x_scale = next(iter(requested_x_scales)) if requested_x_scales else "linear"
+    y_scale = next(iter(requested_y_scales)) if requested_y_scales else "linear"
 
+    fig.update_xaxes(type=x_scale)
+    fig.update_yaxes(type=y_scale)
     fig.update_layout(
         template="plotly_white",
         title="Overplot",
@@ -887,6 +941,8 @@ def generate_visualization(self, viz_id: str):
     redis = get_sync_redis()
     db = get_sync_db()
 
+
+
     owner_email = None
     try:
         doc = db.visualizations.find_one({"_id": ObjectId(viz_id)})
@@ -973,6 +1029,8 @@ def generate_visualization(self, viz_id: str):
             x_axis = series["x_axis"]
             y_axis = series["y_axis"]
             z_axis = series.get("z_axis")
+            x_scale = (series.get("x_scale") or "linear").lower().strip()
+            y_scale = (series.get("y_scale") or "linear").lower().strip()
 
             # Prefer processed parquet (best for /raw endpoint too)
             if job.get("processed_key"):
@@ -1004,6 +1062,8 @@ def generate_visualization(self, viz_id: str):
                     ext,
                     x_axis,
                     y_axis,
+                    x_scale=x_scale,
+                    y_scale=y_scale,
                 )
 
                 display_frame = overview.rename(
@@ -1033,7 +1093,7 @@ def generate_visualization(self, viz_id: str):
                         max_points=200_000,
                     )
                 else:
-                    raw_df = _sample_xy(data_url, ext, x_axis, y_axis, max_points=120_000)
+                    raw_df = _sample_xy(data_url, ext, x_axis, y_axis, max_points=120_000 , x_scale=x_scale,y_scale=y_scale)
                 if raw_df.empty:
                     _update_db_status(
                         db,
@@ -1054,7 +1114,9 @@ def generate_visualization(self, viz_id: str):
 
         # Ensure numeric-style x-axis zoom (prevents category zoom weirdness)
         if chart_type in {"scatter", "scatterline", "line", "bar"}:
-            fig.update_xaxes(type="linear")
+            x_scale = (series_frames[0]["series"].get("x_scale") or "linear").lower().strip()
+            if x_scale == "linear":
+                fig.update_xaxes(type="linear")
 
         post_script = _build_zoom_loader_script(
             viz_id=viz_id,
