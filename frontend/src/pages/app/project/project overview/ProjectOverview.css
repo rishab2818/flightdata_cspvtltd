@@ -14,16 +14,55 @@ width: 100%;
   font-weight: 700;
   letter-spacing: 0.4px;
   line-height: normal;
+  margin-top: 5px;
 
 }
+
 .statscard {
-  background: #ffffff;
+   background: #ffffff;
   border-radius: 4px;
   border: 1px solid #00000026;
   display: flex;
+  flex-direction: column;   /* ✅ REQUIRED */
+  align-items: flex-start;
+  width: 100%;
+  height: auto;             /* ✅ REQUIRED */
+  overflow: visible;        /* ✅ REQUIRED */
   padding: 20px;
-  gap: 10px;
+   gap: 10px;
+  box-sizing: border-box;
 }
+
+.statscard p {
+  display: block;
+  width: 100%;
+  white-space: normal;
+  overflow: visible;
+  margin: 0;
+    border: 1px solid blue;
+}
+
+.edit-btn{
+  background: #ffffff;
+  border: none;
+}        
+
+.project-description {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 400;
+  color: #514F4F;
+  font-family: "SF Pro", Helvetica, Arial, sans-serif;
+
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-word;
+
+  margin-top: 10px;
+   
+}
+
+
 .UploadCard {
  width: 100%;
    gap: 16px;
@@ -44,6 +83,7 @@ width: 100%;
       color: #000000;
       font-Size: 14;
       width: 56px;
+      height: 24px;
       display:flex;
       align-Items:center;
       justify-Content:center;

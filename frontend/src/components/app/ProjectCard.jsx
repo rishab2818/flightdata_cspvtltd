@@ -88,6 +88,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
   letterSpacing: "0px",
   lineHeight: "normal",   
   flexGrow: 1,
+  marginTop:"10px",
 }}
 
       >
@@ -108,25 +109,52 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
         {/* created + members group */}
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACING.lg + SPACING.sm }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: "#000000" }}>
-            <FiCalendar size={24} />
-            <div>
+            {/* <FiCalendar size={24} /> */}
+            {/* <div>
               <div style={{ fontSize: 14, color: "#737373" }}>Created</div>
               <div
                 style={{ fontSize: 14, fontWeight: 600, color: "#000000", marginTop: 2, fontFamily: "inter-semi-bold, Helvetica" }}
               >
                 {date}
               </div>
-            </div>
+            </div> */}
+            <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 14,
+  }}
+>
+  <span style={{fontSize:14, color: "#737373" }}>Created</span>
+  <span
+    style={{
+      fontWeight: 600,
+      color: "#000000",
+      fontFamily: "inter-semi-bold, Helvetica",
+    }}
+  >
+    {date}
+  </span>
+</div>
+
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: "#000000" }}>
-            <FiUser size={24} />
-            <div>
-              <div style={{ fontSize: 14, color: "#737373" }}>Members</div>
-              <div
+            {/* <FiUser size={24} /> */}
+            <div
+              style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 14,
+  }}
+            >
+              <span style={{ fontSize: 14, color: "#737373" }}>Members</span>
+              <span
                 style={{ fontSize: 14, fontWeight: 600, color: "#000000", marginTop: 2, fontFamily: "inter-semi-bold, Helvetica" }}
               >
                 {String(members).padStart(2, '0')}
-              </div>
+              </span>
             </div>
           </div>
         </div>

@@ -330,7 +330,7 @@ export default function UploadMinutesModal({
       <div className="modalBox">
         <h2 className="modalTitle">Upload Meeting Minutes</h2>
 
-        <form onSubmit={handleSubmit} className="form">
+        <form  autoComplete="off" onSubmit={handleSubmit} className="form">
 
           {/* Upload Box */}
           <div className="uploadRoot">
@@ -386,7 +386,7 @@ export default function UploadMinutesModal({
   <div className="actionGrid">
     {/* Action Point */}
     <div className="field">
-      <input
+      {/* <input
         type="text"
         placeholder="CFD analysis to be conducted for Airbus 320"
         value={actionPointDescription}
@@ -394,7 +394,20 @@ export default function UploadMinutesModal({
         className="TextInput"
         // onKeyDown={handleActionPointKeyDown}
         // autoComplete="off"
-      />
+      /> */}
+
+      <input
+  type="text"
+  name={`ap-desc-${Date.now()}`}   // 🔑 dynamic name
+  placeholder="CFD analysis to be conducted for Airbus 320"
+  value={actionPointDescription}
+  onChange={(e) => setActionPointDescription(e.target.value)}
+  className="TextInput"
+  autoComplete="new-password"     // 🔑 Chrome autofill killer
+  spellCheck={false}
+  inputMode="text"
+/>
+
     </div>
 
     {/* Assign To */}

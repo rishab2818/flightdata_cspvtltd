@@ -7,17 +7,15 @@ import designicon from "../../assets/design_black.svg";
 import Report1 from "../../assets/Report1.svg";
 import load from "../../assets/load.svg";
 import FileUploadBox from "../../components/common/FileUploadBox";
-import DocumentActions from "../../components/common/DocumentActions"; // <-- Import DocumentActions
+import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import CommonStatCard from "../../components/common/common_card/common_card";
-import { FiPlus, FiUploadCloud, FiSearch } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "—");
-
-// StatCard component is replaced by CommonStatCard usage
 
 /* --------------------- Main Component --------------------- */
 export default function TechnicalReports() {
@@ -27,13 +25,12 @@ export default function TechnicalReports() {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all" });
   const [showModal, setShowModal] = useState(false);
-  // State for editing
   const [editingRecord, setEditingRecord] = useState(null);
 
-  /** 🔴 NEW — Delete Modal State */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
 
+  // Load records initially
   const loadRecords = async () => {
     try {
       setLoading(true);
@@ -52,26 +49,15 @@ export default function TechnicalReports() {
     loadRecords();
   }, []);
 
-  // const filtered = useMemo(() => {
-  //   return records.filter((row) =>
-  //     filters.type === "all" ? true : row.report_type === filters.type
-  //   );
-  // }, [records, filters]);
-
+  // Filtered records based on search + type filter
   const filtered = useMemo(() => {
     const searchText = search.toLowerCase();
-
     return records.filter((row) => {
-      const typeMatch =
-        filters.type === "all" || row.report_type === filters.type;
-
-      const searchMatch =
-        row.report_name?.toLowerCase().includes(searchText);
-
+      const typeMatch = filters.type === "all" || row.report_type === filters.type;
+      const searchMatch = row.name?.toLowerCase().includes(searchText);
       return typeMatch && searchMatch;
     });
   }, [records, filters, search]);
-
 
   /* --------------------- Action Handlers --------------------- */
 
@@ -97,22 +83,27 @@ export default function TechnicalReports() {
     }
   };
 
-  // const handleDelete = async (row) => {
-  //   if (!window.confirm("Delete this technical report?")) return;
-  //   try {
-  //     await recordsApi.removeTechnical(row.record_id);
-  //     setRecords((prev) => prev.filter((r) => r.record_id !== row.record_id));
-  //   } catch (err) {
-  //     alert("Delete failed. Please try again.");
-  //   }
-  // };
+  const handleEdit = (row) => {
+    setEditingRecord(row);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingRecord(null);
+  };
+
+  const handleUpdate = (updatedRecord) => {
+    setRecords((prev) =>
+      prev.map((r) => (r.record_id === updatedRecord.record_id ? updatedRecord : r))
+    );
+  };
 
   /* -------------------- DELETE WITH CONFIRMATION -------------------- */
   const confirmDelete = async () => {
     if (!recordToDelete) return;
 
     try {
-      // Use recordToDelete instead of row
       await recordsApi.removeTechnical(recordToDelete.record_id);
       setRecords((prev) => prev.filter((r) => r.record_id !== recordToDelete.record_id));
     } catch (err) {
@@ -123,30 +114,18 @@ export default function TechnicalReports() {
     setRecordToDelete(null);
   };
 
-
-  const handleEdit = (row) => {
-    setEditingRecord(row);
-    setShowModal(true);
+  /* -------------------- Handle New Record Creation -------------------- */
+  const handleCreated = (newRecord) => {
+    setRecords((prev) => [newRecord, ...prev]); // Add to top of the list
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingRecord(null); // Clear editing state when closing
-  };
-
-  const handleUpdate = (updatedRecord) => {
-    setRecords((prev) =>
-      prev.map((r) => (r.record_id === updatedRecord.record_id ? updatedRecord : r))
-    );
-  };
-
-
+  /* -------------------- UI -------------------- */
   return (
-    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto",height:"100%", gap:"10px",borderRadius: "8px" }}>
-
+    <div style={{ width: "100%", maxWidth: 1640, margin: "0 auto", height: "100%", gap: "10px", borderRadius: "8px" }}>
+      {/* Stat Cards */}
       <div
         style={{
-          borderRadius:"8px",
+          borderRadius: "8px",
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
           gap: "24px",
@@ -156,8 +135,8 @@ export default function TechnicalReports() {
         <CommonStatCard title="Technical" value={records.filter((r) => r.report_type === "Technical").length} icon={technicalIcon} bg="#F3E8FF" />
         <CommonStatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} icon={designicon} bg="#DCFCE7" />
       </div>
-      {/* Filter section  */}
-      <div
+
+     <div
         style={{
           marginTop: 22,
           background: "#fff",
@@ -197,7 +176,7 @@ export default function TechnicalReports() {
             value={filters.type}
             onChange={(e) => setFilters({ type: e.target.value })}
             style={{
-              minWidth: "284px",
+              minWidth: "350px",
               background: "#F3F3F5",
               height: "42px",
               borderRadius: "8px",
@@ -249,6 +228,9 @@ export default function TechnicalReports() {
         </button>
       </div>
 
+
+
+      {/* Table */}
       <div
         style={{
           marginTop: 23,
@@ -258,22 +240,14 @@ export default function TechnicalReports() {
           padding: "10px 24px 24px 24px",
           display: "flex",
           flexDirection: "column",
-          height: "calc(68vh - 70px)", // adjust if header size changes
+          height: "calc(68vh - 70px)",
         }}
       >
-        <div style={{ marginTop: 10, flex: 1, maxHeight: "100", overflowX: "auto", overflowY: "auto" }}>
-          <div
-            style={{
-              marginBottom: 10,
-              marginLeft: 5,
-              color: "#0A0A0A",
-              fontSize: 16,
-              fontWeight: "600",
-              gap: 15,
-            }}
-          >
+        <div style={{ marginTop: 10, flex: 1, overflowX: "auto", overflowY: "auto" }}>
+          <div style={{ marginBottom: 10, marginLeft: 5, color: "#0A0A0A", fontSize: 16, fontWeight: 600 }}>
             Technical Reports
           </div>
+
           <table
             style={{
               width: "100%",
@@ -283,10 +257,10 @@ export default function TechnicalReports() {
               borderRadius: "8px",
               overflow: "hidden",
               minWidth: 900,
-              marginTop: "20px"
+              marginTop: "20px",
             }}
           >
-            <thead >
+            <thead>
               <tr
                 style={{
                   color: "#000000",
@@ -300,24 +274,15 @@ export default function TechnicalReports() {
                   background: "#EFF7FF",
                 }}
               >
-                {["Report Name", "Description", "Type", "Created Date", "Ratings", "Action"].map( // <-- ADDED 'Action'
-                  (col) => (
-                    <th
-                      key={col}
-                      style={{
-                        padding: "12px 16px",
-                        fontWeight: 600,
-
-                        borderBottom: `1px solid ${BORDER}`,
-                      }}
-                    >
-                      {col}
-                    </th>
-                  )
-                )}
+                {["Report Name", "Description", "Type", "Created Date", "Ratings", "Action"].map((col) => (
+                  <th key={col} style={{ padding: "12px 16px", fontWeight: 600, borderBottom: `1px solid ${BORDER}` }}>
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody style={{textAlign: "left",fontSize:"12px",fontWeight:400, color:"#717182", fontFamily:"Inter-Regular, Helvetica" }}>
+
+            <tbody style={{ textAlign: "left", fontSize: "12px", fontWeight: 400, color: "#717182",fontFamily:"Inter-Regular, Helvetica" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
@@ -325,6 +290,7 @@ export default function TechnicalReports() {
                   </td>
                 </tr>
               )}
+
               {!loading && error && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center", color: "#b91c1c" }}>
@@ -335,78 +301,36 @@ export default function TechnicalReports() {
 
               {!loading && !error && filtered.length === 0 && (
                 <tr style={{ height: "250px" }}>
-                  <td colSpan={10} style={{ padding: 0 }}>
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "60%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "40px 0",
-                      }}
-                    >
+                  <td colSpan={6} style={{ padding: 0 }}>
+                    <div style={{ width: "100%", height: "60%", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
                       <EmptySection />
                     </div>
                   </td>
                 </tr>
               )}
+
               {!loading &&
                 !error &&
                 filtered.map((row, index) => {
                   const isLast = index === filtered.length - 1;
-
                   return (
                     <tr key={row.record_id}>
-                      <td
-                        style={{
-                          padding: "12px 16px",
-                          fontWeight: 600,
-                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
-                        }}
-                      >
+                      <td style={{ padding: "12px 16px", fontWeight: 600, borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {row.name}
                       </td>
-                      <td
-                        style={{
-                          padding: "12px 16px",
-                          color: "#475569",
-                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
-                        }}
-                      >
+                      <td style={{ padding: "12px 16px", color: "#475569", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {row.description}
                       </td>
-                      <td
-                        style={{
-                          padding: "12px 16px",
-                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
-                        }}
-                      >
+                      <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {row.report_type}
                       </td>
-                      <td
-                        style={{
-                          padding: "12px 16px",
-                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
-                        }}
-                      >
+                      <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {formatDate(row.created_date)}
                       </td>
-                      <td
-                        style={{
-                          padding: "12px 16px",
-                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
-                        }}
-                      >
+                      <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {Number(row.rating || 0).toFixed(1)}
                       </td>
-                      {/* ADDED Action Cell */}
-                      <td
-                        style={{
-                          padding: "12px 16px",
-                          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
-                        }}
-                      >
+                      <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         <DocumentActions
                           doc={{ id: row.record_id, fileName: row.original_name }}
                           onEdit={() => handleEdit(row)}
@@ -429,9 +353,9 @@ export default function TechnicalReports() {
       {showModal && (
         <ReportModal
           onClose={closeModal}
-          onCreated={loadRecords}
-          editingRecord={editingRecord} // Pass the editing record
-          onUpdated={handleUpdate} // Handle successful update
+          onCreated={handleCreated} // <-- Append new record instantly
+          editingRecord={editingRecord}
+          onUpdated={handleUpdate}
         />
       )}
 
@@ -450,24 +374,6 @@ export default function TechnicalReports() {
 }
 
 /* --------------------- Input Component --------------------- */
-// function Input({ label,style, ...rest }) {
-//   return (
-//     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-//       <span style={{ color: "#475569", fontSize: 13 }}>{label}</span>
-//       <input
-//         {...rest}
-//         style={{
-//           height: 40,
-//           borderRadius: "8px",
-//           border: `1px solid ${BORDER}`,
-//           padding: "0 12px",
-//           background: "#F3F3F5",
-//         }}
-//       />
-//     </label>
-//   );
-// }
-
 function Input({ label, style, ...rest }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -480,14 +386,14 @@ function Input({ label, style, ...rest }) {
           border: `1px solid ${BORDER}`,
           padding: "0 12px",
           background: "#F3F3F5",
-          ...style, // ✅ APPLY IT
+          ...style,
         }}
       />
     </label>
   );
 }
 
-/* --------------------- Modal Component (Updated for Edit) --------------------- */
+/* --------------------- Modal Component --------------------- */
 function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
   const [form, setForm] = useState({
     name: "",
@@ -502,37 +408,32 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
   const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  // Populate form fields if editingRecord is provided
   useEffect(() => {
     if (editingRecord) {
       setForm({
         name: editingRecord.name || "",
         description: editingRecord.description || "",
         report_type: editingRecord.report_type || "Technical",
-        // Format date for input type="date"
-        created_date: editingRecord.created_date ? editingRecord.created_date.split('T')[0] : "",
+        created_date: editingRecord.created_date ? editingRecord.created_date.split("T")[0] : "",
         rating: editingRecord.rating ?? "",
       });
-      setFile(null); // Clear file input when editing
+      setFile(null);
       setError("");
     }
   }, [editingRecord]);
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    try {
-      setSubmitting(true);
+    setSubmitting(true);
 
-      // Initialize file-related variables with existing data if editing, or null/empty if creating
+    try {
       let storage_key = editingRecord ? editingRecord.storage_key : null;
       let original_name = editingRecord ? editingRecord.original_name : "";
       let content_type = editingRecord ? editingRecord.content_type : "";
       let size_bytes = editingRecord ? editingRecord.size_bytes : null;
       let content_hash = editingRecord ? editingRecord.content_hash : "";
 
-      // 1. Handle NEW file upload
       if (file) {
         content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("technical-reports", {
@@ -550,7 +451,6 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
         size_bytes = file.size;
       }
 
-      // 2. Prepare Payload
       const payload = {
         ...form,
         rating: form.rating === "" ? undefined : Number(form.rating || 0),
@@ -563,14 +463,12 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
       };
 
       let result;
-
-      // 3. Call Create or Update API
       if (editingRecord) {
         result = await recordsApi.updateTechnical(editingRecord.record_id, payload);
-        onUpdated?.(result); // Notify parent of update
+        onUpdated?.(result);
       } else {
         result = await recordsApi.createTechnical(payload);
-        onCreated?.(result); // Notify parent of creation
+        onCreated?.(result); // <-- Append instantly
       }
 
       onClose();
@@ -583,19 +481,8 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(15,23,42,0.4)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 12,
-        zIndex: 100,
-      }}
-    >
-      <div
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12, zIndex: 100 }}>
+     <div
         style={{
           width: "min(840px, 96vw)",
           background: "#fff",
@@ -732,6 +619,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
           </div>
         </form>
       </div>
+
     </div>
   );
 }

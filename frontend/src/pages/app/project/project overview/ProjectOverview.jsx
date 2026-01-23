@@ -12,7 +12,8 @@ import Delete from '../../../../assets/Delete.svg'
 import PencilSimple from '../../../../assets/PencilSimple.svg'
 import ArrowRight from '../../../../assets/ArrowRight.svg'
 import ConfirmationModal from "../../../../components/common/ConfirmationModal";
-
+import SeeMoreText from "../../../../components/common/SeeMoreButton";
+import { FiCalendar, FiUser } from "react-icons/fi";
 
 
 const DATASET_TABS = [
@@ -32,6 +33,20 @@ export default function ProjectUpload() {
 
   const [modal, setModal] = useState({ open: false, mode: 'create', tag: '' })
   const [deletingTag, setDeletingTag] = useState(null)
+
+
+ const desc = project?.project_description || '';
+
+
+
+const date = project?.created_at
+  ? new Date(project.created_at).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    })
+  : "-";
+
+const members = project?.members?.length || 0;
 
   /* ================= Progress tracking ================= */
   const [jobProgress, setJobProgress] = useState({}) // jobId -> {status, progress, message}
@@ -211,13 +226,92 @@ export default function ProjectUpload() {
 
     <div className="UploadWapper">
       {/* Header */}
+<div className="statscard">
 
-      <div className='statscard'>
-        <label className='projectTitle'>{project?.project_name}</label>
-        <span className='projectActive' >
-          Active
-        </span>
-      </div>
+  {/* ===== Top Row ===== */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    }}
+  >
+    <label className="projectTitle">{project?.project_name}</label>
+
+    <span className="projectActive">Active</span>
+
+    <button className="edit-btn" title="Edit">
+      <img
+        style={{ width: "24px", height: "24px" }}
+        src={PencilSimple}
+        alt="pencil"
+      />
+    </button>
+  </div>
+
+  {/* ===== Description (Next Line) ===== */}
+  {/* <div
+    style={{
+      fontSize: "12px",
+      fontWeight: 400,
+      color: "#514F4F",
+      fontFamily: "SF Pro, Helvetica, Arial, sans-serif",
+      marginTop: 8,
+      marginBottom: 12,
+      maxWidth: "100%",
+    }}
+  >
+    <span style={{ color: "red" }}>{desc}</span>
+
+    {/* <SeeMoreText text={desc} /> */}
+  {/* </div>  */}
+
+  {/* ===== Description ===== */}
+{desc && (
+  <div className="project-description">
+    <SeeMoreText text={desc} />
+  </div>
+)}
+
+  {/* ===== Created + Members (Next Line) ===== */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 32,
+      fontSize: 14,
+    }}
+  >
+    {/* Created */}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ color: "#737373" }}>Created</span>
+      <span
+        style={{
+          fontWeight: 600,
+          color: "#000000",
+          fontFamily: "inter-semi-bold, Helvetica",
+        }}
+      >
+        {date}
+      </span>
+    </div>
+
+    {/* Members */}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ color: "#737373" }}>Members</span>
+      <span
+        style={{
+          fontWeight: 600,
+          color: "#000000",
+          fontFamily: "inter-semi-bold, Helvetica",
+        }}
+      >
+        {String(members).padStart(2, "0")}
+      </span>
+    </div>
+  </div>
+</div>
+
 
 
 
