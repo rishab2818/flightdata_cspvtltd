@@ -533,7 +533,7 @@ const deleteVisualization = async (vizId) => {
 
           <div className="ps-field">
             <label>File</label>
-            <select
+            <select 
               value={activeSeries?.jobId || ''}
               onChange={(e) =>
                 updateActiveSeries({
@@ -545,9 +545,9 @@ const deleteVisualization = async (vizId) => {
               }
               disabled={!activeSeries?.tag}
             >
-              <option value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
+              <option className="FileSelect" value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
               {activeFiles.map((f) => (
-                <option key={f.job_id} value={f.job_id}>
+                <option  className="FileSelect" key={f.job_id} value={f.job_id}>
                   {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
                 </option>
               ))}

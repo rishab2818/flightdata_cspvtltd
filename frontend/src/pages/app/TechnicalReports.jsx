@@ -150,7 +150,7 @@ export default function TechnicalReports() {
           gap: 12
         }}
       >
-            <div style={{flex:1, maxWidth:"850px",height:"42px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
+            <div style={{flex:1, maxWidth:"700px",height:"42px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
                   <FiSearch size={16} color="#64748b" />
                   <input
                     style={{
@@ -170,13 +170,14 @@ export default function TechnicalReports() {
                     onChange={(e) => setSearch(e.target.value)}
                   />
         </div>
+        <div style={{display:"inline-flex", gap:20}}>
         <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {/* <span style={{  color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Type</span> */}
           <select
             value={filters.type}
             onChange={(e) => setFilters({ type: e.target.value })}
             style={{
-              minWidth: "350px",
+              minWidth: "300px",
               background: "#F3F3F5",
               height: "42px",
               borderRadius: "8px",
@@ -227,8 +228,7 @@ export default function TechnicalReports() {
            Upload Document
         </button>
       </div>
-
-
+      </div>
 
       {/* Table */}
       <div
