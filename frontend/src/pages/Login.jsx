@@ -38,6 +38,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
+        <div class="login-content">
 
         {/* LEFT */}
         <div className="login-left">
@@ -97,6 +98,7 @@ export default function Login() {
         <div className="login-right">
           <img className="vector" src={Vector} alt="vector" />
           <img className="plane" src={Airplane1} alt="airplane" />
+        </div>
         </div>
 
       </div>
