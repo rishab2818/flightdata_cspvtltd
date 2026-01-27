@@ -690,6 +690,10 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
     fig.update_xaxes(type=x_scale)
     fig.update_yaxes(type=y_scale)
+    if x_scale == "log":
+        fig.update_xaxes(dtick=1, exponentformat="power", showexponent="all")
+    if y_scale == "log":
+        fig.update_yaxes(dtick=1, exponentformat="power", showexponent="all")
     fig.update_layout(
         template="plotly_white",
         title="Overplot",
