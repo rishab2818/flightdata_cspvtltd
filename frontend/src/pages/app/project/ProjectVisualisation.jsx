@@ -554,6 +554,7 @@ const deleteVisualization = async (vizId) => {
             </select>
           </div>
 
+
             <div className="ps-field">
             <label>Plot Type</label>
             <select
@@ -1076,9 +1077,7 @@ disabled={deletingViz === viz.viz_id}
       setConfirmRemoveSeries({ open: false, seriesId: null });
     }}
   />
-)}
-
-      
+)}     
     </div>
   )
   }

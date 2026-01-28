@@ -57,7 +57,7 @@ export default function ProjectShell() {
           <div className="project-shell__brand-text">back</div>
         </div>
 
-        <nav className="project-shell__nav">
+        <nav className="project-shell__nav1">
           {navItems.map((item) => (
             <NavLink
               key={item.key}
@@ -65,7 +65,7 @@ export default function ProjectShell() {
               end={item.to === ''}
               className={({ isActive }) =>
                 (isActive || location.pathname.endsWith(`/${item.to}`))
-                  ? 'project-shell__nav-link'
+                  ? 'project-shell__nav1-link'
                   : 'project-not-active'
               }
             >

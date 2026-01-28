@@ -1,4 +1,4 @@
-// Cleaned and corrected full component
+
 import React, { useEffect, useMemo, useState } from "react";
 import { FiDownload, FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
@@ -16,6 +16,7 @@ import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 import DownloadSimple from "../../assets/DownloadSimple.svg";
 import load from "../../assets/load.svg"
+import { useDownload } from "../../components/common/useDownload";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -111,6 +112,8 @@ export default function DivisionalRecords() {
       const [showDeleteModal, setShowDeleteModal] = useState(false);
       const [recordToDelete, setRecordToDelete] = useState(null);
 
+      const { download, view, loadingFiles, errorFiles } = useDownload(recordsApi.downloadDivisional);
+
   const openModal = () => {
     setEditingRecord(null);
     setShowModal(true);
@@ -141,18 +144,23 @@ export default function DivisionalRecords() {
     }
   };
 
-  const handleDownload = async (row) => {
-    try {
-      const res = await recordsApi.downloadDivisional(row.record_id);
-      const link = document.createElement("a");
-      link.href = res.download_url;
-      link.download = row.original_name || "divisional-record";
-      link.click();
-      link.remove();
-    } catch (err) {
-      alert("Download failed. Please try again.");
-    }
-  };
+ const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);
+};
+
+  // const handleDownload = async (row) => {
+  //   try {
+  //     const res = await recordsApi.downloadDivisional(row.record_id);
+  //     const link = document.createElement("a");
+  //     link.href = res.download_url;
+  //     link.download = row.original_name || "divisional-record";
+  //     link.click();
+  //     link.remove();
+  //   } catch (err) {
+  //     alert("Download failed. Please try again.");
+  //   }
+  // };
 
   // const handleDelete = async (row) => {
   //   if (!window.confirm("Delete this divisional record?")) return;
@@ -280,7 +288,7 @@ export default function DivisionalRecords() {
                 </td>
                 <td>{row.remarks || "—"}</td>
                 <td className={styles.actionCol}>
-                  <DocumentActions
+                  {/* <DocumentActions
                     doc={{ id: row.record_id, fileName: row.original_name }}
                     onEdit={() => {
                       setEditingRecord(row);
@@ -291,8 +299,28 @@ export default function DivisionalRecords() {
                     onDelete={() => {
                        setRecordToDelete(row);
                        setShowDeleteModal(true);
-                      }}
-                  />
+                      }} */}
+
+                        <DocumentActions
+                doc={{ id: row.record_id, fileName: row.original_name }}
+                onEdit={() => {
+                  setEditingRecord(row);
+                  setShowModal(true);
+                }}
+                onView={() => view(row.record_id)}
+                onDownload={() => download(row.record_id)}
+                onDelete={() => {
+                  setRecordToDelete(row);
+                  setShowDeleteModal(true);
+                }}
+                // optional: pass loading state for this row
+                loading={loadingFiles[row.record_id]}
+              />
+              {errorFiles[row.record_id] && (
+                <p style={{ color: "red", fontSize: "12px" }}>
+                  {errorFiles[row.record_id]}
+                </p>
+              )}
                 </td>
               </tr>
             ))}
