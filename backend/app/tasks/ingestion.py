@@ -24,7 +24,7 @@ from app.db.sync_mongo import get_sync_db
 from app.repositories.notifications import create_sync_notification
 
 
-TABULAR_EXTS = {".csv", ".xlsx", ".xls",'.txt'}
+TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c"}
 
 
 def _set_status(redis, job_id: str, status: str, progress: int, message: str):
@@ -176,6 +176,7 @@ def ingest_file(
     dataset_type: str | None = None,
     tag_name: str | None = None,
     sheet_name: str | None = None,
+    parse_range: dict | None = None,
 ):
     redis = get_sync_redis()
     db = get_sync_db()
@@ -238,6 +239,10 @@ def ingest_file(
         if dataset_type == "wind" and ext == ".txt":
             columns, row_count, sample_rows, stats = _wind_txt_to_parquet(
                 raw_path, parquet_path, header_mode, custom_headers
+            )
+        elif ext in {".dat", ".c"}:
+            columns, row_count, sample_rows, stats = _text_range_to_parquet(
+                raw_path, parquet_path, parse_range
             )
         elif ext == ".csv":
             columns, row_count, sample_rows, stats = _csv_to_parquet(
@@ -308,12 +313,132 @@ def ingest_file(
 import re
 
 _NUM_RE = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
+_NUM_TOKEN_RE = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$")
+LEADING_JUNK_RE = re.compile(r'^[\s#\$%&@!;:,._-]+')
+
+def _strip_leading_junk(text: str) -> str:
+    return LEADING_JUNK_RE.sub('', text or '')
+
 
 def _is_numeric_line(line: str) -> bool:
     return bool(_NUM_RE.search(line))
 
 def _extract_numbers(line: str) -> list[float]:
     return [float(x) for x in _NUM_RE.findall(line)]
+
+
+def _infer_delimiter(lines: list[str]) -> str | None:
+    for delim in [",", "\t", ";", "|"]:
+        if any(delim in ln for ln in lines):
+            return delim
+    return None
+
+
+def _split_line(line: str, delim: str | None) -> list[str]:
+    cleaned = _strip_leading_junk(line)
+
+    if delim:
+        return [c.strip() for c in cleaned.strip().split(delim) if c.strip()]
+    return [c for c in re.split(r"\s+", cleaned.strip()) if c != ""]
+
+
+
+def _line_has_string_tokens(line: str, delim: str | None) -> bool:
+    tokens = _split_line(line, delim)
+    if not tokens:
+        return False
+    for tok in tokens:
+        if tok == "":
+            continue
+        if not _NUM_TOKEN_RE.match(tok):
+            return True
+    return False
+
+
+def _text_range_to_parquet(
+    txt_path: str,
+    parquet_path: str,
+    parse_range: dict | None,
+):
+    with open(txt_path, "r", errors="ignore") as f:
+        lines = f.read().splitlines()
+
+    if not lines:
+        raise ValueError("Selected file is empty")
+
+    total_lines = len(lines)
+    start = 1
+    end = total_lines
+    if parse_range:
+        start = int(parse_range.get("start_line", 1))
+        end = int(parse_range.get("end_line", total_lines))
+
+    if start < 1 or end < start or start > total_lines:
+        raise ValueError("Invalid parse range")
+
+    selected = lines[start - 1 : end]
+    selected = [ln for ln in selected if ln.strip()]
+    if not selected:
+        raise ValueError("Selected range is empty")
+
+    delim = _infer_delimiter(selected)
+    header_is_present = _line_has_string_tokens(selected[0], delim)
+
+    data_lines = selected[1:] if header_is_present else selected
+    rows: list[list[str | None]] = []
+    max_cols = 0
+    for ln in data_lines:
+        if not ln.strip():
+            continue
+        cells = _split_line(ln, delim)
+        if not cells:
+            continue
+        rows.append(cells)
+        max_cols = max(max_cols, len(cells))
+
+    if not rows or max_cols == 0:
+        raise ValueError("No data rows parsed from selected range")
+
+    if header_is_present:
+        # headers = _split_line(selected[0], delim)
+        # headers = [h.strip() or f"column_{i + 1}" for i, h in enumerate(headers)]
+        # if len(headers) < max_cols:
+        #     headers += [f"column_{i + 1}" for i in range(len(headers), max_cols)]
+        # headers = headers[:max_cols]
+        raw_headers = _split_line(selected[0], delim)
+
+        headers = []
+        for h in raw_headers:
+            clean = _strip_leading_junk(h).strip()
+            if clean:
+                headers.append(clean)
+
+        # pad if needed
+        if len(headers) < max_cols:
+            headers += [f"column_{i + 1}" for i in range(len(headers), max_cols)]
+
+        headers = headers[:max_cols]
+
+    else:
+        headers = [f"column_{i + 1}" for i in range(max_cols)]
+
+    normalized_rows = []
+    for row in rows:
+        if len(row) < max_cols:
+            row = row + [None] * (max_cols - len(row))
+        elif len(row) > max_cols:
+            row = row[:max_cols]
+        normalized_rows.append(row)
+
+    df = pd.DataFrame(normalized_rows, columns=headers)
+
+    stats: dict = {}
+    _update_numeric_stats(stats, df)
+    sample_rows = df.head(10).to_dict(orient="records")
+    row_count = len(df)
+
+    df.to_parquet(parquet_path, index=False)
+    return list(df.columns), row_count, sample_rows, stats
 
 def _wind_txt_to_parquet(
     txt_path: str,
