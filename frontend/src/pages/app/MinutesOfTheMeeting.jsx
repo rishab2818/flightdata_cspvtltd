@@ -17,6 +17,7 @@ import EmptySection from "../../components/common/EmptyProject";
 import { documentsApi } from "../../api/documentsApi";
 import { meetingsApi } from "../../api/meetingsApi";
 import { projectApi } from "../../api/projectapi";
+import { useDownload } from "../../components/common/useDownload";
 
 import "./MinutesOfTheMeeting.css";
 
@@ -79,6 +80,7 @@ function convertDocToRow(doc) {
 
   return {
     id: doc.doc_id,
+    record_id: doc.doc_id, // <-- add this
     fileName: doc.original_name,
     tag: doc.tag,
     meetingDate: formatDate(doc.doc_date),
@@ -88,6 +90,33 @@ function convertDocToRow(doc) {
     actionOn: combinedActionOn.length ? combinedActionOn.join(", ") : "—",
   };
 }
+
+
+// function convertDocToRow(doc) {
+//   const actionPoints = (doc.action_points || []).map((ap) => ({
+//     description: ap?.description || "",
+//     assigned_to: ap?.assigned_to || "",
+//     completed: Boolean(ap?.completed),
+//   }));
+
+//   const combinedActionOn = [
+//     ...new Set([
+//       ...(doc.action_on || []),
+//       ...actionPoints.map((a) => a.assigned_to).filter(Boolean),
+//     ]),
+//   ];
+
+//   return {
+//     id: doc.doc_id,
+//     fileName: doc.original_name,
+//     tag: doc.tag,
+//     meetingDate: formatDate(doc.doc_date),
+//     meetingDateRaw: doc.doc_date,
+//     rawActionOn: doc.action_on || [],
+//     actionPoints,
+//     actionOn: combinedActionOn.length ? combinedActionOn.join(", ") : "—",
+//   };
+// }
 
 /* =================== MAIN COMPONENT =================== */
 
@@ -119,6 +148,13 @@ export default function MinutesOfTheMeeting() {
 
   const [selectedActions, setSelectedActions] = useState([]);
   const [showActionsModal, setShowActionsModal] = useState(false);
+
+ const {
+  download,
+  view,
+  loadingFiles,
+  errorFiles,
+} = useDownload(documentsApi.getDownloadUrl);
 
 
   const handleDeleteDocument = async (doc) => {
@@ -267,10 +303,21 @@ export default function MinutesOfTheMeeting() {
       }
     };
   
-    const handleViewActions = (actionPoints = []) => {
-      setSelectedActions(actionPoints || []);
-      setShowActionsModal(true);
-    };
+    // const handleViewActions = (actionPoints = []) => {
+    //   setSelectedActions(actionPoints || []);
+    //   setShowActionsModal(true);
+    // };
+
+    const handleView = (row) => {
+  if (!row?.record_id) return;
+  view(row.record_id);
+};
+
+const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);
+};
+
   
     const handleEditDocument = (row) => {
       setEditingDoc(row);
@@ -348,6 +395,10 @@ export default function MinutesOfTheMeeting() {
           onEdit={setEditingDoc}
           onDelete={handleDeleteDocument} 
           setRows={setRows}
+          download={download}
+          view={view}
+          loadingFiles={loadingFiles}
+          errorFiles={errorFiles}
         />
       </div>
 
@@ -571,7 +622,7 @@ function NextMeetingBanner({
   );
 }
 
-function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, setRows }) {
+function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, setRows, download, view, loadingFiles, errorFiles, }) {
   return (
     <div className="TableGrid">
       <table className="Table">
@@ -620,14 +671,26 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, s
             !error &&
             rows.map((row) => (
 
+              // <MinutesRow
+              //   key={row.id}
+              //   row={row}
+              //   setRows={setRows}
+              //   onViewAction={onViewAction}
+              //   onEdit={onEdit}
+              //   onDelete={onDelete}
+              // />
               <MinutesRow
-                key={row.id}
-                row={row}
-                setRows={setRows}
-                onViewAction={onViewAction}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
+  key={row.id}
+  row={row}
+  onViewAction={onViewAction}
+  onEdit={onEdit}
+  onDelete={onDelete}
+  download={download}
+  view={view}
+  loadingFiles={loadingFiles}
+  errorFiles={errorFiles}
+/>
+
 
             ))}
         </tbody>
@@ -635,45 +698,99 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, s
     </div>
   );
 }
+function MinutesRow({
+  row,
+  onViewAction,
+  onEdit,
+  onDelete,
+  download,
+  view,
+  loadingFiles,
+  errorFiles,
+}) {
+  const isLoading = loadingFiles[row.record_id] || false;
+  const error = errorFiles[row.record_id] || "";
 
-
-function MinutesRow({ row, onViewAction, onEdit, setRows, onDelete }) {
   return (
     <tr className="minutes-row">
-
-      {/* 1️⃣ File Name (no icon now) */}
       <td className="cell-text">{row.fileName}</td>
-
-      {/* 2️⃣ Tag */}
       <td className="cell">
         <span className="tag-pill">{row.tag}</span>
       </td>
-
-      {/* 3️⃣ Meeting Date */}
       <td className="cell-text">{row.meetingDate}</td>
-
-      {/* 4️⃣ Action On */}
       <td className="cell-text">{row.actionOn}</td>
-
-      {/* 5️⃣ View Action */}
       <td className="cell cell-center">
         <IconBadge clickable onClick={() => onViewAction(row.actionPoints)}>
           <FiCalendar size={16} />
         </IconBadge>
       </td>
-
-      {/* 6️⃣ Actions */}
       <td className="cell cell-center cell-actions">
         <DocumentActions
-  doc={{ id: row.id, fileName: row.fileName }}
-  onEdit={() => onEdit(row)}
-  onDelete={onDelete}
-/>
-
+          doc={{ id: row.id, fileName: row.fileName }}
+          onView={() => view(row.record_id)}
+          onDownload={() => download(row.record_id)}
+          onEdit={() => onEdit(row)}
+          onDelete={() => onDelete(row)}
+          loading={isLoading}
+        />
+        {error && <p className="errorText">{error}</p>}
       </td>
     </tr>
   );
 }
+
+
+// function MinutesRow({ row, onViewAction, onEdit, setRows, onDelete, download, view, loadingFiles, errorFiles, }) {
+//   return (
+//     <tr className="minutes-row">
+
+//       {/* 1️⃣ File Name (no icon now) */}
+//       <td className="cell-text">{row.fileName}</td>
+
+//       {/* 2️⃣ Tag */}
+//       <td className="cell">
+//         <span className="tag-pill">{row.tag}</span>
+//       </td>
+
+//       {/* 3️⃣ Meeting Date */}
+//       <td className="cell-text">{row.meetingDate}</td>
+
+//       {/* 4️⃣ Action On */}
+//       <td className="cell-text">{row.actionOn}</td>
+
+//       {/* 5️⃣ View Action */}
+//       <td className="cell cell-center">
+//         <IconBadge clickable onClick={() => onViewAction(row.actionPoints)}>
+//           <FiCalendar size={16} />
+//         </IconBadge>
+//       </td>
+
+//       {/* 6️⃣ Actions */}
+//       <td className="cell cell-center cell-actions">
+// <DocumentActions
+//   doc={{ id: row.id, fileName: row.fileName }}
+//   onView={() => view(row.record_id)}
+//   onDownload={() => download(row.record_id)}
+//   onEdit={() => onEdit(row)}
+//   onDelete={() => onDelete(row)}
+//   loading={loadingFiles[row.record_id]}
+// />
+
+
+// {errorFiles[row.id] && (
+//   <p className="errorText">{errorFiles[row.id]}</p>
+// )}
+
+//         {/* <DocumentActions
+//   doc={{ id: row.id, fileName: row.fileName }}
+//   onEdit={() => onEdit(row)}
+//   onDelete={onDelete}
+// /> */}
+
+//       </td>
+//     </tr>
+//   );
+// }
 
 function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
   const [activeTab, setActiveTab] = useState("view");

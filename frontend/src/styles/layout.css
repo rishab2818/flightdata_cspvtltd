@@ -63,9 +63,9 @@
   transition: all 0.2s ease;
 }
 
-.sidebar__link:hover {
+/* .sidebar__link:hover {
   background: #f3f4f6;
-}
+} */
 
 .sidebar__link--active {
   background: #1976d2;

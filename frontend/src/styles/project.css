@@ -7,13 +7,20 @@
 }
 
 .project-shell__sidebar {
-  /* background: #F1F7FF; */
-  background: white;
+ width: clamp(220px, 20vw, 280px);
+  min-width: clamp(220px, 18vw, 250px);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  background: #ffffff;
   border-right: 1px solid #e2e8f0;
-  padding: 22px 18px;
+  padding: 24px 18px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  box-sizing: border-box;
+  z-index: 5;
 }
 
 .project-shell__brand {
@@ -38,86 +45,54 @@
   justify-content: center;
 }
 
+/* PROJECT SHELL NAVIGATION */
+
+.project-shell__nav1 {
+  display: flex;  
+  flex-direction: column;             /* horizontal layout */
+  gap: 16px;                   /* space between nav items */
+  background-color: #ffffff;  /* light background */
+  padding: 8px 16px;
+  align-items: left;
+}
 
 
-.project-shell__nav {
+.project-shell__nav1-link {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 220px;
-  margin-top: 8px;
-  padding: 10px;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 2px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.project-shell__nav1-link:hover {
+   background: #f3f4f6;
+}
+
+.project-shell__nav1-link.active,
+.project-shell__nav1-link[aria-current="page"] {
+  background-color: #1976d2;  /* active highlight */
+  color: #fff;
 }
 
 .project-shell__navIcon {
   width: 20px;
   height: 20px;
-  color: #cbd5e1;
-}
-
-.project-shell__nav-label {
-  color: #000000;
-  font-family: "Inter-Regular", Helvetica;
-  font-size: 16px;
-  font-weight: 400;
-  align-items: center;
-  justify-content: center;
-}
-
-.project-shell__nav-link {
-  /* display: block;
-  padding: 12px 14px;
-  align-items: center;
-  /* vertically center text & icon */
-  /* display: flex;
-  gap: 5px;
-  text-decoration: none;
-  color: #0f172a;
-
-  font-weight: 600;
-  border: 1px solid transparent;
-  transition: all 0.2s ease; */ 
-
-    display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  border-radius: 2px;
-  padding: 10px 12px;
-  text-decoration: none;
-  color: #111827;
-  transition: all 0.2s ease;
+  object-fit: contain;
 }
 
 .project-not-active {
-  display: block;
-  padding: 12px 14px;
+   display: flex;
   align-items: center;
-  display: flex;
-  gap: 5px;
+  gap: 8px;
   text-decoration: none;
-  color: #0f172a;
-  /* same text color as active */
-  font-weight: 600;
-  /* match active weight */
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-  background: transparent;
-  /* no background by default */
-}
-
-.project-not-active:hover {
-  background: #e8f0ff;
-  /* optional hover like active */
-}
-
-.project-shell__nav-link:hover {
-  background: #e8f0ff;
-}
-
-.project-shell__nav-link--active {
-  border-color: #f6f6f7;
-  background: #91BFF9;
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .project-shell__content {
