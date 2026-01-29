@@ -17,6 +17,7 @@ class Role(str, Enum):
 
 async def main():
     client = AsyncIOMotorClient(MONGO_URI)
+    # db = client[MONGO_DB]   
     db = client[MONGO_DB]
 
     # Ensure unique email index
