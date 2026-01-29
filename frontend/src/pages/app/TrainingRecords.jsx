@@ -580,6 +580,7 @@ import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import { useDownload } from "../../components/common/useDownload";
 
 
 const BORDER = "#E2E8F0";
@@ -626,6 +627,7 @@ export default function TrainingRecords() {
       const [showDeleteModal, setShowDeleteModal] = useState(false);
       const [recordToDelete, setRecordToDelete] = useState(null);
   
+      const { download, view, loadingFiles, errorFiles } = useDownload(recordsApi.downloadTraining);
 
   const loadRecords = async () => {
     try {
@@ -688,18 +690,23 @@ export default function TrainingRecords() {
     }
   };
 
-  const handleDownload = async (row) => {
-    try {
-      const res = await recordsApi.downloadTraining(row.record_id);
-      const link = document.createElement("a");
-      link.href = res.download_url;
-      link.download = row.original_name || "training-record";
-      link.click();
-      link.remove();
-    } catch (err) {
-      alert("Download failed. Please try again.");
-    }
-  };
+    const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);
+};
+
+  // const handleDownload = async (row) => {
+  //   try {
+  //     const res = await recordsApi.downloadTraining(row.record_id);
+  //     const link = document.createElement("a");
+  //     link.href = res.download_url;
+  //     link.download = row.original_name || "training-record";
+  //     link.click();
+  //     link.remove();
+  //   } catch (err) {
+  //     alert("Download failed. Please try again.");
+  //   }
+  // };
 
   // const handleDelete = async (row) => {
   //   if (!window.confirm("Delete this training record?")) return;

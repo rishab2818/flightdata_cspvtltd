@@ -276,25 +276,22 @@ export default function UploadModal({
             let headers = []
             let dataRows = []
 
-            if (headerMode === 'file') {
-                headers = rawRows[0].map((h) => (h || '').trim())
-                dataRows = rawRows.slice(1)
-            } else if (headerMode === 'none') {
-                headers = rawRows[0].map((_, i) => `column_${i + 1}`)
-                dataRows = rawRows
-            } else {
-                headers = headersList?.length ? headersList : rawRows[0].map((_, i) => `column_${i + 1}`)
-                dataRows = rawRows
-            }
+    const ext = getExt(file.name);
+    const targetIdx = idx ?? selectedIdx;
 
-            const rows = dataRows.slice(0, 10).map((r) => {
-                const obj = {}
-                headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-                return obj
-            })
+    // IMAGE PREVIEW
+    if (isImage(file)) {
+        const url = URL.createObjectURL(file);
+        setPreview({ type: 'image', url, name: file.name });
+        return;
+    }
 
-            setPreview({ type: 'table', headers, rows, name: file.name })
-            return
+    // TXT OR CSV
+    if (ext === '.txt' || ext === '.csv') {
+        const text = await file.text();
+        if (!text.trim()) {
+            setPreview({ type: 'message', message: 'File is empty.' });
+            return;
         }
 
         if (ext === '.dat' || ext === '.c') {
@@ -330,153 +327,89 @@ export default function UploadModal({
                 return
             }
 
-            const sheetNames = wb.SheetNames
-            const existingItem = targetIdx != null ? files[targetIdx] : null
-            const existingSelected = existingItem?.selectedSheets || {}
-            const nextSelectedSheets = {}
-            sheetNames.forEach((name, i) => {
-                if (Object.prototype.hasOwnProperty.call(existingSelected, name)) {
-                    nextSelectedSheets[name] = existingSelected[name]
-                } else {
-                    nextSelectedSheets[name] = i === 0
-                }
-            })
-
-            const nextActiveSheet =
-                existingItem?.activeSheet && sheetNames.includes(existingItem.activeSheet)
-                    ? existingItem.activeSheet
-                    : sheetNames[0]
-
-            setExcelWb(wb)
-            setExcelSheets(sheetNames)
-            setActiveSheet(nextActiveSheet)
-
-            if (targetIdx != null) {
-                setFiles((prev) => {
-                    const clone = [...prev]
-                    const item = clone[targetIdx]
-                    if (!item) return prev
-                    clone[targetIdx] = {
-                        ...item,
-                        sheetNames,
-                        selectedSheets: nextSelectedSheets,
-                        activeSheet: nextActiveSheet,
-                    }
-                    return clone
-                })
+            // Detect delimiter for TXT
+            let delimiter = ',';
+            if (ext === '.txt') {
+                const firstLine = lines[0];
+                if (firstLine.includes('\t')) delimiter = '\t';
+                else if (firstLine.includes('|')) delimiter = '|';
+                else delimiter = /\s+/;
             }
 
-            parseExcelSheet(wb, nextActiveSheet, file.name)
-            return
-            /* legacy preview block (kept for reference)
-            if (ext === '.xlsx' || ext === '.xls') {
-    const buf = await file.arrayBuffer()
-    const wb = XLSX.read(buf, { type: 'array' })
+            const rawRows = lines.map(line =>
+                delimiter instanceof RegExp ? line.split(delimiter) : line.split(delimiter)
+            );
 
-    if (!wb.SheetNames?.length) {
-        setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-        return
-    }
-
-    const parseExcelSheet = (wb, sheetName, fileName) => {
-    const ws = wb.Sheets[sheetName]
-    if (!ws) return
-
-    const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-    const rowsRaw = (json || []).slice(0, 15)
-
-    if (!rowsRaw.length) {
-        setPreview({ type: 'message', message: 'Selected sheet is empty.' })
-        return
-    }
-
-    let headers = []
-    let dataRows = []
-
-    if (headerMode === 'file') {
-        headers = rowsRaw[0].map((h) => String(h || '').trim())
-        dataRows = rowsRaw.slice(1)
-    } else if (headerMode === 'none') {
-        headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
-        dataRows = rowsRaw
-    } else {
-        headers = headersList?.length
-            ? headersList
-            : rowsRaw[0].map((_, i) => `column_${i + 1}`)
-        dataRows = rowsRaw
-    }
-
-    const rows = dataRows.slice(0, 10).map((r) => {
-        const obj = {}
-        headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-        return obj
-    })
-
-    setPreview({
-        type: 'table',
-        headers,
-        rows,
-        name: `${fileName} — ${sheetName}`
-    })
-}
-
-const onSelectSheet = (sheetName) => {
-    setActiveSheet(sheetName)
-    if (excelWb) {
-        parseExcelSheet(excelWb, sheetName, selectedFile.name)
-    }
-}
-
-
-    // store workbook + sheets
-    setExcelWb(wb)
-    setExcelSheets(wb.SheetNames)
-
-    // default sheet (first one OR previously selected)
-    const sheetToUse = activeSheet && wb.SheetNames.includes(activeSheet)
-        ? activeSheet
-        : wb.SheetNames[0]
-
-    setActiveSheet(sheetToUse)
-
-    parseExcelSheet(wb, sheetToUse, file.name)
-    return
-}
-
-            if (!sheetName) return setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-
-            const ws = wb.Sheets[sheetName]
-            const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-            const rowsRaw = (json || []).slice(0, 15).filter((r) => Array.isArray(r))
-
-            if (!rowsRaw.length) return setPreview({ type: 'message', message: 'Excel sheet appears empty.' })
-
-            let headers = []
-            let dataRows = []
+            let headers = [];
+            let dataRows = [];
 
             if (headerMode === 'file') {
-                headers = rowsRaw[0].map((h) => String(h || '').trim())
-                dataRows = rowsRaw.slice(1)
+                headers = rawRows[0].map(h => String(h || '').trim());
+                dataRows = rawRows.slice(1);
             } else if (headerMode === 'none') {
-                headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
-                dataRows = rowsRaw
+                headers = rawRows[0].map((_, i) => `column_${i + 1}`);
+                dataRows = rawRows;
             } else {
-                headers = headersList?.length ? headersList : rowsRaw[0].map((_, i) => `column_${i + 1}`)
-                dataRows = rowsRaw
+                headers = headersList?.length
+                    ? headersList
+                    : rawRows[0].map((_, i) => `column_${i + 1}`);
+                dataRows = rawRows;
             }
 
-            const rows = dataRows.slice(0, 10).map((r) => {
-                const obj = {}
-                headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-                return obj
-            })
+            // If tabular, show table; else show full text
+            if (headers.length > 1 || ext === '.csv') {
+                const rows = dataRows.slice(0, 10).map(r => {
+                    const obj = {};
+                    headers.forEach((h, i) => (obj[h] = r[i] ?? ''));
+                    return obj;
+                });
+                setPreview({ type: 'table', headers, rows, name: file.name });
+            } else {
+                // Single-column text → full preview
+                setPreview({ type: 'text', content: text, name: file.name });
+            }
+        }
+        return;
+    }
 
-            setPreview({ type: 'table', headers, rows, name: file.name })
-            return
-            */
+    // EXCEL PREVIEW
+    if (ext === '.xlsx' || ext === '.xls') {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        if (!wb.SheetNames?.length) {
+            setPreview({ type: 'message', message: 'No sheets found in Excel file.' });
+            return;
         }
 
-        setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
+        const sheetNames = wb.SheetNames;
+        const existingItem = targetIdx != null ? files[targetIdx] : null;
+        const existingSelected = existingItem?.selectedSheets || {};
+        const nextSelectedSheets = {};
+        sheetNames.forEach((name, i) => {
+            nextSelectedSheets[name] = existingSelected[name] ?? i === 0;
+        });
+
+        const nextActiveSheet =
+            existingItem?.activeSheet && sheetNames.includes(existingItem.activeSheet)
+                ? existingItem.activeSheet
+                : sheetNames[0];
+
+        setExcelWb(wb);
+        setExcelSheets(sheetNames);
+        setActiveSheet(nextActiveSheet);
+
+        if (targetIdx != null) {
+            setFiles(prev => {
+                const clone = [...prev];
+                const item = clone[targetIdx];
+                if (!item) return prev;
+                clone[targetIdx] = { ...item, sheetNames, selectedSheets: nextSelectedSheets, activeSheet: nextActiveSheet };
+                return clone;
+            });
+        }
+
+        parseExcelSheet(wb, nextActiveSheet, file.name);
+        return;
     }
 
 
@@ -926,7 +859,7 @@ const onSelectSheet = (sheetName) => {
                                                     {item.file.type || 'unknown'} · {Math.round(item.file.size / 1024)} KB · {visualizeInfo(item.file, item.visualize)}
                                                 </div>
                                             </div>
-                                            {/* 
+
                                             <label className="toggle" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
@@ -935,7 +868,7 @@ const onSelectSheet = (sheetName) => {
                                                     disabled={!isTabular(item.file)}
                                                 />
                                                 <span className="slider" />
-                                            </label> */}
+                                            </label>
                                         </div>
                                     ))}
                                 </div>
@@ -995,6 +928,59 @@ const onSelectSheet = (sheetName) => {
                                         </div>
                                         <div>{preview.totalLines}</div>
                                     </div>
+                                </>
+                            )}
+
+                            <div className="fd-preview">
+    {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+    {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+    {preview.type === 'image' && (
+        <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }}/>
+    )}
+    {preview.type === 'table' && (
+        <div className="excel-preview">
+            <table className="data-table">
+                <thead>
+                    <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                    {preview.rows.map((row, rIdx) => (
+                        <tr key={`r-${rIdx}`}>
+                            {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    )}
+    {preview.type === 'text' && (
+        <pre
+            style={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                maxHeight: 520,
+                overflowY: 'auto',
+                overflowX: 'auto',
+                padding: 8,
+                background: '#F3F3F5',
+                border: '1px solid #e2e8f0',
+                borderRadius: 6,
+                fontSize: 13,
+                fontFamily: 'monospace'
+            }}
+        >
+            {preview.content}
+        </pre>
+    )}
+</div>
+
+
+
+                            {/* <div className="fd-preview">
+                                {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+                                {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+                                {preview.type === 'image' && (
+                                    <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }}/>
                                 )}
 
                                 {excelSheets.length > 0 && (

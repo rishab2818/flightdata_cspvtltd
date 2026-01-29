@@ -554,6 +554,7 @@ const deleteVisualization = async (vizId) => {
             </select>
           </div>
 
+
             <div className="ps-field">
             <label>Plot Type</label>
             <select
@@ -614,108 +615,84 @@ const deleteVisualization = async (vizId) => {
          
         </div>
 
-        <div
-          className="ps-row"
-          style={{
-            gridTemplateColumns:
-              chartType === 'contour' ? 'repeat(8, minmax(0, 1fr))' : 'repeat(7, minmax(0, 1fr))',
-          }}
-        >
-          <div className="ps-field">
-            <label>X Axis</label>
-            <select
-              value={activeSeries?.xAxis || ''}
-              onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
-              disabled={!activeSeries?.jobId}
-            >
-              <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-              {activeColumns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </div>
+         <div
+  className="ps-row"
+  style={{
+    display: 'grid',
+    gap: '14px',
+    marginBottom: '14px',
+    gridTemplateColumns:
+      chartType === 'contour' || dimension === '3d'
+        ? 'repeat(7, minmax(0, 1fr))'
+        : 'repeat(7, minmax(0, 1fr))',
+  }}
+>
+  {/* X Axis */}
+  <div className="ps-field">
+    <label>X Axis</label>
+    <select
+      value={activeSeries?.xAxis || ''}
+      onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
+      disabled={!activeSeries?.jobId}
+    >
+      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+      {activeColumns.map((col) => (
+        <option key={col} value={col}>{col}</option>
+      ))}
+    </select>
+  </div>
 
+  {/* Y Axis */}
+  <div className="ps-field">
+    <label>Y Axis</label>
+    <select
+      value={activeSeries?.yAxis || ''}
+      onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+      disabled={!activeSeries?.jobId}
+    >
+      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+      {activeColumns.map((col) => (
+        <option key={col} value={col}>{col}</option>
+      ))}
+    </select>
+  </div>
 
-          {/* ===== Y Axis (old CSS row style) ===== */}
-          <div className="ps-field">
-            <label className="viz-label">Y Axis</label>
+  {/* Z Axis (only if required) */}
+  {requiresZ && (
+    <div className="ps-field">
+      <label>Z Axis</label>
+      <select
+        value={activeSeries?.zAxis || ''}
+        onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
+        disabled={!activeSeries?.jobId}
+      >
+        <option value="">Select</option>
+        {activeColumns.map((col) => (
+          <option key={col} value={col}>{col}</option>
+        ))}
+      </select>
+    </div>
+  )}
 
+  {/* Plot Name */}
+  <div className="ps-field">
+    <label>Plot Name (Optional)</label>
+    <input
+      placeholder="Defaults to Dataset | X → Y"
+      value={activeSeries?.label || ''}
+      onChange={(e) => updateActiveSeries({ label: e.target.value })}
+    />
+  </div>
 
-            <select
-              className="viz-select"
-              value={activeSeries?.yAxis || ''}
-              onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
-              disabled={!activeSeries?.jobId}
-              style={{ flex: 1 }}
-            >
-              <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-              {activeColumns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </div>
+  {/* Generate Button */}
+  <div className="ps-field">
+    <button type="submit" className="plot-btn" disabled={loading}>
+      <img src={ChartLine1} alt="chart" />
+      {loading ? 'Generating…' : 'Generate Plot'}
+    </button>
+  </div>
+</div>
 
-
-          {/* {chartType === 'contour' && (
-            <div className="ps-field">
-              <label className="viz-label">Z Axis</label>
-              <select
-                className="viz-select"
-                value={activeSeries?.zAxis || ''}
-                onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
-                disabled={!activeSeries?.jobId}
-                style={{ flex: 1 }}
-              >
-                <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-                {activeColumns.map((col) => (
-                  <option key={col} value={col}>
-                    {col}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )} */}
-
-          {requiresZ && (
-            <div className="ps-field">
-              <label>Z Axis</label>
-              <select
-                value={activeSeries?.zAxis || ''}
-                onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
-                disabled={!activeSeries?.jobId}
-              >
-                <option value="">Select</option>
-                {activeColumns.map((col) => (
-                  <option key={col} value={col}>{col}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-
-
-          <div className="ps-field" >
-            <label className="viz-label">Plot Name(Optional)</label>
-            <input
-              placeholder="Defaults to Dataset | X → Y"
-              value={activeSeries?.label || ''}
-              onChange={(e) => updateActiveSeries({ label: e.target.value })}
-            />
-          </div>
-
-          <div className="ps-field" >
-            {/* Generate button (old UI position) */}
-            <button type="submit" className="plot-btn" disabled={loading}>
-              <img src={ChartLine1} alt="chart" />
-              {loading ? 'Generating…' : `Generate Plot`}
-            </button>
-          </div>
-
-        </div>
 
         {/* ===== Series Manager (KEPT) ===== */}
         <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
@@ -1076,9 +1053,7 @@ disabled={deletingViz === viz.viz_id}
       setConfirmRemoveSeries({ open: false, seriesId: null });
     }}
   />
-)}
-
-      
+)}     
     </div>
   )
   }

@@ -10,7 +10,7 @@ import { computeSha256 } from '../../../lib/fileUtils';
 import { downloadExcel } from '../../../lib/excelExport';
 import DownloadSimple from "../../../assets/DownloadSimple.svg";
 import ConfirmationModal from "../../../components/common/ConfirmationModal.jsx";
-
+import { useDownload } from "../../../components/common/useDownload";
 
 const normalizeNumber = (value) =>
   value === '' || value === undefined || value === null ? undefined : Number(value);
@@ -54,6 +54,9 @@ export default function BudgetEstimation() {
   /** 🔴 NEW — Delete Modal State */
       const [showDeleteModal, setShowDeleteModal] = useState(false);
       const [recordToDelete, setRecordToDelete] = useState(null);
+
+      const { download, view, loadingFiles, errorFiles } = useDownload(budgetsApi.download);
+
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -149,17 +152,28 @@ export default function BudgetEstimation() {
 
 /*----------------------------------------------------------------------*/
    
-const handleDownload = async (record) => {
-    if (!record?.record_id) return;
-    try {
-      const { download_url } = await budgetsApi.download(record.record_id);
-      if (download_url) {
-        window.open(download_url, '_blank');
-      }
-    } catch (err) {
-      setError('Unable to download attachment.');
-    }
-  };
+// const handleDownload = async (record) => {
+//     if (!record?.record_id) return;
+//     try {
+//       const { download_url } = await budgetsApi.download(record.record_id);
+//       if (download_url) {
+//         window.open(download_url, '_blank');
+//       }
+//     } catch (err) {
+//       setError('Unable to download attachment.');
+//     }
+//   };
+
+//  const handleDownload = (record) => {
+//   if (!record?.record_id) return;
+//   download(record.record_id);
+// };
+
+const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);
+};
+
 
   const handleSubmit = async ({ values, file }) => {
     setSaving(true);
@@ -272,7 +286,14 @@ const handleDownload = async (record) => {
             <img src={DownloadSimple} alt="download" className={styles.icons} />
           </button>
         </div>
-        {error && <div className={styles.errorBanner}>{error}</div>}
+       {error && typeof error === 'string' && (
+  <div className={styles.errorBanner}>{error}</div>
+)}
+
+{errorFiles && typeof errorFiles.message === 'string' && (
+  <div className={styles.errorBanner}>{errorFiles.message}</div>
+)}
+
         {loading ? (
           <div className={styles.emptyState}>Loading forecasts…</div>
         ) : (
