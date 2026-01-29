@@ -14,10 +14,8 @@ const DATASET_OPTIONS = [
     { key: 'others', label: 'Others' }
 ]
 
-const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c'])
+const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'])
-const DAT_EXTS = new Set(['.dat', '.c'])
-const MAX_TEXT_PREVIEW_LINES = 500
 
 const getExt = (name = '') => {
     const idx = name.lastIndexOf('.')
@@ -26,75 +24,6 @@ const getExt = (name = '') => {
 const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
 const isExcel = (file) => ['.xlsx', '.xls'].includes(getExt(file?.name))
-const isDatLike = (file) => DAT_EXTS.has(getExt(file?.name))
-
-const NUM_TOKEN_RE = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/
-
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-
-const inferDelimiter = (lines) => {
-    const candidates = [',', '\t', ';', '|']
-    for (const d of candidates) {
-        if (lines.some((ln) => ln.includes(d))) return d
-    }
-    return null
-}
-
-// For the ignoring the special charcter for the header 
-const stripLeadingJunk = (line) => {
-    return line.replace(/^[\s#\$%&@!;:,._-]+/, '')
-}
-
-
-const splitLine = (line, delim) => {
-    const cleaned = stripLeadingJunk(line)
-
-    if (delim) return cleaned.trim().split(delim).map((t) => t.trim())
-    return cleaned.trim().split(/\s+/).filter((t) => t !== '')
-}
-
-
-const lineHasStringTokens = (line, delim) => {
-    const tokens = splitLine(line, delim)
-    if (!tokens.length) return false
-    return tokens.some((tok) => tok && !NUM_TOKEN_RE.test(tok))
-}
-
-const buildTableFromLines = (lines) => {
-    const cleanLines = lines.filter((ln) => ln.trim() !== '')
-    if (!cleanLines.length) return { headers: [], rows: [] }
-
-    const delim = inferDelimiter(cleanLines)
-    const headerIsPresent = lineHasStringTokens(cleanLines[0], delim)
-
-    const dataLines = headerIsPresent ? cleanLines.slice(1) : cleanLines
-    const rowsRaw = dataLines.map((ln) => splitLine(ln, delim))
-    const maxCols = rowsRaw.reduce((m, r) => Math.max(m, r.length), 0)
-
-    let headers = []
-    if (headerIsPresent) {
-        headers = splitLine(cleanLines[0], delim).map((h, i) => (h || `column_${i + 1}`))
-    } else {
-        headers = Array.from({ length: maxCols }, (_, i) => `column_${i + 1}`)
-    }
-    if (headers.length < maxCols) {
-        headers = headers.concat(
-            Array.from({ length: maxCols - headers.length }, (_, i) => `column_${headers.length + i + 1}`)
-        )
-    } else {
-        headers = headers.slice(0, maxCols)
-    }
-
-    const rows = rowsRaw.slice(0, 10).map((r) => {
-        const obj = {}
-        headers.forEach((h, i) => {
-            obj[h] = r[i] ?? ''
-        })
-        return obj
-    })
-
-    return { headers, rows }
-}
 
 function sanitizeTag(tag) {
     return (tag || '').trim()
@@ -125,11 +54,9 @@ export default function UploadModal({
     const [headerMode, setHeaderMode] = useState('file')
     const [customHeadersText, setCustomHeadersText] = useState('')
 
-
     const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet }]
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
-    const [rangeInput, setRangeInput] = useState({ start: '1', end: '10' })
 
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(null)
@@ -137,8 +64,8 @@ export default function UploadModal({
     const [result, setResult] = useState(null)
 
     const [excelSheets, setExcelSheets] = useState([])   // ['Sheet1', 'Sheet2']
-    const [activeSheet, setActiveSheet] = useState(null)
-    const [excelWb, setExcelWb] = useState(null)         // cached workbook
+const [activeSheet, setActiveSheet] = useState(null)
+const [excelWb, setExcelWb] = useState(null)         // cached workbook
 
 
     // lock background scroll
@@ -161,7 +88,6 @@ export default function UploadModal({
         setExcelSheets([])
         setActiveSheet(null)
         setExcelWb(null)
-        setRangeInput({ start: '1', end: '10' })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialTag, mode]) // intentionally NOT depending on initialDatasetType to avoid overriding user clicks
 
@@ -225,35 +151,6 @@ export default function UploadModal({
         [headerMode, headersList]
     )
 
-    const buildTextPreview = React.useCallback(
-        (text, range, fileName) => {
-            const lines = text.split(/\r?\n/)
-            const totalLines = lines.length
-            if (!totalLines) {
-                setPreview({ type: 'message', message: 'Selected file is empty.' })
-                return
-            }
-
-            const start = clamp(range?.start ?? 1, 1, totalLines)
-            const end = clamp(range?.end ?? Math.min(10, totalLines), start, totalLines)
-            const selectedLines = lines.slice(start - 1, end)
-            const table = buildTableFromLines(selectedLines)
-
-            setPreview({
-                type: 'text-lines',
-                name: fileName,
-                lines: lines.slice(0, MAX_TEXT_PREVIEW_LINES),
-                totalLines,
-                range: { start, end },
-                table,
-                rawText: text,
-                truncated: totalLines > MAX_TEXT_PREVIEW_LINES,
-            })
-            setRangeInput({ start: String(start), end: String(end) })
-        },
-        []
-    )
-
     const loadPreview = async (file, idx) => {
         if (!file) return
         const ext = getExt(file.name)
@@ -294,30 +191,6 @@ export default function UploadModal({
             })
 
             setPreview({ type: 'table', headers, rows, name: file.name })
-            return
-        }
-
-        if (ext === '.dat' || ext === '.c') {
-            const text = await file.text()
-            const existingItem = targetIdx != null ? files[targetIdx] : null
-            const lines = text.split(/\r?\n/)
-            const totalLines = lines.length || 1
-            const existingRange = existingItem?.parseRange
-            const nextRange = {
-                start: clamp(existingRange?.start ?? 1, 1, totalLines),
-                end: clamp(existingRange?.end ?? Math.min(10, totalLines), 1, totalLines),
-            }
-            if (nextRange.end < nextRange.start) nextRange.end = nextRange.start
-            buildTextPreview(text, nextRange, file.name)
-            if (targetIdx != null) {
-                setFiles((prev) => {
-                    const clone = [...prev]
-                    const item = clone[targetIdx]
-                    if (!item) return prev
-                    clone[targetIdx] = { ...item, parseRange: nextRange }
-                    return clone
-                })
-            }
             return
         }
 
@@ -479,7 +352,7 @@ const onSelectSheet = (sheetName) => {
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
     }
 
-
+    
 
     const onPickFiles = async (fileList) => {
         const incoming = Array.from(fileList || [])
@@ -495,11 +368,7 @@ const onSelectSheet = (sheetName) => {
             for (const f of incoming) {
                 const k = fileKey(f)
                 if (existingKeys.has(k)) continue
-                appended.push({
-                    file: f,
-                    visualize: isTabular(f),
-                    parseRange: isDatLike(f) ? { start: 1, end: 10 } : null,
-                })
+                appended.push({ file: f, visualize: isTabular(f) })
             }
 
             const next = [...prev, ...appended]
@@ -538,34 +407,6 @@ const onSelectSheet = (sheetName) => {
 
         setSelectedIdx(idx)
         await loadPreview(files[idx]?.file, idx)
-    }
-
-    const updateParseRange = (nextRange) => {
-        if (selectedIdx == null) return
-        setFiles((prev) => {
-            const clone = [...prev]
-            const item = clone[selectedIdx]
-            if (!item) return prev
-            clone[selectedIdx] = { ...item, parseRange: nextRange }
-            return clone
-        })
-        if (preview?.type === 'text-lines' && preview.rawText && selectedFile) {
-            buildTextPreview(preview.rawText, nextRange, selectedFile.name)
-        }
-    }
-
-    const commitRangeInput = (nextStartRaw, nextEndRaw) => {
-        if (preview?.type !== 'text-lines') return
-        const total = preview.totalLines || 1
-        const startVal = Number(nextStartRaw)
-        const endVal = Number(nextEndRaw)
-        if (!Number.isFinite(startVal) || !Number.isFinite(endVal)) return
-        const next = {
-            start: clamp(startVal, 1, total),
-            end: clamp(endVal, 1, total),
-        }
-        if (next.end < next.start) next.end = next.start
-        updateParseRange(next)
     }
 
     const onSelectSheet = (sheetName) => {
@@ -660,13 +501,6 @@ const onSelectSheet = (sheetName) => {
             return setError(`Select at least one sheet to plot for "${missingSheet.file.name}".`)
         }
 
-        const missingRange = finalItems.find(
-            (it) => it.visualize && isDatLike(it.file) && (!it.parseRange || !it.parseRange.start || !it.parseRange.end)
-        )
-        if (missingRange) {
-            return setError(`Select a line range to parse for "${missingRange.file.name}".`)
-        }
-
         setUploading(true)
         setUploadProgress(0)
 
@@ -676,12 +510,6 @@ const onSelectSheet = (sheetName) => {
                 if (it.visualize && isExcel(it.file) && Array.isArray(it.sheetNames) && it.sheetNames.length) {
                     const sheets = getSelectedSheets(it)
                     if (sheets.length) entry.sheets = sheets
-                }
-                if (it.visualize && isDatLike(it.file) && it.parseRange) {
-                    entry.parse_range = {
-                        start_line: Number(it.parseRange.start),
-                        end_line: Number(it.parseRange.end),
-                    }
                 }
                 return entry
             })
@@ -740,10 +568,10 @@ const onSelectSheet = (sheetName) => {
                     <div className="fd-modal__left">
                         <div className="project-card">
 
-                            <div className="UploadBox">
+                           <div className="UploadBox">
                                 <label className="uploadTile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
-                                    <p className='button' style={{ width: '200px' }}>
-                                        <img src={Plus} ait="Browse" className='icon' />
+                                    <p className='button'style={{width:'200px'}}>
+                                        <img src={Plus} ait="Browse" className='icon'/>
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
                                     <p className='uploadtext'>
@@ -761,31 +589,31 @@ const onSelectSheet = (sheetName) => {
 
                             <div className="form-field">
 
-                                <label className="summaryLabel" style={{ marginTop: 8 }}>Folder / Tag Name</label>
-                                <input
-                                    className="input"
-                                    placeholder="Write File Name/Tag"
-                                    value={tagName}
-                                    onChange={(e) => setTagName(e.target.value)}
-                                />
+                            <label className="summaryLabel" style={{ marginTop: 8 }}>Folder / Tag Name</label>
+                            <input
+                                className="input"
+                                placeholder="Write File Name/Tag"
+                                value={tagName}
+                                onChange={(e) => setTagName(e.target.value)}
+                            />
                             </div>
 
                             <div className="form-field">
-                                <label className="summaryLabel" style={{ marginTop: 8 }}>Data Type</label>
-                                <select
-                                    className="input-data"
-                                    value={datasetType}
-                                    onChange={(e) => setDatasetType(e.target.value)}
-                                    disabled={mode === 'edit'} // ✅ disable in edit mode
-                                >
-                                    <option value="" disabled>Select Data Category</option>
-                                    {DATASET_OPTIONS.map((opt) => (
-                                        <option key={opt.key} value={opt.key}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+  <label className="summaryLabel"style={{ marginTop: 8 }}>Data Type</label>
+  <select
+    className="input-data"
+    value={datasetType}
+    onChange={(e) => setDatasetType(e.target.value)}
+     disabled={mode === 'edit'} // ✅ disable in edit mode
+  >
+    <option value="" disabled>Select Data Category</option>
+    {DATASET_OPTIONS.map((opt) => (
+      <option key={opt.key} value={opt.key}>
+        {opt.label}
+      </option>
+    ))}
+  </select>
+</div>
 
                             {/* ✅ Dataset selector stays in modal; no parent control needed
                             {mode !== 'edit' && (
@@ -816,7 +644,7 @@ const onSelectSheet = (sheetName) => {
                                 </div>
                             )} */}
 
-
+                            
 
                             {/* Header handling (affects new uploads) */}
                             {/* <div className="header-options" style={{ marginTop: 12 }}>
@@ -836,22 +664,22 @@ const onSelectSheet = (sheetName) => {
                                     </label>
                                 </div> */}
 
-                            <div className="form-field">
-                                <label style={{ marginTop: 8 }} className="summaryLabel">Plot File Header</label>
+                                <div className="form-field">
+  <label style={{marginTop:8}} className="summaryLabel">Plot File Header</label>
 
-                                <select
-                                    className="input-data"
-                                    value={headerMode}
-                                    onChange={(e) => setHeaderMode(e.target.value)}
-                                >
-                                    <option value="file">Use headers from file</option>
-                                    <option value="none">File has no headers</option>
-                                    <option value="custom">Provide custom headers</option>
-                                </select>
+  <select
+    className="input-data"
+    value={headerMode}
+    onChange={(e) => setHeaderMode(e.target.value)}
+  >
+    <option value="file">Use headers from file</option>
+    <option value="none">File has no headers</option>
+    <option value="custom">Provide custom headers</option>
+  </select>
 
                                 {headerMode === 'custom' && (
                                     <div className="header-options__inputs">
-                                        <label style={{ marginTop: '5px', color: '#000000', fontSize: '13px', fontWeight: '600', fontFamily: 'inter-regular,Helvetica' }} className="summary-label">Comma separated headers</label>
+                                        <label style={{marginTop:'5px',color:'#000000',fontSize:'13px',fontWeight:'600',fontFamily:'inter-regular,Helvetica'}} className="summary-label">Comma separated headers</label>
                                         <input
                                             className="input-data"
                                             placeholder="e.g. time, alpha, mach"
@@ -862,7 +690,7 @@ const onSelectSheet = (sheetName) => {
                                 )}
                             </div>
 
-
+                         
 
                             {/* Edit mode: Save rename button */}
                             {mode === 'edit' && (
@@ -956,154 +784,68 @@ const onSelectSheet = (sheetName) => {
                     <div className="fd-modal__right">
                         <div className="project-card1" >
                             <div className='card'>
-                                <h3 style={{ marginTop: "20px" }}>Preview</h3>
-                                <div className="summaryLabel" >
-                                    {selectedFile ? selectedFile.name : 'Select a file to preview'}
-                                </div>
+                            <h3 style={{marginTop:"20px"}}>Preview</h3>
+                            <div className="summaryLabel" >
+                                {selectedFile ? selectedFile.name : 'Select a file to preview'}
+                            </div>
 
-                                {preview.type === 'text-lines' && (
-                                    <div style={{ marginTop: 10 }}>
-                                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                                            <label className="summaryLabel" style={{ margin: 0 }}>Start line</label>
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                max={preview.totalLines || 1}
-                                                value={rangeInput.start}
-                                                onChange={(e) => {
-                                                    setRangeInput((prev) => ({ ...prev, start: e.target.value }))
-                                                }}
-                                                onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                                style={{ width: 120 }}
-                                            />
+                            {excelSheets.length > 0 && (
+                                <>
+                                    <div className="summaryLabel" style={{ marginTop: 10 }}>Excel Sheets</div>
+                                    <div className="sheet-list">
+                                        {excelSheets.map((sheet) => {
+                                            const isActive = sheet === activeSheet
+                                            const isSelected = !!selectedFileEntry?.selectedSheets?.[sheet]
+                                            return (
+                                                <div key={sheet} className={`sheet-row ${isActive ? 'active' : ''}`}>
+                                                    <button
+                                                        type="button"
+                                                        className="sheet-name"
+                                                        onClick={() => onSelectSheet(sheet)}
+                                                    >
+                                                        {sheet}
+                                                    </button>
+                                                    <label className="toggle" onClick={(e) => e.stopPropagation()}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => toggleSheetSelection(sheet)}
+                                                        />
+                                                        <span className="slider" />
+                                                    </label>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </>
+                            )}
 
-                                            <label className="summaryLabel" style={{ margin: 0 }}>End line</label>
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                max={preview.totalLines || 1}
-                                                value={rangeInput.end}
-                                                onChange={(e) => {
-                                                    setRangeInput((prev) => ({ ...prev, end: e.target.value }))
-                                                }}
-                                                onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                                style={{ width: 120 }}
-                                            />
-                                        </div>
-                                        <div className="summaryLabel" style={{ marginTop: 6 }}>
-                                            Header is auto-detected from the first selected line.
-                                        </div>
-                                        <div>{preview.totalLines}</div>
+
+                            <div className="fd-preview">
+                                {preview.type === 'none' && <div className="EmptyState">No preview</div>}
+                                {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
+                                {preview.type === 'image' && (
+                                    <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }}/>
+                                )}
+                                {preview.type === 'table' && (
+                                    <div className="excel-preview" >
+                                        <table className="data-table">
+                                            <thead>
+                                                <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
+                                            </thead>
+                                            <tbody>
+                                                {preview.rows.map((row, rIdx) => (
+                                                    <tr key={`r-${rIdx}`}>
+                                                        {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
+                            </div>
 
-                                {excelSheets.length > 0 && (
-                                    <>
-                                        <div className="summaryLabel" style={{ marginTop: 10 }}>Excel Sheets</div>
-                                        <div className="sheet-list">
-                                            {excelSheets.map((sheet) => {
-                                                const isActive = sheet === activeSheet
-                                                const isSelected = !!selectedFileEntry?.selectedSheets?.[sheet]
-                                                return (
-                                                    <div key={sheet} className={`sheet-row ${isActive ? 'active' : ''}`}>
-                                                        <button
-                                                            type="button"
-                                                            className="sheet-name"
-                                                            onClick={() => onSelectSheet(sheet)}
-                                                        >
-                                                            {sheet}
-                                                        </button>
-                                                        <label className="toggle" onClick={(e) => e.stopPropagation()}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleSheetSelection(sheet)}
-                                                            />
-                                                            <span className="slider" />
-                                                        </label>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                    </>
-                                )}
-
-
-                                <div className="fd-preview">
-                                    {preview.type === 'none' && <div className="EmptyState">No preview</div>}
-                                    {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
-                                    {preview.type === 'image' && (
-                                        <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
-                                    )}
-                                    {preview.type === 'text-lines' && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                            <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
-                                                {preview.lines.map((ln, i) => {
-                                                    const lineNo = i + 1
-                                                    const inRange = lineNo >= (preview.range?.start || 1) && lineNo <= (preview.range?.end || 1)
-                                                    return (
-                                                        <div
-                                                            key={`ln-${lineNo}`}
-                                                            style={{
-                                                                display: 'flex',
-                                                                gap: 10,
-                                                                padding: '2px 8px',
-                                                                background: inRange ? '#fff4cc' : 'transparent',
-                                                                fontFamily: 'monospace',
-                                                                fontSize: 12,
-                                                            }}
-                                                        >
-                                                            <span style={{ width: 48, color: '#6b7280', textAlign: 'right' }}>{lineNo}</span>
-                                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                                {ln === '' ? ' ' : ln}
-                                                            </span>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                            {preview.truncated && (
-                                                <div className="summaryLabel">Showing first {MAX_TEXT_PREVIEW_LINES} lines.</div>
-                                            )}
-
-                                            {preview.table?.headers?.length ? (
-                                                <div className="excel-preview">
-                                                    <table className="data-table">
-                                                        <thead>
-                                                            <tr>{preview.table.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {preview.table.rows.map((row, rIdx) => (
-                                                                <tr key={`r-${rIdx}`}>
-                                                                    {preview.table.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            ) : (
-                                                <div className="EmptyState">No data rows in selected range.</div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {preview.type === 'table' && (
-                                        <div className="excel-preview" >
-                                            <table className="data-table">
-                                                <thead>
-                                                    <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
-                                                </thead>
-                                                <tbody>
-                                                    {preview.rows.map((row, rIdx) => (
-                                                        <tr key={`r-${rIdx}`}>
-                                                            {preview.headers.map((h, cIdx) => <td key={`${rIdx}-${cIdx}`}>{row[h]}</td>)}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                            {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
                                     className="project-shell__nav-link"
@@ -1113,7 +855,7 @@ const onSelectSheet = (sheetName) => {
                                     Close
                                 </button>
                             </div> */}
-                            </div>
+                        </div>
                         </div>
                     </div>
 

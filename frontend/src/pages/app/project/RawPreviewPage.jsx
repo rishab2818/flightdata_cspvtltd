@@ -52,7 +52,7 @@ export default function RawPreviewPage() {
         const blob = await fileRes.blob()
 
         // TEXT
-        if (['csv', 'txt', 'dat', 'c'].includes(ext)) {
+        if (['csv', 'txt'].includes(ext)) {
           const text = await blob.text()
           setPreviewData({ type: 'text', data: text })
         }

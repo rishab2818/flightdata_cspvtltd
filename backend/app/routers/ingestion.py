@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
 projects = ProjectRepository()
 
-TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c"}
+TABULAR_EXTS = {".csv", ".xlsx", ".xls",'.txt'}
 
 
 def _safe_slug(value: str) -> str:
@@ -76,20 +76,6 @@ def _parse_custom_headers(custom_headers: str | None, header_mode: str) -> list[
             detail="Provide custom_headers when header_mode is 'custom'",
         )
     return parsed_headers
-
-
-def _normalize_parse_range(value: dict | None) -> dict | None:
-    if not value:
-        return None
-    if not isinstance(value, dict):
-        raise HTTPException(status_code=400, detail="parse_range must be an object")
-    start = value.get("start_line")
-    end = value.get("end_line")
-    if not isinstance(start, int) or not isinstance(end, int):
-        raise HTTPException(status_code=400, detail="parse_range.start_line/end_line must be integers")
-    if start < 1 or end < start:
-        raise HTTPException(status_code=400, detail="parse_range must be valid and 1-based")
-    return {"start_line": start, "end_line": end}
 
 
 @router.post("/{project_id}/batch", response_model=IngestionBatchCreateResponse)
@@ -145,7 +131,6 @@ async def start_ingestion_batch(
         ext = os.path.splitext(original_name.lower())[-1]
         requested_visualize = False
         requested_sheets: list[str] = []
-        requested_parse_range = None
 
         if manifest_items:
             item = manifest_items[idx] if idx < len(manifest_items) else None
@@ -154,11 +139,9 @@ async def start_ingestion_batch(
                 sheets = item.get("sheets")
                 if isinstance(sheets, list):
                     requested_sheets = [s.strip() for s in sheets if isinstance(s, str) and s.strip()]
-                requested_parse_range = _normalize_parse_range(item.get("parse_range"))
 
         # force OFF for non-tabular
         visualize_enabled = bool(requested_visualize and ext in TABULAR_EXTS)
-        parse_range_for_job = requested_parse_range if ext in {".dat", ".c"} else None
 
         raw_key = f"{project_folder}/{dataset_folder}/{tag_folder}/raw/{uuid4()}_{original_name}"
 
@@ -210,7 +193,6 @@ async def start_ingestion_batch(
                 content_type=file.content_type,
                 size_bytes=size_bytes,
                 sheet_name=None,
-                parse_range=None,
             )
             await repo.update_job(full_job_id, status="stored", progress=100)
             responses.append(
@@ -253,7 +235,6 @@ async def start_ingestion_batch(
                 content_type=file.content_type,
                 size_bytes=size_bytes,
                 sheet_name=sheet_name,
-                parse_range=parse_range_for_job,
             )
 
             # If visualize enabled, materialize parquet during ingestion
@@ -269,7 +250,6 @@ async def start_ingestion_batch(
                     dataset_type,
                     tag_folder,
                     sheet_name,
-                    parse_range_for_job,
                 )
                 status_value = "queued"
             else:
@@ -290,7 +270,6 @@ async def start_ingestion_batch(
                     status=status_value,
                     autoscale=describe_autoscale(),
                     sheet_name=sheet_name,
-                    parse_range=None,
                 )
             )
 
