@@ -373,8 +373,14 @@ def _text_range_to_parquet(
         start = int(parse_range.get("start_line", 1))
         end = int(parse_range.get("end_line", total_lines))
 
-    if start < 1 or end < start or start > total_lines:
-        raise ValueError("Invalid parse range")
+    if start < 1:
+        start = 1
+    if start > total_lines:
+        start = total_lines
+    if end < start:
+        end = start
+    if end > total_lines:
+        end = total_lines
 
     selected = lines[start - 1 : end]
     selected = [ln for ln in selected if ln.strip()]

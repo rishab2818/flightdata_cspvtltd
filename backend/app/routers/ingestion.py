@@ -69,13 +69,15 @@ def _parse_custom_headers(custom_headers: str | None, header_mode: str) -> list[
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="custom_headers must be a JSON array of strings",
             ) from exc
-
-    if header_mode == "custom" and not parsed_headers:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Provide custom_headers when header_mode is 'custom'",
-        )
     return parsed_headers
+
+
+def _parse_manifest_custom_headers(value) -> list[str] | None:
+    if value is None:
+        return None
+    if not isinstance(value, list) or not all(isinstance(x, str) and x.strip() for x in value):
+        raise HTTPException(status_code=400, detail="manifest.custom_headers must be a list of strings")
+    return [x.strip() for x in value if x.strip()]
 
 
 def _normalize_parse_range(value: dict | None) -> dict | None:
@@ -146,6 +148,7 @@ async def start_ingestion_batch(
         requested_visualize = False
         requested_sheets: list[str] = []
         requested_parse_range = None
+        requested_custom_headers = None
 
         if manifest_items:
             item = manifest_items[idx] if idx < len(manifest_items) else None
@@ -155,10 +158,19 @@ async def start_ingestion_batch(
                 if isinstance(sheets, list):
                     requested_sheets = [s.strip() for s in sheets if isinstance(s, str) and s.strip()]
                 requested_parse_range = _normalize_parse_range(item.get("parse_range"))
+                requested_custom_headers = _parse_manifest_custom_headers(item.get("custom_headers"))
 
         # force OFF for non-tabular
         visualize_enabled = bool(requested_visualize and ext in TABULAR_EXTS)
         parse_range_for_job = requested_parse_range if ext in {".dat", ".c"} else None
+        header_mode_for_file = header_mode
+        custom_headers_for_file = parsed_headers
+        if requested_custom_headers:
+            header_mode_for_file = "custom"
+            custom_headers_for_file = requested_custom_headers
+        elif header_mode == "custom" and not parsed_headers:
+            header_mode_for_file = "file"
+            custom_headers_for_file = None
 
         raw_key = f"{project_folder}/{dataset_folder}/{tag_folder}/raw/{uuid4()}_{original_name}"
 
@@ -202,8 +214,8 @@ async def start_ingestion_batch(
                 storage_key=raw_key,
                 owner_email=user.email,
                 dataset_type=dataset_type,
-                header_mode=header_mode,
-                custom_headers=parsed_headers,
+                header_mode=header_mode_for_file,
+                custom_headers=custom_headers_for_file,
                 tag_name=tag_folder,
                 visualize_enabled=False,
                 processed_key=None,
@@ -245,8 +257,8 @@ async def start_ingestion_batch(
                 storage_key=raw_key,
                 owner_email=user.email,
                 dataset_type=dataset_type,
-                header_mode=header_mode,
-                custom_headers=parsed_headers,
+                header_mode=header_mode_for_file,
+                custom_headers=custom_headers_for_file,
                 tag_name=tag_folder,
                 visualize_enabled=visualize_enabled,
                 processed_key=processed_key,
@@ -264,8 +276,8 @@ async def start_ingestion_batch(
                     raw_key,
                     processed_key,
                     original_name,
-                    header_mode,
-                    parsed_headers,
+                    header_mode_for_file,
+                    custom_headers_for_file,
                     dataset_type,
                     tag_folder,
                     sheet_name,
@@ -306,8 +318,8 @@ async def start_ingestion_batch(
                     storage_key=raw_key,
                     owner_email=user.email,
                     dataset_type=dataset_type,
-                    header_mode=header_mode,
-                    custom_headers=parsed_headers,
+                    header_mode=header_mode_for_file,
+                    custom_headers=custom_headers_for_file,
                     tag_name=tag_folder,
                     visualize_enabled=False,
                     processed_key=None,
