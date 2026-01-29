@@ -130,6 +130,8 @@ export default function UploadModal({
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
     const [rangeInput, setRangeInput] = useState({ start: '1', end: '10' })
+    const [applyRangeToAll, setApplyRangeToAll] = useState(false)
+    const [applyCustomHeadersToAll, setApplyCustomHeadersToAll] = useState(false)
 
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(null)
@@ -162,6 +164,8 @@ export default function UploadModal({
         setActiveSheet(null)
         setExcelWb(null)
         setRangeInput({ start: '1', end: '10' })
+        setApplyRangeToAll(false)
+        setApplyCustomHeadersToAll(false)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialTag, mode]) // intentionally NOT depending on initialDatasetType to avoid overriding user clicks
 
@@ -491,6 +495,14 @@ const onSelectSheet = (sheetName) => {
         setFiles((prev) => {
             const existingKeys = new Set(prev.map((x) => fileKey(x.file)))
             const appended = []
+            const rangeForNew = {
+                start: Number(rangeInput.start) || 1,
+                end: Number(rangeInput.end) || 10,
+            }
+            const nextHeaders = customHeadersText
+                .split(',')
+                .map((h) => h.trim())
+                .filter(Boolean)
 
             for (const f of incoming) {
                 const k = fileKey(f)
@@ -498,7 +510,11 @@ const onSelectSheet = (sheetName) => {
                 appended.push({
                     file: f,
                     visualize: isTabular(f),
-                    parseRange: isDatLike(f) ? { start: 1, end: 10 } : null,
+                    parseRange: isDatLike(f) ? (applyRangeToAll ? rangeForNew : { start: 1, end: 10 }) : null,
+                    customHeaders:
+                        headerMode === 'custom' && applyCustomHeadersToAll && isTabular(f)
+                            ? nextHeaders
+                            : undefined,
                 })
             }
 
@@ -537,6 +553,11 @@ const onSelectSheet = (sheetName) => {
         setExcelWb(null)
 
         setSelectedIdx(idx)
+        if (headerMode === 'custom' && !applyCustomHeadersToAll) {
+            const item = files[idx]
+            const nextValue = Array.isArray(item?.customHeaders) ? item.customHeaders.join(', ') : ''
+            setCustomHeadersText(nextValue)
+        }
         await loadPreview(files[idx]?.file, idx)
     }
 
@@ -544,6 +565,11 @@ const onSelectSheet = (sheetName) => {
         if (selectedIdx == null) return
         setFiles((prev) => {
             const clone = [...prev]
+            if (applyRangeToAll) {
+                return clone.map((item) =>
+                    isDatLike(item.file) ? { ...item, parseRange: nextRange } : item
+                )
+            }
             const item = clone[selectedIdx]
             if (!item) return prev
             clone[selectedIdx] = { ...item, parseRange: nextRange }
@@ -639,8 +665,17 @@ const onSelectSheet = (sheetName) => {
             return
         }
 
-        if (headerMode === 'custom' && (!headersList || !headersList.length)) {
-            return setError("Provide custom headers when header_mode is 'custom'.")
+        if (headerMode === 'custom') {
+            if (applyCustomHeadersToAll) {
+                if (!headersList || !headersList.length) {
+                    return setError("Provide custom headers when header_mode is 'custom'.")
+                }
+            } else {
+                const anyCustom = files.some((it) => Array.isArray(it.customHeaders) && it.customHeaders.length)
+                if (!anyCustom) {
+                    return setError("Provide custom headers for at least one file or enable 'Apply custom headers to all files'.")
+                }
+            }
         }
 
         const finalItems = files.map((it) => ({
@@ -683,6 +718,9 @@ const onSelectSheet = (sheetName) => {
                         end_line: Number(it.parseRange.end),
                     }
                 }
+                if (headerMode === 'custom' && Array.isArray(it.customHeaders) && it.customHeaders.length) {
+                    entry.custom_headers = it.customHeaders
+                }
                 return entry
             })
             const res = await ingestionApi.startBatch(
@@ -693,7 +731,7 @@ const onSelectSheet = (sheetName) => {
                     datasetType,
                     tagName: tag,
                     headerMode,
-                    customHeaders: headerMode === 'custom' ? headersList : null,
+                    customHeaders: headerMode === 'custom' && applyCustomHeadersToAll ? headersList : null,
                     manifest,
                     onUploadProgress: (evt) => {
                         if (!evt.total) return setUploadProgress(null)
@@ -856,8 +894,59 @@ const onSelectSheet = (sheetName) => {
                                             className="input-data"
                                             placeholder="e.g. time, alpha, mach"
                                             value={customHeadersText}
-                                            onChange={(e) => setCustomHeadersText(e.target.value)}
+                                            onChange={(e) => {
+                                                const value = e.target.value
+                                                setCustomHeadersText(value)
+                                                if (applyCustomHeadersToAll) {
+                                                    const nextHeaders = value
+                                                        .split(',')
+                                                        .map((h) => h.trim())
+                                                        .filter(Boolean)
+                                                    setFiles((prev) =>
+                                                        prev.map((item) =>
+                                                            isTabular(item.file)
+                                                                ? { ...item, customHeaders: nextHeaders }
+                                                                : item
+                                                        )
+                                                    )
+                                                } else if (selectedIdx != null) {
+                                                    const nextHeaders = value
+                                                        .split(',')
+                                                        .map((h) => h.trim())
+                                                        .filter(Boolean)
+                                                    setFiles((prev) => {
+                                                        const clone = [...prev]
+                                                        const item = clone[selectedIdx]
+                                                        if (!item) return prev
+                                                        clone[selectedIdx] = { ...item, customHeaders: nextHeaders }
+                                                        return clone
+                                                    })
+                                                }
+                                            }}
                                         />
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={applyCustomHeadersToAll}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked
+                                                    setApplyCustomHeadersToAll(checked)
+                                                    if (!checked) return
+                                                    const nextHeaders = customHeadersText
+                                                        .split(',')
+                                                        .map((h) => h.trim())
+                                                        .filter(Boolean)
+                                                    setFiles((prev) =>
+                                                        prev.map((item) =>
+                                                            isTabular(item.file)
+                                                                ? { ...item, customHeaders: nextHeaders }
+                                                                : item
+                                                        )
+                                                    )
+                                                }}
+                                            />
+                                            <span className="summaryLabel" style={{ margin: 0 }}>Apply custom headers to all files</span>
+                                        </label>
                                     </div>
                                 )}
                             </div>
@@ -963,9 +1052,9 @@ const onSelectSheet = (sheetName) => {
 
                                 {preview.type === 'text-lines' && (
                                     <div style={{ marginTop: 10 }}>
-                                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                                            <label className="summaryLabel" style={{ margin: 0 }}>Start line</label>
-                                            <input
+                                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <label className="summaryLabel" style={{ margin: 0 }}>Start line</label>
+                                        <input
                                                 type="number"
                                                 min={1}
                                                 max={preview.totalLines || 1}
@@ -974,11 +1063,11 @@ const onSelectSheet = (sheetName) => {
                                                     setRangeInput((prev) => ({ ...prev, start: e.target.value }))
                                                 }}
                                                 onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                                style={{ width: 120 }}
-                                            />
+                                            style={{ width: 120 }}
+                                        />
 
-                                            <label className="summaryLabel" style={{ margin: 0 }}>End line</label>
-                                            <input
+                                        <label className="summaryLabel" style={{ margin: 0 }}>End line</label>
+                                        <input
                                                 type="number"
                                                 min={1}
                                                 max={preview.totalLines || 1}
@@ -987,9 +1076,28 @@ const onSelectSheet = (sheetName) => {
                                                     setRangeInput((prev) => ({ ...prev, end: e.target.value }))
                                                 }}
                                                 onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                                style={{ width: 120 }}
+                                            style={{ width: 120 }}
+                                        />
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={applyRangeToAll}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked
+                                                    setApplyRangeToAll(checked)
+                                                    if (!checked || !preview?.range) return
+                                                    setFiles((prev) =>
+                                                        prev.map((item) =>
+                                                            isDatLike(item.file)
+                                                                ? { ...item, parseRange: { ...preview.range } }
+                                                                : item
+                                                        )
+                                                    )
+                                                }}
                                             />
-                                        </div>
+                                            <span className="summaryLabel" style={{ margin: 0 }}>Apply range to all .dat/.c files</span>
+                                        </label>
+                                    </div>
                                         <div className="summaryLabel" style={{ marginTop: 6 }}>
                                             Header is auto-detected from the first selected line.
                                         </div>
