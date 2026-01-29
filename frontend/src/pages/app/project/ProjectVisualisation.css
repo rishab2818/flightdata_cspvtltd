@@ -40,6 +40,7 @@
 .ps-field {
   display: flex;
   flex-direction: column;
+  min-width: 0; 
 }
 
 .ps-field label {
@@ -49,6 +50,7 @@
   color: #0a0a0a;
   margin-bottom: 6px;
 }
+
 
 /* ===============================
    INPUTS / SELECTS
@@ -80,6 +82,15 @@
   background-color: #f3f3f5;
   color: #000000;
 } */
+
+.ps-field select {
+  width: 100%;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 32px;
+}
 
 .ps-field input {
   height: 36px;

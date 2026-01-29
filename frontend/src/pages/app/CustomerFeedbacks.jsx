@@ -620,8 +620,7 @@ import DocumentActions from "../../components/common/DocumentActions";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
-
-
+import { useDownload } from "../../components/common/useDownload";
 
 
 const BORDER = "#E2E8F0";
@@ -651,6 +650,13 @@ export default function CustomerFeedbacks() {
       const [showDeleteModal, setShowDeleteModal] = useState(false);
       const [recordToDelete, setRecordToDelete] = useState(null);
 
+      const { download, view, loadingFiles, errorFiles } = useDownload(recordsApi.downloadFeedback);
+
+//       const { download, view, loadingFiles, errorFiles } = useDownload(
+//   (recordId) => recordsApi.downloadFeedback(recordId)
+// );
+
+
   const loadRecords = async () => {
     try {
       setLoading(true);
@@ -678,28 +684,44 @@ export default function CustomerFeedbacks() {
   }, [records, filters]);
 
   // handle view
-  const handleView = async (row) => {
-    try {
-      const res = await recordsApi.downloadFeedback(row.record_id);
-      window.open(res.download_url, "_blank", "noopener,noreferrer");
-    } catch (err) {
-      alert("Unable to open this file.");
-    }
-  };
+  // const handleView = async (row) => {
+  //   try {
+  //     const res = await recordsApi.downloadFeedback(row.record_id);
+  //     window.open(res.download_url, "_blank", "noopener,noreferrer");
+  //   } catch (err) {
+  //     alert("Unable to open this file.");
+  //   }
+  // };
+
+     const handleView = (row) => {
+  if (!row?.record_id) return;
+  view(row.record_id);
+};
+
+  const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);
+};
+
+//     const handleDownload = (row) => {
+//   if (!row?.record_id) return;
+//   download(row.record_id);
+// };
+
 
   // handle download
-  const handleDownload = async (row) => {
-    try {
-      const res = await recordsApi.downloadFeedback(row.record_id);
-      const link = document.createElement("a");
-      link.href = res.download_url;
-      link.download = row.original_name || "feedback-file";
-      link.click();
-      link.remove();
-    } catch (err) {
-      alert("Download failed. Please try again.");
-    }
-  };
+  // const handleDownload = async (row) => {
+  //   try {
+  //     const res = await recordsApi.downloadFeedback(row.record_id);
+  //     const link = document.createElement("a");
+  //     link.href = res.download_url;
+  //     link.download = row.original_name || "feedback-file";
+  //     link.click();
+  //     link.remove();
+  //   } catch (err) {
+  //     alert("Download failed. Please try again.");
+  //   }
+  // };
 
   // // handle delete
   // const handleDelete = async (row) => {
@@ -1004,14 +1026,20 @@ export default function CustomerFeedbacks() {
                         <DocumentActions
                           doc={{ id: row.record_id, fileName: row.original_name }}
                           onEdit={() => handleEdit(row)}
-                          onView={() => handleView(row)}
-                          onDownload={() => handleDownload(row)}
+                          onDownload={() => download(row.record_id)}
+                          onView={() => view(row.record_id)}
                            onDelete={() => {
                        setRecordToDelete(row);
                        setShowDeleteModal(true);
                       }}
+                      // loading={loadingFiles[row.record_id]}
 
                         />
+                        {/* {errorFiles[row.record_id] && (
+                <p style={{ color: "red", fontSize: "12px" }}>
+                  {errorFiles[row.record_id]}
+                </p>
+              )} */}
                       </td>
                     </tr>
                   );

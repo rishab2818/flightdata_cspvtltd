@@ -121,7 +121,7 @@ export default function DocumentActions({
       <button
         type="button"
          style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
-        onClick={() => onDelete?.(doc)}
+        onClick={() => onDelete?.(doc.id)}
       >
          <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
       </button>

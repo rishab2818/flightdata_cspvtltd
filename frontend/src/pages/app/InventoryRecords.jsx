@@ -9,6 +9,7 @@ import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
 import FileText from "../../assets/FileText.svg"
 import load from "../../assets/load.svg";
+import { useDownload } from "../../components/common/useDownload";
 
 
 import styles from "./InventoryRecords.module.css";
@@ -125,6 +126,10 @@ export default function InventoryRecords() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState(null);
 
+     const { download, view, loadingFiles, errorFiles } = useDownload(
+    recordsApi.downloadInventory
+  );
+
   const openModal = () => {
     setEditingOrder(null);
     setShowModal(true);
@@ -186,27 +191,37 @@ export default function InventoryRecords() {
     loadOrders();
   }, []);
 
-  const handleView = async (row) => {
-    try {
-      const res = await recordsApi.downloadInventory(row.record_id);
-      window.open(res.download_url, "_blank", "noopener,noreferrer");
-    } catch (err) {
-      alert("Unable to open this record. Try downloading instead.");
-    }
-  };
+  // const handleView = async (row) => {
+  //   try {
+  //     const res = await recordsApi.downloadInventory(row.record_id);
+  //     window.open(res.download_url, "_blank", "noopener,noreferrer");
+  //   } catch (err) {
+  //     alert("Unable to open this record. Try downloading instead.");
+  //   }
+  // };
 
-  const handleDownload = async (row) => {
-    try {
-      const res = await recordsApi.downloadInventory(row.record_id);
-      const link = document.createElement("a");
-      link.href = res.download_url;
-      link.download = row.original_name || "inventory-record";
-      link.click();
-      link.remove();
-    } catch (err) {
-      alert("Download failed. Please try again.");
-    }
-  };
+     const handleView = (row) => {
+  if (!row?.record_id) return;
+  view(row.record_id);
+};
+
+ const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);
+};
+
+  // const handleDownload = async (row) => {
+  //   try {
+  //     const res = await recordsApi.downloadInventory(row.record_id);
+  //     const link = document.createElement("a");
+  //     link.href = res.download_url;
+  //     link.download = row.original_name || "inventory-record";
+  //     link.click();
+  //     link.remove();
+  //   } catch (err) {
+  //     alert("Download failed. Please try again.");
+  //   }
+  // };
 
   // const handleDelete = async (row) => {
   //   if (!window.confirm("Delete this supply order?")) return;
@@ -457,27 +472,15 @@ export default function InventoryRecords() {
                     <StatusBadge status={row.status || "Ongoing"} />
                   </td>
                   <td className="cell cell-center">
-                    <DocumentActions
-                      doc={{
-                        id: row.record_id,
-                        fileName: row.original_name,
-                        onDeleted: (id) =>
-                          setOrders((prev) =>
-                            prev.filter((r) => r.record_id !== id)
-                          ),
-                      }}
-                      onEdit={() => {
-                        setEditingOrder(row);
-                        setShowModal(true);
-                      }}
-                      onView={() => handleView(row)}
-                      onDownload={() => handleDownload(row)}
-                      onDelete={() => {
-                       setRecordToDelete(row);
-                       setShowDeleteModal(true);
-                      }}
-
-                    />
+                      <DocumentActions
+    doc={{ id: row.record_id, fileName: row.original_name }}
+    onView={() => handleView(row)}
+    onDownload={() => handleDownload(row)}
+    onDelete={() => {
+      setRecordToDelete(row);
+      setShowDeleteModal(true);
+    }}
+  />
                   </td>
                 </tr>
               ))}
