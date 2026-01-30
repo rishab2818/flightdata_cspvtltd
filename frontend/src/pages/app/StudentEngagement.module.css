@@ -138,7 +138,7 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 0px 24px 24px 24px;
+  padding: 24px 24px 24px 24px;
   width: 100%;
   overflow-x: auto;     /* enables horizontal scroll */
   overflow-y: auto;
@@ -157,7 +157,7 @@
 }
 
 .Table {
-  width: 1440px;
+  width: 1513px;
   max-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -167,6 +167,7 @@
   border-color: #0000001A;
   overflow-y: auto;
   z-index: 60;
+  margin-top: 20px;
   
 }
 
@@ -275,8 +276,7 @@ align-items: center;
 .modalBody {
   flex: 1;
   overflow-y: auto;            /* scroll only here */
-  padding-top: 18px;
-
+  /* padding-top: 18px; */
   /* limit body height */
   max-height: calc(90vh - 80px);
 }
@@ -294,8 +294,6 @@ align-items: center;
     grid-column: span 1;
   }
 }
-
-
 
 .closeBtn {
   width: 16px;

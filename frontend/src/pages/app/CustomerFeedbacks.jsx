@@ -1277,7 +1277,22 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
             <Input label="Project Name" value={form.project_name} onChange={(e) => onChange("project_name", e.target.value)} />
             <Input label="Division" value={form.division} onChange={(e) => onChange("division", e.target.value)} />
             {/* <Input label="Feedback Received" value={form.feedback_from} onChange={(e) => onChange("feedback_from", e.target.value)} /> */}
-            <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
+            {/* <Input label="Ratings" type="number"  min={0} max={5} step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} /> */}
+            <Input
+  label="Ratings"
+  type="number"
+  min={0}
+  max={5}
+  step="0.1"
+  value={form.rating}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === "" || (Number(value) >= 0 && Number(value) <= 5)) {
+      onChange("rating", value);
+    }
+  }}
+/>
+
             {/* <Input  
               style={{
     fontSize: "14px",

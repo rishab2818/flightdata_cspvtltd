@@ -69,9 +69,10 @@
   height: 100%;
 }
 
-.fd-modal__left,
-.fd-modal__right {
-  overflow: hidden;
+.fd-modal__left1,
+.fd-modal__right1 {
+  height: 100%;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -81,7 +82,6 @@
    Cards
 ========================= */
 .project-card,
-.project-card1,
 .project-card2 {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -93,6 +93,7 @@
   gap: 10px;
 }
 .project-card1 {
+  margin-left: 10px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -102,6 +103,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  /* height: 100%;  */
 }
 
 /* =========================
@@ -180,7 +182,7 @@
   padding: 0px 12px;
   background-color: #F3F3F5;
   border-radius: 4px;
-  color: #717182;
+  color: #0a0a0a;
   font-family: "Inter-Regular", Helvetica;
   font-weight: 400;
   border: 1px solid transparent;
@@ -192,7 +194,7 @@
   padding: 0px 12px;
   background-color: #F3F3F5;
   border-radius: 4px;
-  color: #717182;
+  color: #0a0a0a;
   font-family: "Inter-Regular", Helvetica;
   font-weight: 400;
   border: none;
@@ -244,10 +246,10 @@
   margin-bottom: 8px;
 }
 
-/* .fd-fileitem--active {
-  border-color: #2563eb;
-  background: #F3F3F5;
-} */
+.fd-fileitem--active1 {
+  border-color: #a0b7e7;
+  background:#EFF7FF;
+} 
 
 .fd-fileitem__name {
   font-size: 13px;
@@ -423,7 +425,7 @@
 }
 
 .data-table th {
-  background: #f1f5f9;
+  background:#EFF7FF;
   font-weight: 600;
 }
 
