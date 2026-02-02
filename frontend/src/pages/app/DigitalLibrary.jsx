@@ -257,7 +257,7 @@ const confirmDelete = async () => {
       </div>
 
       <div className={styles.tableWrapper}>
-        <div style={{padding: "16px 20px",width:"100%",fontSize:16, fontWeight:600, color: "#0a0a0a",fontfamily: "Inter-semiBold, Helvetica"}}>My Files</div>
+        <div style={{marginTop:"20px",marginBottom:"15px",width:"100%",fontSize:16, fontWeight:600, color: "#0a0a0a",fontfamily: "Inter-semiBold, Helvetica"}}>My Files</div>
         <div className={styles.tableHeader}>
           <table className={styles.table}>
             <thead>

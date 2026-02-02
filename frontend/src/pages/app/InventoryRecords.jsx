@@ -383,7 +383,7 @@ export default function InventoryRecords() {
       </div>
 
       {/* Table */}
-      <div className={styles.tableWrapper}>
+      <div className={styles.TableWrapper}>
         <h3>Supply Order</h3>
 
         <table className={styles.table}>

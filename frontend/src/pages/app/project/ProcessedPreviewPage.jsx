@@ -81,6 +81,7 @@ export default function ProcessedPreviewPage() {
     }
 
     return (
+        <div className="project-page">
         <div className="project-card" style={{  width: "100%", margin: "0px auto", background: "#fff", padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <div>
@@ -170,6 +171,7 @@ export default function ProcessedPreviewPage() {
                     )}
                 </div>
             )}
+        </div>
         </div>
     )
 }

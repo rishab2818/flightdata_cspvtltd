@@ -100,6 +100,7 @@ export default function RawPreviewPage() {
   }, [jobId])
 
   return (
+    <div className="project-page"> 
     <div
       className="project-card"
       style={{ width: '100%', margin: '0 auto', background: '#fff', padding: 24 }}
@@ -266,6 +267,7 @@ export default function RawPreviewPage() {
           )}
         </div>
       )}
+    </div>
     </div>
   )
 }

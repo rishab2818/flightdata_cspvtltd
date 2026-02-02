@@ -302,7 +302,7 @@ export default function UploadModal({
             return
         }
 
-        if (ext === '.dat' || ext === '.c') {
+       if (ext === '.dat' || ext === '.c' ) {
             const text = await file.text()
             const existingItem = targetIdx != null ? files[targetIdx] : null
             const lines = text.split(/\r?\n/)
@@ -776,7 +776,7 @@ const onSelectSheet = (sheetName) => {
 
                 <div className="fd-modal__grid">
                     {/* Left */}
-                    <div className="fd-modal__left">
+                    <div className="fd-modal__left1">
                         <div className="project-card">
 
                             <div className="UploadBox">
@@ -800,7 +800,7 @@ const onSelectSheet = (sheetName) => {
 
                             <div className="form-field">
 
-                                <label className="summaryLabel" style={{ marginTop: 8 }}>Folder / Tag Name</label>
+                                <label className="summaryLabel" style={{ marginTop: 20 }}>Folder / Tag Name</label>
                                 <input
                                     className="input"
                                     placeholder="Write File Name/Tag"
@@ -810,7 +810,7 @@ const onSelectSheet = (sheetName) => {
                             </div>
 
                             <div className="form-field">
-                                <label className="summaryLabel" style={{ marginTop: 8 }}>Data Type</label>
+                                <label className="summaryLabel" style={{ marginTop: 10 }}>Data Type</label>
                                 <select
                                     className="input-data"
                                     value={datasetType}
@@ -876,7 +876,7 @@ const onSelectSheet = (sheetName) => {
                                 </div> */}
 
                             <div className="form-field">
-                                <label style={{ marginTop: 8 }} className="summaryLabel">Plot File Header</label>
+                                <label style={{ marginTop: 10 }} className="summaryLabel">Plot File Header</label>
 
                                 <select
                                     className="input-data"
@@ -1001,11 +1001,11 @@ const onSelectSheet = (sheetName) => {
                             )}
 
                             {files.length > 0 && (
-                                <div className="fd-filelist" style={{ maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                                <div className="fd-filelist" style={{ maxHeight: 260, overflowY: 'auto' }}>
                                     {files.map((item, idx) => (
                                         <div
                                             key={`${fileKey(item.file)}-${idx}`}
-                                            className={`fileitem ${idx === selectedIdx ? 'fd-fileitem--active' : ''}`}
+                                            className={`fileitem ${idx === selectedIdx ? 'fd-fileitem--active1' : ''}`}
                                             onClick={() => onSelectFile(idx)}
                                             role="button"
                                             tabIndex={0}
@@ -1016,7 +1016,7 @@ const onSelectSheet = (sheetName) => {
                                                     {item.file.type || 'unknown'} · {Math.round(item.file.size / 1024)} KB · {visualizeInfo(item.file, item.visualize)}
                                                 </div>
                                             </div>
-                                            {/* 
+                                            
                                             <label className="toggle" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
@@ -1025,7 +1025,7 @@ const onSelectSheet = (sheetName) => {
                                                     disabled={!isTabular(item.file)}
                                                 />
                                                 <span className="slider" />
-                                            </label> */}
+                                            </label>
                                         </div>
                                     ))}
                                 </div>
@@ -1043,18 +1043,25 @@ const onSelectSheet = (sheetName) => {
                     </div>
 
                     {/* Right */}
-                    <div className="fd-modal__right">
+                    <div className="fd-modal__right1">
                         <div className="project-card1" >
                             <div className='card'>
-                                <h3 style={{ marginTop: "20px" }}>Preview</h3>
-                                <div className="summaryLabel" >
+                                <h3 style={{ marginTop: "20px", fontSize:'18px', fontWeight:600 }}>Preview</h3>
+                                <div style={{fontSize:'11px',fontFamily:'"Inter-Regular", Helvetica',fontWeight:400}} >
                                     {selectedFile ? selectedFile.name : 'Select a file to preview'}
                                 </div>
 
                                 {preview.type === 'text-lines' && (
                                     <div style={{ marginTop: 10 }}>
-                                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                                        <label className="summaryLabel" style={{ margin: 0 }}>Start line</label>
+                                     <div className="summaryLabel" style={{ marginTop:"20px" }}>
+                                            Header is auto-detected from the first selected line.
+                                        </div>
+                                        <div style={{fontSize:'11px',fontFamily:'"Inter-Regular", Helvetica',fontWeight:400}}>
+                                            Total Line Count :{preview.totalLines}</div>
+
+                                    <div style={{ marginTop:"10px",display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        
+                                        <label className="summaryLabel" style={{ margin: 0, marginRight:"-8px" }}>Start line</label>
                                         <input
                                                 type="number"
                                                 min={1}
@@ -1064,10 +1071,11 @@ const onSelectSheet = (sheetName) => {
                                                     setRangeInput((prev) => ({ ...prev, start: e.target.value }))
                                                 }}
                                                 onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                            style={{ width: 120 }}
+                                            style={{ width: 120, background:"#f3f3f5", height:"25px", border:"1px solid #e2e8f0", borderRadius:"4px", padding:"8px", marginRight:"10px" }}
                                         />
+                                    
 
-                                        <label className="summaryLabel" style={{ margin: 0 }}>End line</label>
+                                        <label className="summaryLabel" style={{ margin: 0, marginRight:"-8px" }}>End line</label>
                                         <input
                                                 type="number"
                                                 min={1}
@@ -1077,9 +1085,9 @@ const onSelectSheet = (sheetName) => {
                                                     setRangeInput((prev) => ({ ...prev, end: e.target.value }))
                                                 }}
                                                 onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                            style={{ width: 120 }}
+                                            style={{ width: 120, background:"#f3f3f5", height:"25px", border:"1px solid #e2e8f0", borderRadius:"4px", padding:"8px" }}
                                         />
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <label style={{ marginTop:'-8px',display: 'flex', alignItems: 'center', gap: 4 }}>
                                             <input
                                                 type="checkbox"
                                                 checked={applyRangeToAll}
@@ -1096,13 +1104,10 @@ const onSelectSheet = (sheetName) => {
                                                     )
                                                 }}
                                             />
-                                            <span className="summaryLabel" style={{ margin: 0 }}>Apply range to all .dat/.c files</span>
+                                            <span  style={{ margin: 0, fontSize:'11px', fontFamily:'"Inter-Regular", Helvetica', fontWeight:400 }}>Apply range to all .dat/.c files</span>
                                         </label>
                                     </div>
-                                        <div className="summaryLabel" style={{ marginTop: 6 }}>
-                                            Header is auto-detected from the first selected line.
-                                        </div>
-                                        <div>{preview.totalLines}</div>
+                                       
                                     </div>
                                 )}
 
@@ -1145,8 +1150,8 @@ const onSelectSheet = (sheetName) => {
                                         <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
                                     )}
                                     {preview.type === 'text-lines' && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                            <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
+                                        <div style={{ marginTop:"10px",display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                            <div style={{ padding:"12px",maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
                                                 {preview.lines.map((ln, i) => {
                                                     const lineNo = i + 1
                                                     const inRange = lineNo >= (preview.range?.start || 1) && lineNo <= (preview.range?.end || 1)
@@ -1157,12 +1162,16 @@ const onSelectSheet = (sheetName) => {
                                                                 display: 'flex',
                                                                 gap: 10,
                                                                 padding: '2px 8px',
-                                                                background: inRange ? '#fff4cc' : 'transparent',
+                                                                background: inRange ? '#EFF7FF' : 'transparent',
                                                                 fontFamily: 'monospace',
                                                                 fontSize: 12,
+                                                                border: '1px solid #e5e7eb',
+                                                                height:"40px",
+                                                                alignItems:"center",
                                                             }}
                                                         >
-                                                            <span style={{ width: 48, color: '#6b7280', textAlign: 'right' }}>{lineNo}</span>
+                                                            <span style={{ width: 20, color: '#6b7280', textAlign: 'right' }}>{lineNo}</span>
+                                                            
                                                             <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                                                 {ln === '' ? ' ' : ln}
                                                             </span>
@@ -1175,7 +1184,7 @@ const onSelectSheet = (sheetName) => {
                                             )}
 
                                             {preview.table?.headers?.length ? (
-                                                <div className="excel-preview">
+                                                <div className="excelpreview">
                                                     <table className="data-table">
                                                         <thead>
                                                             <tr>{preview.table.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>
@@ -1195,7 +1204,7 @@ const onSelectSheet = (sheetName) => {
                                         </div>
                                     )}
                                     {preview.type === 'table' && (
-                                        <div className="excel-preview" >
+                                        <div className="excelpreview" >
                                             <table className="data-table">
                                                 <thead>
                                                     <tr>{preview.headers.map((h, i) => <th key={`${h}-${i}`}>{h}</th>)}</tr>

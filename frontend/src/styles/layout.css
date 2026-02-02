@@ -199,7 +199,7 @@
   width: 340px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 6px;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
   overflow: hidden;
   z-index: 20;
@@ -255,20 +255,26 @@
 }
 
 .notification__item-title {
+   font-size: 14px;
+   font-family: "inter-Regular", Helvetica;
   font-weight: 700;
   color: #0f172a;
 }
 
 .notification__item-message {
-  font-size: 13px;
-  color: #475569;
-  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+   font-family: "inter-Regular", Helvetica;
+  color: #0f172a;
+  margin-top: 6px;
 }
 
-.notification__item-time {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 6px;
+.notification-time {
+  font-size: 11px;
+  font-weight: 300;
+  font-family: "inter-Regular", Helvetica;
+  color: #0f172a;
+  margin-top: 8px;
 }
 
 .notification__empty {

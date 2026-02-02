@@ -12,7 +12,7 @@ import chartLine from "../../../assets/ChartLine.svg";
 import reply from "../../../assets/reply.svg";
 
 const navItems = [
-  { key: 'data', to: 'data', label: 'Project Overview', icon: Database2 },
+  { key: 'overview', to: '', label: 'Project Overview', icon: Database2 },
   { key: 'visualisation', to: 'visualisation', label: 'Visualize', icon: chartLine },
   { key: 'report', to: 'report', label: 'Technical Reports', icon: Report2 },
   { key: 'digital', to: 'digital', label: 'Digital Library', icon: digital },

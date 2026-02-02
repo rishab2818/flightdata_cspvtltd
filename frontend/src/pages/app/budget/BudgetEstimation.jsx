@@ -281,10 +281,11 @@ const handleDownload = (row) => {
                 </option>
               ))}
             </select>
-          </div>
-          <button type="button" className={styles.exportButton} onClick={handleExport}>
+             <button type="button" className={styles.exportButton} onClick={handleExport}>
             <img src={DownloadSimple} alt="download" className={styles.icons} />
           </button>
+          </div>
+         
         </div>
        {error && typeof error === 'string' && (
   <div className={styles.errorBanner}>{error}</div>
