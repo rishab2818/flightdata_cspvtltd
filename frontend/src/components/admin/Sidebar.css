@@ -25,11 +25,22 @@
   object-fit: cover;
 }
 
+
 .sidebar-title {
+  font-size: 18px;
   font-weight: 500;
   padding: 10px;
   color: #333333;
 }
+
+.sidebar-divider {
+  height: 2px;
+  background-color: #fa5c08;
+  width: calc(100% + 32px); /* cancel sidebar padding */
+  margin-left: -16px;
+  margin-bottom: 8px;
+}
+
 
 /* Menu list */
 .sidebar-menu {

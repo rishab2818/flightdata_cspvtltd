@@ -86,7 +86,7 @@
 .app-shell__body {
   flex: 1;
   padding: 24px 28px 40px 28px;
-  /* padding: 24px; */
+  padding: 24px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -109,6 +109,13 @@
   gap: 2px;
   align-items: flex-start;
   text-align: left;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background-color: #00000033;
+  width: calc(100% + 32px); /* cancel sidebar padding */
+  margin-left: -16px;
 }
 
 .header__title {
@@ -338,7 +345,7 @@
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
   min-width: 160px;
-  overflow: hidden;
+  /* overflow: hidden; */
   z-index: 10;
 }
 
@@ -359,10 +366,13 @@
 
 .app-shell__main {
   flex: 1;
-  overflow: auto;
+  overflow: auto; 
   margin: 0 auto;
   padding: 12px 0px 12px 0px;
   width: 100%;
+  /* width: 1585px; */
+  height: 100%;
+  /* margin-left: -20px; */
 }
 
 .app-shell__header--dashboard .header__title {
@@ -374,7 +384,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 15px 0px 9px 0px;
+  padding: 0px 0px 9px 0px;
 }
 @media (max-width: 1200px) {
   .app-shell__header {

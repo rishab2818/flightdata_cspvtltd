@@ -9,7 +9,7 @@ import GearFine from "../../../assets/GearFine.svg";
 import Report2 from "../../../assets/Report2.svg";
 import digital from "../../../assets/digital.svg";
 import chartLine from "../../../assets/ChartLine.svg";
-import reply from "../../../assets/reply.svg";
+import ArrowLeft from "../../../assets/ArrowLeft.svg";
 
 const navItems = [
   { key: 'overview', to: '', label: 'Project Overview', icon: Database2 },
@@ -52,10 +52,12 @@ export default function ProjectShell() {
       <aside className="project-shell__sidebar">
         <div className="project-shell__brand">
           <button type="button" className="project-shell__back" onClick={() => navigate('/app')}>
-            <img src={reply} alt="Back" className="back-icon" />
+            <img src={ArrowLeft} alt="Back" className="back-icon" />
           </button>
-          <div className="project-shell__brand-text">back</div>
+          <div className="project-shell__brand-text">Back</div>
         </div>
+
+         <div class="full-width-line"></div>
 
         <nav className="project-shell__nav1">
           {navItems.map((item) => (
