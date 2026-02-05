@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
 import { ingestionApi } from '../../../api/ingestionApi';
+import MatConfigPanel from '../../../mat/MatConfigPanel'
+import { matApi } from '../../../mat/matApi'
 import './ProjectUploadModal.css';
 // import './ProjectUpload.css';
 
@@ -15,9 +17,10 @@ const DATASET_OPTIONS = [
     { key: 'others', label: 'Others' }
 ]
 
-const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c'])
+const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'])
 const DAT_EXTS = new Set(['.dat', '.c'])
+const MAT_EXTS = new Set(['.mat'])
 const MAX_TEXT_PREVIEW_LINES = 500
 
 const getExt = (name = '') => {
@@ -28,6 +31,8 @@ const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
 const isExcel = (file) => ['.xlsx', '.xls'].includes(getExt(file?.name))
 const isDatLike = (file) => DAT_EXTS.has(getExt(file?.name))
+const isMat = (file) => MAT_EXTS.has(getExt(file?.name))
+const isCustomHeaderCapable = (file) => isTabular(file) && !isMat(file)
 
 const NUM_TOKEN_RE = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/
 
@@ -127,7 +132,7 @@ export default function UploadModal({
     const [customHeadersText, setCustomHeadersText] = useState('')
 
 
-    const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet }]
+    const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet, matMeta, matConfig }]
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
     const [rangeInput, setRangeInput] = useState({ start: '1', end: '10' })
@@ -513,9 +518,13 @@ const onSelectSheet = (sheetName) => {
                     visualize: isTabular(f),
                     parseRange: isDatLike(f) ? (applyRangeToAll ? rangeForNew : { start: 1, end: 10 }) : null,
                     customHeaders:
-                        headerMode === 'custom' && applyCustomHeadersToAll && isTabular(f)
+                        headerMode === 'custom' && applyCustomHeadersToAll && isCustomHeaderCapable(f)
                             ? nextHeaders
                             : undefined,
+                    matMeta: null,
+                    matConfig: null,
+                    matLoading: false,
+                    matError: null,
                 })
             }
 
@@ -524,6 +533,11 @@ const onSelectSheet = (sheetName) => {
             if (selectedIdx == null && next.length) {
                 setSelectedIdx(0)
                 loadPreview(next[0].file, 0)
+                if (isMat(next[0].file)) {
+                    setTimeout(() => {
+                        loadMatMeta(next[0].file, 0)
+                    }, 0)
+                }
             }
 
             return next
@@ -560,6 +574,61 @@ const onSelectSheet = (sheetName) => {
             setCustomHeadersText(nextValue)
         }
         await loadPreview(files[idx]?.file, idx)
+        if (isMat(files[idx]?.file)) {
+            await loadMatMeta(files[idx]?.file, idx)
+        }
+    }
+
+    const loadMatMeta = async (file, idx) => {
+        if (!file || idx == null) return
+        const existing = files[idx]
+        if (existing?.matMeta?.length) return
+        setFiles((prev) => {
+            const clone = [...prev]
+            const item = clone[idx]
+            if (!item) return prev
+            clone[idx] = { ...item, matLoading: true, matError: null }
+            return clone
+        })
+        try {
+            const res = await matApi.inspect(file)
+            const variables = res?.variables || []
+            setFiles((prev) => {
+                const clone = [...prev]
+                const item = clone[idx]
+                if (!item) return prev
+                const active = variables[0]
+                let nextConfig = item.matConfig
+                if (!nextConfig && active) {
+                    const axes = [0, 1, 2].filter((i) => i < active.ndims)
+                    const fixed = {}
+                    for (let i = 0; i < active.ndims; i += 1) {
+                        if (!axes.includes(i)) fixed[i] = 0
+                    }
+                    nextConfig = { variable: active.name, axes, fixed }
+                }
+                clone[idx] = {
+                    ...item,
+                    matMeta: variables,
+                    matConfig: nextConfig || null,
+                    matLoading: false,
+                    matError: null,
+                }
+                return clone
+            })
+        } catch (err) {
+            setFiles((prev) => {
+                const clone = [...prev]
+                const item = clone[idx]
+                if (!item) return prev
+                clone[idx] = {
+                    ...item,
+                    matLoading: false,
+                    matError: err?.response?.data?.detail || err.message || 'Failed to inspect MAT file',
+                }
+                return clone
+            })
+        }
     }
 
     const updateParseRange = (nextRange) => {
@@ -703,6 +772,13 @@ const onSelectSheet = (sheetName) => {
             return setError(`Select a line range to parse for "${missingRange.file.name}".`)
         }
 
+        const missingMatConfig = finalItems.find(
+            (it) => it.visualize && isMat(it.file) && !it.matConfig
+        )
+        if (missingMatConfig) {
+            return setError(`Select a MAT variable and axes for "${missingMatConfig.file.name}".`)
+        }
+
         setUploading(true)
         setUploadProgress(0)
 
@@ -721,6 +797,9 @@ const onSelectSheet = (sheetName) => {
                 }
                 if (headerMode === 'custom' && Array.isArray(it.customHeaders) && it.customHeaders.length) {
                     entry.custom_headers = it.customHeaders
+                }
+                if (it.visualize && isMat(it.file) && it.matConfig) {
+                    entry.mat_config = it.matConfig
                 }
                 return entry
             })
@@ -905,7 +984,7 @@ const onSelectSheet = (sheetName) => {
                                                         .filter(Boolean)
                                                     setFiles((prev) =>
                                                         prev.map((item) =>
-                                                            isTabular(item.file)
+                                                            isCustomHeaderCapable(item.file)
                                                                 ? { ...item, customHeaders: nextHeaders }
                                                                 : item
                                                         )
@@ -939,7 +1018,7 @@ const onSelectSheet = (sheetName) => {
                                                         .filter(Boolean)
                                                     setFiles((prev) =>
                                                         prev.map((item) =>
-                                                            isTabular(item.file)
+                                                            isCustomHeaderCapable(item.file)
                                                                 ? { ...item, customHeaders: nextHeaders }
                                                                 : item
                                                         )
@@ -1050,6 +1129,25 @@ const onSelectSheet = (sheetName) => {
                                 <div style={{fontSize:'11px',fontFamily:'"Inter-Regular", Helvetica',fontWeight:400}} >
                                     {selectedFile ? selectedFile.name : 'Select a file to preview'}
                                 </div>
+
+                                {selectedFile && isMat(selectedFile) && (
+                                    <MatConfigPanel
+                                        meta={selectedFileEntry?.matMeta}
+                                        config={selectedFileEntry?.matConfig}
+                                        loading={selectedFileEntry?.matLoading}
+                                        error={selectedFileEntry?.matError}
+                                        onChange={(next) => {
+                                            if (selectedIdx == null) return
+                                            setFiles((prev) => {
+                                                const clone = [...prev]
+                                                const item = clone[selectedIdx]
+                                                if (!item) return prev
+                                                clone[selectedIdx] = { ...item, matConfig: next }
+                                                return clone
+                                            })
+                                        }}
+                                    />
+                                )}
 
                                 {preview.type === 'text-lines' && (
                                     <div style={{ marginTop: 10 }}>
