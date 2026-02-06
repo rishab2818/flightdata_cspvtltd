@@ -26,6 +26,7 @@ class IngestionRepository:
         size_bytes: int | None = None,
         sheet_name: str | None = None,
         parse_range: dict | None = None,
+        mat_config: dict | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
@@ -43,6 +44,7 @@ class IngestionRepository:
             "header_mode": header_mode,
             "custom_headers": custom_headers,
             "parse_range": parse_range,
+            "mat_config": mat_config,
             "status": "queued",
             "progress": 0,
             "owner_email": owner_email,

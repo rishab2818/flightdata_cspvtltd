@@ -479,6 +479,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                         line=dict(width=1),
                         showscale=True,
                         name=label,
+                        colorscale='Electric'
                     )
                 )
             else:
