@@ -24,6 +24,7 @@ import { usersApi } from "../../api/usersApi";
 import "./UserManagement.css";
 import ChangePasswordDialog from "../../components/admin/ChangePasswordDialog";
 import Delete from '../../assets/Delete.svg'
+import password from '../../assets/password.svg'
 import TablePagination from "@mui/material/TablePagination";
 
 
@@ -160,12 +161,12 @@ export default function UserManagement() {
                       <Tooltip title="Change password">
                         <IconButton
                           size="small"
-                          className="action-btn"
+                          className="action-btn password"
                           onClick={() =>
                             setPwdDlg({ open: true, email: u.email })
                           }
                         >
-                          <KeyIcon fontSize="small" />
+                          <img style={{width:'20px', height:'20px'}} src={password} alt="password"/>
                         </IconButton>
                       </Tooltip>
 

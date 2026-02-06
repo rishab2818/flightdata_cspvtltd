@@ -128,7 +128,13 @@
 .action-btn {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  margin-left: 6px;
+  gap: 10px;
+}
+
+.action-btn.password {
+  border: 1px solid #e5e7eb;
+  /* border-radius: 6px; */
+  margin-right: 10px;
 }
 
 .action-btn.delete {
