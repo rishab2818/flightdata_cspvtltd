@@ -2,12 +2,13 @@
 
 
 from datetime import datetime
-from typing import Optional , Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 # for the log-log and semi log 
 AxisScale = Literal["linear" , 'log']
+SourceType = Literal["tabular", "mat"]
 
 class VisualizationSeriesInput(BaseModel):
     job_id: str = Field(..., description="Ingestion job ID for this series")
@@ -28,15 +29,22 @@ class VisualizationSeriesOut(VisualizationSeriesInput):
 
 class VisualizationCreateRequest(BaseModel):
     project_id: str = Field(..., description="Project ID the visualization belongs to")
-    series: list[VisualizationSeriesInput]
+    source_type: SourceType = Field(default="tabular")
+    series: list[VisualizationSeriesInput] = Field(default_factory=list)
+    job_id: Optional[str] = None
+    var: Optional[str] = None
+    mapping: Optional[dict[str, Any]] = None
+    filters: dict[str, Any] = Field(default_factory=dict)
     chart_type: str = Field(default="scatter", description="Type of chart to render")
 
 
 class VisualizationOut(BaseModel):
     viz_id: str
     project_id: str
+    source_type: SourceType = "tabular"
     chart_type: str
     series: list[VisualizationSeriesOut]
+    mat_request: Optional[dict[str, Any]] = None
 
     status: str
     progress: int = 0

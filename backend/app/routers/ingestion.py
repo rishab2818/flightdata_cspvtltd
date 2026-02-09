@@ -81,14 +81,6 @@ def _parse_manifest_custom_headers(value) -> list[str] | None:
     return [x.strip() for x in value if x.strip()]
 
 
-def _parse_manifest_mat_config(value) -> dict | None:
-    if value is None:
-        return None
-    if not isinstance(value, dict):
-        raise HTTPException(status_code=400, detail="manifest.mat_config must be an object")
-    return value
-
-
 def _normalize_parse_range(value: dict | None) -> dict | None:
     if not value:
         return None
@@ -158,7 +150,6 @@ async def start_ingestion_batch(
         requested_sheets: list[str] = []
         requested_parse_range = None
         requested_custom_headers = None
-        requested_mat_config = None
 
         if manifest_items:
             item = manifest_items[idx] if idx < len(manifest_items) else None
@@ -169,12 +160,10 @@ async def start_ingestion_batch(
                     requested_sheets = [s.strip() for s in sheets if isinstance(s, str) and s.strip()]
                 requested_parse_range = _normalize_parse_range(item.get("parse_range"))
                 requested_custom_headers = _parse_manifest_custom_headers(item.get("custom_headers"))
-                requested_mat_config = _parse_manifest_mat_config(item.get("mat_config"))
 
         # force OFF for non-tabular
         visualize_enabled = bool(requested_visualize and ext in TABULAR_EXTS)
         parse_range_for_job = requested_parse_range if ext in {".dat", ".c"} else None
-        mat_config_for_job = requested_mat_config if ext == ".mat" else None
         header_mode_for_file = header_mode
         custom_headers_for_file = parsed_headers
         if requested_custom_headers:
@@ -235,7 +224,6 @@ async def start_ingestion_batch(
                 size_bytes=size_bytes,
                 sheet_name=None,
                 parse_range=None,
-                mat_config=mat_config_for_job,
             )
             await repo.update_job(full_job_id, status="stored", progress=100)
             responses.append(
@@ -258,7 +246,9 @@ async def start_ingestion_batch(
             processed_key = None
             if visualize_enabled:
                 stem = os.path.splitext(original_name)[0]
-                if sheet_name:
+                if ext == ".mat":
+                    processed_key = None
+                elif sheet_name:
                     sheet_slug = _safe_slug(sheet_name)
                     processed_key = f"{project_folder}/{dataset_folder}/{tag_folder}/processed/{uuid4()}_{stem}__{sheet_slug}.parquet"
                 else:
@@ -279,7 +269,6 @@ async def start_ingestion_batch(
                 size_bytes=size_bytes,
                 sheet_name=sheet_name,
                 parse_range=parse_range_for_job,
-                mat_config=mat_config_for_job,
             )
 
             # If visualize enabled, materialize parquet during ingestion
@@ -296,7 +285,6 @@ async def start_ingestion_batch(
                     tag_folder,
                     sheet_name,
                     parse_range_for_job,
-                    mat_config_for_job,
                 )
                 status_value = "queued"
             else:
@@ -341,7 +329,6 @@ async def start_ingestion_batch(
                     content_type=file.content_type,
                     size_bytes=size_bytes,
                     sheet_name=sheet_name,
-                    mat_config=mat_config_for_job,
                 )
                 await repo.update_job(raw_sheet_job_id, status="stored", progress=100)
                 responses.append(
@@ -679,5 +666,4 @@ async def save_processed_column_names(
     })
 
     return {"ok": True}
-
 

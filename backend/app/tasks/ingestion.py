@@ -172,7 +172,7 @@ def ingest_file(
     job_id: str,
     bucket: str,
     storage_key: str,
-    processed_key: str,
+    processed_key: str | None,
     filename: str,
     header_mode: str = "file",
     custom_headers: list[str] | None = None,
@@ -180,7 +180,6 @@ def ingest_file(
     tag_name: str | None = None,
     sheet_name: str | None = None,
     parse_range: dict | None = None,
-    mat_config: dict | None = None,
 ):
     redis = get_sync_redis()
     db = get_sync_db()
@@ -233,7 +232,7 @@ def ingest_file(
             except Exception:
                 pass
 
-        _publish(job_id, states.STARTED, 35, "Materializing Parquet")
+        _publish(job_id, states.STARTED, 35, "Preparing data")
         db.ingestion_jobs.update_one(
             {"_id": ObjectId(job_id)},
             {"$set": {"status": states.STARTED, "progress": 35, "updated_at": datetime.utcnow()}},
@@ -248,42 +247,52 @@ def ingest_file(
         #         raw_path, parquet_path, header_mode, custom_headers
         #     )
         
-        ## add functionlity for the wind tunnel txt also 
-        if dataset_type == "wind" and ext == ".txt":
-            columns, row_count, sample_rows, stats = _wind_txt_to_parquet(
-                raw_path, parquet_path, header_mode, custom_headers
-            )
-        elif ext in {".dat", ".c"}:
-            columns, row_count, sample_rows, stats = _text_range_to_parquet(
-                raw_path, parquet_path, parse_range
-            )
-        elif ext == ".mat":
-            from app.mat.processor import materialize_mat_parquet
-            columns, row_count, sample_rows, stats, mat_meta = materialize_mat_parquet(
-                raw_path, parquet_path, mat_config
-            )
-        elif ext == ".csv":
-            columns, row_count, sample_rows, stats = _csv_to_parquet(
-                raw_path, parquet_path, header_mode, custom_headers
-            )
+        columns: list[str] = []
+        row_count = 0
+        sample_rows: list[dict] = []
+        stats: dict = {}
+        mat_meta: dict | None = None
+        processed_key_to_store = processed_key
+
+        # MAT ingestion is lightweight indexing only (no parquet materialization at ingest time).
+        if ext == ".mat":
+            from app.mat.indexing import index_mat
+
+            _publish(job_id, states.STARTED, 60, "Indexing MAT variables")
+            mat_meta = index_mat(raw_path).model_dump()
+            processed_key_to_store = None
         else:
-            columns, row_count, sample_rows, stats = _excel_to_parquet(
-                raw_path,
-                parquet_path,
-                header_mode,
-                custom_headers,
-                sheet_name=sheet_name,
-            )
+            # add functionlity for the wind tunnel txt also
+            if dataset_type == "wind" and ext == ".txt":
+                columns, row_count, sample_rows, stats = _wind_txt_to_parquet(
+                    raw_path, parquet_path, header_mode, custom_headers
+                )
+            elif ext in {".dat", ".c"}:
+                columns, row_count, sample_rows, stats = _text_range_to_parquet(
+                    raw_path, parquet_path, parse_range
+                )
+            elif ext == ".csv":
+                columns, row_count, sample_rows, stats = _csv_to_parquet(
+                    raw_path, parquet_path, header_mode, custom_headers
+                )
+            else:
+                columns, row_count, sample_rows, stats = _excel_to_parquet(
+                    raw_path,
+                    parquet_path,
+                    header_mode,
+                    custom_headers,
+                    sheet_name=sheet_name,
+                )
 
-
-
-        _publish(job_id, states.STARTED, 80, "Uploading processed Parquet")
-        minio.fput_object(bucket, processed_key, parquet_path, content_type="application/octet-stream")
-        logger.info("ingest_file uploaded parquet job_id=%s processed_key=%s", job_id, processed_key)
+            _publish(job_id, states.STARTED, 80, "Uploading processed Parquet")
+            if not processed_key:
+                raise ValueError("processed_key is required for non-MAT ingestion")
+            minio.fput_object(bucket, processed_key, parquet_path, content_type="application/octet-stream")
+            logger.info("ingest_file uploaded parquet job_id=%s processed_key=%s", job_id, processed_key)
 
         _publish(job_id, states.SUCCESS, 100, "Upload + processing complete")
         meta_payload = {"stats": stats}
-        if ext == ".mat" and "mat_meta" in locals():
+        if mat_meta is not None:
             meta_payload["mat"] = mat_meta
 
         db.ingestion_jobs.update_one(
@@ -291,7 +300,7 @@ def ingest_file(
             {"$set": {
                 "status": states.SUCCESS,
                 "progress": 100,
-                "processed_key": processed_key,
+                "processed_key": processed_key_to_store,
                 "columns": columns,
                 "rows_seen": row_count,
                 "sample_rows": sample_rows,
@@ -300,7 +309,6 @@ def ingest_file(
                 "tag_name": tag_name,
                 "header_mode": header_mode,
                 "custom_headers": custom_headers,
-                "mat_config": mat_config,
                 "updated_at": datetime.utcnow(),
             }},
         )

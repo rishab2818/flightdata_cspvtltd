@@ -86,14 +86,18 @@ class VisualizationRepository:
         owner_email: str,
         series: list[dict],
         filename: str | None = None,
+        source_type: str = "tabular",
+        mat_request: dict | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
 
         doc = {
             "project_id": project_id,
+            "source_type": source_type,
             "chart_type": chart_type,
             "series": series,          # ✅ series contains x_axis per item
+            "mat_request": mat_request,
             "filename": filename,
             "status": "queued",
             "progress": 0,
