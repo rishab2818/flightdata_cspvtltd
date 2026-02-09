@@ -71,6 +71,11 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
               background: "#DEFFF0",
               color: COLORS.successText,
               fontSize: 14,
+              width: 56,
+              height: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               border: `1px solid ${COLORS.border}`,
             }}
           >

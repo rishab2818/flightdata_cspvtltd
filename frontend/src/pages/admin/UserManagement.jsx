@@ -24,6 +24,9 @@ import { usersApi } from "../../api/usersApi";
 import "./UserManagement.css";
 import ChangePasswordDialog from "../../components/admin/ChangePasswordDialog";
 import Delete from '../../assets/Delete.svg'
+import password from '../../assets/password.svg'
+import TablePagination from "@mui/material/TablePagination";
+
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -32,6 +35,9 @@ export default function UserManagement() {
   const [pwdDlg, setPwdDlg] = useState({ open: false, email: null });
   const [confirm, setConfirm] = useState({ open: false, email: null });
   const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+ 
 
   const load = async () => {
     setBusy(true);
@@ -72,6 +78,13 @@ export default function UserManagement() {
     await load();
     setConfirm({ open: false, email: null });
   };
+
+  const paginatedUsers = useMemo(() => {
+  const start = page * rowsPerPage;
+  const end = start + rowsPerPage;
+  return filtered.slice(start, end);
+}, [filtered, page, rowsPerPage]);
+
 
   return (
     <div className="user-management-page">
@@ -126,7 +139,8 @@ export default function UserManagement() {
               </TableHead>
 
               <TableBody>
-                {filtered.map((u) => (
+                {/* {filtered.map((u) => ( */}
+                {paginatedUsers.map((u) => (
                   <TableRow key={u.email} className="user-management-table-row">
                     <TableCell>{u.first_name} {u.last_name}</TableCell>
                     <TableCell>
@@ -147,12 +161,12 @@ export default function UserManagement() {
                       <Tooltip title="Change password">
                         <IconButton
                           size="small"
-                          className="action-btn"
+                          className="action-btn password"
                           onClick={() =>
                             setPwdDlg({ open: true, email: u.email })
                           }
                         >
-                          <KeyIcon fontSize="small" />
+                          <img style={{width:'20px', height:'20px'}} src={password} alt="password"/>
                         </IconButton>
                       </Tooltip>
 
@@ -173,6 +187,19 @@ export default function UserManagement() {
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+  component="div"
+  count={filtered.length}
+  page={page}
+  onPageChange={(e, newPage) => setPage(newPage)}
+  rowsPerPage={rowsPerPage}
+  onRowsPerPageChange={(e) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
+    setPage(0);
+  }}
+  rowsPerPageOptions={[5, 10, 25]}
+ />
+
           </div>
         </div>
       </div>

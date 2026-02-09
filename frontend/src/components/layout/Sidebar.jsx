@@ -19,6 +19,8 @@ export default function Sidebar() {
         <span>Data Visualisation</span>
       </div>
 
+       <div className="sidebar-divider"></div>
+
       {items.length === 0 ? (
         <div className="sidebar__empty">No navigation available</div>
       ) : (

@@ -49,7 +49,6 @@ const stripLeadingJunk = (line) => {
     return line.replace(/^[\s#\$%&@!;:,._-]+/, '')
 }
 
-
 const splitLine = (line, delim) => {
     const cleaned = stripLeadingJunk(line)
 
@@ -131,6 +130,9 @@ export default function UploadModal({
 
 
     const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet }]
+    const hasTabularFiles = useMemo(() => {
+    return files.some(item => isTabular(item.file))
+}, [files])
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
     const [rangeInput, setRangeInput] = useState({ start: '1', end: '10' })
@@ -145,6 +147,8 @@ export default function UploadModal({
     const [excelSheets, setExcelSheets] = useState([])   // ['Sheet1', 'Sheet2']
     const [activeSheet, setActiveSheet] = useState(null)
     const [excelWb, setExcelWb] = useState(null)         // cached workbook
+
+    
 
 
     // lock background scroll
@@ -886,7 +890,103 @@ const onSelectSheet = (sheetName) => {
                                     </label>
                                 </div> */}
 
-                            <div className="form-field">
+                                {hasTabularFiles && (
+    <div className="form-field">
+        <label style={{ marginTop: 10 }} className="summaryLabel">
+            Plot File Header
+        </label>
+
+        <select
+            className="input-data"
+            value={headerMode}
+            onChange={(e) => setHeaderMode(e.target.value)}
+        >
+            <option value="file">Use headers from file</option>
+            <option value="none">File has no headers</option>
+            <option value="custom">Provide custom headers</option>
+        </select>
+
+        {headerMode === 'custom' && (
+            <div className="header-options__inputs">
+                <label
+                    style={{
+                        marginTop: '5px',
+                        fontSize: '13px',
+                        fontWeight: 600
+                    }}
+                    className="summary-label1"
+                >
+                    Comma separated headers
+                </label>
+
+                <input
+                    className="input-data"
+                    placeholder="e.g. time, alpha, mach"
+                    value={customHeadersText}
+                    onChange={(e) => {
+                        const value = e.target.value
+                        setCustomHeadersText(value)
+
+                        const nextHeaders = value
+                            .split(',')
+                            .map(h => h.trim())
+                            .filter(Boolean)
+
+                        if (applyCustomHeadersToAll) {
+                            setFiles(prev =>
+                                prev.map(item =>
+                                    isTabular(item.file)
+                                        ? { ...item, customHeaders: nextHeaders }
+                                        : item
+                                )
+                            )
+                        } else if (selectedIdx != null) {
+                            setFiles(prev => {
+                                const clone = [...prev]
+                                clone[selectedIdx] = {
+                                    ...clone[selectedIdx],
+                                    customHeaders: nextHeaders
+                                }
+                                return clone
+                            })
+                        }
+                    }}
+                />
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <input
+                        type="checkbox"
+                        checked={applyCustomHeadersToAll}
+                        onChange={(e) => {
+                            const checked = e.target.checked
+                            setApplyCustomHeadersToAll(checked)
+                            if (!checked) return
+
+                            const nextHeaders = customHeadersText
+                                .split(',')
+                                .map(h => h.trim())
+                                .filter(Boolean)
+
+                            setFiles(prev =>
+                                prev.map(item =>
+                                    isTabular(item.file)
+                                        ? { ...item, customHeaders: nextHeaders }
+                                        : item
+                                )
+                            )
+                        }}
+                    />
+                    <span className="summaryLabel" style={{ margin: 0 }}>
+                        Apply custom headers to all files
+                    </span>
+                </label>
+            </div>
+        )}
+    </div>
+)}
+
+
+                            {/* <div className="form-field">
                                 <label style={{ marginTop: 10 }} className="summaryLabel">Plot File Header</label>
 
                                 <select
@@ -961,7 +1061,7 @@ const onSelectSheet = (sheetName) => {
                                         </label>
                                     </div>
                                 )}
-                            </div>
+                            </div> */}
 
 
 

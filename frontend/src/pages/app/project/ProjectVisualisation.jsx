@@ -206,6 +206,16 @@ const plotOptions =
     }
   }
 
+  // const seriesSummary = (s) => {
+  //   const ds = datasetLabel(s.datasetType)
+  //   const x = s.xAxis || '-'
+  //   const y = s.yAxis || '-'
+  //   const z = s.zAxis || '-'
+  //   const f = s.jobId ? 'file✅' : 'file❌'
+  //   if (chartType === 'contour') return `${ds} • ${f} • ${x} → ${y} → ${z}`
+  //   return `${ds} • ${f} • ${x} → ${y}`
+  // }
+
   const seriesSummary = (s) => {
     const ds = datasetLabel(s.datasetType)
     const job = jobsById[s.jobId]
@@ -629,7 +639,7 @@ const fetchVisualizations = async (page = 1, reset = false) => {
       if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
         pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
       } else {
-        fetchVisualizations()
+        fetchVisualizations(1, true)
       }
     } catch (e) {
       setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
@@ -1043,7 +1053,7 @@ const deleteVisualization = async (vizId) => {
         <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
           <div className="ps-field" style={{ gridColumn: 'span 4' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <label style={{ marginBottom: 0 }}>Plot ({seriesList.length})</label>
+              <label style={{fontSize: "16px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica", marginBottom: 0 }}>Plot ({seriesList.length})</label>
 
               <button
                 type="button"
@@ -1064,8 +1074,8 @@ const deleteVisualization = async (vizId) => {
                     key={s.id}
                     onClick={() => setActiveSeriesId(s.id)}
                     style={{
-                      border: active ? '2px solid #1976D2' : '1px solid #d1d5db',
-                      background: active ? '#eef6ff' : '#fff',
+                      border: active ? '2px solid #1976D2' : '1px solid #00000026',
+                      // background: active ? '#eef6ff' : '#fff',
                       borderRadius: 6,
                       padding: '8px 10px',
                       cursor: 'pointer',
@@ -1073,7 +1083,7 @@ const deleteVisualization = async (vizId) => {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                      <div style={{ fontSize: "14px", fontWeight: 400, fontFamily: "Inter-Regular, Helvetica" }}>Plot {idx + 1}</div>
+                      <div style={{ fontSize: "14px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica" }}>Plot {idx + 1}</div>
 
                       <label className="toggle" style={{ margin: 0 }}>
                         <input
@@ -1087,12 +1097,12 @@ const deleteVisualization = async (vizId) => {
                       </label>
                     </div>
 
-                    <div className="summarylabel2" style={{ marginTop: 8, alignItems: 'flex-start' }}>
+                    <div  style={{ fontSize:"12px",fontWeight:"400",fontFamily:"inter-Regular,Helvetica",marginTop: 8, alignItems: 'flex-start' }}>
                       {seriesSummary(s)}
                     </div>
-
                     {seriesList.length > 1 && (
 
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <button
   type="button"
   onClick={(e) => {
@@ -1101,17 +1111,24 @@ const deleteVisualization = async (vizId) => {
   }}
   style={{
     marginTop: 8,
-    height: 32,
-    width: '100%',
+    height: 24,
+    display:'flex',
+    alignItems:'center',
+    justifyContent:'center',
+    width: '40%',
     borderRadius: 4,
     border: '1px solid #fecdd3',
     background: '#fff1f2',
     color: '#b91c1c',
     cursor: 'pointer',
+    fontSize:'12px',
+    fontWeight: 400,
+    fontFamily:"Inter-Regular,Helvetica",
   }}
 >
   Remove
 </button>
+</div>
                       // <button
                       //   type="button"
                       //   onClick={(e) => {
