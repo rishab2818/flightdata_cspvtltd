@@ -16,6 +16,8 @@ from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_sync_redis
 from app.db.sync_mongo import get_sync_db
+from app.mat.reader import read_mat_slice
+from app.mat.slicing import build_slice_spec
 from app.repositories.notifications import create_sync_notification
 
 CHUNK_SIZE = 250_000
@@ -479,6 +481,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                         line=dict(width=1),
                         showscale=True,
                         name=label,
+                        colorscale='Electric'
                     )
                 )
             else:
@@ -714,6 +717,79 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         
 
     return fig
+
+
+def _build_mat_figure(
+    chart_type: str,
+    var_name: str,
+    axis_dims: list[int],
+    coords: dict[int, np.ndarray],
+    values: np.ndarray,
+    labels: dict[int, str],
+):
+    chart = (chart_type or "line").lower().strip()
+    fig = go.Figure()
+
+    if chart in {"line", "scatter"}:
+        if len(axis_dims) != 1:
+            raise ValueError(f"{chart} requires exactly one mapped dimension")
+        x_dim = axis_dims[0]
+        x_vals = np.asarray(coords[x_dim]).reshape(-1)
+        y_vals = np.asarray(values).reshape(-1)
+        if y_vals.shape[0] != x_vals.shape[0]:
+            raise ValueError("MAT slice shape mismatch for line/scatter rendering")
+
+        mode = "lines" if chart == "line" else "markers"
+        fig.add_trace(go.Scatter(name=var_name, x=x_vals, y=y_vals, mode=mode))
+        fig.update_layout(
+            xaxis_title=labels.get(x_dim) or f"dim_{x_dim}",
+            yaxis_title=var_name,
+        )
+
+    elif chart in {"heatmap", "contour", "surface"}:
+        if len(axis_dims) != 2:
+            raise ValueError(f"{chart} requires exactly two mapped dimensions")
+        x_dim, y_dim = axis_dims
+        x_vals = np.asarray(coords[x_dim]).reshape(-1)
+        y_vals = np.asarray(coords[y_dim]).reshape(-1)
+        z_vals = np.asarray(values)
+
+        if z_vals.ndim != 2:
+            raise ValueError(f"{chart} requires a 2D MAT slice")
+        if z_vals.shape != (x_vals.shape[0], y_vals.shape[0]):
+            raise ValueError("MAT slice shape does not match mapped coordinate lengths")
+
+        z_plot = z_vals.T  # Plotly expects z shape as [len(y), len(x)].
+
+        if chart == "heatmap":
+            fig.add_trace(go.Heatmap(name=var_name, x=x_vals, y=y_vals, z=z_plot))
+        elif chart == "contour":
+            fig.add_trace(
+                go.Contour(
+                    name=var_name,
+                    x=x_vals,
+                    y=y_vals,
+                    z=z_plot,
+                    contours=dict(coloring="heatmap", showlabels=True),
+                )
+            )
+        else:
+            fig.add_trace(go.Surface(name=var_name, x=x_vals, y=y_vals, z=z_plot))
+
+        fig.update_layout(
+            xaxis_title=labels.get(x_dim) or f"dim_{x_dim}",
+            yaxis_title=labels.get(y_dim) or f"dim_{y_dim}",
+        )
+    else:
+        raise ValueError(f"Unsupported MAT chart type: {chart_type}")
+
+    fig.update_layout(
+        template="plotly_white",
+        title=f"{var_name} ({chart})",
+        legend_title_text="MAT Variable",
+    )
+    return fig
+
 
 def _build_zoom_loader_script(
     viz_id: str,
@@ -954,6 +1030,81 @@ def generate_visualization(self, viz_id: str):
             return
 
         owner_email = doc.get("owner_email")
+        source_type = (doc.get("source_type") or "tabular").lower().strip()
+
+        minio = get_minio_client()
+        viz_bucket = settings.visualization_bucket
+        if not minio.bucket_exists(viz_bucket):
+            minio.make_bucket(viz_bucket)
+
+        if source_type == "mat":
+            chart_type = (doc.get("chart_type") or "line").lower().strip()
+            request = doc.get("mat_request") or {}
+            job_id = request.get("job_id")
+            var_name = request.get("var")
+            mapping = request.get("mapping")
+            filters = request.get("filters") or {}
+
+            if not job_id or not var_name or not isinstance(mapping, dict):
+                _update_db_status(
+                    db,
+                    viz_id,
+                    status=states.FAILURE,
+                    progress=100,
+                    message="Invalid MAT visualization request",
+                )
+                return
+
+            _set_status(redis, viz_id, states.STARTED, 25, "Reading MAT slice")
+            _update_db_status(db, viz_id, status=states.STARTED, progress=25, message="Reading MAT slice")
+            slice_spec = build_slice_spec(chart_type=chart_type, mapping=mapping, filters=filters)
+            coords, values, labels = read_mat_slice(job_id, var_name, slice_spec)
+
+            _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
+            fig = _build_mat_figure(
+                chart_type=chart_type,
+                var_name=var_name,
+                axis_dims=slice_spec.axis_dims,
+                coords=coords,
+                values=np.asarray(values),
+                labels=labels,
+            )
+
+            html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
+            html_bytes = html.encode("utf-8")
+            html_key = f"projects/{doc['project_id']}/visualizations/{viz_id}.html"
+
+            _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")
+            minio.put_object(
+                bucket_name=viz_bucket,
+                object_name=html_key,
+                data=io.BytesIO(html_bytes),
+                length=len(html_bytes),
+                content_type="text/html",
+            )
+
+            _set_status(redis, viz_id, states.SUCCESS, 100, "Visualization ready")
+            _update_db_status(
+                db,
+                viz_id,
+                status=states.SUCCESS,
+                progress=100,
+                message="Visualization ready",
+                html=html,
+                html_key=html_key,
+                tiles=[],
+                series_stats=[],
+            )
+
+            if owner_email:
+                create_sync_notification(
+                    owner_email,
+                    f"Visualization ready for {doc.get('chart_type', 'chart')}",
+                    title="Visualization complete",
+                    category="visualization",
+                    link=f"/app/projects/{doc.get('project_id')}/visualisation" if doc.get("project_id") else None,
+                )
+            return
 
         series_list = doc.get("series") or []
         if not series_list and doc.get("y_axis"):
@@ -1013,10 +1164,7 @@ def generate_visualization(self, viz_id: str):
         _set_status(redis, viz_id, states.STARTED, 10, "Preparing visualization")
         _update_db_status(db, viz_id, status=states.STARTED, progress=10, message="Preparing visualization")
 
-        minio = get_minio_client()
-        bucket = settings.visualization_bucket
-        if not minio.bucket_exists(bucket):
-            minio.make_bucket(bucket)
+        bucket = viz_bucket
 
         series_frames = []
         tile_metadata = []

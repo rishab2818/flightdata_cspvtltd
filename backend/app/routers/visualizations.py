@@ -125,13 +125,57 @@ async def create_visualization(
 ):
     await _ensure_member(payload.project_id, user)
 
+    chart_type = (payload.chart_type or "scatter").lower().strip()
+    source_type = (payload.source_type or "tabular").lower().strip()
+
+    if source_type not in {"tabular", "mat"}:
+        raise HTTPException(status_code=400, detail="source_type must be 'tabular' or 'mat'")
+
+    if source_type == "mat":
+        if not payload.job_id or not payload.var or not payload.mapping:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="MAT visualization requires job_id, var, and mapping",
+            )
+
+        job = await ingestions.get_job(payload.job_id)
+        if not job or job["project_id"] != payload.project_id:
+            raise HTTPException(status_code=404, detail="MAT dataset not found")
+
+        if not str(job.get("filename", "")).lower().endswith(".mat"):
+            raise HTTPException(status_code=400, detail="Selected dataset is not a MAT file")
+
+        allowed = {"line", "scatter", "heatmap", "contour", "surface"}
+        if chart_type not in allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported MAT chart_type '{chart_type}'. Allowed: {', '.join(sorted(allowed))}",
+            )
+
+        viz_id = await repo.create(
+            payload.project_id,
+            chart_type,
+            user.email,
+            series=[],
+            filename=job.get("filename", "dataset"),
+            source_type="mat",
+            mat_request={
+                "job_id": payload.job_id,
+                "var": payload.var,
+                "mapping": payload.mapping,
+                "filters": payload.filters or {},
+            },
+        )
+        generate_visualization.delay(viz_id)
+        doc = _with_series(await repo.get(viz_id))
+        return VisualizationOut(**doc)
+
     if not payload.series:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Please include at least one Y axis series",
         )
 
-    chart_type = (payload.chart_type or "scatter").lower().strip()
     requires_z = chart_type == "contour"
 
     series_docs = []
@@ -184,6 +228,8 @@ async def create_visualization(
         user.email,
         series_docs,
         filename=primary_filename,
+        source_type="tabular",
+        mat_request=None,
     )
 
     generate_visualization.delay(viz_id)

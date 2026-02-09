@@ -1,6 +1,7 @@
 
 
 import json
+import logging
 import os
 import tempfile
 from datetime import datetime
@@ -24,7 +25,9 @@ from app.db.sync_mongo import get_sync_db
 from app.repositories.notifications import create_sync_notification
 
 
-TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c"}
+TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c", ".mat"}
+
+logger = logging.getLogger(__name__)
 
 
 def _set_status(redis, job_id: str, status: str, progress: int, message: str):
@@ -169,7 +172,7 @@ def ingest_file(
     job_id: str,
     bucket: str,
     storage_key: str,
-    processed_key: str,
+    processed_key: str | None,
     filename: str,
     header_mode: str = "file",
     custom_headers: list[str] | None = None,
@@ -188,6 +191,15 @@ def ingest_file(
     filename = job_doc.get("filename", filename)
 
     ext = os.path.splitext(filename.lower())[-1]
+    logger.info(
+        "ingest_file start job_id=%s ext=%s filename=%s processed_key=%s dataset_type=%s tag=%s",
+        job_id,
+        ext,
+        filename,
+        processed_key,
+        dataset_type,
+        tag_name,
+    )
     if ext not in TABULAR_EXTS:
         # should never happen because API forces OFF
         db.ingestion_jobs.update_one(
@@ -220,7 +232,7 @@ def ingest_file(
             except Exception:
                 pass
 
-        _publish(job_id, states.STARTED, 35, "Materializing Parquet")
+        _publish(job_id, states.STARTED, 35, "Preparing data")
         db.ingestion_jobs.update_one(
             {"_id": ObjectId(job_id)},
             {"$set": {"status": states.STARTED, "progress": 35, "updated_at": datetime.utcnow()}},
@@ -235,44 +247,64 @@ def ingest_file(
         #         raw_path, parquet_path, header_mode, custom_headers
         #     )
         
-        ## add functionlity for the wind tunnel txt also 
-        if dataset_type == "wind" and ext == ".txt":
-            columns, row_count, sample_rows, stats = _wind_txt_to_parquet(
-                raw_path, parquet_path, header_mode, custom_headers
-            )
-        elif ext in {".dat", ".c"}:
-            columns, row_count, sample_rows, stats = _text_range_to_parquet(
-                raw_path, parquet_path, parse_range
-            )
-        elif ext == ".csv":
-            columns, row_count, sample_rows, stats = _csv_to_parquet(
-                raw_path, parquet_path, header_mode, custom_headers
-            )
+        columns: list[str] = []
+        row_count = 0
+        sample_rows: list[dict] = []
+        stats: dict = {}
+        mat_meta: dict | None = None
+        processed_key_to_store = processed_key
+
+        # MAT ingestion is lightweight indexing only (no parquet materialization at ingest time).
+        if ext == ".mat":
+            from app.mat.indexing import index_mat
+
+            _publish(job_id, states.STARTED, 60, "Indexing MAT variables")
+            mat_meta = index_mat(raw_path).model_dump()
+            processed_key_to_store = None
         else:
-            columns, row_count, sample_rows, stats = _excel_to_parquet(
-                raw_path,
-                parquet_path,
-                header_mode,
-                custom_headers,
-                sheet_name=sheet_name,
-            )
+            # add functionlity for the wind tunnel txt also
+            if dataset_type == "wind" and ext == ".txt":
+                columns, row_count, sample_rows, stats = _wind_txt_to_parquet(
+                    raw_path, parquet_path, header_mode, custom_headers
+                )
+            elif ext in {".dat", ".c"}:
+                columns, row_count, sample_rows, stats = _text_range_to_parquet(
+                    raw_path, parquet_path, parse_range
+                )
+            elif ext == ".csv":
+                columns, row_count, sample_rows, stats = _csv_to_parquet(
+                    raw_path, parquet_path, header_mode, custom_headers
+                )
+            else:
+                columns, row_count, sample_rows, stats = _excel_to_parquet(
+                    raw_path,
+                    parquet_path,
+                    header_mode,
+                    custom_headers,
+                    sheet_name=sheet_name,
+                )
 
-
-
-        _publish(job_id, states.STARTED, 80, "Uploading processed Parquet")
-        minio.fput_object(bucket, processed_key, parquet_path, content_type="application/octet-stream")
+            _publish(job_id, states.STARTED, 80, "Uploading processed Parquet")
+            if not processed_key:
+                raise ValueError("processed_key is required for non-MAT ingestion")
+            minio.fput_object(bucket, processed_key, parquet_path, content_type="application/octet-stream")
+            logger.info("ingest_file uploaded parquet job_id=%s processed_key=%s", job_id, processed_key)
 
         _publish(job_id, states.SUCCESS, 100, "Upload + processing complete")
+        meta_payload = {"stats": stats}
+        if mat_meta is not None:
+            meta_payload["mat"] = mat_meta
+
         db.ingestion_jobs.update_one(
             {"_id": ObjectId(job_id)},
             {"$set": {
                 "status": states.SUCCESS,
                 "progress": 100,
-                "processed_key": processed_key,
+                "processed_key": processed_key_to_store,
                 "columns": columns,
                 "rows_seen": row_count,
                 "sample_rows": sample_rows,
-                "metadata": {"stats": stats},
+                "metadata": meta_payload,
                 "dataset_type": dataset_type,
                 "tag_name": tag_name,
                 "header_mode": header_mode,
@@ -295,7 +327,13 @@ def ingest_file(
         redis.publish(f"ingestion:{job_id}:events", json.dumps({"status": states.FAILURE, "progress": 100, "message": str(exc)}))
         db.ingestion_jobs.update_one(
             {"_id": ObjectId(job_id)},
-            {"$set": {"status": states.FAILURE, "progress": 100, "message": str(exc), "updated_at": datetime.utcnow()}},
+            {"$set": {
+                "status": states.FAILURE,
+                "progress": 100,
+                "message": str(exc),
+                "processed_key": None,
+                "updated_at": datetime.utcnow()
+            }},
         )
         raise
     finally:

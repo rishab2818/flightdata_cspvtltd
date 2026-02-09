@@ -9,7 +9,7 @@ import ViewIcon from '../../../assets/ViewIcon.svg'
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
 
-const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c'])
+const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
 const INLINE_EXTENSIONS = new Set([
   '.pdf',
   '.png',

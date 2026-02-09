@@ -15,9 +15,10 @@ const DATASET_OPTIONS = [
     { key: 'others', label: 'Others' }
 ]
 
-const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c'])
+const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'])
 const DAT_EXTS = new Set(['.dat', '.c'])
+const MAT_EXTS = new Set(['.mat'])
 const MAX_TEXT_PREVIEW_LINES = 500
 
 const getExt = (name = '') => {
@@ -28,6 +29,8 @@ const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
 const isExcel = (file) => ['.xlsx', '.xls'].includes(getExt(file?.name))
 const isDatLike = (file) => DAT_EXTS.has(getExt(file?.name))
+const isMat = (file) => MAT_EXTS.has(getExt(file?.name))
+const isCustomHeaderCapable = (file) => isTabular(file) && !isMat(file)
 
 const NUM_TOKEN_RE = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/
 
@@ -485,6 +488,14 @@ const onSelectSheet = (sheetName) => {
             */
         }
 
+        if (ext === '.mat') {
+            setPreview({
+                type: 'message',
+                message: 'MAT variable metadata is indexed on upload and available in the Visualization screen.',
+            })
+            return
+        }
+
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
     }
 
@@ -517,7 +528,7 @@ const onSelectSheet = (sheetName) => {
                     visualize: isTabular(f),
                     parseRange: isDatLike(f) ? (applyRangeToAll ? rangeForNew : { start: 1, end: 10 }) : null,
                     customHeaders:
-                        headerMode === 'custom' && applyCustomHeadersToAll && isTabular(f)
+                        headerMode === 'custom' && applyCustomHeadersToAll && isCustomHeaderCapable(f)
                             ? nextHeaders
                             : undefined,
                 })
@@ -1005,7 +1016,7 @@ const onSelectSheet = (sheetName) => {
                                                         .filter(Boolean)
                                                     setFiles((prev) =>
                                                         prev.map((item) =>
-                                                            isTabular(item.file)
+                                                            isCustomHeaderCapable(item.file)
                                                                 ? { ...item, customHeaders: nextHeaders }
                                                                 : item
                                                         )
@@ -1039,7 +1050,7 @@ const onSelectSheet = (sheetName) => {
                                                         .filter(Boolean)
                                                     setFiles((prev) =>
                                                         prev.map((item) =>
-                                                            isTabular(item.file)
+                                                            isCustomHeaderCapable(item.file)
                                                                 ? { ...item, customHeaders: nextHeaders }
                                                                 : item
                                                         )

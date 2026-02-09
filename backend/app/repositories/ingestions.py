@@ -93,4 +93,3 @@ class IngestionRepository:
             {"_id": ObjectId(job_id)},
             {"$set": fields},
         )
-

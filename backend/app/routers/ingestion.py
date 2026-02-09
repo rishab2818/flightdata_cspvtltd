@@ -22,12 +22,13 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import io
 import pandas as pd
+from minio.error import S3Error
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
 projects = ProjectRepository()
 
-TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c"}
+TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c", ".mat"}
 
 
 def _safe_slug(value: str) -> str:
@@ -245,7 +246,9 @@ async def start_ingestion_batch(
             processed_key = None
             if visualize_enabled:
                 stem = os.path.splitext(original_name)[0]
-                if sheet_name:
+                if ext == ".mat":
+                    processed_key = None
+                elif sheet_name:
                     sheet_slug = _safe_slug(sheet_name)
                     processed_key = f"{project_folder}/{dataset_folder}/{tag_folder}/processed/{uuid4()}_{stem}__{sheet_slug}.parquet"
                 else:
@@ -564,8 +567,23 @@ async def preview_processed(
     processed_key = doc.get("processed_key")
     if not processed_key:
         raise HTTPException(status_code=400, detail="No processed parquet available for this file")
+    if doc.get("status") not in ("SUCCESS", "success", "stored"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Processed parquet not available. Job status: {doc.get('status')}",
+        )
 
     bucket = settings.ingestion_bucket
+
+    # Ensure object exists before reading
+    minio = get_minio_client()
+    try:
+        minio.stat_object(bucket, processed_key)
+    except S3Error:
+        raise HTTPException(
+            status_code=400,
+            detail="Processed parquet is missing in storage. Re-run processing.",
+        )
 
     # Read parquet and keep only a small number of rows
     table = _read_parquet_from_minio(bucket, processed_key)
@@ -648,5 +666,4 @@ async def save_processed_column_names(
     })
 
     return {"ok": True}
-
 

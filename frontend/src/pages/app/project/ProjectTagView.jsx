@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { ingestionApi } from "../../../api/ingestionApi"
 
-const TABULAR_EXTENSIONS = new Set([".csv", ".xlsx", ".xls", ".txt", ".dat", ".c"])
+const TABULAR_EXTENSIONS = new Set([".csv", ".xlsx", ".xls", ".txt", ".dat", ".c", ".mat"])
 const INLINE_EXTENSIONS = new Set([
   ".pdf",
   ".png",

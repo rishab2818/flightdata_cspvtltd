@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
+import { matApi } from '../../../mat/matApi'
 import * as XLSX from 'xlsx'
 import '../../../styles/project.css'
 
@@ -68,6 +69,12 @@ export default function RawPreviewPage() {
           const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { header: 1 }) : []
           setActiveSheet(initialSheet)
           setPreviewData({ type: 'excel', sheetNames, data: rows })
+        }
+
+        // MAT
+        else if (ext === 'mat') {
+          const matInfo = await matApi.variables(jobId)
+          setPreviewData({ type: 'mat', variables: matInfo?.variables || [] })
         }
 
         // PDF
@@ -233,6 +240,34 @@ export default function RawPreviewPage() {
                 </tbody>
               </table>
             </>
+          )}
+
+          {/* MAT */}
+          {previewData?.type === 'mat' && (
+            previewData.variables?.length ? (
+              <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left' }}>Variable</th>
+                    <th style={{ textAlign: 'left' }}>Shape</th>
+                    <th style={{ textAlign: 'left' }}>Dtype</th>
+                    <th style={{ textAlign: 'left' }}>Dimensions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewData.variables.map((v, i) => (
+                    <tr key={`${v.name}-${i}`}>
+                      <td>{v.name}</td>
+                      <td>{Array.isArray(v.shape) ? v.shape.join(' x ') : ''}</td>
+                      <td>{v.dtype || '-'}</td>
+                      <td>{v.ndims ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="empty-state">No numeric arrays found in this MAT file.</div>
+            )
           )}
 
           {/* PDF */}
