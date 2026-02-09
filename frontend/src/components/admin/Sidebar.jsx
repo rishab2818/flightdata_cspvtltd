@@ -1,6 +1,8 @@
 // src/components/admin/Sidebar.jsx
 import React from "react";
 import "./Sidebar.css";
+import Divider from "@mui/material/Divider";
+
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -64,6 +66,8 @@ export default function Sidebar() {
           Data Visualisation
         </Typography>
       </Box>
+
+      <div className="sidebar-divider"></div>
 
       {/* Navigation */}
       <List className="sidebar-menu" sx={{ mt: 1 }}>

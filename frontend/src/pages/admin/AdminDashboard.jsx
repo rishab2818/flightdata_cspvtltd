@@ -14,7 +14,7 @@ export default function AdminDashboard() {
       <Box
         sx={{
           flexGrow: 1,
-          padding: 3,
+          // padding: 3,
           backgroundColor: "#F5f9ff",
           display: "flex",
           flexDirection: "column",

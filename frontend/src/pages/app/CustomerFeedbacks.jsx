@@ -1353,7 +1353,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
             >
               Cancel
             </button>
-            <button
+            {/* <button
   type="submit"
   disabled={submitting}
   style={{
@@ -1374,7 +1374,25 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
 >
   <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
   {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
+</button> */}
+<button
+  type="submit"
+  disabled={submitting}
+  style={{
+    width: "100px", // fix typo: 'Width' → 'width'
+    border: "none",
+    background: PRIMARY,
+    color: "#fff",
+    padding: "10px 18px",
+    borderRadius: "4px",
+    fontWeight: 600,
+    cursor: submitting ? "not-allowed" : "pointer",
+    opacity: submitting ? 0.7 : 1,
+  }}
+>
+  {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
 </button>
+
 
            
           </div>

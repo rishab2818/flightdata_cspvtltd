@@ -332,6 +332,9 @@ export default function UploadMinutesModal({
 
         <form  autoComplete="off" onSubmit={handleSubmit} className="form">
 
+          <input type="text" name="fake-username" autoComplete="username" hidden />
+  <input type="password" name="fake-password" autoComplete="current-password" hidden />
+
           {/* Upload Box */}
           <div className="uploadRoot">
             <div className="uploadBox">
@@ -396,7 +399,7 @@ export default function UploadMinutesModal({
         // autoComplete="off"
       /> */}
 
-      <input
+      {/* <input
   type="text"
   name={`ap-desc-${Date.now()}`}   // 🔑 dynamic name
   placeholder="CFD analysis to be conducted for Airbus 320"
@@ -406,7 +409,19 @@ export default function UploadMinutesModal({
   autoComplete="new-password"     // 🔑 Chrome autofill killer
   spellCheck={false}
   inputMode="text"
+/> */}
+<input
+  type="text"
+  name={`ap-desc-${Date.now()}`}
+  placeholder="CFD analysis to be conducted for Airbus 320"
+  value={actionPointDescription}
+  onChange={(e) => setActionPointDescription(e.target.value)}
+  className="Textinput"
+  autoComplete="nope"
+  spellCheck={false}
+  inputMode="text"
 />
+
 
     </div>
 
@@ -421,7 +436,7 @@ export default function UploadMinutesModal({
             setActionPointAssignee(e.target.value);
             setAssigneeQuery(e.target.value);
           }}
-          className="TextInput"
+          className="Textinput"
         />
 
         <button
@@ -554,13 +569,25 @@ export default function UploadMinutesModal({
             <div className="flex1">
               <label className="label">Tag Name</label>
               <input
+  type="text"
+  name={`tag-${Date.now()}`}     
+  placeholder="e.g., Strategy Planning, Team Sync"
+  value={tag}
+  onChange={(e) => setTag(e.target.value)}
+  className="Textinput"
+  autoComplete="nope"    
+  spellCheck={false}
+  inputMode="text"
+/>
+
+              {/* <input
                 type="text"
                 placeholder="e.g., Strategy Planning, Team Sync"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
                 className="TextInput"
                 autoComplete="off"
-              />
+              /> */}
             </div>
 
             {/* <div className="flex1">

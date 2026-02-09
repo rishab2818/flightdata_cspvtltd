@@ -167,15 +167,16 @@
   border-radius: 8px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   overflow: hidden;
+  padding: 24px;
 }
 
 .sectionHeader {
   flex-shrink: 0;
-  padding: 16px 20px;
+  /* padding: 16px 20px; */
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 20px;
   justify-content: space-between;
 }
 
@@ -225,30 +226,27 @@
 }
 
 .tableWrapper {
-  background: white;
-  padding: 0px 24px 24px 24px;
   width: 100%;
+  overflow-x: auto;        
+  border: 1px solid #0000001A;
   border-radius: 8px;
-  display: block;
-  flex-direction: column;
-  height: 60%;
-  flex: 1;                /* THIS is the key */
-  overflow-x: auto;       /* horizontal scroll */
-  overflow-y: auto;
+  background: #fff;
+  /* overflow-y: auto; */
 }
 
+
 .table {
-  table-layout: auto;    /* Allows flexible column width */
+  table-layout: auto;    
   width: 100%;  
-  display: flex;
-  flex-direction: column;
+  /* display: flex;
+  flex-direction: column; */
   min-width: 1800px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
-  border: 1px solid #00000026;
+  /* border: 1px solid #00000026;
   border-radius: 8px;
-  border-color: #0000001A;
+  border-color: #0000001A; */
 }
 
 .table th,
@@ -259,23 +257,24 @@
   font-size: 14px;
   font-family: "Inter-regular", Helvetica;
   font-weight: 400;
-   white-space: normal;   /* Allows wrapping */
+  white-space: normal;   /* Allows wrapping */
   min-width: 150px; 
-    padding: 12px 15px;     /* Spread columns */
+  padding: 12px 15px;     /* Spread columns */
 }
 
 .table th {
   background: #EFF7FF;
   font-weight: 400;
   color:#000000;
-  position: relative;
+  position: sticky;
   top: 0;
   font-size: 14px;
   font-family: "Inter-regular", Helvetica;
   padding: 12px 15px;
   white-space: normal;   /* Allows wrapping */
   text-align: left;
-  min-width: 150px;      /* Spread columns */
+  min-width: 150px; 
+
 }
 
 /* 
