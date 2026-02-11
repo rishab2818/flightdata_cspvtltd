@@ -304,38 +304,73 @@ const plotOptions =
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [projectId])
 
-const fetchVisualizations = async (page = 1, reset = false) => {
-  if (loadingViz) return;
+// const fetchVisualizations = async (page = 1, reset = false) => {
+//   if (loadingViz) return;
 
-  setLoadingViz(true);
+//   setLoadingViz(true);
+//   try {
+//     const res = await visualizationApi.listForProject(projectId, {
+//       page,
+//       limit: PAGE_SIZE,
+//     });
+
+//     const list = res || [];
+
+//     setVisualizations((prev) =>
+//       reset ? list : [...prev, ...list]
+//     );
+
+//     // ✅ ONLY update hasMore when loading next page
+//     if (!reset) {
+//       setHasMoreViz(list.length >= PAGE_SIZE);
+//     }
+
+//     setVizPage(page);
+//   } catch (e) {
+//     setError(
+//       e?.response?.data?.detail ||
+//       e.message ||
+//       'Failed to load visualizations'
+//     );
+//   } finally {
+//     setLoadingViz(false);
+//   }
+// };
+
+const fetchVisualizations = async (page = 1, reset = false) => {
+  if (loadingViz) return
+
+  setLoadingViz(true)
+
   try {
     const res = await visualizationApi.listForProject(projectId, {
       page,
       limit: PAGE_SIZE,
-    });
+    })
 
-    const list = res || [];
+    console.log("LIST API RESPONSE:", res)
 
-    setVisualizations((prev) =>
+    const list = Array.isArray(res)
+      ? res
+      : res?.items || res?.data || []
+
+    setVisualizations(prev =>
       reset ? list : [...prev, ...list]
-    );
+    )
 
-    // ✅ ONLY update hasMore when loading next page
-    if (!reset) {
-      setHasMoreViz(list.length >= PAGE_SIZE);
-    }
+    setHasMoreViz(list.length >= PAGE_SIZE)
+    setVizPage(page)
 
-    setVizPage(page);
   } catch (e) {
     setError(
       e?.response?.data?.detail ||
       e.message ||
       'Failed to load visualizations'
-    );
+    )
   } finally {
-    setLoadingViz(false);
+    setLoadingViz(false)
   }
-};
+}
 
 
 
@@ -612,12 +647,29 @@ const fetchVisualizations = async (page = 1, reset = false) => {
           )
         }
 
-        requestPayload = {
-          project_id: projectId,
-          source_type: 'tabular',
-          chart_type: chartType,
-          series: payloadSeries,
-        }
+        const firstSeries = payloadSeries.length
+  ? configured.find(s => s.jobId === payloadSeries[0].job_id)
+  : null
+
+
+requestPayload = {
+  project_id: projectId,
+  source_type: 'tabular',
+  dataset_type: firstSeries?.datasetType || null,
+  tag_name: firstSeries?.tag || null,
+  chart_type: chartType,
+  series: payloadSeries,
+}
+
+
+        // requestPayload = {
+        //   project_id: projectId,
+        //   source_type: 'tabular',
+        //   dataset_type: activeSeries?.datasetType || null,
+        //   tag_name: activeSeries?.tag || null,
+        //   chart_type: chartType,
+        //   series: payloadSeries,
+        // }
       }
 
       const res = await visualizationApi.create(requestPayload)

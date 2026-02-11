@@ -8,6 +8,7 @@ import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
+import { visualizationApi } from '../../../api/visualizationApi'
 
 const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
 const INLINE_EXTENSIONS = new Set([
@@ -66,6 +67,7 @@ const forceDownloadFromUrl = async (url, filename) => {
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
     const [files, setFiles] = useState([])
     const [tab, setTab] = useState('raw')
+    const [plots, setPlots] = useState([])
 
         const [confirmDelete, setConfirmDelete] = useState({
   open: false,
@@ -77,14 +79,44 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
             .then(setFiles)
     }, [projectId, datasetType, tagName])
 
-    const rows =
-        tab === 'raw'
-            ? files
-            : tab === 'processed'
-                ? files.filter(f => f.processed_key)
-                : tab === 'others'
-                    ? files.filter(f => !f.processed_key && !f.visualize_enabled)
-                    : []
+    useEffect(() => {
+  if (tab !== 'plot') return
+
+  visualizationApi
+    .listForProject(projectId)
+    .then((res) => {
+      const list = Array.isArray(res) ? res : res.data || []
+
+      const filtered = list.filter(
+        (v) =>
+          v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
+          v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
+      )
+
+      setPlots(filtered)
+    })
+    .catch(() => setPlots([]))
+}, [tab, projectId, datasetType, tagName])
+
+      const rows =
+  tab === 'plot'
+    ? plots
+    : tab === 'raw'
+      ? files
+      : tab === 'processed'
+        ? files.filter(f => f.processed_key)
+        : tab === 'others'
+          ? files.filter(f => !f.processed_key && !f.visualize_enabled)
+          : []
+
+    // const rows =
+    //     tab === 'raw'
+    //         ? files
+    //         : tab === 'processed'
+    //             ? files.filter(f => f.processed_key)
+    //             : tab === 'others'
+    //                 ? files.filter(f => !f.processed_key && !f.visualize_enabled)
+    //                 : []
 
     //  const handleView = async (file, canEdit) => {
     //     if (isTabularFile(file) && file.processed_key) {
@@ -167,7 +199,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
             <div className="tablist">
                 <button className={tab === 'raw' ? 'active' : ''} onClick={() => setTab('raw')}>Raw</button>
                 <button className={tab === 'processed' ? 'active' : ''} onClick={() => setTab('processed')}>Processed</button>
-                <button disabled>Plot</button>
+                <button className={tab === 'plot' ? 'active' : ''} onClick={() => setTab('plot')}>Plot</button>
                 <button className={tab === 'others' ? 'active' : ''} onClick={() => setTab('others')}>Others</button>
                 
             </div>
@@ -177,7 +209,9 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     <tr>
                              <th className="tablehead">
                                         <span className="th-content">
-                                         <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>File Name
+                                         <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
+{tab === 'plot' ? 'Plot Name' : 'File Name'}
+
                                          </span>
                                          </th>
                                       <th className="tablehead">
@@ -192,10 +226,29 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     {rows.map(f => (
                         <tr key={f._id}>
                             <td style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
-                                <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
-                                <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
-                                {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
-                                </div>
+                                <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+  <img
+    style={{ width: '20px', height: '20px' }}
+    src={Folder1}
+    alt="folder"
+  />
+
+  {tab === 'plot' ? (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <p className="data-card__name" style={{ margin: 0 }}>
+        {f.filename || 'dataset'}
+      </p>
+      <p className="summarylabel2" style={{ margin: 0 }}>
+        {f.chart_type} · {f.status}
+      </p>
+    </div>
+  ) : (
+    f.sheet_name
+      ? `${f.filename} — ${f.sheet_name}`
+      : f.filename
+  )}
+</div>
+
                                 </td>
                             <td 
                             style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
@@ -204,7 +257,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                 {new Date(f.created_at).toLocaleDateString()}
                                 </div>
                                 </td>
-                            <td style={{display:'flex',gap:'8px', alignItems:'center'}}>
+                            <td style={{ verticalAlign: 'middle' }}>
+                              <div style={{display:'flex',gap:'8px', alignItems:'left',justifyContent:'left'}}>
                                 {/* <button
                                 onClick={() => handleView(f, tab === 'processed')} title="View"
                                     // onClick={() => {
@@ -221,6 +275,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                 </button> */}
 
                                 <button
+                               
   onClick={() => handleView(f, tab)} // pass 'raw' or 'processed'
   title="View"
   style={{
@@ -228,7 +283,9 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     border:'0.67px solid #0000001A',
     width:'40px',
     height:'35px',
-    borderRadius:'8px'
+    borderRadius:'8px',
+    justifyContent: 'center',
+    alignItems:'center',
   }}
 >
   <img style={{width:'20px', height:'20px'}} src={ViewIcon} alt="view"/>
@@ -238,13 +295,14 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
 
                                 <button 
                                 onClick={() => handleDownload(f)} title="Download"
-                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}>
+                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',justifyContent: 'center',}}>
                                     <img style={{width:'20px', height:'20px'}} src={DownloadSimple} alt="download"/>
                                     </button>
                                <button  onClick={() =>setConfirmDelete({ open: true, file: f })} title="Delete"
-                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}>
+                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',justifyContent: 'center'}}>
                                     <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
                                     </button>
+                                    </div>
                             </td>
                         </tr>
                     ))}

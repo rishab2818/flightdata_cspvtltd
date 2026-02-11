@@ -88,12 +88,16 @@ class VisualizationRepository:
         filename: str | None = None,
         source_type: str = "tabular",
         mat_request: dict | None = None,
+        dataset_type: str | None = None,
+        tag_name: str | None = None,
     ) -> str:
         db = await get_db()
         now = datetime.utcnow()
 
         doc = {
             "project_id": project_id,
+            "dataset_type": dataset_type,
+            "tag_name": tag_name,
             "source_type": source_type,
             "chart_type": chart_type,
             "series": series,          # ✅ series contains x_axis per item
