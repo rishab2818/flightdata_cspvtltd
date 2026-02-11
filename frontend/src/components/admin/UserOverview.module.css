@@ -44,7 +44,7 @@
 .totalNum {
   font-family: 'Inter-Medium',Helvetica ;
   font-weight: 500;
-  font-size: 48px;
+  font-size: 35px;
   line-height: 100%;
   letter-spacing: 0%;
   text-align: center;
@@ -77,13 +77,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 0;
-  gap: 36px;
+  padding: 12px 0;
+  gap: 20px;
 }
 
 .itemLeft {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
 }
 
@@ -91,7 +92,7 @@
 font-family: 'Inter-Medium',Helvetica ;
 font-weight: 500;
 font-style: Medium;
-font-size: 32px;
+font-size: 22px;
 line-height: 100%;
 letter-spacing: 0%;
 text-align: center;
@@ -99,7 +100,7 @@ text-align: center;
 
 .itemLabel {
   font-family: 'Inter-Medium',Helvetica ;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
 width: 120;
 height: 19;

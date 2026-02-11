@@ -18,18 +18,21 @@ import styles from './UserOverview.module.css';
  *
  * Top 'Total Users' is all users length.
  */
-const Rocket = () => <img src={RocketIcon} alt="RocketIcon" style={{ width: 24, height: 24 }} />;
+const Rocket = () => <img src={RocketIcon} alt="RocketIcon" style={{ width: 20, height: 20 }} />;
 const User3 = () => <img src={Usersthreeicon} alt="Usersthreeicon" style={{ width: 24, height:24 }}/>;
-const Medal = () => <img src={medalicon} alt="medalicon" style={{ width: 24, height: 24 }} />;
-const Book = () => <img src={bookicon} alt="bookicon" style={{ width: 24, height: 24 }}/>;
+const Medal = () => <img src={medalicon} alt="medalicon" style={{ width: 20, height: 20 }} />;
+const Book = () => <img src={bookicon} alt="bookicon" style={{ width: 20, height: 20 }}/>;
 const ROWS = [
   { role: 'GD', label: 'Group Directors', icon: <Medal /> },
+  { role: 'DH', label: 'Divisional Head', icon: <Rocket /> },
   { role: 'TL', label: 'Team Leads', icon: <Rocket /> },
   { role: 'SM', label: 'System Managers', icon: <Rocket /> },
-  { role: 'JRF', label: 'Junior research Fellow', icon: <Book /> },
+  { role: 'OIC', label: 'Office in Charge', icon: <Rocket /> },
+  { role: 'JRF', label: 'Junior Research Fellow', icon: <Book /> },
+  { role: 'SRF', label: 'Senior Research Fellow', icon: <Book /> },
   { role: 'CE', label: 'Contract Engineers', icon: <Book /> },
+  { role: 'STUDENT', label: 'Student', icon: <Book /> },
 ];
-
 
 
 function pad2(n) {
