@@ -137,8 +137,11 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     //     }
     //   }
 
-    const handleView = (file, tabName) => {
-  if (tabName === 'processed' && file.processed_key) {
+  const handleView = (file, tabName) => {
+  if (tabName === 'plot') {
+    // Open full visualization page for plots
+    window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
+  } else if (tabName === 'processed' && file.processed_key) {
     window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
   } else if (tabName === 'raw') {
     window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
@@ -148,15 +151,34 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
   }
 }
 
+
     
-      const handleDownload = async (file) => {
-        try {
-          const { url } = await ingestionApi.download(file.job_id)
-          await forceDownloadFromUrl(url, file.filename)
-        } catch (err) {
-          window.alert(err?.response?.data?.detail || err.message || 'Download failed')
-        }
-      }
+//      const handleDownload = async (file) => {
+//   try {
+//     if (tab === 'plot') {
+//       const response = await visualizationApi.download(file.viz_id)
+
+//       const blob = new Blob([response.data])
+//       const objectUrl = window.URL.createObjectURL(blob)
+
+//       const link = document.createElement('a')
+//       link.href = objectUrl
+//       link.download = file.filename || 'visualization.html'
+//       document.body.appendChild(link)
+//       link.click()
+//       link.remove()
+
+//       window.URL.revokeObjectURL(objectUrl)
+//     } else {
+//       const { url } = await ingestionApi.download(file.job_id)
+//       await forceDownloadFromUrl(url, file.filename)
+//     }
+//   } catch (err) {
+//     console.error(err)
+//     window.alert('Download failed')
+//   }
+// }
+
     
       // const handleDelete = async (file) => {
       //   if (!window.confirm(`Delete "${file.filename}"? This cannot be undone.`)) return
@@ -169,15 +191,25 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
       // }
 
       
-      const handleDeleteFile = async () => {
+    const handleDeleteFile = async () => {
   if (!confirmDelete.file) return
 
   try {
-    await ingestionApi.remove(confirmDelete.file.job_id)
+    if (tab === 'plot') {
+      // Delete visualization
+      await visualizationApi.remove(confirmDelete.file.viz_id)
 
-    setFiles(prev =>
-      prev.filter(f => f.job_id !== confirmDelete.file.job_id)
-    )
+      setPlots(prev =>
+        prev.filter(p => p.viz_id !== confirmDelete.file.viz_id)
+      )
+    } else {
+      // Delete normal file
+      await ingestionApi.remove(confirmDelete.file.job_id)
+
+      setFiles(prev =>
+        prev.filter(f => f.job_id !== confirmDelete.file.job_id)
+      )
+    }
   } catch (err) {
     window.alert(
       err?.response?.data?.detail || err.message || 'Delete failed'
@@ -186,6 +218,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     setConfirmDelete({ open: false, file: null })
   }
 }
+
 
     return (
         <div style={{background:'#ffffff',gap:'10px', padding:'20px', width:'100%', height:'100%', border:'1px solid #00000026', borderRadius:'4px'}}>
