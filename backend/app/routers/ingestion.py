@@ -1,9 +1,10 @@
 import json
 import os
 import re
+import tempfile
 from datetime import timedelta
 from uuid import uuid4
-from typing import Dict
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response
 from sse_starlette.sse import EventSourceResponse
@@ -16,6 +17,10 @@ from app.core.system_info import describe_autoscale
 from app.models.ingestion import IngestionBatchCreateResponse, IngestionCreateResponse, IngestionJobOut, IngestionStatus
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
+from app.calculations.derived import (
+    apply_derived_columns_to_frame,
+    normalize_derived_columns,
+)
 from app.tasks.ingestion import ingest_file
 # for the processed data view 
 import pyarrow as pa
@@ -552,6 +557,40 @@ def _read_parquet_from_minio(bucket: str, object_key: str):
     buf = io.BytesIO(data)
     return pq.read_table(buf)  # pyarrow Table
 
+
+def _rows_to_json_records(df: pd.DataFrame, limit: int | None = None) -> list[dict]:
+    frame = df if limit is None else df.head(limit)
+    frame = frame.where(pd.notna(frame), None)
+    return frame.to_dict(orient="records")
+
+
+def _update_numeric_stats(stats: dict, df: pd.DataFrame):
+    for col in df.columns:
+        series = pd.to_numeric(df[col], errors="coerce")
+        if series.notna().any():
+            mn = float(series.min())
+            mx = float(series.max())
+            if col not in stats:
+                stats[col] = {"min": mn, "max": mx}
+            else:
+                stats[col]["min"] = min(stats[col]["min"], mn)
+                stats[col]["max"] = max(stats[col]["max"], mx)
+
+
+class DerivedColumnIn(BaseModel):
+    name: str
+    expression: str
+
+
+class DerivedPreviewIn(BaseModel):
+    derived_columns: list[DerivedColumnIn]
+    limit: int = 20
+
+
+class DerivedMaterializeIn(BaseModel):
+    derived_columns: list[DerivedColumnIn]
+
+
 #Preview JSON (all columns, limited rows)
 @router.get("/jobs/{job_id}/processed/preview")
 async def preview_processed(
@@ -620,6 +659,184 @@ async def preview_processed(
         "total_rows": table.num_rows,
     }
 
+
+@router.post("/jobs/{job_id}/processed/derived/preview")
+async def preview_processed_derived_columns(
+    job_id: str,
+    payload: DerivedPreviewIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    processed_key = doc.get("processed_key")
+    if not processed_key:
+        raise HTTPException(status_code=400, detail="No processed parquet available for this file")
+
+    try:
+        derived_specs = normalize_derived_columns([c.model_dump() for c in payload.derived_columns])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not derived_specs:
+        raise HTTPException(status_code=400, detail="At least one derived column is required")
+
+    limit = max(1, min(int(payload.limit or 20), 200))
+    table = _read_parquet_from_minio(settings.ingestion_bucket, processed_key)
+    sliced = table.slice(0, limit)
+    frame = sliced.to_pandas()
+
+    try:
+        frame = apply_derived_columns_to_frame(frame, derived_specs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Derived formula error: {exc}") from exc
+
+    original_cols = table.schema.names
+    out_cols = list(frame.columns)
+    rename_map: Dict[str, str] = doc.get("column_rename_map") or {}
+    display_cols = [rename_map.get(c, c) for c in out_cols]
+    records = _rows_to_json_records(frame)
+
+    rows = []
+    for row in records:
+        rows.append({rename_map.get(k, k): v for k, v in row.items()})
+
+    return {
+        "job_id": job_id,
+        "filename": doc.get("filename"),
+        "original_columns": original_cols,
+        "derived_columns": [s["name"] for s in derived_specs],
+        "all_columns": out_cols,
+        "rename_map": rename_map,
+        "display_columns": display_cols,
+        "rows": rows,
+        "limit": limit,
+        "total_rows": table.num_rows,
+    }
+
+
+@router.post("/jobs/{job_id}/processed/derived/materialize")
+async def materialize_processed_derived_columns(
+    job_id: str,
+    payload: DerivedMaterializeIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    processed_key = doc.get("processed_key")
+    if not processed_key:
+        raise HTTPException(status_code=400, detail="No processed parquet available for this file")
+
+    try:
+        derived_specs = normalize_derived_columns([c.model_dump() for c in payload.derived_columns])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not derived_specs:
+        raise HTTPException(status_code=400, detail="At least one derived column is required")
+
+    minio = get_minio_client()
+    bucket = settings.ingestion_bucket
+
+    in_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".parquet")
+    out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".parquet")
+    in_tmp_path = in_tmp.name
+    out_tmp_path = out_tmp.name
+    in_tmp.close()
+    out_tmp.close()
+
+    writer = None
+    final_cols: list[str] = []
+    total_rows = 0
+    sample_rows: list[dict[str, Any]] = []
+    stats: dict[str, dict[str, float]] = {}
+
+    try:
+        minio.fget_object(bucket, processed_key, in_tmp_path)
+        parquet_file = pq.ParquetFile(in_tmp_path)
+
+        for batch in parquet_file.iter_batches(batch_size=200_000):
+            frame = batch.to_pandas()
+            frame = apply_derived_columns_to_frame(frame, derived_specs)
+            _update_numeric_stats(stats, frame)
+            total_rows += len(frame)
+            if not sample_rows:
+                sample_rows = _rows_to_json_records(frame, limit=10)
+            table = pa.Table.from_pandas(frame, preserve_index=False)
+            final_cols = list(frame.columns)
+            if writer is None:
+                writer = pq.ParquetWriter(out_tmp_path, table.schema, compression="snappy")
+            writer.write_table(table)
+
+        if writer is None:
+            frame = pq.read_table(in_tmp_path).to_pandas()
+            frame = apply_derived_columns_to_frame(frame, derived_specs)
+            _update_numeric_stats(stats, frame)
+            total_rows = len(frame)
+            sample_rows = _rows_to_json_records(frame, limit=10)
+            final_cols = list(frame.columns)
+            table = pa.Table.from_pandas(frame, preserve_index=False)
+            pq.write_table(table, out_tmp_path, compression="snappy")
+
+        if writer is not None:
+            writer.close()
+
+        key_prefix = os.path.dirname(processed_key)
+        stem = os.path.splitext(os.path.basename(doc.get("filename") or "dataset"))[0]
+        new_processed_key = f"{key_prefix}/{uuid4()}_{stem}__derived.parquet"
+
+        minio.fput_object(
+            bucket_name=bucket,
+            object_name=new_processed_key,
+            file_path=out_tmp_path,
+            content_type="application/octet-stream",
+        )
+
+        prev_meta = dict(doc.get("metadata") or {})
+        prev_meta["stats"] = stats
+
+        existing_rename_map = doc.get("column_rename_map") or {}
+        filtered_rename_map = {k: v for k, v in existing_rename_map.items() if k in final_cols}
+
+        await repo.update_job_fields(
+            job_id,
+            {
+                "processed_key": new_processed_key,
+                "columns": final_cols,
+                "processed_schema": final_cols,
+                "rows_seen": total_rows,
+                "sample_rows": sample_rows,
+                "metadata": prev_meta,
+                "derived_columns": derived_specs,
+                "column_rename_map": filtered_rename_map,
+                "status": "SUCCESS",
+                "progress": 100,
+            },
+        )
+
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "processed_key": new_processed_key,
+            "columns": final_cols,
+            "rows_seen": total_rows,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Derived formula error: {exc}") from exc
+    finally:
+        try:
+            os.remove(in_tmp_path)
+        except Exception:
+            pass
+        try:
+            os.remove(out_tmp_path)
+        except Exception:
+            pass
+
 # End B : Save rename map (per file)
 
 class RenameColumnsIn(BaseModel):
@@ -666,4 +883,3 @@ async def save_processed_column_names(
     })
 
     return {"ok": True}
-

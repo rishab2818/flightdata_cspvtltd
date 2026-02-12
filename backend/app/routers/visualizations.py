@@ -19,6 +19,11 @@ from app.models.visualization import (
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.visualizations import VisualizationRepository
+from app.calculations.derived import (
+    apply_derived_columns_to_frame,
+    build_formula_plan,
+    normalize_derived_columns,
+)
 from app.tasks.visualization import generate_visualization
 
 logger = logging.getLogger(__name__)
@@ -178,7 +183,7 @@ async def create_visualization(
             detail="Please include at least one Y axis series",
         )
 
-    requires_z = chart_type == "contour"
+    requires_z = chart_type in {"contour", "scatter3d", "line3d", "surface"}
 
     series_docs = []
     for idx, item in enumerate(payload.series, start=1):
@@ -194,17 +199,37 @@ async def create_visualization(
                 detail=f"Z axis is required for contour plots (series {idx})",
             )
 
-        if job.get("columns"):
+        derived_specs: list[dict] = []
+        try:
+            derived_specs = normalize_derived_columns(
+                [d.model_dump() for d in (item.derived_columns or [])]
+            )
+            base_columns = list(job.get("columns") or [])
+            plan = build_formula_plan(
+                base_columns=base_columns,
+                derived_columns=derived_specs,
+                target_columns=[
+                    item.x_axis,
+                    item.y_axis,
+                    item.z_axis if requires_z else None,
+                ],
+            )
+            available_cols = set(base_columns) | set(plan.derived_names)
             missing = [
                 col
                 for col in [item.x_axis, item.y_axis, item.z_axis if requires_z else None]
-                if col and col not in job["columns"]
+                if col and col not in available_cols
             ]
             if missing:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Columns not found in dataset for series {idx}: {', '.join(missing)}",
                 )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid derived column definition for series {idx}: {exc}",
+            ) from exc
             
         _validate_log_scale_against_ingestion_stats(job, item.x_axis, item.y_axis, item.x_scale, item.y_scale)
 
@@ -218,6 +243,7 @@ async def create_visualization(
                 "x_scale":item.x_scale,
                 "y_scale" : item.y_scale,
                 "label": item.label or item.y_axis,
+                "derived_columns": derived_specs,
                 "filename": job.get("filename", "dataset"),
             }
         )
@@ -373,6 +399,7 @@ async def get_visualization_raw(
     job_id = series_doc.get("job_id")
     x_axis = series_doc.get("x_axis")
     y_axis = series_doc.get("y_axis")
+    derived_specs = series_doc.get("derived_columns") or []
 
     if not job_id or not x_axis or not y_axis:
         raise HTTPException(status_code=400, detail="Series missing job_id/x_axis/y_axis")
@@ -404,7 +431,19 @@ async def get_visualization_raw(
         expires=timedelta(hours=2),
     )
 
-    cols = [x_axis, y_axis]
+    base_columns = list(job.get("columns") or [])
+    try:
+        normalized_derived = normalize_derived_columns(derived_specs)
+        formula_plan = build_formula_plan(
+            base_columns=base_columns,
+            derived_columns=normalized_derived,
+            target_columns=[x_axis, y_axis],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid derived columns in visualization: {exc}") from exc
+
+    cols = formula_plan.read_columns or [x_axis, y_axis]
+    can_pushdown_filter = x_axis in cols and not formula_plan.derived_columns
 
     # Best-effort pushdown filtering with pyarrow.dataset
     try:
@@ -412,11 +451,11 @@ async def get_visualization_raw(
 
         dataset = ds.dataset(data_url, format="parquet")
         filt = None
-        if x_min is not None and x_max is not None:
+        if can_pushdown_filter and x_min is not None and x_max is not None:
             filt = (ds.field(x_axis) >= x_min) & (ds.field(x_axis) <= x_max)
-        elif x_min is not None:
+        elif can_pushdown_filter and x_min is not None:
             filt = ds.field(x_axis) >= x_min
-        elif x_max is not None:
+        elif can_pushdown_filter and x_max is not None:
             filt = ds.field(x_axis) <= x_max
 
         table = dataset.to_table(columns=cols, filter=filt)
@@ -424,10 +463,27 @@ async def get_visualization_raw(
     except Exception:
         # Fallback: read then filter (may be heavier)
         df = pd.read_parquet(data_url, columns=cols)
-        if x_min is not None:
+        if can_pushdown_filter and x_min is not None:
             df = df[df[x_axis] >= x_min]
-        if x_max is not None:
+        if can_pushdown_filter and x_max is not None:
             df = df[df[x_axis] <= x_max]
+
+    if formula_plan.derived_columns:
+        try:
+            df = apply_derived_columns_to_frame(df, formula_plan.derived_columns)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Failed to evaluate derived columns: {exc}") from exc
+
+    if x_axis not in df.columns or y_axis not in df.columns:
+        raise HTTPException(
+            status_code=400,
+            detail="Series axis columns are not available after derived column evaluation",
+        )
+
+    if x_min is not None:
+        df = df[df[x_axis] >= x_min]
+    if x_max is not None:
+        df = df[df[x_axis] <= x_max]
 
     # numeric cleanup (prevents category-axis weird zoom)
     df[x_axis] = pd.to_numeric(df[x_axis], errors="coerce")

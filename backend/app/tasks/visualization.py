@@ -19,6 +19,11 @@ from app.db.sync_mongo import get_sync_db
 from app.mat.reader import read_mat_slice
 from app.mat.slicing import build_slice_spec
 from app.repositories.notifications import create_sync_notification
+from app.calculations.derived import (
+    apply_derived_columns_to_frame,
+    build_formula_plan,
+    normalize_derived_columns,
+)
 
 CHUNK_SIZE = 250_000
 LOD_LEVELS = (256, 1024, 4096)
@@ -74,8 +79,10 @@ def _iter_chunks(
     x_axis: str,
     y_axis: str | None,
     z_axis: str | None = None,
+    read_columns: list[str] | None = None,
+    derived_columns: list[dict[str, str]] | None = None,
 ):
-    columns = [col for col in [x_axis, y_axis, z_axis] if col]
+    columns = list(read_columns or [col for col in [x_axis, y_axis, z_axis] if col])
     read_kwargs = {"usecols": columns, "on_bad_lines": "skip"}
 
     if ext in {".csv"}:
@@ -93,12 +100,17 @@ def _iter_chunks(
         iterator = _iter_parquet_batches(url, columns)
     elif ext in {".xlsx", ".xls", ".xlsm"}:
         frame = pd.read_excel(url, usecols=columns, engine="openpyxl")
+        if derived_columns:
+            frame = apply_derived_columns_to_frame(frame, derived_columns)
         yield frame
         return
     else:
         raise ValueError("File type not supported for visualization")
 
-    yield from iterator
+    for chunk in iterator:
+        if derived_columns:
+            chunk = apply_derived_columns_to_frame(chunk, derived_columns)
+        yield chunk
 
 
 def _sample_xy(
@@ -109,6 +121,8 @@ def _sample_xy(
     x_scale: str ="linear",
     y_scale:str ="linear",
     max_points: int = 120_000,
+    read_columns: list[str] | None = None,
+    derived_columns: list[dict[str, str]] | None = None,
 ) -> pd.DataFrame:
     cols = [c for c in [x_axis, y_axis] if c]
     if not cols:
@@ -117,7 +131,15 @@ def _sample_xy(
     kept = []
     kept_n = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis, None):
+    for chunk in _iter_chunks(
+        url,
+        ext,
+        x_axis or cols[0],
+        y_axis,
+        None,
+        read_columns=read_columns,
+        derived_columns=derived_columns,
+    ):
         chunk = chunk[cols].copy()
 
         for c in cols:
@@ -159,6 +181,8 @@ def _sample_xyz(
     y_axis: str | None,
     z_axis: str | None,
     max_points: int = 200_000,
+    read_columns: list[str] | None = None,
+    derived_columns: list[dict[str, str]] | None = None,
 ) -> pd.DataFrame:
     cols = [c for c in [x_axis, y_axis, z_axis] if c]
     if len(cols) < 3:
@@ -167,7 +191,15 @@ def _sample_xyz(
     kept = []
     kept_n = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis or cols[0], y_axis, z_axis):
+    for chunk in _iter_chunks(
+        url,
+        ext,
+        x_axis or cols[0],
+        y_axis,
+        z_axis,
+        read_columns=read_columns,
+        derived_columns=derived_columns,
+    ):
         chunk = chunk[cols].copy()
 
         for c in cols:
@@ -196,13 +228,28 @@ def _sample_xyz(
     return pd.concat(kept, ignore_index=True)
 
 
-def _scan_axis_bounds(url: str, ext: str, x_axis: str, x_scale: str = "linear") -> tuple[float, float, int]:
+def _scan_axis_bounds(
+    url: str,
+    ext: str,
+    x_axis: str,
+    x_scale: str = "linear",
+    read_columns: list[str] | None = None,
+    derived_columns: list[dict[str, str]] | None = None,
+) -> tuple[float, float, int]:
     x_min = np.inf
     x_max = -np.inf
 
     rows = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis, None, None):
+    for chunk in _iter_chunks(
+        url,
+        ext,
+        x_axis,
+        None,
+        None,
+        read_columns=read_columns,
+        derived_columns=derived_columns,
+    ):
         s = pd.to_numeric(chunk[x_axis], errors="coerce").dropna()
         if s.empty:
             continue
@@ -282,8 +329,17 @@ def _materialize_tiles(
     x_scale: str ='linear',
     y_scale: str ='linear',
     levels: tuple[int, ...] = LOD_LEVELS,
+    read_columns: list[str] | None = None,
+    derived_columns: list[dict[str, str]] | None = None,
 ):
-    x_min, x_max, rows = _scan_axis_bounds(url, ext, x_axis, x_scale=x_scale)
+    x_min, x_max, rows = _scan_axis_bounds(
+        url,
+        ext,
+        x_axis,
+        x_scale=x_scale,
+        read_columns=read_columns,
+        derived_columns=derived_columns,
+    )
     if x_min == x_max:
         x_max = x_min + 1e-9
 
@@ -293,7 +349,15 @@ def _materialize_tiles(
     tiles = []
     partitions = 0
 
-    for chunk in _iter_chunks(url, ext, x_axis, y_axis, None):
+    for chunk in _iter_chunks(
+        url,
+        ext,
+        x_axis,
+        y_axis,
+        None,
+        read_columns=read_columns,
+        derived_columns=derived_columns,
+    ):
         # IMPORTANT: numeric coerce to avoid category-axis and digitize errors
         chunk[x_axis] = pd.to_numeric(chunk[x_axis], errors="coerce")
         chunk[y_axis] = pd.to_numeric(chunk[y_axis], errors="coerce")
@@ -1199,6 +1263,12 @@ def generate_visualization(self, viz_id: str):
             z_axis = series.get("z_axis")
             x_scale = (series.get("x_scale") or "linear").lower().strip()
             y_scale = (series.get("y_scale") or "linear").lower().strip()
+            derived_specs = normalize_derived_columns(series.get("derived_columns") or [])
+            formula_plan = build_formula_plan(
+                base_columns=list(job.get("columns") or []),
+                derived_columns=derived_specs,
+                target_columns=[x_axis, y_axis, z_axis],
+            )
 
             # Prefer processed parquet (best for /raw endpoint too)
             if job.get("processed_key"):
@@ -1216,7 +1286,14 @@ def generate_visualization(self, viz_id: str):
                 )
                 ext = os.path.splitext(job.get("filename", "").lower())[-1]
 
-            series_meta_for_js.append({"x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis})
+            series_meta_for_js.append(
+                {
+                    "x_axis": x_axis,
+                    "y_axis": y_axis,
+                    "z_axis": z_axis,
+                    "derived_columns": formula_plan.derived_columns,
+                }
+            )
 #
             if chart_type in TILED_TYPES:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
@@ -1232,6 +1309,8 @@ def generate_visualization(self, viz_id: str):
                     y_axis,
                     x_scale=x_scale,
                     y_scale=y_scale,
+                    read_columns=formula_plan.read_columns,
+                    derived_columns=formula_plan.derived_columns,
                 )
 
                 display_frame = overview.rename(
@@ -1259,9 +1338,21 @@ def generate_visualization(self, viz_id: str):
                         y_axis,
                         z_axis,
                         max_points=200_000,
+                        read_columns=formula_plan.read_columns,
+                        derived_columns=formula_plan.derived_columns,
                     )
                 else:
-                    raw_df = _sample_xy(data_url, ext, x_axis, y_axis, max_points=120_000 , x_scale=x_scale,y_scale=y_scale)
+                    raw_df = _sample_xy(
+                        data_url,
+                        ext,
+                        x_axis,
+                        y_axis,
+                        max_points=120_000,
+                        x_scale=x_scale,
+                        y_scale=y_scale,
+                        read_columns=formula_plan.read_columns,
+                        derived_columns=formula_plan.derived_columns,
+                    )
                 if raw_df.empty:
                     _update_db_status(
                         db,
