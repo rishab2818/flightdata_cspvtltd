@@ -225,6 +225,22 @@ export const ingestionApi = {
     return data
   },
 
+  previewDerivedColumns: async (jobId, derivedColumns = [], limit = 20) => {
+    const { data } = await axiosClient.post(`/api/ingestion/jobs/${jobId}/processed/derived/preview`, {
+      derived_columns: derivedColumns,
+      limit,
+    })
+    return data
+  },
+
+  saveDerivedColumns: async (jobId, derivedColumns = []) => {
+    const { data } = await axiosClient.post(
+      `/api/ingestion/jobs/${jobId}/processed/derived/materialize`,
+      { derived_columns: derivedColumns }
+    )
+    return data
+  },
+
 
 
 }

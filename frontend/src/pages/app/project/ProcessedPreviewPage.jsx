@@ -12,10 +12,14 @@ export default function ProcessedPreviewPage() {
     const [error, setError] = useState(null)
 
     const [originalCols, setOriginalCols] = useState([])
+    const [persistedCols, setPersistedCols] = useState([])
     const [renameMap, setRenameMap] = useState({})
     const [rows, setRows] = useState([])
     const [limit, setLimit] = useState(20)
     const [saving, setSaving] = useState(false)
+    const [previewingDerived, setPreviewingDerived] = useState(false)
+    const [savingDerived, setSavingDerived] = useState(false)
+    const [derivedColumns, setDerivedColumns] = useState([])
 
     const displayCols = useMemo(() => {
         return originalCols.map(c => (renameMap?.[c] ?? c))
@@ -27,6 +31,7 @@ export default function ProcessedPreviewPage() {
         try {
             const data = await ingestionApi.getProcessedPreview(jobId, limit)
             setOriginalCols(data.original_columns || [])
+            setPersistedCols(data.original_columns || [])
             setRenameMap(data.rename_map || {})
             setRows(data.rows || [])
         } catch (e) {
@@ -47,7 +52,7 @@ export default function ProcessedPreviewPage() {
 
     const validateRenameMap = () => {
         // compute final display names and check duplicates/empties
-        const finalNames = originalCols.map(c => (renameMap?.[c] ?? c).trim())
+        const finalNames = persistedCols.map(c => (renameMap?.[c] ?? c).trim())
         if (finalNames.some(n => !n)) return "Column name cannot be empty"
         const s = new Set(finalNames)
         if (s.size !== finalNames.length) return "Duplicate column names are not allowed"
@@ -63,7 +68,7 @@ export default function ProcessedPreviewPage() {
         try {
             // send only changed columns (optional)
             const payload = {}
-            originalCols.forEach(c => {
+            persistedCols.forEach(c => {
                 const v = (renameMap?.[c] ?? c).trim()
                 if (v !== c) payload[c] = v
             })
@@ -78,6 +83,72 @@ export default function ProcessedPreviewPage() {
 
     const onReset = () => {
         setRenameMap({})
+    }
+
+    const updateDerived = (idx, patch) => {
+        setDerivedColumns((prev) => {
+            const list = [...prev]
+            list[idx] = { ...(list[idx] || { name: "", expression: "" }), ...patch }
+            return list
+        })
+    }
+
+    const addDerived = () => {
+        setDerivedColumns((prev) => [...prev, { name: "", expression: "" }])
+    }
+
+    const removeDerived = (idx) => {
+        setDerivedColumns((prev) => prev.filter((_, i) => i !== idx))
+    }
+
+    const buildDerivedPayload = () => {
+        const cleaned = []
+        for (const item of derivedColumns) {
+            const name = (item?.name || "").trim()
+            const expression = (item?.expression || "").trim()
+            if (!name && !expression) continue
+            if (!name || !expression) throw new Error("Each derived column requires both name and expression")
+            if (cleaned.some((c) => c.name === name)) throw new Error(`Duplicate derived column '${name}'`)
+            cleaned.push({ name, expression })
+        }
+        return cleaned
+    }
+
+    const onPreviewDerived = async () => {
+        setError(null)
+        try {
+            const payload = buildDerivedPayload()
+            if (!payload.length) {
+                throw new Error("Add at least one derived column to preview")
+            }
+            setPreviewingDerived(true)
+            const data = await ingestionApi.previewDerivedColumns(jobId, payload, limit)
+            setOriginalCols(data.all_columns || data.original_columns || [])
+            setPersistedCols(data.original_columns || [])
+            setRenameMap(data.rename_map || {})
+            setRows(data.rows || [])
+        } catch (e) {
+            setError(e?.response?.data?.detail || e.message || "Derived preview failed")
+        } finally {
+            setPreviewingDerived(false)
+        }
+    }
+
+    const onSaveDerived = async () => {
+        setError(null)
+        try {
+            const payload = buildDerivedPayload()
+            if (!payload.length) {
+                throw new Error("Add at least one derived column to save")
+            }
+            setSavingDerived(true)
+            await ingestionApi.saveDerivedColumns(jobId, payload)
+            await fetchPreview()
+        } catch (e) {
+            setError(e?.response?.data?.detail || e.message || "Save derived columns failed")
+        } finally {
+            setSavingDerived(false)
+        }
     }
 
     return (
@@ -135,6 +206,75 @@ export default function ProcessedPreviewPage() {
             </div>
 
             {error && <div className="project-shell__error" style={{ marginTop: 12 }}>{error}</div>}
+            <div className="project-card" style={{ marginTop: 12, padding: 12, background: "#fafafa" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <strong>Derived Columns</strong>
+                    <button
+                        className="project-shell__nav-link"
+                        type="button"
+                        onClick={addDerived}
+                        disabled={!isEditable}
+                    >
+                        + Add Formula
+                    </button>
+                </div>
+                <div className="summary-label" style={{ marginTop: 8 }}>
+                    Formula example: <code>[Lift] / [Drag]</code>
+                </div>
+                {derivedColumns.map((item, idx) => (
+                    <div
+                        key={`derived-${idx}`}
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "220px 1fr 88px",
+                            gap: 10,
+                            marginTop: 10,
+                        }}
+                    >
+                        <input
+                            className="input-control"
+                            placeholder="column_name"
+                            value={item?.name || ""}
+                            onChange={(e) => updateDerived(idx, { name: e.target.value })}
+                            disabled={!isEditable}
+                        />
+                        <input
+                            className="input-control"
+                            placeholder="[A] / [B]"
+                            value={item?.expression || ""}
+                            onChange={(e) => updateDerived(idx, { expression: e.target.value })}
+                            disabled={!isEditable}
+                        />
+                        <button
+                            className="project-shell__nav-link"
+                            type="button"
+                            onClick={() => removeDerived(idx)}
+                            disabled={!isEditable}
+                            style={{ background: "#fff1f2", color: "#b91c1c", borderColor: "#fecdd3" }}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                ))}
+                <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                    <button
+                        className="project-shell__nav-link"
+                        type="button"
+                        onClick={onPreviewDerived}
+                        disabled={loading || previewingDerived}
+                    >
+                        {previewingDerived ? "Previewing..." : "Preview Formula"}
+                    </button>
+                    <button
+                        className="project-shell__nav-link"
+                        type="button"
+                        onClick={onSaveDerived}
+                        disabled={!isEditable || loading || savingDerived}
+                    >
+                        {savingDerived ? "Saving..." : "Save Derived Into Data"}
+                    </button>
+                </div>
+            </div>
             {loading && <div className="empty-state" style={{ marginTop: 12 }}>Loading preview…</div>}
 
             {!loading && !error && (

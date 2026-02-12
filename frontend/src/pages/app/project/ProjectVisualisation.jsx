@@ -3,6 +3,8 @@ import { useOutletContext, useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { matApi } from '../../../mat/matApi'
+import { calculationsApi } from '../../../calculations/calculationsApi'
+import { flattenFormulaTemplates } from '../../../calculations/formulaHelpers'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
 
 import './ProjectVisualisation.css'
@@ -85,6 +87,7 @@ const newSeries = (n = 1) => ({
   matXDim: 0,
   matYDim: 1,
   matFilters: {},
+  derivedColumns: [],
 })
 
 export default function ProjectVisualisation() {
@@ -116,6 +119,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [chartType, setChartType] = useState('scatter')
   const [xScale, setXScale] = useState('linear')
   const [yScale, setYScale] = useState('linear')
+  const [visualSectionTab, setVisualSectionTab] = useState('visualize')
 
 
   // whether the selected chart type requires a Z axis (used in render and submit)
@@ -125,6 +129,19 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [tagsByDataset, setTagsByDataset] = useState({})
   const [filesByDatasetTag, setFilesByDatasetTag] = useState({})
   const [matMetaByJob, setMatMetaByJob] = useState({})
+
+  /* ================= calculation tab state ================= */
+  const [formulaCatalog, setFormulaCatalog] = useState([])
+  const [calcDatasetType, setCalcDatasetType] = useState('wind')
+  const [calcTag, setCalcTag] = useState('')
+  const [calcJobId, setCalcJobId] = useState('')
+  const [calcCategoryKey, setCalcCategoryKey] = useState('')
+  const [calcFormulaKey, setCalcFormulaKey] = useState('')
+  const [calcInputs, setCalcInputs] = useState([])
+  const [calcOutputColumn, setCalcOutputColumn] = useState('')
+  const [calcPreviewRows, setCalcPreviewRows] = useState([])
+  const [calcProcessing, setCalcProcessing] = useState(false)
+  const [calcError, setCalcError] = useState(null)
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
@@ -246,6 +263,25 @@ const plotOptions =
     return map
   }, [filesByDatasetTag])
 
+  const formulaTemplateMap = useMemo(
+    () => flattenFormulaTemplates(formulaCatalog),
+    [formulaCatalog]
+  )
+  const selectedFormulaTemplate = useMemo(
+    () => formulaTemplateMap[calcFormulaKey] || null,
+    [formulaTemplateMap, calcFormulaKey]
+  )
+
+  const calcFiles = useMemo(() => {
+    if (!calcDatasetType || !calcTag) return []
+    return getFiles(calcDatasetType, calcTag)
+  }, [calcDatasetType, calcTag, filesByDatasetTag])
+  const calcJob = useMemo(
+    () => calcFiles.find((f) => f.job_id === calcJobId) || null,
+    [calcFiles, calcJobId]
+  )
+  const calcColumns = useMemo(() => calcJob?.columns || [], [calcJob])
+
   /* ================= load tags for datasetType (per active series) ================= */
   useEffect(() => {
     const ds = activeSeries?.datasetType
@@ -287,6 +323,72 @@ const plotOptions =
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, activeSeries?.datasetType, activeSeries?.tag])
+
+  useEffect(() => {
+    calculationsApi
+      .catalog()
+      .then((data) => {
+        const categories = data?.categories || []
+        setFormulaCatalog(categories)
+        if (!categories.length) return
+        const firstCategory = categories[0]
+        const firstTemplate = firstCategory?.templates?.[0]
+        setCalcCategoryKey((prev) => prev || firstCategory?.key || '')
+        setCalcFormulaKey((prev) => prev || firstTemplate?.key || '')
+      })
+      .catch((e) => {
+        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load formula catalog')
+      })
+  }, [])
+
+  useEffect(() => {
+    if (!calcDatasetType) return
+    if (tagsByDataset[calcDatasetType]) return
+    ingestionApi
+      .listTags(projectId, calcDatasetType)
+      .then((rows) => {
+        setTagsByDataset((prev) => ({ ...prev, [calcDatasetType]: rows || [] }))
+      })
+      .catch((e) => {
+        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load tags')
+      })
+  }, [projectId, calcDatasetType, tagsByDataset])
+
+  useEffect(() => {
+    if (!calcDatasetType || !calcTag) return
+    const key = `${calcDatasetType}::${calcTag}`
+    if (filesByDatasetTag[key]) return
+    ingestionApi
+      .listFilesInTag(projectId, calcDatasetType, calcTag)
+      .then((list) => {
+        const processed = (list || []).filter((f) => {
+          if (isMatFileName(f?.filename || '')) return true
+          return !!(f.processed_key && f.columns?.length)
+        })
+        setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }))
+      })
+      .catch((e) => {
+        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load files')
+      })
+  }, [projectId, calcDatasetType, calcTag, filesByDatasetTag])
+
+  useEffect(() => {
+    const n = Number(selectedFormulaTemplate?.inputs?.length || 0)
+    setCalcInputs((prev) => Array.from({ length: n }, (_, i) => prev[i] || ''))
+  }, [selectedFormulaTemplate?.key])
+
+  useEffect(() => {
+    if (!calcCategoryKey) return
+    const category = formulaCatalog.find((c) => c.key === calcCategoryKey)
+    const templates = category?.templates || []
+    if (!templates.length) {
+      setCalcFormulaKey('')
+      return
+    }
+    if (!templates.some((t) => t.key === calcFormulaKey)) {
+      setCalcFormulaKey(templates[0].key)
+    }
+  }, [calcCategoryKey, calcFormulaKey, formulaCatalog])
 
   /* ================= saved visualizations ================= */
   // const fetchVisualizations = async () => {
@@ -355,6 +457,22 @@ const fetchVisualizations = async (page = 1, reset = false) => {
   )
 
   const activeColumns = useMemo(() => activeJob?.columns || [], [activeJob])
+  const activeDerivedColumnNames = useMemo(() => {
+    const names = []
+    for (const item of activeSeries?.derivedColumns || []) {
+      const name = (item?.name || '').trim()
+      if (!name) continue
+      if (!names.includes(name)) names.push(name)
+    }
+    return names
+  }, [activeSeries?.derivedColumns])
+  const activeAxisColumns = useMemo(() => {
+    const merged = [...activeColumns]
+    for (const name of activeDerivedColumnNames) {
+      if (!merged.includes(name)) merged.push(name)
+    }
+    return merged
+  }, [activeColumns, activeDerivedColumnNames])
   const activeMatMeta = useMemo(
     () => matMetaByJob[activeSeries?.jobId || ''] || null,
     [matMetaByJob, activeSeries?.jobId]
@@ -468,6 +586,7 @@ const fetchVisualizations = async (page = 1, reset = false) => {
       xAxis: '',
       yAxis: '',
       zAxis: '',
+      derivedColumns: [],
     })
   }, [
     activeIsMat,
@@ -514,6 +633,137 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     }
     if (!x || !y) return ds
     return `${ds} | ${x} → ${y}`
+  }
+
+  const normalizeDerivedColumns = (series) => {
+    const cleaned = []
+    for (const item of series?.derivedColumns || []) {
+      const name = (item?.name || '').trim()
+      const expression = (item?.expression || '').trim()
+      if (!name && !expression) continue
+      if (!name || !expression) {
+        throw new Error('Each derived column requires both a name and an expression.')
+      }
+      if (cleaned.some((c) => c.name === name)) {
+        throw new Error(`Duplicate derived column name '${name}' in one plot series.`)
+      }
+      cleaned.push({ name, expression })
+    }
+    return cleaned
+  }
+
+  const applyCalculationToVisualisation = (datasetType, tag, jobId, derivedColumn) => {
+    let targetSeriesId = null
+    setSeriesList((prev) => {
+      if (!prev.length) {
+        const s = newSeries(1)
+        targetSeriesId = s.id
+        s.datasetType = datasetType
+        s.tag = tag
+        s.jobId = jobId
+        s.derivedColumns = [derivedColumn]
+        return [s]
+      }
+      targetSeriesId = prev[0].id
+      return prev.map((s, idx) => {
+        if (idx === 0) {
+          return {
+            ...s,
+            datasetType,
+            tag,
+            jobId,
+            derivedColumns: [derivedColumn],
+            xAxis: '',
+            yAxis: '',
+            zAxis: '',
+          }
+        }
+        return { ...s, derivedColumns: [] }
+      })
+    })
+    if (targetSeriesId) {
+      setActiveSeriesId(targetSeriesId)
+    }
+  }
+
+  const handleCalcInputChange = (idx, value) => {
+    setCalcInputs((prev) => prev.map((v, i) => (i === idx ? value : v)))
+  }
+
+  const handleCalcPreview = async () => {
+    setCalcError(null)
+    if (!calcJobId) {
+      setCalcError('Select a file first')
+      return
+    }
+    if (!calcFormulaKey) {
+      setCalcError('Select a formula template')
+      return
+    }
+    if (!calcOutputColumn.trim()) {
+      setCalcError('Provide output column name')
+      return
+    }
+    if (calcInputs.some((c) => !c)) {
+      setCalcError('Select all required input columns')
+      return
+    }
+
+    try {
+      setCalcProcessing(true)
+      // New formula attempt should clear any previous unsaved derived overlay.
+      setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
+      setCalcPreviewRows([])
+      const data = await calculationsApi.preview(calcJobId, {
+        formula_key: calcFormulaKey,
+        input_columns: calcInputs,
+        output_column: calcOutputColumn.trim(),
+        limit: 20,
+      })
+      setCalcPreviewRows(data?.rows || [])
+      const derived = data?.derived_column
+      if (derived?.name && derived?.expression) {
+        applyCalculationToVisualisation(calcDatasetType, calcTag, calcJobId, derived)
+      }
+    } catch (e) {
+      setCalcError(e?.response?.data?.detail || e.message || 'Formula preview failed')
+    } finally {
+      setCalcProcessing(false)
+    }
+  }
+
+  const handleCalcSave = async () => {
+    setCalcError(null)
+    if (!calcJobId || !calcFormulaKey || !calcOutputColumn.trim() || calcInputs.some((c) => !c)) {
+      setCalcError('Complete file, formula, input columns and output name before saving')
+      return
+    }
+    try {
+      setCalcProcessing(true)
+      await calculationsApi.materialize(calcJobId, {
+        formula_key: calcFormulaKey,
+        input_columns: calcInputs,
+        output_column: calcOutputColumn.trim(),
+        limit: 20,
+      })
+      const key = `${calcDatasetType}::${calcTag}`
+      const list = await ingestionApi.listFilesInTag(projectId, calcDatasetType, calcTag)
+      const processed = (list || []).filter((f) => {
+        if (isMatFileName(f?.filename || '')) return true
+        return !!(f.processed_key && f.columns?.length)
+      })
+      setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }))
+      setCalcPreviewRows([])
+      setCalcOutputColumn('')
+      setCalcInputs(Array.from({ length: Number(selectedFormulaTemplate?.inputs?.length || 0) }, () => ''))
+
+      // clear unsaved derived overlay after persistence
+      setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
+    } catch (e) {
+      setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed')
+    } finally {
+      setCalcProcessing(false)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -594,15 +844,19 @@ const fetchVisualizations = async (page = 1, reset = false) => {
       } else {
         const payloadSeries = tabularSeries
           .filter((s) => s.xAxis && s.yAxis && (!requiresZ || s.zAxis))
-          .map((s) => ({
-            job_id: s.jobId,
-            x_axis: s.xAxis,
-            y_axis: s.yAxis,
-            z_axis: requiresZ ? s.zAxis : undefined,
-            x_scale: xScale,
-            y_scale: yScale,
-            label: (s.label || '').trim() || buildAutoLabel(s),
-          }))
+          .map((s) => {
+            const derivedColumns = normalizeDerivedColumns(s)
+            return {
+              job_id: s.jobId,
+              x_axis: s.xAxis,
+              y_axis: s.yAxis,
+              z_axis: requiresZ ? s.zAxis : undefined,
+              x_scale: xScale,
+              y_scale: yScale,
+              label: (s.label || '').trim() || buildAutoLabel(s),
+              derived_columns: derivedColumns,
+            }
+          })
 
         if (payloadSeries.length === 0) {
           throw new Error(
@@ -732,6 +986,226 @@ const deleteVisualization = async (vizId) => {
   /* ================= UI ================= */
   return (
     <div className="CardWapper">
+      <div className="tablist" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className={visualSectionTab === 'visualize' ? 'active' : ''}
+          onClick={() => setVisualSectionTab('visualize')}
+        >
+          Visualisation
+        </button>
+        <button
+          type="button"
+          className={visualSectionTab === 'calculation' ? 'active' : ''}
+          onClick={() => setVisualSectionTab('calculation')}
+        >
+          Calculation
+        </button>
+      </div>
+
+      {visualSectionTab === 'calculation' && (
+        <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
+            <p className="summary-label" style={{ margin: 0 }}>
+              Select Dataset → Tag → File, choose a formula template, map columns, then preview or save.
+            </p>
+          </div>
+
+          {calcError && <div className="project-shell__error">{calcError}</div>}
+
+          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+            <div className="ps-field">
+              <label>Dataset</label>
+              <select
+                value={calcDatasetType}
+                onChange={(e) => {
+                  setCalcDatasetType(e.target.value)
+                  setCalcTag('')
+                  setCalcJobId('')
+                  setCalcPreviewRows([])
+                }}
+              >
+                {DATASET_TYPES.map((d) => (
+                  <option key={d.key} value={d.key}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="ps-field">
+              <label>Tag</label>
+              <select
+                value={calcTag}
+                onChange={(e) => {
+                  setCalcTag(e.target.value)
+                  setCalcJobId('')
+                  setCalcPreviewRows([])
+                }}
+              >
+                <option value="">Select</option>
+                {getTags(calcDatasetType).map((t) => (
+                  <option key={t.tag_name} value={t.tag_name}>
+                    {t.tag_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="ps-field">
+              <label>File</label>
+              <select
+                value={calcJobId}
+                onChange={(e) => {
+                  setCalcJobId(e.target.value)
+                  setCalcPreviewRows([])
+                }}
+                disabled={!calcTag}
+              >
+                <option value="">{calcTag ? 'Select' : 'Select tag first'}</option>
+                {calcFiles.map((f) => (
+                  <option key={f.job_id} value={f.job_id}>
+                    {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="ps-field">
+              <label>Output Column</label>
+              <input
+                className="input-control"
+                value={calcOutputColumn}
+                onChange={(e) => setCalcOutputColumn(e.target.value)}
+                placeholder="derived_col_name"
+              />
+            </div>
+          </div>
+
+          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <div className="ps-field">
+              <label>Category</label>
+              <select
+                value={calcCategoryKey}
+                onChange={(e) => {
+                  setCalcCategoryKey(e.target.value)
+                  setCalcPreviewRows([])
+                }}
+              >
+                <option value="">Select</option>
+                {formulaCatalog.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="ps-field">
+              <label>Formula</label>
+              <select
+                value={calcFormulaKey}
+                onChange={(e) => {
+                  setCalcFormulaKey(e.target.value)
+                  setCalcPreviewRows([])
+                }}
+                disabled={!calcCategoryKey}
+              >
+                <option value="">{calcCategoryKey ? 'Select' : 'Select category first'}</option>
+                {(formulaCatalog.find((c) => c.key === calcCategoryKey)?.templates || []).map((tpl) => (
+                  <option key={tpl.key} value={tpl.key}>
+                    {tpl.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="ps-field">
+              <label>Mapped Inputs</label>
+              <div className="summary-label" style={{ marginTop: 8 }}>
+                {selectedFormulaTemplate?.inputs?.length || 0} input(s)
+              </div>
+            </div>
+          </div>
+
+          {calcJob && (
+            <div className="summary-label">
+              Columns: {calcColumns.length ? calcColumns.join(', ') : 'No columns available'}
+            </div>
+          )}
+
+          {(selectedFormulaTemplate?.inputs || []).length > 0 && (
+            <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              {selectedFormulaTemplate.inputs.map((inputName, idx) => (
+                <div className="ps-field" key={`calc-input-${inputName}-${idx}`}>
+                  <label>{`Column ${inputName}`}</label>
+                  <select
+                    value={calcInputs[idx] || ''}
+                    onChange={(e) => handleCalcInputChange(idx, e.target.value)}
+                    disabled={!calcJobId}
+                  >
+                    <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
+                    {calcColumns.map((col) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              className="project-shell__nav-link"
+              onClick={handleCalcPreview}
+              disabled={calcProcessing}
+            >
+              {calcProcessing ? 'Processing…' : 'Process Formula'}
+            </button>
+            <button
+              type="button"
+              className="project-shell__nav-link"
+              onClick={handleCalcSave}
+              disabled={calcProcessing}
+            >
+              {calcProcessing ? 'Saving…' : 'Save Derived Column To Dataset'}
+            </button>
+          </div>
+
+          <div>
+            <p className="summary-label" style={{ marginBottom: 6 }}>Preview</p>
+            <div className="excel-preview">
+              {calcPreviewRows.length ? (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {Object.keys(calcPreviewRows[0] || {}).map((k) => (
+                        <th key={k}>{k}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calcPreviewRows.slice(0, 10).map((row, i) => (
+                      <tr key={`calc-row-${i}`}>
+                        {Object.keys(calcPreviewRows[0] || {}).map((k) => (
+                          <td key={`${i}-${k}`}>{String(row?.[k] ?? '')}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="empty-state">No preview yet. Process a formula to see results.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {visualSectionTab === 'visualize' && (
+        <>
       {/* ================= TOP: SETTINGS (old UI classes) ================= */}
       <form onSubmit={handleSubmit} className="plot-settings">
         <div className="tableHeader">Plot Setting</div>
@@ -761,6 +1235,7 @@ const deleteVisualization = async (vizId) => {
                   matXDim: 0,
                   matYDim: 1,
                   matFilters: {},
+                  derivedColumns: [],
                 })
               }
             >
@@ -787,6 +1262,7 @@ const deleteVisualization = async (vizId) => {
                   matXDim: 0,
                   matYDim: 1,
                   matFilters: {},
+                  derivedColumns: [],
                 })
               }
             >
@@ -813,6 +1289,7 @@ const deleteVisualization = async (vizId) => {
                   matXDim: 0,
                   matYDim: 1,
                   matFilters: {},
+                  derivedColumns: [],
                 })
               }
               disabled={!activeSeries?.tag}
@@ -873,8 +1350,6 @@ const deleteVisualization = async (vizId) => {
   </select>
 </div>
 
-
-
            {/* <div className="ps-field">
             <label>Chart Type</label>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
@@ -910,7 +1385,7 @@ const deleteVisualization = async (vizId) => {
           disabled={!activeSeries?.jobId}
         >
           <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-          {activeColumns.map((col) => (
+          {activeAxisColumns.map((col) => (
             <option key={col} value={col}>{col}</option>
           ))}
         </select>
@@ -924,7 +1399,7 @@ const deleteVisualization = async (vizId) => {
           disabled={!activeSeries?.jobId}
         >
           <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-          {activeColumns.map((col) => (
+          {activeAxisColumns.map((col) => (
             <option key={col} value={col}>{col}</option>
           ))}
         </select>
@@ -939,7 +1414,7 @@ const deleteVisualization = async (vizId) => {
             disabled={!activeSeries?.jobId}
           >
             <option value="">Select</option>
-            {activeColumns.map((col) => (
+            {activeAxisColumns.map((col) => (
               <option key={col} value={col}>{col}</option>
             ))}
           </select>
@@ -1047,7 +1522,6 @@ const deleteVisualization = async (vizId) => {
     </button>
   </div>
 </div>
-
 
         {/* ===== Series Manager (KEPT) ===== */}
         <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
@@ -1392,6 +1866,8 @@ disabled={deletingViz === viz.viz_id}
         </div>
 
       </div>
+      </>
+      )}
     {confirmDelete.open && (
   <ConfirmationModal
     title="Delete this visualization?"

@@ -74,6 +74,7 @@ class IngestionJobOut(BaseModel):
     columns: Optional[List[str]] = None
     rows_seen: Optional[int] = None
     metadata: Optional[dict] = None
+    derived_columns: Optional[List[dict]] = None
 
 
 class IngestionCreateResponse(BaseModel):
