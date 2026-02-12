@@ -291,8 +291,6 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
   <img style={{width:'20px', height:'20px'}} src={ViewIcon} alt="view"/>
 </button>
 
-
-
                                 <button 
                                 onClick={() => handleDownload(f)} title="Download"
                                  style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',justifyContent: 'center',}}>

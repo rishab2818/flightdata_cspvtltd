@@ -264,12 +264,12 @@
 
 .table th {
   background: #EFF7FF;
-  font-weight: 400;
+  font-weight: 600;
   color:#000000;
   position: sticky;
   top: 0;
   font-size: 14px;
-  font-family: "Inter-regular", Helvetica;
+  font-family: "Inter-SemiBold", Helvetica;
   padding: 12px 15px;
   white-space: normal;   /* Allows wrapping */
   text-align: left;

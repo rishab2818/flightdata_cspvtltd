@@ -152,12 +152,12 @@
   text-align: left;
   padding: 12px;
   font-size: 14px;
-  font-weight: 400;
-  color: #0f172a;
+  font-weight: 600;
+  color: #000000;
   background: #EFF7FF;
   border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
-   font-family: "Inter-regular", Helvetica;
+   font-family: "Inter-SemiBold", Helvetica;
    z-index: 10; 
 }
 
