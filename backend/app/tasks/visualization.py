@@ -542,9 +542,8 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
             fig.update_layout(
                 autosize=True,
-            height=700,
-            
-            margin=dict(l=0, r=0, t=0, b=60, pad=5),  # 👈 key: increase b + add pad
+            height=None,
+            margin=dict(l=40, r=40, t=40, b=40),  # 👈 key: increase b + add pad
             scene=dict(
                 domain=dict(x=[0, 1], y=[0, 1]),
                 xaxis_title=x_col,
@@ -598,9 +597,9 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
             fig.update_layout(
             autosize=True,
-            height=700,
+            height=None,
             
-            margin=dict(l=0, r=0, t=0, b=60, pad=5),  # 👈 key: increase b + add pad
+            margin=dict(l=40, r=40, t=40, b=40),  # 👈 key: increase b + add pad
             scene=dict(
                 domain=dict(x=[0, 1], y=[0, 1]),
                 xaxis_title=x_col,
@@ -643,9 +642,10 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
             fig.update_layout(
             autosize=True,
-            height=700,
+            height=None,
+            margin=dict(l=40, r=40, t=40, b=40),
             
-            margin=dict(l=0, r=0, t=0, b=60, pad=5),  # 👈 key: increase b + add pad
+            # margin=dict(l=0, r=0, t=0, b=0, pad=5),  # 👈 key: increase b + add pad
             scene=dict(
                 domain=dict(x=[0, 1], y=[0, 1]),
                 xaxis_title=x_col,
@@ -654,9 +654,6 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             ),
             scene_camera=dict(eye=dict(x=1.1, y=1.1, z=0.7))
         )
-
-
-
 
         elif chart_type == "violin":
             fig.add_trace(
@@ -697,11 +694,23 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         fig.update_xaxes(dtick=1, exponentformat="power", showexponent="all")
     if y_scale == "log":
         fig.update_yaxes(dtick=1, exponentformat="power", showexponent="all")
-    fig.update_layout(
-        template="plotly_white",
-        title="Overplot",
-        legend_title_text="Series",
-    )
+    # fig.update_layout(
+    #     template="plotly_white",
+    #     title="Overplot",
+    #     legend_title_text="Series",
+    # )
+
+    if len(series_frames) > 1:
+        fig.update_layout(
+            template="plotly_white",
+            title="Overplot",
+            legend_title_text="Series",
+        )
+    else:
+        fig.update_layout(
+            template="plotly_white",
+            legend_title_text="Series",
+        )
 
     if chart_type == "polar":
         fig.update_layout(
@@ -1070,7 +1079,14 @@ def generate_visualization(self, viz_id: str):
                 labels=labels,
             )
 
-            html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
+            # html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
+            html = pio.to_html(
+    fig,
+    include_plotlyjs="cdn",
+    full_html=True,
+    config={"responsive": True},
+)
+
             html_bytes = html.encode("utf-8")
             html_key = f"projects/{doc['project_id']}/visualizations/{viz_id}.html"
 

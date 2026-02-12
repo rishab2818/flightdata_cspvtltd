@@ -30,6 +30,8 @@ class VisualizationSeriesOut(VisualizationSeriesInput):
 class VisualizationCreateRequest(BaseModel):
     project_id: str = Field(..., description="Project ID the visualization belongs to")
     source_type: SourceType = Field(default="tabular")
+    dataset_type: Optional[str] = None
+    tag_name: Optional[str] = None
     series: list[VisualizationSeriesInput] = Field(default_factory=list)
     job_id: Optional[str] = None
     var: Optional[str] = None
@@ -41,6 +43,8 @@ class VisualizationCreateRequest(BaseModel):
 class VisualizationOut(BaseModel):
     viz_id: str
     project_id: str
+    dataset_type: Optional[str] = None
+    tag_name: Optional[str] = None 
     source_type: SourceType = "tabular"
     chart_type: str
     series: list[VisualizationSeriesOut]

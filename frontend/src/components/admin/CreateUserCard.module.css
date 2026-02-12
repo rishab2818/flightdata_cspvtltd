@@ -35,7 +35,7 @@ letter-spacing: 0%;
 .form {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 18px;
+  /* gap: 18px; */
   margin-top: 4px;
   flex: 1;
   
@@ -48,8 +48,8 @@ font-size: 16px;
 line-height: 100%;
 letter-spacing: 0%;
 color: #000000;
-width: 85;
-height: 19;
+/* width: 85;
+height: 19; */
 opacity: 1;
 gap: 4px;
 margin-bottom: 10px;
@@ -63,11 +63,11 @@ font-size: 14px;
 line-height: 100%;
 letter-spacing: 0%;
 color: #000000;
-width: 85;
-height: 19;
+/* width: 85;
+height: 19; */
 opacity: 1;
 gap: 4px;
-margin-bottom: 10px;
+/* margin-bottom: 10px; */
 }
 
 .fullButton {
@@ -85,5 +85,8 @@ margin-bottom: 10px;
 }
 
 .alert {
-  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
 }

@@ -359,7 +359,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 70vh;
+  height: 50vh;
   min-height: 500px;
 }
 
@@ -387,7 +387,7 @@
 
 /*=========================TILE PREVIEW TABLE=================*/
 
-.datatable {
+/* .datatable {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
@@ -406,7 +406,42 @@
   background: #f3f3f5;
   color: #000000;
   font-weight: 600;
+} */
+
+.datatable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
 }
+
+/* REMOVE border from td */
+.datatable th,
+.datatable td {
+  padding: 10px 12px;
+  text-align: center;
+  white-space: nowrap;
+  border: none;
+}
+
+/* Apply border to row instead */
+.datatable tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Remove last row border */
+.datatable tbody tr:last-child {
+  border-bottom: none;
+}
+
+.datatable th {
+  background: #f3f3f5;
+  font-weight: 600;
+}
+
+.datatable td {
+  vertical-align: middle;
+}
+
 
 .summarylabel1 {
   font-size: 16px;
