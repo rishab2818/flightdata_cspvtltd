@@ -153,31 +153,31 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
 
 
     
-//      const handleDownload = async (file) => {
-//   try {
-//     if (tab === 'plot') {
-//       const response = await visualizationApi.download(file.viz_id)
+     const handleDownload = async (file) => {
+  try {
+    if (tab === 'plot') {
+      const response = await visualizationApi.download(file.viz_id)
 
-//       const blob = new Blob([response.data])
-//       const objectUrl = window.URL.createObjectURL(blob)
+      const blob = new Blob([response.data])
+      const objectUrl = window.URL.createObjectURL(blob)
 
-//       const link = document.createElement('a')
-//       link.href = objectUrl
-//       link.download = file.filename || 'visualization.html'
-//       document.body.appendChild(link)
-//       link.click()
-//       link.remove()
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = file.filename || 'visualization.html'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
 
-//       window.URL.revokeObjectURL(objectUrl)
-//     } else {
-//       const { url } = await ingestionApi.download(file.job_id)
-//       await forceDownloadFromUrl(url, file.filename)
-//     }
-//   } catch (err) {
-//     console.error(err)
-//     window.alert('Download failed')
-//   }
-// }
+      window.URL.revokeObjectURL(objectUrl)
+    } else {
+      const { url } = await ingestionApi.download(file.job_id)
+      await forceDownloadFromUrl(url, file.filename)
+    }
+  } catch (err) {
+    console.error(err)
+    window.alert('Download failed')
+  }
+}
 
     
       // const handleDelete = async (file) => {
@@ -324,11 +324,24 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
   <img style={{width:'20px', height:'20px'}} src={ViewIcon} alt="view"/>
 </button>
 
-                                <button 
-                                onClick={() => handleDownload(f)} title="Download"
-                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',justifyContent: 'center',}}>
-                                    <img style={{width:'20px', height:'20px'}} src={DownloadSimple} alt="download"/>
-                                    </button>
+                                {tab !== 'plot' && (
+  <button
+    onClick={() => handleDownload(f)}
+    title="Download"
+    style={{
+      background: '#ffffff',
+      border: '0.67px solid #0000001A',
+      width: '40px',
+      height: '35px',
+      borderRadius: '8px',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
+  </button>
+)}
+
                                <button  onClick={() =>setConfirmDelete({ open: true, file: f })} title="Delete"
                                  style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',justifyContent: 'center'}}>
                                     <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>

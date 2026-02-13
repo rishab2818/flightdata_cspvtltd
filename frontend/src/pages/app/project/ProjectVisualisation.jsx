@@ -1038,7 +1038,8 @@ const deleteVisualization = async (vizId) => {
   /* ================= UI ================= */
   return (
     <div className="CardWapper">
-      <div className="tablist" style={{ marginBottom: 12 }}>
+    <div className="project-cardpage">
+      <div className="Tablist" style={{ marginBottom: 12 }}>
         <button
           type="button"
           className={visualSectionTab === 'visualize' ? 'active' : ''}
@@ -1059,14 +1060,14 @@ const deleteVisualization = async (vizId) => {
         <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
-            <p className="summary-label" style={{ margin: 0 }}>
+            {/* <p className="summary-label" style={{ margin: 0 }}>
               Select Dataset → Tag → File, choose a formula template, map columns, then preview or save.
-            </p>
+            </p> */}
           </div>
 
           {calcError && <div className="project-shell__error">{calcError}</div>}
 
-          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="Row calculation-row">
             <div className="ps-field">
               <label>Dataset</label>
               <select
@@ -1124,18 +1125,7 @@ const deleteVisualization = async (vizId) => {
               </select>
             </div>
 
-            <div className="ps-field">
-              <label>Output Column</label>
-              <input
-                className="input-control"
-                value={calcOutputColumn}
-                onChange={(e) => setCalcOutputColumn(e.target.value)}
-                placeholder="derived_col_name"
-              />
-            </div>
-          </div>
-
-          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          {/* <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}> */}
             <div className="ps-field">
               <label>Category</label>
               <select
@@ -1177,57 +1167,84 @@ const deleteVisualization = async (vizId) => {
                 {selectedFormulaTemplate?.inputs?.length || 0} input(s)
               </div>
             </div>
+          {/* </div> */}
           </div>
 
-          {calcJob && (
+          {/* {calcJob && (
             <div className="summary-label">
               Columns: {calcColumns.length ? calcColumns.join(', ') : 'No columns available'}
             </div>
-          )}
+          )} */}
+          
+        <div
+  className="Row calculation-row"
+  style={{ gridTemplateColumns: "repeat(6, minmax(180px, 1fr))" }}
+>
 
-          {(selectedFormulaTemplate?.inputs || []).length > 0 && (
-            <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-              {selectedFormulaTemplate.inputs.map((inputName, idx) => (
-                <div className="ps-field" key={`calc-input-${inputName}-${idx}`}>
-                  <label>{`Column ${inputName}`}</label>
-                  <select
-                    value={calcInputs[idx] || ''}
-                    onChange={(e) => handleCalcInputChange(idx, e.target.value)}
-                    disabled={!calcJobId}
-                  >
-                    <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
-                    {calcColumns.map((col) => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          )}
+  {(selectedFormulaTemplate?.inputs || []).length > 0 &&
+    selectedFormulaTemplate.inputs.map((inputName, idx) => (
+      <div
+        className="ps-field"
+        key={`calc-input-${inputName}-${idx}`}
+      >
+        <label>{`Column ${inputName}`}</label>
+        <select
+          value={calcInputs[idx] || ''}
+          onChange={(e) =>
+            handleCalcInputChange(idx, e.target.value)
+          }
+          disabled={!calcJobId}
+        >
+          <option value="">
+            {calcJobId ? 'Select' : 'Select file first'}
+          </option>
+          {calcColumns.map((col) => (
+            <option key={col} value={col}>
+              {col}
+            </option>
+          ))}
+        </select>
+      </div>
+    ))}
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcPreview}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Processing…' : 'Process Formula'}
-            </button>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcSave}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Saving…' : 'Save Derived Column To Dataset'}
-            </button>
-          </div>
+  <div className="ps-field">
+    <label>Derived Column</label>
+    <input
+      className="input-control"
+      value={calcOutputColumn}
+      onChange={(e) => setCalcOutputColumn(e.target.value)}
+      placeholder="derived_col_name"
+    />
+  </div>
+
+
+  <div  style={{marginTop:'26px'}}>
+  <button
+    type="button"
+    
+    className="project-shell__nav-link"
+    onClick={handleCalcPreview}
+    disabled={calcProcessing}
+  >
+    {calcProcessing ? 'Processing…' : 'Process Formula'}
+  </button>
+  </div>
+  </div>
+  
+  <div style={{display:'flex',alignItems:"right", justifyContent:"right"}}>
+  <button
+    type="button"
+    className="project-shell__nav-save"
+    onClick={handleCalcSave}
+    disabled={calcProcessing}
+  >
+    {calcProcessing ? 'Saving…' : 'Save Derived Column'}
+  </button>
+  </div>
+
 
           <div>
-            <p className="summary-label" style={{ marginBottom: 6 }}>Preview</p>
+            <p className="summary-label" style={{ marginBottom: 6, fontFamily:"Inter-SemiBold,Helvetica", fontWeight:"600 px", color:"#000000"}}>Preview</p>
             <div className="excel-preview">
               {calcPreviewRows.length ? (
                 <table className="data-table">
@@ -1692,6 +1709,7 @@ const deleteVisualization = async (vizId) => {
         <div className="actions-row" style={{ justifyContent: 'space-between' }}>
           <div>
             <p className="summarylabel">{statusMessage}</p>
+            
 
             {/* meta (kept) */}
             {plotMeta && (
@@ -1944,6 +1962,7 @@ disabled={deletingViz === viz.viz_id}
     }}
   />
 )}     
+    </div>
     </div>
   )
   }
