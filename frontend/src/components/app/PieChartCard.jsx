@@ -24,7 +24,7 @@ export default function PieChartCard({ title, value }) {
         display: "flex",
         flexDirection: "column",
         gap: 10,
-        maxWidth: 520,
+        maxWidth: 620,
       }}
     >
       <h3

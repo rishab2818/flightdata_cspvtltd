@@ -109,6 +109,8 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 });
 
   const [deletingViz, setDeletingViz] = useState(null)
+ const [fullScreenViz, setFullScreenViz] = useState(null);
+
 
 
   /* ================= series manager ================= */
@@ -150,6 +152,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 const [vizPage, setVizPage] = useState(1);
 const [hasMoreViz, setHasMoreViz] = useState(true);
 const [loadingViz, setLoadingViz] = useState(false);
+const [loadingSave, setLoadingSave] = useState(false);
 
   const [activeViz, setActiveViz] = useState(null)
   const [plotHtml, setPlotHtml] = useState('')
@@ -438,6 +441,26 @@ const plotOptions =
 //     setLoadingViz(false);
 //   }
 // };
+
+const handleSaveVisualization = async () => {
+  if (!plotHtml) return; // safety check
+  setLoadingSave(true);
+  try {
+    await visualizationApi.save({
+      project_id: projectId,
+      html: plotHtml,
+      series: seriesList,
+      chart_type: chartType,
+      name: activeSeries?.label || 'Plot',
+    });
+    setStatusMessage('Visualization saved successfully.');
+    fetchVisualizations(1, true); // refresh saved visualizations list
+  } catch (err) {
+    setStatusMessage('Failed to save visualization.');
+  } finally {
+    setLoadingSave(false);
+  }
+};
 
 const fetchVisualizations = async (page = 1, reset = false) => {
   if (loadingViz) return
@@ -1244,7 +1267,7 @@ const deleteVisualization = async (vizId) => {
 
 
           <div>
-            <p className="summary-label" style={{ marginBottom: 6, fontFamily:"Inter-SemiBold,Helvetica", fontWeight:"600 px", color:"#000000"}}>Preview</p>
+            <p className="summary-label" style={{ marginBottom: 6, fontFamily:"inter-semi-bold, Helvetica",fontSize:"16px", fontWeight:600, color:"#000000"}}>Preview</p>
             <div className="excel-preview">
               {calcPreviewRows.length ? (
                 <table className="data-table">
@@ -1709,7 +1732,17 @@ const deleteVisualization = async (vizId) => {
         <div className="actions-row" style={{ justifyContent: 'space-between' }}>
           <div>
             <p className="summarylabel">{statusMessage}</p>
-            
+
+            <div className="ps-field">
+  <button
+    type="button"
+    className="project-shell__nav-save"
+    onClick={handleSaveVisualization}
+    disabled={!plotHtml || loadingSave} // only enable after plot is generated
+  >
+    {loadingSave ? 'Saving…' : 'Save Visualization'}
+  </button>
+</div>
 
             {/* meta (kept) */}
             {plotMeta && (
@@ -1891,7 +1924,10 @@ const deleteVisualization = async (vizId) => {
                         // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
                         //   <img className="actionBtn" src={blackPloticon} alt="download" />
                         // </button>
-                        <button type="button" onClick={() => window.open(`/app/projects/${projectId}/visualisation/full/${viz.viz_id}`, '_blank')}>
+                        <button
+  type="button"
+  onClick={() => setFullScreenViz(viz)}
+>
                           <img className="actionBtn" src={linechart} alt="download" />
                         </button>
                       )}
@@ -1963,6 +1999,27 @@ disabled={deletingViz === viz.viz_id}
   />
 )}     
     </div>
+     {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
+    {fullScreenViz && (
+      <div className="fullscreen-overlay">
+        <div className="fullscreen-content">
+
+          <button
+            className="fullscreen-close"
+            onClick={() => setFullScreenViz(null)}
+          >
+            ✕
+          </button>
+
+          <iframe
+            src={fullScreenViz.html_url}
+            title="Full Visualization"
+            className="fullscreen-frame"
+          />
+
+        </div>
+      </div>
+    )}
     </div>
   )
   }
