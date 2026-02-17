@@ -70,4 +70,5 @@ export const visualizationApi = {
   remove: async (vizId) => {
     await axiosClient.delete(`/api/visualizations/${vizId}`)
   },
+
 }

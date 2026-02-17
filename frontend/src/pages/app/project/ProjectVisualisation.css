@@ -721,7 +721,7 @@ min-width: 0;
   min-width: 0;
 }
 
-.fullscreen-overlay {
+/* .fullscreen-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -760,4 +760,6 @@ min-width: 0;
   border-radius: 6px;
   cursor: pointer;
   z-index: 10;
-}
+} */
+
+

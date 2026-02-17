@@ -25,6 +25,9 @@ from app.calculations.derived import (
     normalize_derived_columns,
 )
 from app.tasks.visualization import generate_visualization
+from plotly.io import to_json 
+import plotly.graph_objects as go
+
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +118,42 @@ def _with_series(doc: dict | None):
         item.setdefault("label", item.get("y_axis"))
 
     return doc
+
+async def build_preview_figure(payload: VisualizationCreateRequest) -> "go.Figure":
+    chart_type = (payload.chart_type or "scatter").lower().strip()
+    fig = go.Figure()
+
+    # Very light preview: read a limited sample from parquet for each series
+    for item in payload.series:
+        job = await ingestions.get_job(item.job_id)
+        if not job:
+            continue
+
+        object_name = job.get("processed_key") or job.get("storage_key")
+        if not object_name:
+            continue
+
+        minio = get_minio_client()
+        url = minio.presigned_get_object(
+            bucket_name=settings.ingestion_bucket,
+            object_name=object_name,
+            expires=timedelta(hours=2),
+        )
+
+        cols = [c for c in [item.x_axis, item.y_axis, item.z_axis] if c]
+        df = pd.read_parquet(url, columns=list(dict.fromkeys(cols)))
+        if len(df) > 200_000:
+            df = df.sample(n=200_000, random_state=42)
+
+        label = item.label or item.y_axis or "Series"
+
+        if chart_type == "bar":
+            fig.add_bar(name=label, x=df[item.x_axis], y=df[item.y_axis])
+        else:
+            fig.add_scatter(name=label, x=df[item.x_axis], y=df[item.y_axis], mode="lines+markers")
+
+    return fig
+
 
 
 async def _ensure_member(project_id: str, user: CurrentUser):
@@ -267,6 +306,11 @@ async def create_visualization(
     doc = _with_series(await repo.get(viz_id))
     return VisualizationOut(**doc)
 
+@router.post("/preview")
+async def preview_visualization(payload: VisualizationCreateRequest, user: CurrentUser = Depends(get_current_user)):
+    await _ensure_member(payload.project_id, user)
+    fig = await build_preview_figure(payload)
+    return {"figure": fig.to_plotly_json()}
 
 @router.delete("/{viz_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_visualization(viz_id: str, user: CurrentUser = Depends(get_current_user)):

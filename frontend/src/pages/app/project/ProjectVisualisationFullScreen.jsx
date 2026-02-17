@@ -66,45 +66,48 @@ ${plotHtml}
 `;
 
 
-  return (
-    <div style={{
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  background: "#fff"
-}}>
+ return (
+  <div
+    style={{
+      width: "100vw",
+      height: "100vh",
+      padding: 24,
+      boxSizing: "border-box",
+      background: "#f8fafc",
+    }}
+  >
+    {loading && <div style={{ textAlign: "center", paddingTop: 20 }}>Loading…</div>}
 
-      {loading && (
-        <div style={{ textAlign: "center", paddingTop: 20 }}>
-          Loading…
-        </div>
-      )}
+    {error && (
+      <div style={{ textAlign: "center", color: "red", paddingTop: 20 }}>
+        {error}
+      </div>
+    )}
 
-      {error && (
-        <div style={{ textAlign: "center", color: "red", paddingTop: 20 }}>
-          {error}
-        </div>
-      )}
+    {!loading && !error && plotHtml && (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          background: "#fff",
+          borderRadius: 12,
+          boxShadow: "0 6px 24px rgba(0,0,0,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        <iframe
+          title="plot"
+          srcDoc={fullHtml}
+          style={{ width: "100%", height: "100%", border: "none" }}
+        />
+      </div>
+    )}
 
-      {!loading && !error && plotHtml && (
-  <iframe
-  title="plot"
-  srcDoc={fullHtml}
-  style={{ width: "100%", height: "100%", border: "none" }}
-/>
-
-
-
-)}
-
-
-      {!loading && !error && !plotHtml && (
-        <div style={{ textAlign: "center", paddingTop: 20 }}>
-          No visualization returned.
-        </div>
-      )}
-    </div>
-  );
+    {!loading && !error && !plotHtml && (
+      <div style={{ textAlign: "center", paddingTop: 20 }}>
+        No visualization returned.
+      </div>
+    )}
+  </div>
+);
 }

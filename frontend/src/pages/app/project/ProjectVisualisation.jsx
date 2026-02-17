@@ -111,8 +111,6 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [deletingViz, setDeletingViz] = useState(null)
  const [fullScreenViz, setFullScreenViz] = useState(null);
 
-
-
   /* ================= series manager ================= */
   const [seriesList, setSeriesList] = useState([newSeries(1)])
   const [activeSeriesId, setActiveSeriesId] = useState(seriesList[0]?.id)
@@ -144,6 +142,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [calcPreviewRows, setCalcPreviewRows] = useState([])
   const [calcProcessing, setCalcProcessing] = useState(false)
   const [calcError, setCalcError] = useState(null)
+  const [tempVizId, setTempVizId] = useState(null)
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
@@ -442,25 +441,69 @@ const plotOptions =
 //   }
 // };
 
+// const handleSaveVisualization = async () => {
+//   if (!plotHtml) return; // safety check
+//   setLoadingSave(true);
+//   try {
+//     await visualizationApi.save({
+//       project_id: projectId,
+//       html: plotHtml,
+//       series: seriesList,
+//       chart_type: chartType,
+//       name: activeSeries?.label || 'Plot',
+//     });
+//     setStatusMessage('Visualization saved successfully.');
+//     fetchVisualizations(1, true); // refresh saved visualizations list
+//   } catch (err) {
+//     setStatusMessage('Failed to save visualization.');
+//   } finally {
+//     setLoadingSave(false);
+//   }
+// };
+
 const handleSaveVisualization = async () => {
-  if (!plotHtml) return; // safety check
-  setLoadingSave(true);
   try {
-    await visualizationApi.save({
-      project_id: projectId,
-      html: plotHtml,
-      series: seriesList,
-      chart_type: chartType,
-      name: activeSeries?.label || 'Plot',
-    });
-    setStatusMessage('Visualization saved successfully.');
-    fetchVisualizations(1, true); // refresh saved visualizations list
+    setLoadingSave(true)
+
+    await fetchVisualizations(1, true)
+
+    setStatusMessage("Visualization saved successfully ✅")
+
   } catch (err) {
-    setStatusMessage('Failed to save visualization.');
+    console.error(err)
   } finally {
-    setLoadingSave(false);
+    setLoadingSave(false)
   }
+}
+
+const handleFullScreen = (viz) => {
+  if (!viz?.html_url) return;
+
+  const url = viz.html_url.startsWith("http")
+    ? viz.html_url
+    : `${window.__FD_API_BASE__}${viz.html_url}`;
+
+  window.open(url, "_blank", "noopener,noreferrer");
 };
+
+const handleGeneratePlot = async () => {
+  try {
+    setLoading(true)
+
+    const res = await visualizationApi.create(requestPayload)
+
+    setTempVizId(res.viz_id)   // store temporary id
+    pollVisualization(res.viz_id)
+
+    setStatusMessage("Preview ready. Click Save Visualization.")
+
+  } catch (err) {
+    console.error(err)
+    setStatusMessage("Failed to generate plot")
+  } finally {
+    setLoading(false)
+  }
+}
 
 const fetchVisualizations = async (page = 1, reset = false) => {
   if (loadingViz) return
@@ -496,8 +539,6 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setLoadingViz(false)
   }
 }
-
-
 
   /* ================= columns for active series ================= */
   const activeFiles = useMemo(() => {
@@ -950,7 +991,8 @@ requestPayload = {
       }
 
       const res = await visualizationApi.create(requestPayload)
-      pollVisualization(res.viz_id)
+pollVisualization(res.viz_id)
+
     } catch (err) {
       setError(err?.response?.data?.detail || err.message || 'Failed to create visualization')
     } finally {
@@ -958,22 +1000,29 @@ requestPayload = {
     }
   }
 
-  const pollVisualization = async (vizId) => {
-    try {
-      const detail = await visualizationApi.detail(vizId)
-      setActiveViz(detail)
-      setPlotHtml(detail.html || '')
-      setStatusMessage(detail.message || detail.status)
+ const pollVisualization = async (vizId) => {
+  try {
+    const detail = await visualizationApi.detail(vizId)
 
-      if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
-        pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
-      } else {
-        fetchVisualizations(1, true)
-      }
-    } catch (e) {
-      setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
+    setActiveViz(detail)
+    setPlotHtml(detail.html || '')
+
+    if (detail.status === 'SUCCESS') {
+      setStatusMessage("Preview ready. Click Save Visualization.")  // ✅ HERE
+    } else {
+      setStatusMessage(detail.message || detail.status)
     }
+
+    if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
+      pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
+    }
+
+  } catch (e) {
+    setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
   }
+}
+
+
 
   const loadVisualization = async (vizId) => {
     try {
@@ -1608,7 +1657,7 @@ const deleteVisualization = async (vizId) => {
 
   {/* Generate Button */}
   <div className="ps-field">
-    <button type="submit" className="plot-btn" disabled={loading}>
+    <button type="submit"  className="plot-btn" disabled={loading}>
       <img src={ChartLine1} alt="chart" />
       {loading ? 'Generating…' : 'Generate Plot'}
     </button>
@@ -1729,39 +1778,39 @@ const deleteVisualization = async (vizId) => {
 
       {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
       <div className="project-card">
-        <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-          <div>
-            <p className="summarylabel">{statusMessage}</p>
+       <div className="actions-row">
+  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+    <p className="summarylabel">{statusMessage}</p>
 
-            <div className="ps-field">
-  <button
-    type="button"
-    className="project-shell__nav-save"
-    onClick={handleSaveVisualization}
-    disabled={!plotHtml || loadingSave} // only enable after plot is generated
-  >
-    {loadingSave ? 'Saving…' : 'Save Visualization'}
-  </button>
+    <button
+  type="button"
+  className="project-shell__nav-save"
+  onClick={handleSaveVisualization}
+  disabled={!plotHtml || loadingSave}
+>
+  {loadingSave ? 'Saving…' : 'Save Visualization'}
+</button>
+
+  </div>
+
+  {/* meta (kept) */}
+  {plotMeta && (
+    <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
+      <div><b>Chart:</b> {plotMeta.chartType}</div>
+      <div><b>Series:</b> {plotMeta.count}</div>
+      <div style={{ marginTop: 6 }}>
+        {plotMeta.items.map((it, i) => (
+          <div key={i}>• {it.label}</div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {activeViz?.status && (
+    <span className="badge">{activeViz.status.toLowerCase()}</span>
+  )}
 </div>
 
-            {/* meta (kept) */}
-            {plotMeta && (
-              <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
-                <div><b>Chart:</b> {plotMeta.chartType}</div>
-                <div><b>Series:</b> {plotMeta.count}</div>
-                <div style={{ marginTop: 6 }}>
-                  {plotMeta.items.map((it, i) => (
-                    <div key={i}>• {it.label}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {activeViz?.status && (
-            <span className="badge">{activeViz.status.toLowerCase()}</span>
-          )}
-        </div>
 
         <div className="Plot-preview" >
           {plotHtml ? (
@@ -1926,10 +1975,11 @@ const deleteVisualization = async (vizId) => {
                         // </button>
                         <button
   type="button"
-  onClick={() => setFullScreenViz(viz)}
+ onClick={() => handleFullScreen(viz)}
 >
-                          <img className="actionBtn" src={linechart} alt="download" />
-                        </button>
+  <img className="actionBtn" src={linechart} alt="fullscreen" />
+</button>
+
                       )}
 
                       <button 
@@ -2000,7 +2050,7 @@ disabled={deletingViz === viz.viz_id}
 )}     
     </div>
      {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
-    {fullScreenViz && (
+    {/* {fullScreenViz && (
       <div className="fullscreen-overlay">
         <div className="fullscreen-content">
 
@@ -2019,7 +2069,7 @@ disabled={deletingViz === viz.viz_id}
 
         </div>
       </div>
-    )}
+    )} */}
     </div>
   )
   }

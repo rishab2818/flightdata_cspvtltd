@@ -293,13 +293,18 @@ export default function ProjectTagView() {
 
         <td>
           {activeTab === "plot" ? (
-            <button
-              onClick={() =>
-                window.open(`/visualisation/${item.viz_id}`, "_blank")
-              }
-            >
-              👁
-            </button>
+           <button
+  onClick={() =>
+    window.open(
+      `/projects/${projectId}/visualisation/full/${item.viz_id}`,
+      "_blank",
+      "noopener,noreferrer"
+    )
+  }
+>
+  👁
+</button>
+
           ) : (
             <>
               <button onClick={() => handleView(item, activeTab === "processed")}>

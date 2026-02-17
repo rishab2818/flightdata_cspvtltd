@@ -141,6 +141,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
   if (tabName === 'plot') {
     // Open full visualization page for plots
     window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
+   
+
   } else if (tabName === 'processed' && file.processed_key) {
     window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
   } else if (tabName === 'raw') {
@@ -256,8 +258,11 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map(f => (
-                        <tr key={f._id}>
+                    {/* {rows.map(f => (
+                        <tr key={f._id}> */}
+                        {rows.map((f) => (
+  <tr key={tab === "plot" ? f.viz_id : f.job_id}>
+
                             <td style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
                                 <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
   <img
@@ -356,7 +361,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
 
              {confirmDelete.open && (
   <ConfirmationModal
-    title={`Delete "${confirmDelete.file?.filename}"?`}
+    // title={`Delete "${confirmDelete.file?.filename}"?`}
+    title={`Delete "${tab === "plot" ? (confirmDelete.file?.filename || "Visualization") : confirmDelete.file?.filename}"?`}
     description="This action cannot be undone."
     onCancel={() =>
       setConfirmDelete({ open: false, file: null })
