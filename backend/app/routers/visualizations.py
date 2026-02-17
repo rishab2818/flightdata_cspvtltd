@@ -35,6 +35,8 @@ projects = ProjectRepository()
 
 # REQUIRED_VIZ_FIELDS = {"x_axis", "chart_type", "series"}
 REQUIRED_VIZ_FIELDS = {"chart_type", "series"}
+# for the overplot functionality 
+ALLOWED_2D_CARTESIAN = {"scatter","line","bar","scatterline"}
 
 
 def _inject_url(doc: dict | None):
@@ -108,11 +110,14 @@ def _with_series(doc: dict | None):
                 "y_axis": doc.get("y_axis"),
                 "label": doc.get("y_axis"),
                 "filename": doc.get("filename", "dataset"),
+                "chart_type" : doc.get("chart_type", "scatter") # For the per series plot 
+
             }
         ]
 
     for item in doc.get("series", []):
         item.setdefault("label", item.get("y_axis"))
+        item.setdefault("chart_type", doc.get("chart_type","scatter")) # For the perseries 
 
     return doc
 
@@ -184,66 +189,59 @@ async def create_visualization(
         )
 
     requires_z = chart_type in {"contour", "scatter3d", "line3d", "surface"}
-
+    # for the per series 
+    default_chart_type = (payload.chart_type or "scatter").lower().strip()
+    if default_chart_type not in ALLOWED_2D_CARTESIAN:
+        raise HTTPException(
+            status_code= 400,
+            detail=f"Tabular chart_type must be one of: {', '.join(sorted(ALLOWED_2D_CARTESIAN))}",
+        )
     series_docs = []
     for idx, item in enumerate(payload.series, start=1):
         job = await ingestions.get_job(item.job_id)
         if not job or job["project_id"] != payload.project_id:
+            raise HTTPException(status_code=404, detail=f"Dataset not found for series {idx}")
+
+        # ✅ per-series chart type override (fallback to visualization default)
+        s_chart_type = ((item.chart_type or default_chart_type) or "scatter").lower().strip()
+        if s_chart_type not in ALLOWED_2D_CARTESIAN:
             raise HTTPException(
-                status_code=404, detail=f"Dataset not found for series {idx}"
+                status_code=400,
+                detail=f"Series {idx} chart_type '{s_chart_type}' not allowed in Phase-1. "
+                    f"Allowed: {', '.join(sorted(ALLOWED_2D_CARTESIAN))}",
             )
 
-        if requires_z and not item.z_axis:
+        # ✅ Phase-1: z_axis not supported for tabular mixed mode
+        if item.z_axis:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Z axis is required for contour plots (series {idx})",
+                status_code=400,
+                detail=f"Z axis is not supported in Phase-1 mixed-series mode (series {idx})",
             )
 
-        derived_specs: list[dict] = []
-        try:
-            derived_specs = normalize_derived_columns(
-                [d.model_dump() for d in (item.derived_columns or [])]
-            )
-            base_columns = list(job.get("columns") or [])
-            plan = build_formula_plan(
-                base_columns=base_columns,
-                derived_columns=derived_specs,
-                target_columns=[
-                    item.x_axis,
-                    item.y_axis,
-                    item.z_axis if requires_z else None,
-                ],
-            )
-            available_cols = set(base_columns) | set(plan.derived_names)
+        if job.get("columns"):
             missing = [
                 col
-                for col in [item.x_axis, item.y_axis, item.z_axis if requires_z else None]
-                if col and col not in available_cols
+                for col in [item.x_axis, item.y_axis]
+                if col and col not in job["columns"]
             ]
             if missing:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail=f"Columns not found in dataset for series {idx}: {', '.join(missing)}",
                 )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid derived column definition for series {idx}: {exc}",
-            ) from exc
-            
-        _validate_log_scale_against_ingestion_stats(job, item.x_axis, item.y_axis, item.x_scale, item.y_scale)
 
+        _validate_log_scale_against_ingestion_stats(job, item.x_axis, item.y_axis, item.x_scale, item.y_scale)
 
         series_docs.append(
             {
                 "job_id": item.job_id,
                 "x_axis": item.x_axis,
                 "y_axis": item.y_axis,
-                "z_axis": item.z_axis,
-                "x_scale":item.x_scale,
-                "y_scale" : item.y_scale,
+                "z_axis": None,
+                "x_scale": item.x_scale,
+                "y_scale": item.y_scale,
+                "chart_type": s_chart_type,  # ✅ NEW
                 "label": item.label or item.y_axis,
-                "derived_columns": derived_specs,
                 "filename": job.get("filename", "dataset"),
             }
         )

@@ -24,6 +24,9 @@ class VisualizationSeriesInput(BaseModel):
     label: Optional[str] = Field(None, description="Optional legend label override")
     derived_columns: list[DerivedColumnInput] = Field(default_factory=list)
 
+    # for the per series plot (2D only rest we will not allow )
+    chart_type: Optional[str] = Field(None,description="Optional per-series chart type override ")
+
     # Extra Inputs for the log and semi log function 
     x_scale : AxisScale = Field("linear" , description ="X Axis scale : linear /log")
     y_scale : AxisScale = Field("linear",description ="Y axis scale :linear/log")

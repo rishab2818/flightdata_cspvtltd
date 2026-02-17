@@ -478,21 +478,59 @@ def _build_contour_grid(
 
 
 
+
+
 def _build_figure(series_frames: list[dict], chart_type: str):
+    """
+    Updated for Phase-1:
+    - Supports per-series chart_type (series["chart_type"]) with fallback to visualization chart_type.
+    - If "mixed mode" is detected (series overrides exist), restrict to ONE family: 2D Cartesian only.
+      Allowed in mixed mode: scatter, line, bar, scatterline
+    - If NOT mixed mode (i.e., no overrides), behavior remains same as before (all chart types supported).
+    """
     chart_type = (chart_type or "scatter").lower().strip()
     fig = go.Figure()
-    # for the log log and semi log 
+
+    # Phase-1 allowed family (2D Cartesian) for mixed per-series chart types
+    ALLOWED_2D_MIXED = {"scatter", "line", "bar", "scatterline"}
+
+    # Detect "mixed mode": any series explicitly specifies chart_type (even if same as global)
+    # You can tighten this if you only want mixed_mode when it differs from global.
+    mixed_mode = any(
+        (item.get("series", {}) or {}).get("chart_type") not in (None, "")
+        for item in series_frames
+    )
+
+    # for the log log and semi log
     requested_x_scales = set()
     requested_y_scales = set()
+
+    # keep last seen cols for best-effort titles (contour used to do this)
+    last_x_col = None
+    last_y_col = None
+
     for item in series_frames:
         series = item["series"]
-        requested_x_scales.add(series.get("x_scale" , "linear"))
-        requested_y_scales.add(series.get("y_scale","linear"))
+        requested_x_scales.add(series.get("x_scale", "linear"))
+        requested_y_scales.add(series.get("y_scale", "linear"))
         df = item["frame"]
 
         label = series.get("label") or series.get("y_axis") or "Series"
         x_col = series.get("x_axis")
         y_col = series.get("y_axis")
+
+        last_x_col = x_col or last_x_col
+        last_y_col = y_col or last_y_col
+
+        # ✅ per-series chart type override (fallback to global chart_type)
+        series_type = (series.get("chart_type") or chart_type or "scatter").lower().strip()
+
+        # ✅ Phase-1 restriction applies ONLY when mixed_mode is true
+        if mixed_mode and series_type not in ALLOWED_2D_MIXED:
+            raise ValueError(
+                f"Phase-1 mixed-series supports only {sorted(ALLOWED_2D_MIXED)}. "
+                f"Got chart_type='{series_type}' for series '{label}'."
+            )
 
         # For safety: avoid category axes when numeric
         if x_col in df.columns:
@@ -500,28 +538,27 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         if y_col in df.columns:
             df[y_col] = pd.to_numeric(df[y_col], errors="ignore")
 
-        if chart_type == "bar":
+        # ✅ Switch on series_type (not global chart_type)
+        if series_type == "bar":
             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
 
-        elif chart_type == "line":
-            # Scattergl is faster even for lines in many cases
+        elif series_type == "line":
             fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="lines"))
 
-        elif chart_type == "scatter":
+        elif series_type == "scatter":
             fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers", opacity=0.8))
 
-        elif chart_type == "scatterline":
+        elif series_type == "scatterline":
             fig.add_trace(
                 go.Scattergl(
                     name=label,
                     x=df[x_col],
                     y=df[y_col],
                     mode="markers+lines",
-                    
                 )
             )
 
-        elif chart_type == "polar":
+        elif series_type == "polar":
             fig.add_trace(
                 go.Scatterpolar(
                     name=label,
@@ -531,7 +568,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 )
             )
 
-        elif chart_type == "contour":
+        elif series_type == "contour":
             z_col = series.get("z_axis")
             grid = _build_contour_grid(df, x_col, y_col, z_col) if z_col else None
             if grid:
@@ -545,7 +582,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                         line=dict(width=1),
                         showscale=True,
                         name=label,
-                        colorscale='Electric'
+                        colorscale="Electric",
                     )
                 )
             else:
@@ -560,32 +597,28 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                     )
                 )
 
-        elif chart_type == "histogram":
+        elif series_type == "histogram":
             fig.add_trace(go.Histogram(name=label, x=df[y_col], opacity=0.75))
 
-        elif chart_type == "box":
+        elif series_type == "box":
             fig.add_trace(go.Box(name=label, y=df[y_col], boxpoints="outliers"))
 
-        ## For the 3d plot 
-        elif chart_type == "scatter3d":
+        # --- 3D plots ---
+        elif series_type == "scatter3d":
             z_col = series.get("z_axis")
 
-            # ---- Validate axes ----
             if not x_col or not y_col or not z_col:
                 raise ValueError("3D Scatter requires X, Y, and Z axes")
 
             for col in (x_col, y_col, z_col):
                 if col not in df.columns:
                     raise ValueError(f"Column '{col}' not found in data")
-
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
             tmp = df[[x_col, y_col, z_col]].dropna()
-
             if tmp.empty:
                 raise ValueError("No valid numeric data available for 3D scatter")
 
-            # ---- Performance guard (LOD) ----
             MAX_POINTS = 200_000
             if len(tmp) > MAX_POINTS:
                 tmp = tmp.sample(MAX_POINTS, random_state=42)
@@ -597,10 +630,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                     z=tmp[z_col],
                     mode="markers",
                     name=label,
-                    marker=dict(
-                        size=3,
-                        opacity=0.7,
-                    ),
+                    marker=dict(size=3, opacity=0.7),
                 )
             )
 
@@ -617,10 +647,8 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             scene_camera=dict(eye=dict(x=1.1, y=1.1, z=0.7))
             )
 
-        elif chart_type == "surface":
+        elif series_type == "surface":
             z_col = series.get("z_axis")
-
-            # validate axes
             if not x_col or not y_col or not z_col:
                 raise ValueError("Surface requires X, Y, and Z axes")
 
@@ -633,7 +661,6 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             if tmp.empty:
                 raise ValueError("No valid numeric data available for Surface")
 
-            # Build grid (IMPORTANT)
             x_vals = np.sort(tmp[x_col].unique())
             y_vals = np.sort(tmp[y_col].unique())
 
@@ -643,21 +670,10 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 .to_numpy()
             )
 
-            # Optional: handle missing grid cells
             if np.isnan(Z).any():
-                # simplest: fill gaps (or raise error if you want strict grids)
                 Z = pd.DataFrame(Z).interpolate(axis=0).interpolate(axis=1).to_numpy()
 
-            fig.add_trace(
-                go.Surface(
-                    x=x_vals,      # 1D
-                    y=y_vals,      # 1D
-                    z=Z,           # 2D matrix
-                    name=label,
-                    showscale=True,
-                    
-                )
-            )
+            fig.add_trace(go.Surface(x=x_vals, y=y_vals, z=Z, name=label, showscale=True))
 
             fig.update_layout(
             autosize=True,
@@ -674,7 +690,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         )
 
 
-        elif chart_type == "line3d":
+        elif series_type == "line3d":
             z_col = series.get("z_axis")
 
             if not x_col or not y_col or not z_col:
@@ -686,11 +702,9 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
             tmp = df[[x_col, y_col, z_col]].dropna()
-
             if tmp.empty:
                 raise ValueError("No valid numeric data for 3D line")
 
-            # IMPORTANT: sort so the line connects meaningfully
             tmp = tmp.sort_values(by=[x_col])
 
             fig.add_trace(
@@ -698,7 +712,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                     x=tmp[x_col],
                     y=tmp[y_col],
                     z=tmp[z_col],
-                    mode="lines",     # 👈 this is the key difference
+                    mode="lines",
                     name=label,
                     line=dict(width=3),
                 )
@@ -730,7 +744,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 )
             )
 
-        elif chart_type == "heatmap":
+        elif series_type == "heatmap":
             fig.add_trace(
                 go.Histogram2d(
                     name=label,
@@ -743,17 +757,27 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
 
         else:
-            fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8))
-    
-    # for the log log and semi log 
-    if(len(requested_x_scales) >1 or len(requested_y_scales)>1):
+            fig.add_trace(
+                go.Scattergl(
+                    name=label,
+                    x=df[x_col],
+                    y=df[y_col],
+                    mode="markers+lines",
+                    opacity=0.8,
+                )
+            )
+
+    # for the log log and semi log
+    if len(requested_x_scales) > 1 or len(requested_y_scales) > 1:
         raise ValueError("All series must use the same x_scale /y_scale (linear/log) .")
-    
+
     x_scale = next(iter(requested_x_scales)) if requested_x_scales else "linear"
     y_scale = next(iter(requested_y_scales)) if requested_y_scales else "linear"
 
-    fig.update_xaxes(type=x_scale)
-    fig.update_yaxes(type=y_scale)
+    # Plotly expects "linear" or "log"
+    fig.update_xaxes(type=("log" if x_scale == "log" else "linear"))
+    fig.update_yaxes(type=("log" if y_scale == "log" else "linear"))
+
     if x_scale == "log":
         fig.update_xaxes(dtick=1, exponentformat="power", showexponent="all")
     if y_scale == "log":
@@ -776,7 +800,8 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             legend_title_text="Series",
         )
 
-    if chart_type == "polar":
+    # keep your special layout tweaks (only meaningful in non-mixed mode if polar/contour used)
+    if not mixed_mode and chart_type == "polar":
         fig.update_layout(
             polar=dict(
                 radialaxis=dict(showgrid=True),
@@ -784,12 +809,14 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             )
         )
 
-    if chart_type == "contour":
-        # best-effort titles (from last series)
-        fig.update_layout(xaxis_title=x_col, yaxis_title=y_col)
-        
+    if not mixed_mode and chart_type == "contour":
+        fig.update_layout(xaxis_title=last_x_col, yaxis_title=last_y_col)
 
     return fig
+
+    
+
+
 
 
 def _build_mat_figure(
@@ -882,7 +909,15 @@ def _build_zoom_loader_script(
         2) window.parent.__FD_API_BASE__ (from React), else
         3) http://localhost:8000 (fallback)
     """
-    if chart_type not in {"scatter", "scatterline", "line", "bar"}:
+    # if chart_type not in {"scatter", "scatterline", "line", "bar"}:
+    #     return ""
+    
+    tile_capable = any(
+        (m.get("chart_type") or "").lower().strip() in {"scatter" ,"scatterline","line","bar"}
+        for m in (series_meta or [])
+
+    )
+    if not tile_capable:
         return ""
 
     payload = {
@@ -1294,6 +1329,8 @@ def generate_visualization(self, viz_id: str):
                 derived_columns=derived_specs,
                 target_columns=[x_axis, y_axis, z_axis],
             )
+            # for the per series chart 
+            series_chart_type = (series.get("chart_type") or chart_type or "scatter").lower().strip()
 
             # Prefer processed parquet (best for /raw endpoint too)
             if job.get("processed_key"):
@@ -1311,16 +1348,23 @@ def generate_visualization(self, viz_id: str):
                 )
                 ext = os.path.splitext(job.get("filename", "").lower())[-1]
 
-            series_meta_for_js.append(
-                {
-                    "x_axis": x_axis,
-                    "y_axis": y_axis,
-                    "z_axis": z_axis,
-                    "derived_columns": formula_plan.derived_columns,
-                }
-            )
+            # series_meta_for_js.append(
+            #     {
+            #         "x_axis": x_axis,
+            #         "y_axis": y_axis,
+            #         "z_axis": z_axis,
+            #         "derived_columns": formula_plan.derived_columns,
+            #     }
+            # )
+            series_meta_for_js.append({
+                "x_axis": x_axis,
+                "y_axis": y_axis,
+                "z_axis": z_axis,
+                "chart_type": series_chart_type,  # ✅ NEW
+            })
+
 #
-            if chart_type in TILED_TYPES:
+            if series_chart_type in TILED_TYPES:
                 _set_status(redis, viz_id, states.STARTED, 30, f"Profiling series {idx}")
                 base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
 
@@ -1355,7 +1399,7 @@ def generate_visualization(self, viz_id: str):
                 _set_status(redis, viz_id, states.STARTED, 30, f"Sampling points for series {idx}")
 
                 # Use XYZ sampling for contour and 3D/surface charts; XY sampling otherwise
-                if chart_type in {"contour", "scatter3d", "line3d", "surface"}:
+                if series_chart_type in {"contour", "scatter3d", "line3d", "surface"}:
                     raw_df = _sample_xyz(
                         data_url,
                         ext,

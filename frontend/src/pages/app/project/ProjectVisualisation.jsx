@@ -42,7 +42,7 @@ const CHART_TYPES = [
 ]
 
 const plotTypes2D = [
-   { value: 'scatter', label: 'Scatter' },
+  { value: 'scatter', label: 'Scatter' },
   { value: 'line', label: 'Line' },
   { value: 'bar', label: 'Bar' },
   // Add plaor 
@@ -55,12 +55,19 @@ const plotTypes2D = [
   { value: 'scatterline', label: 'Scatter Line' },
 ]
 
-const plotTypes3D =[
+const plotTypes3D = [
   { value: 'scatter3d', label: '3D Scatter' },
   { value: 'line3d', label: '3D Line' },
   { value: 'surface', label: '3D Surface' },
 
 ]
+const OVERPLOT_CARTESIAN_TYPES = [
+  { value: 'scatter', label: 'Scatter' },
+  { value: 'line', label: 'Line' },
+  { value: 'bar', label: 'Bar' },
+  { value: 'scatterline', label: 'Scatter Line' },
+]
+
 
 const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
 window.__FD_API_BASE__ = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -72,6 +79,23 @@ const getExt = (name = '') => {
 
 const isMatFileName = (name = '') => getExt(name) === '.mat'
 
+// const newSeries = (n = 1) => ({
+//   id: `s-${Date.now()}-${n}`,
+//   enabled: true,
+
+//   datasetType: 'wind',
+//   tag: '',
+//   jobId: '',
+//   xAxis: '',
+//   yAxis: '',
+//   zAxis: '',
+//   label: '',
+//   matVar: '',
+//   matXDim: 0,
+//   matYDim: 1,
+//   matFilters: {},
+//   derivedColumns: [],
+// })
 const newSeries = (n = 1) => ({
   id: `s-${Date.now()}-${n}`,
   enabled: true,
@@ -83,12 +107,16 @@ const newSeries = (n = 1) => ({
   yAxis: '',
   zAxis: '',
   label: '',
+
+  // ✅ NEW: per-series chart type override (Phase-1)
+  seriesChartType: '',
+
   matVar: '',
   matXDim: 0,
   matYDim: 1,
   matFilters: {},
-  derivedColumns: [],
 })
+
 
 export default function ProjectVisualisation() {
   useEffect(() => {
@@ -99,14 +127,14 @@ export default function ProjectVisualisation() {
   const { project } = useOutletContext()
 
   const [confirmDelete, setConfirmDelete] = useState({
-  open: false,
-  vizId: null,
-})
+    open: false,
+    vizId: null,
+  })
 
-const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
-  open: false,
-  seriesId: null,
-});
+  const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
+    open: false,
+    seriesId: null,
+  });
 
   const [deletingViz, setDeletingViz] = useState(null)
  const [fullScreenViz, setFullScreenViz] = useState(null);
@@ -171,10 +199,10 @@ const [loadingSave, setLoadingSave] = useState(false);
   )
 
   const [dimension, setDimension] = useState('2d')
-// const [plotType, setPlotType] = useState('')
+  // const [plotType, setPlotType] = useState('')
 
-const plotOptions =
-  dimension === '2d' ? plotTypes2D : plotTypes3D
+  const plotOptions =
+    dimension === '2d' ? plotTypes2D : plotTypes3D
 
 
   // keep activeSeriesId always valid
@@ -259,7 +287,7 @@ const plotOptions =
   const jobsById = useMemo(() => {
     const map = {}
     Object.values(filesByDatasetTag).forEach((list) => {
-      ;(list || []).forEach((job) => {
+      ; (list || []).forEach((job) => {
         if (job?.job_id) map[job.job_id] = job
       })
     })
@@ -409,93 +437,38 @@ const plotOptions =
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [projectId])
 
-// const fetchVisualizations = async (page = 1, reset = false) => {
-//   if (loadingViz) return;
+  const fetchVisualizations = async (page = 1, reset = false) => {
+    if (loadingViz) return;
 
-//   setLoadingViz(true);
-//   try {
-//     const res = await visualizationApi.listForProject(projectId, {
-//       page,
-//       limit: PAGE_SIZE,
-//     });
+    setLoadingViz(true);
+    try {
+      const res = await visualizationApi.listForProject(projectId, {
+        page,
+        limit: PAGE_SIZE,
+      });
 
-//     const list = res || [];
+      const list = res || [];
 
-//     setVisualizations((prev) =>
-//       reset ? list : [...prev, ...list]
-//     );
+      setVisualizations((prev) =>
+        reset ? list : [...prev, ...list]
+      );
 
-//     // ✅ ONLY update hasMore when loading next page
-//     if (!reset) {
-//       setHasMoreViz(list.length >= PAGE_SIZE);
-//     }
+      // ✅ ONLY update hasMore when loading next page
+      if (!reset) {
+        setHasMoreViz(list.length >= PAGE_SIZE);
+      }
 
-//     setVizPage(page);
-//   } catch (e) {
-//     setError(
-//       e?.response?.data?.detail ||
-//       e.message ||
-//       'Failed to load visualizations'
-//     );
-//   } finally {
-//     setLoadingViz(false);
-//   }
-// };
-
-const handleSaveVisualization = async () => {
-  if (!plotHtml) return; // safety check
-  setLoadingSave(true);
-  try {
-    await visualizationApi.save({
-      project_id: projectId,
-      html: plotHtml,
-      series: seriesList,
-      chart_type: chartType,
-      name: activeSeries?.label || 'Plot',
-    });
-    setStatusMessage('Visualization saved successfully.');
-    fetchVisualizations(1, true); // refresh saved visualizations list
-  } catch (err) {
-    setStatusMessage('Failed to save visualization.');
-  } finally {
-    setLoadingSave(false);
-  }
-};
-
-const fetchVisualizations = async (page = 1, reset = false) => {
-  if (loadingViz) return
-
-  setLoadingViz(true)
-
-  try {
-    const res = await visualizationApi.listForProject(projectId, {
-      page,
-      limit: PAGE_SIZE,
-    })
-
-    console.log("LIST API RESPONSE:", res)
-
-    const list = Array.isArray(res)
-      ? res
-      : res?.items || res?.data || []
-
-    setVisualizations(prev =>
-      reset ? list : [...prev, ...list]
-    )
-
-    setHasMoreViz(list.length >= PAGE_SIZE)
-    setVizPage(page)
-
-  } catch (e) {
-    setError(
-      e?.response?.data?.detail ||
-      e.message ||
-      'Failed to load visualizations'
-    )
-  } finally {
-    setLoadingViz(false)
-  }
-}
+      setVizPage(page);
+    } catch (e) {
+      setError(
+        e?.response?.data?.detail ||
+        e.message ||
+        'Failed to load visualizations'
+      );
+    } finally {
+      setLoadingViz(false);
+    }
+  };
 
 
 
@@ -908,9 +881,12 @@ const fetchVisualizations = async (page = 1, reset = false) => {
               job_id: s.jobId,
               x_axis: s.xAxis,
               y_axis: s.yAxis,
-              z_axis: requiresZ ? s.zAxis : undefined,
+              // z_axis: requiresZ ? s.zAxis : undefined,
+              z_axis: undefined,
               x_scale: xScale,
               y_scale: yScale,
+              // For the per series plot 
+              chart_type: (s.seriesChartType || '').trim() || undefined,
               label: (s.label || '').trim() || buildAutoLabel(s),
               derived_columns: derivedColumns,
             }
@@ -1002,31 +978,31 @@ requestPayload = {
   //     setError(e?.response?.data?.detail || e.message || 'Failed to delete visualization')
   //   }
   // }
-const deleteVisualization = async (vizId) => {
-  setDeletingViz(vizId)
-  try {
-    await visualizationApi.remove(vizId)
+  const deleteVisualization = async (vizId) => {
+    setDeletingViz(vizId)
+    try {
+      await visualizationApi.remove(vizId)
 
-    setVisualizations((prev) =>
-      prev.filter((v) => v.viz_id !== vizId)
-    )
+      setVisualizations((prev) =>
+        prev.filter((v) => v.viz_id !== vizId)
+      )
 
-    if (activeViz?.viz_id === vizId) {
-      setActiveViz(null)
-      setPlotHtml('')
-      setStatusMessage('Select data to begin')
+      if (activeViz?.viz_id === vizId) {
+        setActiveViz(null)
+        setPlotHtml('')
+        setStatusMessage('Select data to begin')
+      }
+    } catch (e) {
+      setError(
+        e?.response?.data?.detail ||
+        e.message ||
+        'Failed to delete visualization'
+      )
+    } finally {
+      setDeletingViz(null)
+      setConfirmDelete({ open: false, tagName: null })
     }
-  } catch (e) {
-    setError(
-      e?.response?.data?.detail ||
-      e.message ||
-      'Failed to delete visualization'
-    )
-  } finally {
-    setDeletingViz(null)
-    setConfirmDelete({ open: false, tagName: null })
   }
-}
 
   /* =============
   
@@ -1298,151 +1274,151 @@ const deleteVisualization = async (vizId) => {
 
       {visualSectionTab === 'visualize' && (
         <>
-      {/* ================= TOP: SETTINGS (old UI classes) ================= */}
-      <form onSubmit={handleSubmit} className="plot-settings">
-        <div className="tableHeader">Plot Setting</div>
+          {/* ================= TOP: SETTINGS (old UI classes) ================= */}
+          <form onSubmit={handleSubmit} className="plot-settings">
+            <div className="tableHeader">Plot Setting</div>
 
-        {error && (
-          <div className="project-shell__error" style={{ marginBottom: 10 }}>
-            {error}
-          </div>
-        )}
-
-
-        {/* ===== Editor (aligned with old UI grid) ===== */}
-        <div className="ps-row">
-          <div className="ps-field">
-            <label>Dataset</label>
-            <select
-              value={activeSeries?.datasetType || 'wind'}
-              onChange={(e) =>
-                updateActiveSeries({
-                  datasetType: e.target.value,
-                  tag: '',
-                  jobId: '',
-                  xAxis: '',
-                  yAxis: '',
-                  zAxis: '',
-                  matVar: '',
-                  matXDim: 0,
-                  matYDim: 1,
-                  matFilters: {},
-                  derivedColumns: [],
-                })
-              }
-            >
-              {DATASET_TYPES.map((d) => (
-                <option key={d.key} value={d.key}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="ps-field">
-            <label>Tag</label>
-            <select
-              value={activeSeries?.tag || ''}
-              onChange={(e) =>
-                updateActiveSeries({
-                  tag: e.target.value,
-                  jobId: '',
-                  xAxis: '',
-                  yAxis: '',
-                  zAxis: '',
-                  matVar: '',
-                  matXDim: 0,
-                  matYDim: 1,
-                  matFilters: {},
-                  derivedColumns: [],
-                })
-              }
-            >
-              <option value="">Select</option>
-              {getTags(activeSeries?.datasetType).map((t) => (
-                <option key={t.tag_name} value={t.tag_name}>
-                  {t.tag_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="ps-field">
-            <label>File</label>
-            <select 
-              value={activeSeries?.jobId || ''}
-              onChange={(e) =>
-                updateActiveSeries({
-                  jobId: e.target.value,
-                  xAxis: '',
-                  yAxis: '',
-                  zAxis: '',
-                  matVar: '',
-                  matXDim: 0,
-                  matYDim: 1,
-                  matFilters: {},
-                  derivedColumns: [],
-                })
-              }
-              disabled={!activeSeries?.tag}
-            >
-              <option className="FileSelect" value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
-              {activeFiles.map((f) => (
-                <option  className="FileSelect" key={f.job_id} value={f.job_id}>
-                  {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
-                </option>
-              ))}
-            </select>
-          </div>
+            {error && (
+              <div className="project-shell__error" style={{ marginBottom: 10 }}>
+                {error}
+              </div>
+            )}
 
 
-            <div className="ps-field">
-            <label>Plot Type</label>
-            <select
-    value={dimension}
-    onChange={(e) => {
-      setDimension(e.target.value)
-    }}
-    disabled={activeIsMat}
-  >
-    <option value="2d">2D</option>
-    <option value="3d">3D</option>
-  </select>
-          </div>
+            {/* ===== Editor (aligned with old UI grid) ===== */}
+            <div className="ps-row">
+              <div className="ps-field">
+                <label>Dataset</label>
+                <select
+                  value={activeSeries?.datasetType || 'wind'}
+                  onChange={(e) =>
+                    updateActiveSeries({
+                      datasetType: e.target.value,
+                      tag: '',
+                      jobId: '',
+                      xAxis: '',
+                      yAxis: '',
+                      zAxis: '',
+                      matVar: '',
+                      matXDim: 0,
+                      matYDim: 1,
+                      matFilters: {},
+                      derivedColumns: [],
+                    })
+                  }
+                >
+                  {DATASET_TYPES.map((d) => (
+                    <option key={d.key} value={d.key}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-      <div className="ps-field">
-  <label>Chart Type</label>
-  <select
-    value={chartType}
-    onChange={(e) => setChartType(e.target.value)}
-  >
-    <option value="">Select Chart Type</option>
-    {activeChartOptions.map((item) => (
-      <option key={item.value} value={item.value}>
-        {item.label}
-      </option>
-    ))}
-  </select>
-</div>
+              <div className="ps-field">
+                <label>Tag</label>
+                <select
+                  value={activeSeries?.tag || ''}
+                  onChange={(e) =>
+                    updateActiveSeries({
+                      tag: e.target.value,
+                      jobId: '',
+                      xAxis: '',
+                      yAxis: '',
+                      zAxis: '',
+                      matVar: '',
+                      matXDim: 0,
+                      matYDim: 1,
+                      matFilters: {},
+                      derivedColumns: [],
+                    })
+                  }
+                >
+                  <option value="">Select</option>
+                  {getTags(activeSeries?.datasetType).map((t) => (
+                    <option key={t.tag_name} value={t.tag_name}>
+                      {t.tag_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="ps-field">
+                <label>File</label>
+                <select
+                  value={activeSeries?.jobId || ''}
+                  onChange={(e) =>
+                    updateActiveSeries({
+                      jobId: e.target.value,
+                      xAxis: '',
+                      yAxis: '',
+                      zAxis: '',
+                      matVar: '',
+                      matXDim: 0,
+                      matYDim: 1,
+                      matFilters: {},
+                      derivedColumns: [],
+                    })
+                  }
+                  disabled={!activeSeries?.tag}
+                >
+                  <option className="FileSelect" value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
+                  {activeFiles.map((f) => (
+                    <option className="FileSelect" key={f.job_id} value={f.job_id}>
+                      {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
 
-<div className="ps-field">
-  <label>X Scale</label>
-  <select value={xScale} onChange={(e) => setXScale(e.target.value)} disabled={activeIsMat}>
-    <option value="linear">Linear</option>
-    <option value="log">Log</option>
-  </select>
-</div>
+              <div className="ps-field">
+                <label>Plot Type</label>
+                <select
+                  value={dimension}
+                  onChange={(e) => {
+                    setDimension(e.target.value)
+                  }}
+                  disabled={activeIsMat}
+                >
+                  <option value="2d">2D</option>
+                  <option value="3d">3D</option>
+                </select>
+              </div>
 
-<div className="ps-field">
-  <label>Y Scale</label>
-  <select value={yScale} onChange={(e) => setYScale(e.target.value)} disabled={activeIsMat}>
-    <option value="linear">Linear</option>
-    <option value="log">Log</option>
-  </select>
-</div>
+              <div className="ps-field">
+                <label>Chart Type</label>
+                <select
+                  value={chartType}
+                  onChange={(e) => setChartType(e.target.value)}
+                >
+                  <option value="">Select Chart Type</option>
+                  {activeChartOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-           {/* <div className="ps-field">
+
+              <div className="ps-field">
+                <label>X Scale</label>
+                <select value={xScale} onChange={(e) => setXScale(e.target.value)} disabled={activeIsMat}>
+                  <option value="linear">Linear</option>
+                  <option value="log">Log</option>
+                </select>
+              </div>
+
+              <div className="ps-field">
+                <label>Y Scale</label>
+                <select value={yScale} onChange={(e) => setYScale(e.target.value)} disabled={activeIsMat}>
+                  <option value="linear">Linear</option>
+                  <option value="log">Log</option>
+                </select>
+              </div>
+
+              {/* <div className="ps-field">
             <label>Chart Type</label>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
               {CHART_TYPES.map((c) => (
@@ -1452,280 +1428,296 @@ const deleteVisualization = async (vizId) => {
               ))}
             </select>
           </div>  */}
-         
-        </div>
 
-         <div
-  className="ps-row"
-  style={{
-    display: 'grid',
-    gap: '14px',
-    marginBottom: '14px',
-    gridTemplateColumns:
-      chartType === 'contour' || dimension === '3d'
-        ? 'repeat(7, minmax(0, 1fr))'
-        : 'repeat(7, minmax(0, 1fr))',
-  }}
->
-  {!activeIsMat && (
-    <>
-      <div className="ps-field">
-        <label>X Axis</label>
-        <select
-          value={activeSeries?.xAxis || ''}
-          onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
-          disabled={!activeSeries?.jobId}
-        >
-          <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-          {activeAxisColumns.map((col) => (
-            <option key={col} value={col}>{col}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="ps-field">
-        <label>Y Axis</label>
-        <select
-          value={activeSeries?.yAxis || ''}
-          onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
-          disabled={!activeSeries?.jobId}
-        >
-          <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-          {activeAxisColumns.map((col) => (
-            <option key={col} value={col}>{col}</option>
-          ))}
-        </select>
-      </div>
-
-      {requiresZ && (
-        <div className="ps-field">
-          <label>Z Axis</label>
-          <select
-            value={activeSeries?.zAxis || ''}
-            onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
-            disabled={!activeSeries?.jobId}
-          >
-            <option value="">Select</option>
-            {activeAxisColumns.map((col) => (
-              <option key={col} value={col}>{col}</option>
-            ))}
-          </select>
-        </div>
-      )}
-    </>
-  )}
-
-  {activeIsMat && (
-    <>
-      <div className="ps-field">
-        <label>MAT Variable</label>
-        <select
-          value={activeSeries?.matVar || activeMatVar?.name || ''}
-          onChange={(e) =>
-            updateActiveSeries({
-              matVar: e.target.value,
-              matFilters: {},
-            })
-          }
-          disabled={!activeSeries?.jobId || !activeMatVars.length}
-        >
-          <option value="">{activeSeries?.jobId ? 'Select variable' : 'Select file first'}</option>
-          {activeMatVars.map((v) => (
-            <option key={v.name} value={v.name}>
-              {v.name} ({Array.isArray(v.shape) ? v.shape.join('×') : ''})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="ps-field">
-        <label>X Dimension</label>
-        <select
-          value={String(activeSeries?.matXDim ?? '')}
-          onChange={(e) => updateActiveSeries({ matXDim: Number(e.target.value) })}
-          disabled={!activeMatVar}
-        >
-          {Array.from({ length: Number(activeMatVar?.ndim || 0) }, (_, dim) => (
-            <option key={`mat-x-${dim}`} value={dim}>
-              {`Dim ${dim}${getMatCoordGuess(activeMatVar, dim) ? ` (${getMatCoordGuess(activeMatVar, dim)})` : ''}`}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {matNeeds2D && (
-        <div className="ps-field">
-          <label>Y Dimension</label>
-          <select
-            value={String(activeSeries?.matYDim ?? '')}
-            onChange={(e) => updateActiveSeries({ matYDim: Number(e.target.value) })}
-            disabled={!activeMatVar}
-          >
-            {Array.from({ length: Number(activeMatVar?.ndim || 0) }, (_, dim) => (
-              <option key={`mat-y-${dim}`} value={dim} disabled={dim === Number(activeSeries?.matXDim)}>
-                {`Dim ${dim}${getMatCoordGuess(activeMatVar, dim) ? ` (${getMatCoordGuess(activeMatVar, dim)})` : ''}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {matRemainingDims.map((dim) => {
-        const maxIdx = Math.max(0, Number(activeMatVar?.shape?.[dim] || 1) - 1)
-        const label = getMatCoordGuess(activeMatVar, dim) || `Dim ${dim}`
-        return (
-          <div className="ps-field" key={`mat-filter-${dim}`}>
-            <label>{`${label} filter`}</label>
-            <input
-              type="number"
-              min={0}
-              max={maxIdx}
-              value={Number(activeSeries?.matFilters?.[dim] ?? 0)}
-              onChange={(e) =>
-                updateActiveSeries({
-                  matFilters: {
-                    ...(activeSeries?.matFilters || {}),
-                    [dim]: Number(e.target.value || 0),
-                  },
-                })
-              }
-            />
-          </div>
-        )
-      })}
-    </>
-  )}
-
-  {/* Plot Name */}
-  <div className="ps-field">
-    <label>Plot Name (Optional)</label>
-    <input
-      placeholder="Defaults to Dataset | X → Y"
-      value={activeSeries?.label || ''}
-      onChange={(e) => updateActiveSeries({ label: e.target.value })}
-    />
-  </div>
-
-  {/* Generate Button */}
-  <div className="ps-field">
-    <button type="submit" className="plot-btn" disabled={loading}>
-      <img src={ChartLine1} alt="chart" />
-      {loading ? 'Generating…' : 'Generate Plot'}
-    </button>
-  </div>
-</div>
-
-        {/* ===== Series Manager (KEPT) ===== */}
-        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-          <div className="ps-field" style={{ gridColumn: 'span 4' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <label style={{fontSize: "16px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica", marginBottom: 0 }}>Plot ({seriesList.length})</label>
-
-              <button
-                type="button"
-                className="project-shell__nav-link"
-                onClick={addSeriesSlot}
-                style={{ height: 36, padding: '0 12px' }}
-              >
-                + Over Plot
-              </button>
             </div>
 
-            {/* series chips list */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
-              {seriesList.map((s, idx) => {
-                const active = s.id === activeSeriesId
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => setActiveSeriesId(s.id)}
-                    style={{
-                      border: active ? '2px solid #1976D2' : '1px solid #00000026',
-                      // background: active ? '#eef6ff' : '#fff',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      cursor: 'pointer',
-                      minWidth: 220,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                      <div style={{ fontSize: "14px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica" }}>Plot {idx + 1}</div>
-
-                      <label className="toggle" style={{ margin: 0 }}>
-                        <input
-                          type="checkbox"
-                          checked={!!s.enabled}
-                          onChange={(e) => setSeriesEnabled(s.id, e.target.checked)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="slider" />
-                        <span className="toggle-text">{s.enabled ? 'ON' : 'OFF'}</span>
-                      </label>
-                    </div>
-
-                    <div  style={{ fontSize:"12px",fontWeight:"400",fontFamily:"inter-Regular,Helvetica",marginTop: 8, alignItems: 'flex-start' }}>
-                      {seriesSummary(s)}
-                    </div>
-                    {seriesList.length > 1 && (
-
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <button
-  type="button"
-  onClick={(e) => {
-    e.stopPropagation();
-    setConfirmRemoveSeries({ open: true, seriesId: s.id });
-  }}
-  style={{
-    marginTop: 8,
-    height: 24,
-    display:'flex',
-    alignItems:'center',
-    justifyContent:'center',
-    width: '40%',
-    borderRadius: 4,
-    border: '1px solid #fecdd3',
-    background: '#fff1f2',
-    color: '#b91c1c',
-    cursor: 'pointer',
-    fontSize:'12px',
-    fontWeight: 400,
-    fontFamily:"Inter-Regular,Helvetica",
-  }}
->
-  Remove
-</button>
-</div>
-                      // <button
-                      //   type="button"
-                      //   onClick={(e) => {
-                      //     e.stopPropagation()
-                      //     if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
-                      //   }}
-           
-                      //   style={{
-                      //     marginTop: 8,
-                      //     height: 32,
-                      //     width: '100%',
-                      //     borderRadius: 4,
-                      //     border: '1px solid #fecdd3',
-                      //     background: '#fff1f2',
-                      //     color: '#b91c1c',
-                      //     cursor: 'pointer',
-                      //   }}
-                      // >
-                      //   Remove
-                      // </button>
-                    )}
-
+            <div
+              className="ps-row"
+              style={{
+                display: 'grid',
+                gap: '14px',
+                marginBottom: '14px',
+                gridTemplateColumns:
+                  chartType === 'contour' || dimension === '3d'
+                    ? 'repeat(7, minmax(0, 1fr))'
+                    : 'repeat(7, minmax(0, 1fr))',
+              }}
+            >
+              {!activeIsMat && (
+                <>
+                  <div className="ps-field">
+                    <label>X Axis</label>
+                    <select
+                      value={activeSeries?.xAxis || ''}
+                      onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
+                      disabled={!activeSeries?.jobId}
+                    >
+                      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeAxisColumns.map((col) => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
                   </div>
-                )
-              })}
+
+                  <div className="ps-field">
+                    <label>Y Axis</label>
+                    <select
+                      value={activeSeries?.yAxis || ''}
+                      onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+                      disabled={!activeSeries?.jobId}
+                    >
+                      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeAxisColumns.map((col) => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {!activeIsMat && dimension === '2d' && (
+                    <div className="ps-field">
+                      <label>Series Chart Type</label>
+                      <select
+                        value={activeSeries?.seriesChartType || ''}
+                        onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
+                      >
+                        <option value="">Use global ({chartType})</option>
+                        {OVERPLOT_CARTESIAN_TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+
+                  {requiresZ && (
+                    <div className="ps-field">
+                      <label>Z Axis</label>
+                      <select
+                        value={activeSeries?.zAxis || ''}
+                        onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
+                        disabled={!activeSeries?.jobId}
+                      >
+                        <option value="">Select</option>
+                        {activeAxisColumns.map((col) => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeIsMat && (
+                <>
+                  <div className="ps-field">
+                    <label>MAT Variable</label>
+                    <select
+                      value={activeSeries?.matVar || activeMatVar?.name || ''}
+                      onChange={(e) =>
+                        updateActiveSeries({
+                          matVar: e.target.value,
+                          matFilters: {},
+                        })
+                      }
+                      disabled={!activeSeries?.jobId || !activeMatVars.length}
+                    >
+                      <option value="">{activeSeries?.jobId ? 'Select variable' : 'Select file first'}</option>
+                      {activeMatVars.map((v) => (
+                        <option key={v.name} value={v.name}>
+                          {v.name} ({Array.isArray(v.shape) ? v.shape.join('×') : ''})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="ps-field">
+                    <label>X Dimension</label>
+                    <select
+                      value={String(activeSeries?.matXDim ?? '')}
+                      onChange={(e) => updateActiveSeries({ matXDim: Number(e.target.value) })}
+                      disabled={!activeMatVar}
+                    >
+                      {Array.from({ length: Number(activeMatVar?.ndim || 0) }, (_, dim) => (
+                        <option key={`mat-x-${dim}`} value={dim}>
+                          {`Dim ${dim}${getMatCoordGuess(activeMatVar, dim) ? ` (${getMatCoordGuess(activeMatVar, dim)})` : ''}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {matNeeds2D && (
+                    <div className="ps-field">
+                      <label>Y Dimension</label>
+                      <select
+                        value={String(activeSeries?.matYDim ?? '')}
+                        onChange={(e) => updateActiveSeries({ matYDim: Number(e.target.value) })}
+                        disabled={!activeMatVar}
+                      >
+                        {Array.from({ length: Number(activeMatVar?.ndim || 0) }, (_, dim) => (
+                          <option key={`mat-y-${dim}`} value={dim} disabled={dim === Number(activeSeries?.matXDim)}>
+                            {`Dim ${dim}${getMatCoordGuess(activeMatVar, dim) ? ` (${getMatCoordGuess(activeMatVar, dim)})` : ''}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {matRemainingDims.map((dim) => {
+                    const maxIdx = Math.max(0, Number(activeMatVar?.shape?.[dim] || 1) - 1)
+                    const label = getMatCoordGuess(activeMatVar, dim) || `Dim ${dim}`
+                    return (
+                      <div className="ps-field" key={`mat-filter-${dim}`}>
+                        <label>{`${label} filter`}</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={maxIdx}
+                          value={Number(activeSeries?.matFilters?.[dim] ?? 0)}
+                          onChange={(e) =>
+                            updateActiveSeries({
+                              matFilters: {
+                                ...(activeSeries?.matFilters || {}),
+                                [dim]: Number(e.target.value || 0),
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    )
+                  })}
+                </>
+              )}
+
+              {/* Plot Name */}
+              <div className="ps-field">
+                <label>Plot Name (Optional)</label>
+                <input
+                  placeholder="Defaults to Dataset | X → Y"
+                  value={activeSeries?.label || ''}
+                  onChange={(e) => updateActiveSeries({ label: e.target.value })}
+                />
+              </div>
+
+              {/* Generate Button */}
+              <div className="ps-field">
+                <button type="submit" className="plot-btn" disabled={loading}>
+                  <img src={ChartLine1} alt="chart" />
+                  {loading ? 'Generating…' : 'Generate Plot'}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
+
+            {/* ===== Series Manager (KEPT) ===== */}
+            <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+              <div className="ps-field" style={{ gridColumn: 'span 4' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <label style={{ fontSize: "16px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica", marginBottom: 0 }}>Plot ({seriesList.length})</label>
+
+                  <button
+                    type="button"
+                    className="project-shell__nav-link"
+                    onClick={addSeriesSlot}
+                    style={{ height: 36, padding: '0 12px' }}
+                  >
+                    + Over Plot
+                  </button>
+                </div>
+
+                {/* series chips list */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
+                  {seriesList.map((s, idx) => {
+                    const active = s.id === activeSeriesId
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setActiveSeriesId(s.id)}
+                        style={{
+                          border: active ? '2px solid #1976D2' : '1px solid #00000026',
+                          // background: active ? '#eef6ff' : '#fff',
+                          borderRadius: 6,
+                          padding: '8px 10px',
+                          cursor: 'pointer',
+                          minWidth: 220,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                          <div style={{ fontSize: "14px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica" }}>Plot {idx + 1}</div>
+
+                          <label className="toggle" style={{ margin: 0 }}>
+                            <input
+                              type="checkbox"
+                              checked={!!s.enabled}
+                              onChange={(e) => setSeriesEnabled(s.id, e.target.checked)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="slider" />
+                            <span className="toggle-text">{s.enabled ? 'ON' : 'OFF'}</span>
+                          </label>
+                        </div>
+
+                        <div style={{ fontSize: "12px", fontWeight: "400", fontFamily: "inter-Regular,Helvetica", marginTop: 8, alignItems: 'flex-start' }}>
+                          {seriesSummary(s)}
+                        </div>
+                        {seriesList.length > 1 && (
+
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmRemoveSeries({ open: true, seriesId: s.id });
+                              }}
+                              style={{
+                                marginTop: 8,
+                                height: 24,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40%',
+                                borderRadius: 4,
+                                border: '1px solid #fecdd3',
+                                background: '#fff1f2',
+                                color: '#b91c1c',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 400,
+                                fontFamily: "Inter-Regular,Helvetica",
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          // <button
+                          //   type="button"
+                          //   onClick={(e) => {
+                          //     e.stopPropagation()
+                          //     if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
+                          //   }}
+
+                          //   style={{
+                          //     marginTop: 8,
+                          //     height: 32,
+                          //     width: '100%',
+                          //     borderRadius: 4,
+                          //     border: '1px solid #fecdd3',
+                          //     background: '#fff1f2',
+                          //     color: '#b91c1c',
+                          //     cursor: 'pointer',
+                          //   }}
+                          // >
+                          //   Remove
+                          // </button>
+                        )}
+
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
 
 
-      </form>
+          </form>
 
       {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
       <div className="project-card">
@@ -1755,31 +1747,29 @@ const deleteVisualization = async (vizId) => {
                   ))}
                 </div>
               </div>
-            )}
-          </div>
 
-          {activeViz?.status && (
-            <span className="badge">{activeViz.status.toLowerCase()}</span>
-          )}
-        </div>
+              {activeViz?.status && (
+                <span className="badge">{activeViz.status.toLowerCase()}</span>
+              )}
+            </div>
 
-        <div className="Plot-preview" >
-          {plotHtml ? (
-            <iframe
-              title="plot"
-              srcDoc={plotHtml}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
+            <div className="Plot-preview" >
+              {plotHtml ? (
+                <iframe
+                  title="plot"
+                  srcDoc={plotHtml}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
 
-          ) : (
-            <div className="emptystate">No plot generated</div>
-          )}
-        </div>
+              ) : (
+                <div className="emptystate">No plot generated</div>
+              )}
+            </div>
 
-        {/* ===== Tiles (KEPT) ===== */}
+            {/* ===== Tiles (KEPT) ===== */}
 
 
-        {/* {activeViz?.tiles?.length > 0 && (
+            {/* {activeViz?.tiles?.length > 0 && (
           
             {activeViz.tiles.map((item, idx) => (
               <div key={idx} style={{ marginBottom: 16 }}>
@@ -1798,79 +1788,79 @@ const deleteVisualization = async (vizId) => {
                 </div>
               </div>
             ))} */}
-        <div className="projectcard1">
-          {tilePreview && (
-            <div style={{ marginTop: 12 }}>
-              <p className="summarylabel1">
-                Tile level {tilePreview.level} ({tilePreview.rows} rows)
-              </p>
-              <div style={{ maxHeight: 200, overflow: 'auto' }}>
-                <table className="datatable">
-                  <thead>
-                    <tr>
-                      {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
-                        <th key={k}>{k}</th>
-                      ))}
-                    </tr>
-                  </thead>
+            <div className="projectcard1">
+              {tilePreview && (
+                <div style={{ marginTop: 12 }}>
+                  <p className="summarylabel1">
+                    Tile level {tilePreview.level} ({tilePreview.rows} rows)
+                  </p>
+                  <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                    <table className="datatable">
+                      <thead>
+                        <tr>
+                          {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
+                            <th key={k}>{k}</th>
+                          ))}
+                        </tr>
+                      </thead>
 
-                  <tbody>
-                    {(tilePreview.data || []).slice(0, 12).map((row, i) => (
-                      <tr key={i}>
-                        {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
-                          <td key={`${i}-${k}`}>{row[k]}</td>
+                      <tbody>
+                        {(tilePreview.data || []).slice(0, 12).map((row, i) => (
+                          <tr key={i}>
+                            {Object.keys(tilePreview.data?.[0] || {}).map((k) => (
+                              <td key={`${i}-${k}`}>{row[k]}</td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
 
-        {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
-        <div className="projectcard1">
-          <div className="actionsrow actionsrow--header">
-            <label className="text">Saved visualizations ({visualizations.length})</label>
+            {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
+            <div className="projectcard1">
+              <div className="actionsrow actionsrow--header">
+                <label className="text">Saved visualizations ({visualizations.length})</label>
 
-            <div className="actionsrow__right">
-              {/* <button
+                <div className="actionsrow__right">
+                  {/* <button
                 type="button"
                 className="expand-btn"
                 onClick={() => setIsExpanded((p) => !p)}
                 aria-expanded={isExpanded}
               > */}
-              <button
-  type="button"
-  className="expand-btn"
-  // onClick={() => {
-  //   setIsExpanded((prev) => {
-  //     const next = !prev;
-  //     if (next && visualizations.length === 0) {
-  //       fetchVisualizations(1, true);
-  //     }
-  //     return next;
-  //   });
-  // }}
- onClick={() => {
-  setIsExpanded((prev) => {
-    const next = !prev;
+                  <button
+                    type="button"
+                    className="expand-btn"
+                    // onClick={() => {
+                    //   setIsExpanded((prev) => {
+                    //     const next = !prev;
+                    //     if (next && visualizations.length === 0) {
+                    //       fetchVisualizations(1, true);
+                    //     }
+                    //     return next;
+                    //   });
+                    // }}
+                    onClick={() => {
+                      setIsExpanded((prev) => {
+                        const next = !prev;
 
-    if (next && visualizations.length === 0) {
-      fetchVisualizations(1, true);
-    }
+                        if (next && visualizations.length === 0) {
+                          fetchVisualizations(1, true);
+                        }
 
-    return next;
-  });
-}}
->
-                <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
-                {isExpanded ? 'Collapse' : 'Expand'}
-              </button>
+                        return next;
+                      });
+                    }}
+                  >
+                    <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
+                    {isExpanded ? 'Collapse' : 'Expand'}
+                  </button>
 
-              {/* {isExpanded && hasMoreViz && (
+                  {/* {isExpanded && hasMoreViz && (
   <div style={{ textAlign: 'center', marginTop: 12 }}>
     <button
       type="button"
@@ -1884,7 +1874,7 @@ const deleteVisualization = async (vizId) => {
 )} */}
 
 
-              {/* <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
+                  {/* <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
                 Refresh
               </button> */}
 
@@ -1944,60 +1934,105 @@ const deleteVisualization = async (vizId) => {
 }
 disabled={deletingViz === viz.viz_id}
 
-
-
-                      >
-                        <img className="actionBtn" src={Delete} alt="delete" />
-                      </button>                                        
-                    </div>
-                  </div>
-                ))}
+                </div>
               </div>
 
-              {isExpanded && hasMoreViz && (
-  <div style={{ textAlign: 'center', marginTop: 12 }}>
-    <button
-      type="button"
-      className="project-shell__nav-link"
-      disabled={loadingViz}
-      onClick={() => fetchVisualizations(vizPage + 1)}
-    >
-      {loadingViz ? 'Loading…' : 'Load more'}
-    </button>
-  </div>
-)}
+              <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
+                <div className="expand-inner">
+                  {/* {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>} */}
+                  {!loadingViz && visualizations.length === 0 && (
+                    <div className="emptystate">No visualizations yet</div>
+                  )}
 
+
+                  <div className="viz-list">
+                    {visualizations.map((viz) => (
+                      <div key={viz.viz_id} className="viz-item">
+                        <div>
+                          <p className="data-card__name">{viz.filename || 'dataset'}</p>
+                          <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
+                        </div>
+
+                        <div className="viz-actions">
+                          <button type="button" onClick={() => loadVisualization(viz.viz_id)}>
+                            <img className="actionBtn" src={ViewIcon} alt="view" />
+                          </button>
+
+                          {viz.html_url && (
+                            // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                            //   <img className="actionBtn" src={blackPloticon} alt="download" />
+                            // </button>
+                            <button type="button" onClick={() => window.open(`/app/projects/${projectId}/visualisation/full/${viz.viz_id}`, '_blank')}>
+                              <img className="actionBtn" src={linechart} alt="download" />
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            className="danger"
+                            // onClick={() => deleteVisualization(viz.viz_id)}
+                            onClick={() =>
+                              setConfirmDelete({
+                                open: true,
+                                vizId: viz.viz_id
+                              })
+                            }
+                            disabled={deletingViz === viz.viz_id}
+
+
+
+                          >
+                            <img className="actionBtn" src={Delete} alt="delete" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {isExpanded && hasMoreViz && (
+                    <div style={{ textAlign: 'center', marginTop: 12 }}>
+                      <button
+                        type="button"
+                        className="project-shell__nav-link"
+                        disabled={loadingViz}
+                        onClick={() => fetchVisualizations(vizPage + 1)}
+                      >
+                        {loadingViz ? 'Loading…' : 'Load more'}
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+              </div>
             </div>
+
           </div>
-        </div>
-
-      </div>
-      </>
+        </>
       )}
-    {confirmDelete.open && (
-  <ConfirmationModal
-    title="Delete this visualization?"
-    onCancel={() =>
-      setConfirmDelete({ open: false, vizId: null })
-    }
-    onConfirm={() =>
-      deleteVisualization(confirmDelete.vizId)
-    }
-  />
-)}
+      {confirmDelete.open && (
+        <ConfirmationModal
+          title="Delete this visualization?"
+          onCancel={() =>
+            setConfirmDelete({ open: false, vizId: null })
+          }
+          onConfirm={() =>
+            deleteVisualization(confirmDelete.vizId)
+          }
+        />
+      )}
 
-{confirmRemoveSeries.open && confirmRemoveSeries.seriesId && (
-  <ConfirmationModal
-    title="Remove this series?"
-    onCancel={() =>
-      setConfirmRemoveSeries({ open: false, seriesId: null })
-    }
-    onConfirm={() => {
-      removeSeriesSlot(confirmRemoveSeries.seriesId);
-      setConfirmRemoveSeries({ open: false, seriesId: null });
-    }}
-  />
-)}     
+      {confirmRemoveSeries.open && confirmRemoveSeries.seriesId && (
+        <ConfirmationModal
+          title="Remove this series?"
+          onCancel={() =>
+            setConfirmRemoveSeries({ open: false, seriesId: null })
+          }
+          onConfirm={() => {
+            removeSeriesSlot(confirmRemoveSeries.seriesId);
+            setConfirmRemoveSeries({ open: false, seriesId: null });
+          }}
+        />
+      )}
     </div>
      {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
     {fullScreenViz && (
@@ -2022,4 +2057,4 @@ disabled={deletingViz === viz.viz_id}
     )}
     </div>
   )
-  }
+}
