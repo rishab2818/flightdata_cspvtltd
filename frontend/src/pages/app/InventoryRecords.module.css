@@ -210,7 +210,7 @@
 }
 
 .table {
-  width: 1513px;
+  width: 1520px;
   max-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -493,7 +493,7 @@
   background: #fff;
   border-radius: 4px;
   cursor: pointer;
-  width: 127px;
+  width: 100px;
 }
 
 .saveBtn {
@@ -505,7 +505,9 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap:10px;
+  width: 100px;
 }
 
 .saveBtn.icon {

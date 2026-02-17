@@ -884,7 +884,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
                     : "Uploading..."
                   : editingOrder
                     ? "Save Changes"
-                    : "Upload Record"}
+                    : "Upload"}
               </button>
             </div>
           </form>

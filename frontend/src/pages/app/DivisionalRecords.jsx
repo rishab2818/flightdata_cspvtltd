@@ -21,6 +21,16 @@ import { useDownload } from "../../components/common/useDownload";
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
 
+
+/* --------------------- Rating Badge --------------------- */
+function Rating({ value }) {
+  return (
+    <span style={{ color: "#F59E0B", fontWeight: 700 }}>
+      {Number(value || 0).toFixed(1)} ★
+    </span>
+  );
+}
+
 /* --------------------- Stat Card --------------------- */
 function StatCard({ title, value, icon, bg }) {
   return (
@@ -500,7 +510,22 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
             <Input className={styles.input} label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
 
-            <Input className={styles.input} label="Rating" type="number" min={0} step={0.1} value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
+            {/* <Input className={styles.input} label="Rating" type="number" min={0} step={0.1} value={form.rating} onChange={(e) => onChange("rating", e.target.value)} /> */}
+                  <Input
+                  className={styles.input}
+  label="Ratings"
+  type="number"
+  min={0}
+  max={5}
+  step="0.1"
+  value={form.rating}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === "" || (Number(value) >= 0 && Number(value) <= 5)) {
+      onChange("rating", value);
+    }
+  }}
+/>
 
             <label >
                <span className={styles.inputLabel}>Note</span>

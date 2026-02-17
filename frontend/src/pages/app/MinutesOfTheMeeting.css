@@ -159,6 +159,7 @@
   justify-content: center;
   gap: 6px;
   font-family: "Inter-Regular, Helvetica";
+  margin-right: -40px;
 }
 
 .TableGrid {
@@ -170,10 +171,11 @@
   display: block;
   flex-direction: column;
   height: 80%;
+  margin-right: -5px;
 }
 
 .Table {
-  width: 1513px;
+  width: 1520px;
   max-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
@@ -182,6 +184,7 @@
   border-color: #0000001A;
   overflow-y: auto;
   z-index: 60;
+  
 }
 
 .Table th {

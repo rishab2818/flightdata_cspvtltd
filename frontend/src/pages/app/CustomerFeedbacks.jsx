@@ -1375,7 +1375,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
   <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
   {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
 </button> */}
-<button
+{/* <button
   type="submit"
   disabled={submitting}
   style={{
@@ -1391,7 +1391,28 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
   }}
 >
   {submitting ? "Saving..." : editingRecord ? "Save Changes" : "Save"}
-</button>
+</button> */}
+ <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                border: "none",
+                background: PRIMARY,
+                color: "#fff",
+                padding: "10px 18px",
+                borderRadius: "4px",
+                fontWeight: 600,
+                cursor: submitting ? "not-allowed" : "pointer",
+                opacity: submitting ? 0.7 : 1,
+                display: "flex",
+                alignitems: "center",
+                justify0content: "center",
+                gap: "8px",
+              }}
+            >
+             <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
+              {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
+            </button>
 
 
            
