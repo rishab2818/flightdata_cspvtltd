@@ -164,8 +164,8 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
           </div>
         </div>
         {/* view project button */}
-        <Button variant="secondary" style={{ width: 160, height: 44, padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 8, color: "#000000", fontFamily: "inter-semi-bold, Helvetica", fontSize: 16 }} onClick={onView}>
-          <FiEye size={24} /> <span>View Project</span>
+        <Button variant="secondary" style={{ width: 140, height: 34, padding: `${SPACING.sm}px ${SPACING.md}px`, borderRadius: 8, color: "#000000", fontFamily: "inter-semi-bold, Helvetica", fontSize: 14, fontWeight: 400 }} onClick={onView}>
+          <FiEye size={20} /> <span>View Project</span>
         </Button>
       </div>
     </div>

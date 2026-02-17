@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
+
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { matApi } from '../../../mat/matApi'
@@ -116,7 +117,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 });
 
   const [deletingViz, setDeletingViz] = useState(null)
-
+ const [fullScreenViz, setFullScreenViz] = useState(null);
 
   /* ================= series manager ================= */
   const [seriesList, setSeriesList] = useState([newSeries(1)])
@@ -136,6 +137,13 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [tagsByDataset, setTagsByDataset] = useState({})
   const [filesByDatasetTag, setFilesByDatasetTag] = useState({})
   const [matMetaByJob, setMatMetaByJob] = useState({})
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
+//   const [showLeaveWarn, setShowLeaveWarn] = useState(false);
+// const [hasUnsavedCalc, setHasUnsavedCalc] = useState(false);
+
+
+
 
   /* ================= calculation tab state ================= */
   const [formulaCatalog, setFormulaCatalog] = useState([])
@@ -149,6 +157,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [calcPreviewRows, setCalcPreviewRows] = useState([])
   const [calcProcessing, setCalcProcessing] = useState(false)
   const [calcError, setCalcError] = useState(null)
+  const [tempVizId, setTempVizId] = useState(null)
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
@@ -157,6 +166,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 const [vizPage, setVizPage] = useState(1);
 const [hasMoreViz, setHasMoreViz] = useState(true);
 const [loadingViz, setLoadingViz] = useState(false);
+const [loadingSave, setLoadingSave] = useState(false);
 
   const [activeViz, setActiveViz] = useState(null)
   const [plotHtml, setPlotHtml] = useState('')
@@ -414,40 +424,137 @@ const plotOptions =
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [projectId])
 
-const fetchVisualizations = async (page = 1, reset = false) => {
-  if (loadingViz) return;
+// const fetchVisualizations = async (page = 1, reset = false) => {
+//   if (loadingViz) return;
 
-  setLoadingViz(true);
+//   setLoadingViz(true);
+//   try {
+//     const res = await visualizationApi.listForProject(projectId, {
+//       page,
+//       limit: PAGE_SIZE,
+//     });
+
+//     const list = res || [];
+
+//     setVisualizations((prev) =>
+//       reset ? list : [...prev, ...list]
+//     );
+
+//     // ✅ ONLY update hasMore when loading next page
+//     if (!reset) {
+//       setHasMoreViz(list.length >= PAGE_SIZE);
+//     }
+
+//     setVizPage(page);
+//   } catch (e) {
+//     setError(
+//       e?.response?.data?.detail ||
+//       e.message ||
+//       'Failed to load visualizations'
+//     );
+//   } finally {
+//     setLoadingViz(false);
+//   }
+// };
+
+// const handleSaveVisualization = async () => {
+//   if (!plotHtml) return; // safety check
+//   setLoadingSave(true);
+//   try {
+//     await visualizationApi.save({
+//       project_id: projectId,
+//       html: plotHtml,
+//       series: seriesList,
+//       chart_type: chartType,
+//       name: activeSeries?.label || 'Plot',
+//     });
+//     setStatusMessage('Visualization saved successfully.');
+//     fetchVisualizations(1, true); // refresh saved visualizations list
+//   } catch (err) {
+//     setStatusMessage('Failed to save visualization.');
+//   } finally {
+//     setLoadingSave(false);
+//   }
+// };
+
+const handleSaveVisualization = async () => {
+  try {
+    setLoadingSave(true)
+
+    await fetchVisualizations(1, true)
+
+    setStatusMessage("Visualization saved successfully ✅")
+
+  } catch (err) {
+    console.error(err)
+  } finally {
+    setLoadingSave(false)
+  }
+}
+
+const handleFullScreen = (viz) => {
+  if (!viz?.html_url) return;
+
+  const url = viz.html_url.startsWith("http")
+    ? viz.html_url
+    : `${window.__FD_API_BASE__}${viz.html_url}`;
+
+  window.open(url, "_blank", "noopener,noreferrer");
+};
+
+const handleGeneratePlot = async () => {
+  try {
+    setLoading(true)
+
+    const res = await visualizationApi.create(requestPayload)
+
+    setTempVizId(res.viz_id)   // store temporary id
+    pollVisualization(res.viz_id)
+
+    setStatusMessage("Preview ready. Click Save Visualization.")
+
+  } catch (err) {
+    console.error(err)
+    setStatusMessage("Failed to generate plot")
+  } finally {
+    setLoading(false)
+  }
+}
+
+const fetchVisualizations = async (page = 1, reset = false) => {
+  if (loadingViz) return
+
+  setLoadingViz(true)
+
   try {
     const res = await visualizationApi.listForProject(projectId, {
       page,
       limit: PAGE_SIZE,
-    });
+    })
 
-    const list = res || [];
+    console.log("LIST API RESPONSE:", res)
 
-    setVisualizations((prev) =>
+    const list = Array.isArray(res)
+      ? res
+      : res?.items || res?.data || []
+
+    setVisualizations(prev =>
       reset ? list : [...prev, ...list]
-    );
+    )
 
-    // ✅ ONLY update hasMore when loading next page
-    if (!reset) {
-      setHasMoreViz(list.length >= PAGE_SIZE);
-    }
+    setHasMoreViz(list.length >= PAGE_SIZE)
+    setVizPage(page)
 
-    setVizPage(page);
   } catch (e) {
     setError(
       e?.response?.data?.detail ||
       e.message ||
       'Failed to load visualizations'
-    );
+    )
   } finally {
-    setLoadingViz(false);
+    setLoadingViz(false)
   }
-};
-
-
+}
 
   /* ================= columns for active series ================= */
   const activeFiles = useMemo(() => {
@@ -709,81 +816,187 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcInputs((prev) => prev.map((v, i) => (i === idx ? value : v)))
   }
 
-  const handleCalcPreview = async () => {
-    setCalcError(null)
-    if (!calcJobId) {
-      setCalcError('Select a file first')
-      return
-    }
-    if (!calcFormulaKey) {
-      setCalcError('Select a formula template')
-      return
-    }
-    if (!calcOutputColumn.trim()) {
-      setCalcError('Provide output column name')
-      return
-    }
-    if (calcInputs.some((c) => !c)) {
-      setCalcError('Select all required input columns')
-      return
+  // const handleCalcPreview = async () => {
+  //   setCalcError(null)
+  //   if (!calcJobId) {
+  //     setCalcError('Select a file first')
+  //     return
+  //   }
+  //   if (!calcFormulaKey) {
+  //     setCalcError('Select a formula template')
+  //     return
+  //   }
+  //   if (!calcOutputColumn.trim()) {
+  //     setCalcError('Provide output column name')
+  //     return
+  //   }
+  //   if (calcInputs.some((c) => !c)) {
+  //     setCalcError('Select all required input columns')
+  //     return
+  //   }
+
+  //   try {
+  //     setCalcProcessing(true)
+  //     // New formula attempt should clear any previous unsaved derived overlay.
+  //     setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
+  //     setCalcPreviewRows([])
+  //     const data = await calculationsApi.preview(calcJobId, {
+  //       formula_key: calcFormulaKey,
+  //       input_columns: calcInputs,
+  //       output_column: calcOutputColumn.trim(),
+  //       limit: 20,
+  //     })
+  //     setCalcPreviewRows(data?.rows || [])
+  //     const derived = data?.derived_column
+  //     if (derived?.name && derived?.expression) {
+  //       applyCalculationToVisualisation(calcDatasetType, calcTag, calcJobId, derived)
+  //     }
+  //   } catch (e) {
+  //     setCalcError(e?.response?.data?.detail || e.message || 'Formula preview failed')
+  //   } finally {
+  //     setCalcProcessing(false)
+  //   }
+  // }
+
+ const handleCalcPreview = async () => {
+  setCalcError(null);
+
+  if (!calcJobId) {
+    setCalcError('Select a file first');
+    return;
+  }
+  if (!calcFormulaKey) {
+    setCalcError('Select a formula template');
+    return;
+  }
+  if (!calcOutputColumn.trim()) {
+    setCalcError('Provide output column name');
+    return;
+  }
+  if (calcInputs.some((c) => !c)) {
+    setCalcError('Select all required input columns');
+    return;
+  }
+
+  try {
+    setCalcProcessing(true);
+
+    setSeriesList((prev) =>
+      prev.map((s) => ({ ...s, derivedColumns: [] }))
+    );
+
+    setCalcPreviewRows([]);
+
+    const data = await calculationsApi.preview(calcJobId, {
+      formula_key: calcFormulaKey,
+      input_columns: calcInputs,
+      output_column: calcOutputColumn.trim(),
+      limit: 20,
+    });
+
+    setCalcPreviewRows(data?.rows || []);
+
+    const derived = data?.derived_column;
+    if (derived?.name && derived?.expression) {
+      applyCalculationToVisualisation(
+        calcDatasetType,
+        calcTag,
+        calcJobId,
+        derived
+      );
     }
 
-    try {
-      setCalcProcessing(true)
-      // New formula attempt should clear any previous unsaved derived overlay.
-      setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
-      setCalcPreviewRows([])
-      const data = await calculationsApi.preview(calcJobId, {
-        formula_key: calcFormulaKey,
-        input_columns: calcInputs,
-        output_column: calcOutputColumn.trim(),
-        limit: 20,
-      })
-      setCalcPreviewRows(data?.rows || [])
-      const derived = data?.derived_column
-      if (derived?.name && derived?.expression) {
-        applyCalculationToVisualisation(calcDatasetType, calcTag, calcJobId, derived)
-      }
-    } catch (e) {
-      setCalcError(e?.response?.data?.detail || e.message || 'Formula preview failed')
-    } finally {
-      setCalcProcessing(false)
-    }
+    // ✅ POPUP MESSAGE HERE
+    setPopupType("success");
+    setPopupMessage(
+      "Formula processed successfully. Please save the derived column."
+    );
+
+  } catch (e) {
+    setCalcError(
+      e?.response?.data?.detail || e.message || 'Formula preview failed'
+    );
+
+    setPopupType("error");
+    setPopupMessage("Failed to process formula");
+
+  } finally {
+    setCalcProcessing(false);
+
+    setTimeout(() => {
+      setPopupMessage("");
+    }, 4000);
   }
+};
+
+
 
   const handleCalcSave = async () => {
-    setCalcError(null)
-    if (!calcJobId || !calcFormulaKey || !calcOutputColumn.trim() || calcInputs.some((c) => !c)) {
-      setCalcError('Complete file, formula, input columns and output name before saving')
-      return
-    }
-    try {
-      setCalcProcessing(true)
-      await calculationsApi.materialize(calcJobId, {
-        formula_key: calcFormulaKey,
-        input_columns: calcInputs,
-        output_column: calcOutputColumn.trim(),
-        limit: 20,
-      })
-      const key = `${calcDatasetType}::${calcTag}`
-      const list = await ingestionApi.listFilesInTag(projectId, calcDatasetType, calcTag)
-      const processed = (list || []).filter((f) => {
-        if (isMatFileName(f?.filename || '')) return true
-        return !!(f.processed_key && f.columns?.length)
-      })
-      setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }))
-      setCalcPreviewRows([])
-      setCalcOutputColumn('')
-      setCalcInputs(Array.from({ length: Number(selectedFormulaTemplate?.inputs?.length || 0) }, () => ''))
+  setCalcError(null);
 
-      // clear unsaved derived overlay after persistence
-      setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
-    } catch (e) {
-      setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed')
-    } finally {
-      setCalcProcessing(false)
-    }
+  if (!calcJobId || !calcFormulaKey || !calcOutputColumn.trim() || calcInputs.some((c) => !c)) {
+    setCalcError('Complete file, formula, input columns and output name before saving');
+    return;
   }
+
+  try {
+    setCalcProcessing(true);
+
+    await calculationsApi.materialize(calcJobId, {
+      formula_key: calcFormulaKey,
+      input_columns: calcInputs,
+      output_column: calcOutputColumn.trim(),
+      limit: 20,
+    });
+
+    const key = `${calcDatasetType}::${calcTag}`;
+
+    const list = await ingestionApi.listFilesInTag(
+      projectId,
+      calcDatasetType,
+      calcTag
+    );
+
+    const processed = (list || []).filter((f) => {
+      if (isMatFileName(f?.filename || '')) return true;
+      return !!(f.processed_key && f.columns?.length);
+    });
+
+    setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }));
+
+    setCalcPreviewRows([]);
+    setCalcOutputColumn('');
+    setCalcInputs(
+      Array.from(
+        { length: Number(selectedFormulaTemplate?.inputs?.length || 0) },
+        () => ''
+      )
+    );
+
+    // clear unsaved derived overlay after persistence
+    setSeriesList((prev) =>
+      prev.map((s) => ({ ...s, derivedColumns: [] }))
+    );
+
+    // ✅ SUCCESS POPUP HERE
+    setPopupType("success");
+    setPopupMessage("Calculated column saved successfully.");
+
+  } catch (e) {
+    setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed');
+
+    setPopupType("error");
+    setPopupMessage("Failed to save calculated column.");
+
+  } finally {
+    setCalcProcessing(false);
+
+    setTimeout(() => {
+      setPopupMessage("");
+    }, 3000);
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -888,16 +1101,34 @@ const fetchVisualizations = async (page = 1, reset = false) => {
           )
         }
 
-        requestPayload = {
-          project_id: projectId,
-          source_type: 'tabular',
-          chart_type: chartType,
-          series: payloadSeries,
-        }
+        const firstSeries = payloadSeries.length
+  ? configured.find(s => s.jobId === payloadSeries[0].job_id)
+  : null
+
+
+requestPayload = {
+  project_id: projectId,
+  source_type: 'tabular',
+  dataset_type: firstSeries?.datasetType || null,
+  tag_name: firstSeries?.tag || null,
+  chart_type: chartType,
+  series: payloadSeries,
+}
+
+
+        // requestPayload = {
+        //   project_id: projectId,
+        //   source_type: 'tabular',
+        //   dataset_type: activeSeries?.datasetType || null,
+        //   tag_name: activeSeries?.tag || null,
+        //   chart_type: chartType,
+        //   series: payloadSeries,
+        // }
       }
 
       const res = await visualizationApi.create(requestPayload)
-      pollVisualization(res.viz_id)
+pollVisualization(res.viz_id)
+
     } catch (err) {
       setError(err?.response?.data?.detail || err.message || 'Failed to create visualization')
     } finally {
@@ -905,22 +1136,29 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     }
   }
 
-  const pollVisualization = async (vizId) => {
-    try {
-      const detail = await visualizationApi.detail(vizId)
-      setActiveViz(detail)
-      setPlotHtml(detail.html || '')
-      setStatusMessage(detail.message || detail.status)
+ const pollVisualization = async (vizId) => {
+  try {
+    const detail = await visualizationApi.detail(vizId)
 
-      if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
-        pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
-      } else {
-        fetchVisualizations(1, true)
-      }
-    } catch (e) {
-      setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
+    setActiveViz(detail)
+    setPlotHtml(detail.html || '')
+
+    if (detail.status === 'SUCCESS') {
+      setStatusMessage("Preview ready. Click Save Visualization.")  // ✅ HERE
+    } else {
+      setStatusMessage(detail.message || detail.status)
     }
+
+    if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
+      pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
+    }
+
+  } catch (e) {
+    setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
   }
+}
+
+
 
   const loadVisualization = async (vizId) => {
     try {
@@ -1008,7 +1246,8 @@ const deleteVisualization = async (vizId) => {
   /* ================= UI ================= */
   return (
     <div className="CardWapper">
-      <div className="tablist" style={{ marginBottom: 12 }}>
+    <div className="project-cardpage">
+      <div className="Tablist" style={{ marginBottom: 12 }}>
         <button
           type="button"
           className={visualSectionTab === 'visualize' ? 'active' : ''}
@@ -1029,14 +1268,14 @@ const deleteVisualization = async (vizId) => {
         <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
-            <p className="summary-label" style={{ margin: 0 }}>
+            {/* <p className="summary-label" style={{ margin: 0 }}>
               Select Dataset → Tag → File, choose a formula template, map columns, then preview or save.
-            </p>
+            </p> */}
           </div>
 
           {calcError && <div className="project-shell__error">{calcError}</div>}
 
-          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="Row calculation-row">
             <div className="ps-field">
               <label>Dataset</label>
               <select
@@ -1094,18 +1333,7 @@ const deleteVisualization = async (vizId) => {
               </select>
             </div>
 
-            <div className="ps-field">
-              <label>Output Column</label>
-              <input
-                className="input-control"
-                value={calcOutputColumn}
-                onChange={(e) => setCalcOutputColumn(e.target.value)}
-                placeholder="derived_col_name"
-              />
-            </div>
-          </div>
-
-          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          {/* <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}> */}
             <div className="ps-field">
               <label>Category</label>
               <select
@@ -1147,57 +1375,84 @@ const deleteVisualization = async (vizId) => {
                 {selectedFormulaTemplate?.inputs?.length || 0} input(s)
               </div>
             </div>
+          {/* </div> */}
           </div>
 
-          {calcJob && (
+          {/* {calcJob && (
             <div className="summary-label">
               Columns: {calcColumns.length ? calcColumns.join(', ') : 'No columns available'}
             </div>
-          )}
+          )} */}
+          
+        <div
+  className="Row calculation-row"
+  style={{ gridTemplateColumns: "repeat(6, minmax(180px, 1fr))" }}
+>
 
-          {(selectedFormulaTemplate?.inputs || []).length > 0 && (
-            <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-              {selectedFormulaTemplate.inputs.map((inputName, idx) => (
-                <div className="ps-field" key={`calc-input-${inputName}-${idx}`}>
-                  <label>{`Column ${inputName}`}</label>
-                  <select
-                    value={calcInputs[idx] || ''}
-                    onChange={(e) => handleCalcInputChange(idx, e.target.value)}
-                    disabled={!calcJobId}
-                  >
-                    <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
-                    {calcColumns.map((col) => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          )}
+  {(selectedFormulaTemplate?.inputs || []).length > 0 &&
+    selectedFormulaTemplate.inputs.map((inputName, idx) => (
+      <div
+        className="ps-field"
+        key={`calc-input-${inputName}-${idx}`}
+      >
+        <label>{`Column ${inputName}`}</label>
+        <select
+          value={calcInputs[idx] || ''}
+          onChange={(e) =>
+            handleCalcInputChange(idx, e.target.value)
+          }
+          disabled={!calcJobId}
+        >
+          <option value="">
+            {calcJobId ? 'Select' : 'Select file first'}
+          </option>
+          {calcColumns.map((col) => (
+            <option key={col} value={col}>
+              {col}
+            </option>
+          ))}
+        </select>
+      </div>
+    ))}
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcPreview}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Processing…' : 'Process Formula'}
-            </button>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcSave}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Saving…' : 'Save Derived Column To Dataset'}
-            </button>
-          </div>
+  <div className="ps-field">
+    <label>Derived Column</label>
+    <input
+      className="input-control"
+      value={calcOutputColumn}
+      onChange={(e) => setCalcOutputColumn(e.target.value)}
+      placeholder="derived_col_name"
+    />
+  </div>
+
+
+  <div  style={{marginTop:'26px'}}>
+  <button
+    type="button"
+    
+    className="project-shell__nav-link"
+    onClick={handleCalcPreview}
+    disabled={calcProcessing}
+  >
+    {calcProcessing ? 'Processing…' : 'Process Formula'}
+  </button>
+  </div>
+  </div>
+  
+  <div style={{display:'flex',alignItems:"right", justifyContent:"right"}}>
+  <button
+    type="button"
+    className="project-shell__nav-save"
+    onClick={handleCalcSave}
+    disabled={calcProcessing}
+  >
+    {calcProcessing ? 'Saving…' : 'Save Derived Column'}
+  </button>
+  </div>
+
 
           <div>
-            <p className="summary-label" style={{ marginBottom: 6 }}>Preview</p>
+            <p className="summary-label" style={{ marginBottom: 6, fontFamily:"inter-semi-bold, Helvetica",fontSize:"16px", fontWeight:600, color:"#000000"}}>Preview</p>
             <div className="excel-preview">
               {calcPreviewRows.length ? (
                 <table className="data-table">
@@ -1556,7 +1811,7 @@ const deleteVisualization = async (vizId) => {
 
   {/* Generate Button */}
   <div className="ps-field">
-    <button type="submit" className="plot-btn" disabled={loading}>
+    <button type="submit"  className="plot-btn" disabled={loading}>
       <img src={ChartLine1} alt="chart" />
       {loading ? 'Generating…' : 'Generate Plot'}
     </button>
@@ -1643,26 +1898,7 @@ const deleteVisualization = async (vizId) => {
   Remove
 </button>
 </div>
-                      // <button
-                      //   type="button"
-                      //   onClick={(e) => {
-                      //     e.stopPropagation()
-                      //     if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
-                      //   }}
-           
-                      //   style={{
-                      //     marginTop: 8,
-                      //     height: 32,
-                      //     width: '100%',
-                      //     borderRadius: 4,
-                      //     border: '1px solid #fecdd3',
-                      //     background: '#fff1f2',
-                      //     color: '#b91c1c',
-                      //     cursor: 'pointer',
-                      //   }}
-                      // >
-                      //   Remove
-                      // </button>
+                
                     )}
 
                   </div>
@@ -1677,28 +1913,39 @@ const deleteVisualization = async (vizId) => {
 
       {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
       <div className="project-card">
-        <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-          <div>
-            <p className="summarylabel">{statusMessage}</p>
+       <div className="actions-row">
+  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+    <p className="summarylabel">{statusMessage}</p>
 
-            {/* meta (kept) */}
-            {plotMeta && (
-              <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
-                <div><b>Chart:</b> {plotMeta.chartType}</div>
-                <div><b>Series:</b> {plotMeta.count}</div>
-                <div style={{ marginTop: 6 }}>
-                  {plotMeta.items.map((it, i) => (
-                    <div key={i}>• {it.label}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+    <button
+  type="button"
+  className="project-shell__nav-save"
+  onClick={handleSaveVisualization}
+  disabled={!plotHtml || loadingSave}
+>
+  {loadingSave ? 'Saving…' : 'Save Visualization'}
+</button>
 
-          {activeViz?.status && (
-            <span className="badge">{activeViz.status.toLowerCase()}</span>
-          )}
-        </div>
+  </div>
+
+  {/* meta (kept) */}
+  {plotMeta && (
+    <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
+      <div><b>Chart:</b> {plotMeta.chartType}</div>
+      <div><b>Series:</b> {plotMeta.count}</div>
+      <div style={{ marginTop: 6 }}>
+        {plotMeta.items.map((it, i) => (
+          <div key={i}>• {it.label}</div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {activeViz?.status && (
+    <span className="badge">{activeViz.status.toLowerCase()}</span>
+  )}
+</div>
+
 
         <div className="Plot-preview" >
           {plotHtml ? (
@@ -1735,7 +1982,7 @@ const deleteVisualization = async (vizId) => {
                 </div>
               </div>
             ))} */}
-        <div className="projectcard1">
+        {/* <div className="projectcard1">
           {tilePreview && (
             <div style={{ marginTop: 12 }}>
               <p className="summarylabel1">
@@ -1764,7 +2011,7 @@ const deleteVisualization = async (vizId) => {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
 
 
         {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
@@ -1773,12 +2020,7 @@ const deleteVisualization = async (vizId) => {
             <label className="text">Saved visualizations ({visualizations.length})</label>
 
             <div className="actionsrow__right">
-              {/* <button
-                type="button"
-                className="expand-btn"
-                onClick={() => setIsExpanded((p) => !p)}
-                aria-expanded={isExpanded}
-              > */}
+              
               <button
   type="button"
   className="expand-btn"
@@ -1861,9 +2103,13 @@ const deleteVisualization = async (vizId) => {
                         // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
                         //   <img className="actionBtn" src={blackPloticon} alt="download" />
                         // </button>
-                        <button type="button" onClick={() => window.open(`/app/projects/${projectId}/visualisation/full/${viz.viz_id}`, '_blank')}>
-                          <img className="actionBtn" src={linechart} alt="download" />
-                        </button>
+                        <button
+  type="button"
+ onClick={() => handleFullScreen(viz)}
+>
+  <img className="actionBtn" src={linechart} alt="fullscreen" />
+</button>
+
                       )}
 
                       <button 
@@ -1877,8 +2123,6 @@ const deleteVisualization = async (vizId) => {
   })
 }
 disabled={deletingViz === viz.viz_id}
-
-
 
                       >
                         <img className="actionBtn" src={Delete} alt="delete" />
@@ -1932,6 +2176,35 @@ disabled={deletingViz === viz.viz_id}
     }}
   />
 )}     
+    </div>
+    {popupMessage && (
+  <div className={`toast-popup ${popupType}`}>
+    {popupMessage}
+  </div>
+)}
+
+    
+     {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
+    {/* {fullScreenViz && (
+      <div className="fullscreen-overlay">
+        <div className="fullscreen-content">
+
+          <button
+            className="fullscreen-close"
+            onClick={() => setFullScreenViz(null)}
+          >
+            ✕
+          </button>
+
+          <iframe
+            src={fullScreenViz.html_url}
+            title="Full Visualization"
+            className="fullscreen-frame"
+          />
+
+        </div>
+      </div>
+    )} */}
     </div>
   )
   }

@@ -33,9 +33,17 @@ import ProjectTagView from './pages/app/project/ProjectTagView'
 import ProcessedPreviewPage from './pages/app/project/ProcessedPreviewPage'
 import RawPreviewPage from './pages/app/project/RawPreviewPage'
 import ProjectVisualisationFullScreen from './pages/app/project/ProjectVisualisationFullScreen'
+
 export default function App() {
   return (
     <Routes>
+
+       <Route
+        path="/app/projects/:projectId/visualisation/full/:vizId"
+        element={<ProjectVisualisationFullScreen />}
+      /> 
+
+    
       <Route path="/login" element={<Login />} />
 
       <Route element={<ProtectedAdmin />}>
@@ -69,8 +77,11 @@ export default function App() {
           <Route path="data" element={<ProjectOverview />} />
           <Route index element={<ProjectOverview />} />
           <Route path="visualisation" element={<ProjectVisualisation />} />
+          <Route path="meeting" element={<MinutesOfTheMeeting />} />
           <Route path="report" element={<TechnicalReports />} />
           <Route path="digital" element={<DigitalLibrary />} />
+          <Route path="student" element={<StudentEngagement />} />
+          <Route path="procurement" element={<InventoryRecords/>} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
       </Route>
@@ -82,12 +93,8 @@ export default function App() {
       />
       <Route path="/processed-preview/:jobId" element={<ProcessedPreviewPage />} />
       <Route path="/raw-preview/:jobId" element={<RawPreviewPage />} />
-      <Route
-        path="/app/projects/:projectId/visualisation/full/:vizId"
-        element={<ProjectVisualisationFullScreen />}
-      />
-
-
+     
+   
 
     </Routes>
   )

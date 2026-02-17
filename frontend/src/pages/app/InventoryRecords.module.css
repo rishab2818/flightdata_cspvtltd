@@ -210,7 +210,7 @@
 }
 
 .table {
-  width: 1513px;
+  width: 1520px;
   max-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -230,8 +230,8 @@
   background: #EFF7FF;
   text-align: left;
   font-size: 14px;
-  font-family: "Inter-regular", Helvetica;
-  font-weight: 400;
+  font-family: "Inter-SemiBold", Helvetica;
+  font-weight: 600;
   color:#000000;
   border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
@@ -493,7 +493,7 @@
   background: #fff;
   border-radius: 4px;
   cursor: pointer;
-  width: 127px;
+  width: 100px;
 }
 
 .saveBtn {
@@ -505,7 +505,9 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap:10px;
+  width: 100px;
 }
 
 .saveBtn.icon {

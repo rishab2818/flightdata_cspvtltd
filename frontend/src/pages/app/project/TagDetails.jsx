@@ -8,6 +8,7 @@ import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
+import { visualizationApi } from '../../../api/visualizationApi'
 
 const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
 const INLINE_EXTENSIONS = new Set([
@@ -61,11 +62,30 @@ const forceDownloadFromUrl = async (url, filename) => {
     window.URL.revokeObjectURL(objectUrl)
   }
 }
+const openPlotFullScreen = (viz) => {
+  if (!viz) return;
+
+  // Prefer backend-provided URL (best)
+  const raw = viz.html_url || viz.htmlUrl || viz.url;
+
+  if (raw) {
+    const full = raw.startsWith("http")
+      ? raw
+      : `${window.__FD_API_BASE__ || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}${raw}`;
+    window.open(full, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Fallback: if backend doesn't return html_url, download endpoint can be used
+  const fallback = `${window.__FD_API_BASE__ || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/visualizations/${viz.viz_id}/html`;
+  window.open(fallback, "_blank", "noopener,noreferrer");
+};
 
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
     const [files, setFiles] = useState([])
     const [tab, setTab] = useState('raw')
+    const [plots, setPlots] = useState([])
 
         const [confirmDelete, setConfirmDelete] = useState({
   open: false,
@@ -77,54 +97,99 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
             .then(setFiles)
     }, [projectId, datasetType, tagName])
 
-    const rows =
-        tab === 'raw'
-            ? files
-            : tab === 'processed'
-                ? files.filter(f => f.processed_key)
-                : tab === 'others'
-                    ? files.filter(f => !f.processed_key && !f.visualize_enabled)
-                    : []
+    useEffect(() => {
+  if (tab !== 'plot') return
 
-    //  const handleView = async (file, canEdit) => {
-    //     if (isTabularFile(file) && file.processed_key) {
-    //       const editFlag = canEdit ? '1' : '0'
-    //       window.open(`/processed-preview/${file.job_id}?edit=${editFlag}`, '_blank', 'noopener,noreferrer')
-    //       return
-    //     }
-    
-    //     try {
-    //       const { url } = await ingestionApi.download(file.job_id)
-    //       if (canInlinePreview(file)) {
-    //         window.open(url, '_blank', 'noopener,noreferrer')
-    //       } else {
-    //         triggerDownload(url, file.filename)
-    //       }
-    //     } catch (err) {
-    //       window.alert(err?.response?.data?.detail || err.message || 'View failed')
-    //     }
-    //   }
+  visualizationApi
+    .listForProject(projectId)
+    .then((res) => {
+      const list = Array.isArray(res) ? res : res.data || []
 
-    const handleView = (file, tabName) => {
+      const filtered = list.filter(
+        (v) =>
+          v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
+          v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
+      )
+
+      setPlots(filtered)
+    })
+    .catch(() => setPlots([]))
+}, [tab, projectId, datasetType, tagName])
+
+      const rows =
+  tab === 'plot'
+    ? plots
+    : tab === 'raw'
+      ? files
+      : tab === 'processed'
+        ? files.filter(f => f.processed_key)
+        : tab === 'others'
+          ? files.filter(f => !f.processed_key && !f.visualize_enabled)
+          : []
+
+//   const handleView = (file, tabName) => {
+//   if (tabName === 'plot') {
+//     // Open full visualization page for plots
+//     window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
+   
+
+//   } else if (tabName === 'processed' && file.processed_key) {
+//     window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
+//   } else if (tabName === 'raw') {
+//     window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
+//   } else {
+//     // fallback for files that cannot be previewed
+//     ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
+//   }
+// }
+const handleView = (file, tabName) => {
+  if (tabName === 'plot') {
+    openPlotFullScreen(file);
+    return;
+  }
+
   if (tabName === 'processed' && file.processed_key) {
-    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
-  } else if (tabName === 'raw') {
-    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
-  } else {
-    // fallback for files that cannot be previewed
-    ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
+    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (tabName === 'raw') {
+    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename));
+};
+
+
+
+    
+     const handleDownload = async (file) => {
+  try {
+    if (tab === 'plot') {
+      const response = await visualizationApi.download(file.viz_id)
+
+      const blob = new Blob([response.data])
+      const objectUrl = window.URL.createObjectURL(blob)
+
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = file.filename || 'visualization.html'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+
+      window.URL.revokeObjectURL(objectUrl)
+    } else {
+      const { url } = await ingestionApi.download(file.job_id)
+      await forceDownloadFromUrl(url, file.filename)
+    }
+  } catch (err) {
+    console.error(err)
+    window.alert('Download failed')
   }
 }
 
-    
-      const handleDownload = async (file) => {
-        try {
-          const { url } = await ingestionApi.download(file.job_id)
-          await forceDownloadFromUrl(url, file.filename)
-        } catch (err) {
-          window.alert(err?.response?.data?.detail || err.message || 'Download failed')
-        }
-      }
     
       // const handleDelete = async (file) => {
       //   if (!window.confirm(`Delete "${file.filename}"? This cannot be undone.`)) return
@@ -137,15 +202,25 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
       // }
 
       
-      const handleDeleteFile = async () => {
+    const handleDeleteFile = async () => {
   if (!confirmDelete.file) return
 
   try {
-    await ingestionApi.remove(confirmDelete.file.job_id)
+    if (tab === 'plot') {
+      // Delete visualization
+      await visualizationApi.remove(confirmDelete.file.viz_id)
 
-    setFiles(prev =>
-      prev.filter(f => f.job_id !== confirmDelete.file.job_id)
-    )
+      setPlots(prev =>
+        prev.filter(p => p.viz_id !== confirmDelete.file.viz_id)
+      )
+    } else {
+      // Delete normal file
+      await ingestionApi.remove(confirmDelete.file.job_id)
+
+      setFiles(prev =>
+        prev.filter(f => f.job_id !== confirmDelete.file.job_id)
+      )
+    }
   } catch (err) {
     window.alert(
       err?.response?.data?.detail || err.message || 'Delete failed'
@@ -154,6 +229,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     setConfirmDelete({ open: false, file: null })
   }
 }
+
 
     return (
         <div style={{background:'#ffffff',gap:'10px', padding:'20px', width:'100%', height:'100%', border:'1px solid #00000026', borderRadius:'4px'}}>
@@ -167,7 +243,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
             <div className="tablist">
                 <button className={tab === 'raw' ? 'active' : ''} onClick={() => setTab('raw')}>Raw</button>
                 <button className={tab === 'processed' ? 'active' : ''} onClick={() => setTab('processed')}>Processed</button>
-                <button disabled>Plot</button>
+                <button className={tab === 'plot' ? 'active' : ''} onClick={() => setTab('plot')}>Plot</button>
                 <button className={tab === 'others' ? 'active' : ''} onClick={() => setTab('others')}>Others</button>
                 
             </div>
@@ -177,7 +253,9 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     <tr>
                              <th className="tablehead">
                                         <span className="th-content">
-                                         <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>File Name
+                                         <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
+{tab === 'plot' ? 'Plot Name' : 'File Name'}
+
                                          </span>
                                          </th>
                                       <th className="tablehead">
@@ -189,13 +267,35 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map(f => (
-                        <tr key={f._id}>
+                    {/* {rows.map(f => (
+                        <tr key={f._id}> */}
+                        {rows.map((f) => (
+  <tr key={tab === "plot" ? f.viz_id : f.job_id}>
+
                             <td style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
-                                <div style={{gap:'6px', display:'flex',alignItems:'center'}}>
-                                <img style={{width:'20px', height:'20px'}} src={Folder1} alt="folder"/>
-                                {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
-                                </div>
+                                <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+  <img
+    style={{ width: '20px', height: '20px' }}
+    src={Folder1}
+    alt="folder"
+  />
+
+  {tab === 'plot' ? (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <p className="data-card__name" style={{ margin: 0 }}>
+        {f.filename || 'dataset'}
+      </p>
+      <p className="summarylabel2" style={{ margin: 0 }}>
+        {f.chart_type} · {f.status}
+      </p>
+    </div>
+  ) : (
+    f.sheet_name
+      ? `${f.filename} — ${f.sheet_name}`
+      : f.filename
+  )}
+</div>
+
                                 </td>
                             <td 
                             style={{color:'#000000',fontFamily:'inter-regular,Helvetica',fontSize:'14px',fontWeight:'400'}}>
@@ -204,7 +304,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                 {new Date(f.created_at).toLocaleDateString()}
                                 </div>
                                 </td>
-                            <td style={{display:'flex',gap:'8px', alignItems:'center'}}>
+                            <td style={{ verticalAlign: 'middle' }}>
+                              <div style={{display:'flex',gap:'8px', alignItems:'left',justifyContent:'left'}}>
                                 {/* <button
                                 onClick={() => handleView(f, tab === 'processed')} title="View"
                                     // onClick={() => {
@@ -221,6 +322,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                                 </button> */}
 
                                 <button
+                               
   onClick={() => handleView(f, tab)} // pass 'raw' or 'processed'
   title="View"
   style={{
@@ -228,23 +330,37 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     border:'0.67px solid #0000001A',
     width:'40px',
     height:'35px',
-    borderRadius:'8px'
+    borderRadius:'8px',
+    justifyContent: 'center',
+    alignItems:'center',
   }}
 >
   <img style={{width:'20px', height:'20px'}} src={ViewIcon} alt="view"/>
 </button>
 
+                                {tab !== 'plot' && (
+  <button
+    onClick={() => handleDownload(f)}
+    title="Download"
+    style={{
+      background: '#ffffff',
+      border: '0.67px solid #0000001A',
+      width: '40px',
+      height: '35px',
+      borderRadius: '8px',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
+  </button>
+)}
 
-
-                                <button 
-                                onClick={() => handleDownload(f)} title="Download"
-                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}>
-                                    <img style={{width:'20px', height:'20px'}} src={DownloadSimple} alt="download"/>
-                                    </button>
                                <button  onClick={() =>setConfirmDelete({ open: true, file: f })} title="Delete"
-                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center'}}>
+                                 style={{background:'#ffffff',border:'0.67px solid #0000001A', width:'40px', height:'35px', borderRadius:'8px', alignItems:'center',justifyContent: 'center'}}>
                                     <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
                                     </button>
+                                    </div>
                             </td>
                         </tr>
                     ))}
@@ -254,7 +370,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
 
              {confirmDelete.open && (
   <ConfirmationModal
-    title={`Delete "${confirmDelete.file?.filename}"?`}
+    // title={`Delete "${confirmDelete.file?.filename}"?`}
+    title={`Delete "${tab === "plot" ? (confirmDelete.file?.filename || "Visualization") : confirmDelete.file?.filename}"?`}
     description="This action cannot be undone."
     onCancel={() =>
       setConfirmDelete({ open: false, file: null })
