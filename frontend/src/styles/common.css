@@ -46,3 +46,11 @@
     font-size: 12px;
     font-weight: 600;
 }
+
+.fullscreen-page {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+}

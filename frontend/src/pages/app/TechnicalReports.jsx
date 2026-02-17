@@ -557,7 +557,22 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
               </select>
             </label >
             <Input style={{borderRadius: "8px",background:"#F3F3F5",color:"#717182"}}label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
-            <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} />
+            {/* <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} /> */}
+                       <Input
+                             
+              label="Ratings"
+              type="number"
+              min={0}
+              max={5}
+              step="0.1"
+              value={form.rating}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "" || (Number(value) >= 0 && Number(value) <= 5)) {
+                  onChange("rating", value);
+                }
+              }}
+            />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ color: "#475569", fontSize: 13 }}>Note</span>

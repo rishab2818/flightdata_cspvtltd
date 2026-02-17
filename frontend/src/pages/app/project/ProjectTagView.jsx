@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { ingestionApi } from "../../../api/ingestionApi"
+import { visualizationApi } from "../../../api/visualizationApi"
+
 
 const TABULAR_EXTENSIONS = new Set([".csv", ".xlsx", ".xls", ".txt", ".dat", ".c", ".mat"])
 const INLINE_EXTENSIONS = new Set([
@@ -60,13 +62,58 @@ export default function ProjectTagView() {
   const navigate = useNavigate()
 
   const [files, setFiles] = useState([])
+  const [plots, setPlots] = useState([])
   const [activeTab, setActiveTab] = useState("raw")
 
   useEffect(() => {
-    ingestionApi
-      .listFilesInTag(projectId, datasetType, tagName)
-      .then(setFiles)
-  }, [projectId, datasetType, tagName])
+  if (activeTab !== "plot") return
+
+  visualizationApi
+    .listForProject(projectId)
+    .then((res) => {
+      const list = Array.isArray(res) ? res : res.data || []
+
+      const filtered = list.filter(
+        (v) =>
+          v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
+          v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
+      )
+
+      setPlots(filtered)
+    })
+    .catch(() => setPlots([]))
+}, [activeTab, projectId, tagName, datasetType])
+
+  
+//   useEffect(() => {
+//     ingestionApi
+//       .listFilesInTag(projectId, datasetType, tagName)
+//       .then(setFiles)
+//   }, [projectId, datasetType, tagName])
+
+//    useEffect(() => {
+//     if (activeTab === "plot") {
+//       visualizationApi
+//         .listForProject(projectId)
+//         .then((data) => {
+//           // const filtered = data.filter(
+//           //   (v) =>
+//           //     v.tag_name === tagName &&
+//           //     v.dataset_type === datasetType
+//           // )
+//           // setPlots(filtered)
+//      const filtered = data.filter((v) =>
+//   v.tag_name?.toLowerCase() === tagName?.toLowerCase() &&
+//   v.dataset_type?.toLowerCase() === datasetType?.toLowerCase()
+// )
+
+// setPlots(filtered)   // ✅ YOU FORGOT THIS
+//         })
+
+
+//         .catch(() => setPlots([]))
+//     }
+//   }, [activeTab, projectId, tagName, datasetType])
 
   const rawFiles = files
   const processedFiles = files.filter(f => f.processed_key)
@@ -74,8 +121,19 @@ export default function ProjectTagView() {
     f => !f.processed_key && !f.visualize_enabled
   )
 
+  // const rows =
+  //   activeTab === "raw"
+  //     ? rawFiles
+  //     : activeTab === "processed"
+  //       ? processedFiles
+  //       : activeTab === "others"
+  //         ? othersFiles
+  //         : []
+
   const rows =
-    activeTab === "raw"
+  activeTab === "plot"
+    ? plots
+    : activeTab === "raw"
       ? rawFiles
       : activeTab === "processed"
         ? processedFiles
@@ -129,14 +187,22 @@ export default function ProjectTagView() {
       </div>
 
       {/* Tabs */}
-      <div className="tablist">
+      {/* <div className="tablist">
         <button className={activeTab === "raw" ? "active" : ""} onClick={() => setActiveTab("raw")}>Raw</button>
         <button className={activeTab === "processed" ? "active" : ""} onClick={() => setActiveTab("processed")}>Processed</button>
         <button className={activeTab === "others" ? "active" : ""} onClick={() => setActiveTab("others")}>Others</button>
-        <button disabled>Plot</button>
-      </div>
+        <button style={{ cursor: "pointer", opacity: 1 }} className={activeTab === "plot" ? "active" : ""} onClick={() => setActiveTab("plot")}>Plot</button>
+      </div> */}
 
-      {/* Table */}
+      <div>
+  <button onClick={() => setActiveTab("raw")}>Raw</button>
+  <button onClick={() => setActiveTab("processed")}>Processed</button>
+  <button onClick={() => setActiveTab("plot")}>Plot</button>
+  <button onClick={() => setActiveTab("others")}>Others</button>
+</div>
+
+
+      {/* Table
       <table className="data-table">
         <thead>
           <tr>
@@ -158,13 +224,109 @@ export default function ProjectTagView() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table> */}
 
-      {!rows.length && (
-        <div className="empty-state" style={{ marginTop: 12 }}>
-          No files in this tab.
-        </div>
-      )}
+  {/* FILE TABLE */}
+{activeTab !== "plot" && (
+  <>
+    <table className="data-table">
+      <thead>
+        <tr>
+          <th>File Name</th>
+          <th>Created Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((f) => (
+          <tr key={f._id}>
+            <td>
+              {f.sheet_name
+                ? `${f.filename} — ${f.sheet_name}`
+                : f.filename}
+            </td>
+            <td>{new Date(f.created_at).toLocaleDateString()}</td>
+            <td>
+              <button onClick={() => handleView(f, activeTab === "processed")}>
+                👁
+              </button>
+              <button onClick={() => handleDownload(f)}>⬇</button>
+              <button onClick={() => handleDelete(f)}>🗑</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    {!rows.length && (
+      <div className="empty-state" style={{ marginTop: 12 }}>
+        No files in this tab.
+      </div>
+    )}
+  </>
+)}
+
+{activeTab === "plot" && (
+  <>
+  <table className="data-table">
+  <thead>
+    <tr>
+      <th>{activeTab === "plot" ? "Plot Name" : "File Name"}</th>
+      <th>Created Date</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {rows.map((item) => (
+      <tr key={activeTab === "plot" ? item.viz_id : item._id}>
+        <td>
+          {activeTab === "plot"
+            ? (item.filename || item.chart_type || "Plot")
+            : (item.sheet_name
+                ? `${item.filename} — ${item.sheet_name}`
+                : item.filename)}
+        </td>
+
+        <td>
+          {new Date(item.created_at).toLocaleDateString()}
+        </td>
+
+        <td>
+          {activeTab === "plot" ? (
+            <button
+              onClick={() =>
+                window.open(`/visualisation/${item.viz_id}`, "_blank")
+              }
+            >
+              👁
+            </button>
+          ) : (
+            <>
+              <button onClick={() => handleView(item, activeTab === "processed")}>
+                👁
+              </button>
+              <button onClick={() => handleDownload(item)}>⬇</button>
+              <button onClick={() => handleDelete(item)}>🗑</button>
+            </>
+          )}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+{!rows.length && (
+  <div className="empty-state" style={{ marginTop: 12 }}>
+    {activeTab === "plot"
+      ? "No saved visualisations for this tag."
+      : "No files in this tab."}
+  </div>
+)}
+
+  </>
+)}
+
+
     </div>
   )
 }

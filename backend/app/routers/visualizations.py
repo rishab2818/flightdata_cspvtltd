@@ -175,6 +175,8 @@ async def create_visualization(
                 "mapping": payload.mapping,
                 "filters": payload.filters or {},
             },
+            dataset_type=payload.dataset_type,
+            tag_name=payload.tag_name,
         )
         generate_visualization.delay(viz_id)
         doc = _with_series(await repo.get(viz_id))
@@ -254,6 +256,8 @@ async def create_visualization(
         filename=primary_filename,
         source_type="tabular",
         mat_request=None,
+        dataset_type=payload.dataset_type,
+        tag_name=payload.tag_name,
     )
 
     generate_visualization.delay(viz_id)

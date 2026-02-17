@@ -137,6 +137,8 @@ export default function ProjectVisualisation() {
   });
 
   const [deletingViz, setDeletingViz] = useState(null)
+ const [fullScreenViz, setFullScreenViz] = useState(null);
+
 
 
   /* ================= series manager ================= */
@@ -175,9 +177,10 @@ export default function ProjectVisualisation() {
   const [visualizations, setVisualizations] = useState([])
   const PAGE_SIZE = 10;
 
-  const [vizPage, setVizPage] = useState(1);
-  const [hasMoreViz, setHasMoreViz] = useState(true);
-  const [loadingViz, setLoadingViz] = useState(false);
+const [vizPage, setVizPage] = useState(1);
+const [hasMoreViz, setHasMoreViz] = useState(true);
+const [loadingViz, setLoadingViz] = useState(false);
+const [loadingSave, setLoadingSave] = useState(false);
 
   const [activeViz, setActiveViz] = useState(null)
   const [plotHtml, setPlotHtml] = useState('')
@@ -897,12 +900,29 @@ export default function ProjectVisualisation() {
           )
         }
 
-        requestPayload = {
-          project_id: projectId,
-          source_type: 'tabular',
-          chart_type: chartType,
-          series: payloadSeries,
-        }
+        const firstSeries = payloadSeries.length
+  ? configured.find(s => s.jobId === payloadSeries[0].job_id)
+  : null
+
+
+requestPayload = {
+  project_id: projectId,
+  source_type: 'tabular',
+  dataset_type: firstSeries?.datasetType || null,
+  tag_name: firstSeries?.tag || null,
+  chart_type: chartType,
+  series: payloadSeries,
+}
+
+
+        // requestPayload = {
+        //   project_id: projectId,
+        //   source_type: 'tabular',
+        //   dataset_type: activeSeries?.datasetType || null,
+        //   tag_name: activeSeries?.tag || null,
+        //   chart_type: chartType,
+        //   series: payloadSeries,
+        // }
       }
 
       const res = await visualizationApi.create(requestPayload)
@@ -1017,7 +1037,8 @@ export default function ProjectVisualisation() {
   /* ================= UI ================= */
   return (
     <div className="CardWapper">
-      <div className="tablist" style={{ marginBottom: 12 }}>
+    <div className="project-cardpage">
+      <div className="Tablist" style={{ marginBottom: 12 }}>
         <button
           type="button"
           className={visualSectionTab === 'visualize' ? 'active' : ''}
@@ -1038,14 +1059,14 @@ export default function ProjectVisualisation() {
         <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
-            <p className="summary-label" style={{ margin: 0 }}>
+            {/* <p className="summary-label" style={{ margin: 0 }}>
               Select Dataset → Tag → File, choose a formula template, map columns, then preview or save.
-            </p>
+            </p> */}
           </div>
 
           {calcError && <div className="project-shell__error">{calcError}</div>}
 
-          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="Row calculation-row">
             <div className="ps-field">
               <label>Dataset</label>
               <select
@@ -1103,18 +1124,7 @@ export default function ProjectVisualisation() {
               </select>
             </div>
 
-            <div className="ps-field">
-              <label>Output Column</label>
-              <input
-                className="input-control"
-                value={calcOutputColumn}
-                onChange={(e) => setCalcOutputColumn(e.target.value)}
-                placeholder="derived_col_name"
-              />
-            </div>
-          </div>
-
-          <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          {/* <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}> */}
             <div className="ps-field">
               <label>Category</label>
               <select
@@ -1156,57 +1166,84 @@ export default function ProjectVisualisation() {
                 {selectedFormulaTemplate?.inputs?.length || 0} input(s)
               </div>
             </div>
+          {/* </div> */}
           </div>
 
-          {calcJob && (
+          {/* {calcJob && (
             <div className="summary-label">
               Columns: {calcColumns.length ? calcColumns.join(', ') : 'No columns available'}
             </div>
-          )}
+          )} */}
+          
+        <div
+  className="Row calculation-row"
+  style={{ gridTemplateColumns: "repeat(6, minmax(180px, 1fr))" }}
+>
 
-          {(selectedFormulaTemplate?.inputs || []).length > 0 && (
-            <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-              {selectedFormulaTemplate.inputs.map((inputName, idx) => (
-                <div className="ps-field" key={`calc-input-${inputName}-${idx}`}>
-                  <label>{`Column ${inputName}`}</label>
-                  <select
-                    value={calcInputs[idx] || ''}
-                    onChange={(e) => handleCalcInputChange(idx, e.target.value)}
-                    disabled={!calcJobId}
-                  >
-                    <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
-                    {calcColumns.map((col) => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          )}
+  {(selectedFormulaTemplate?.inputs || []).length > 0 &&
+    selectedFormulaTemplate.inputs.map((inputName, idx) => (
+      <div
+        className="ps-field"
+        key={`calc-input-${inputName}-${idx}`}
+      >
+        <label>{`Column ${inputName}`}</label>
+        <select
+          value={calcInputs[idx] || ''}
+          onChange={(e) =>
+            handleCalcInputChange(idx, e.target.value)
+          }
+          disabled={!calcJobId}
+        >
+          <option value="">
+            {calcJobId ? 'Select' : 'Select file first'}
+          </option>
+          {calcColumns.map((col) => (
+            <option key={col} value={col}>
+              {col}
+            </option>
+          ))}
+        </select>
+      </div>
+    ))}
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcPreview}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Processing…' : 'Process Formula'}
-            </button>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcSave}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Saving…' : 'Save Derived Column To Dataset'}
-            </button>
-          </div>
+  <div className="ps-field">
+    <label>Derived Column</label>
+    <input
+      className="input-control"
+      value={calcOutputColumn}
+      onChange={(e) => setCalcOutputColumn(e.target.value)}
+      placeholder="derived_col_name"
+    />
+  </div>
+
+
+  <div  style={{marginTop:'26px'}}>
+  <button
+    type="button"
+    
+    className="project-shell__nav-link"
+    onClick={handleCalcPreview}
+    disabled={calcProcessing}
+  >
+    {calcProcessing ? 'Processing…' : 'Process Formula'}
+  </button>
+  </div>
+  </div>
+  
+  <div style={{display:'flex',alignItems:"right", justifyContent:"right"}}>
+  <button
+    type="button"
+    className="project-shell__nav-save"
+    onClick={handleCalcSave}
+    disabled={calcProcessing}
+  >
+    {calcProcessing ? 'Saving…' : 'Save Derived Column'}
+  </button>
+  </div>
+
 
           <div>
-            <p className="summary-label" style={{ marginBottom: 6 }}>Preview</p>
+            <p className="summary-label" style={{ marginBottom: 6, fontFamily:"inter-semi-bold, Helvetica",fontSize:"16px", fontWeight:600, color:"#000000"}}>Preview</p>
             <div className="excel-preview">
               {calcPreviewRows.length ? (
                 <table className="data-table">
@@ -1682,24 +1719,33 @@ export default function ProjectVisualisation() {
 
           </form>
 
-          {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
-          <div className="project-card">
-            <div className="actions-row" style={{ justifyContent: 'space-between' }}>
-              <div>
-                <p className="summarylabel">{statusMessage}</p>
+      {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
+      <div className="project-card">
+        <div className="actions-row" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <p className="summarylabel">{statusMessage}</p>
 
-                {/* meta (kept) */}
-                {plotMeta && (
-                  <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
-                    <div><b>Chart:</b> {plotMeta.chartType}</div>
-                    <div><b>Series:</b> {plotMeta.count}</div>
-                    <div style={{ marginTop: 6 }}>
-                      {plotMeta.items.map((it, i) => (
-                        <div key={i}>• {it.label}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            <div className="ps-field">
+  <button
+    type="button"
+    className="project-shell__nav-save"
+    onClick={handleSaveVisualization}
+    disabled={!plotHtml || loadingSave} // only enable after plot is generated
+  >
+    {loadingSave ? 'Saving…' : 'Save Visualization'}
+  </button>
+</div>
+
+            {/* meta (kept) */}
+            {plotMeta && (
+              <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
+                <div><b>Chart:</b> {plotMeta.chartType}</div>
+                <div><b>Series:</b> {plotMeta.count}</div>
+                <div style={{ marginTop: 6 }}>
+                  {plotMeta.items.map((it, i) => (
+                    <div key={i}>• {it.label}</div>
+                  ))}
+                </div>
               </div>
 
               {activeViz?.status && (
@@ -1832,13 +1878,61 @@ export default function ProjectVisualisation() {
                 Refresh
               </button> */}
 
-                  <button
-                    type="button"
-                    className="project-shell__nav-link"
-                    onClick={() => fetchVisualizations(1, true)}
-                  >
-                    Refresh
-                  </button>
+              <button
+  type="button"
+  className="project-shell__nav-link"
+  onClick={() => fetchVisualizations(1, true)}
+>
+  Refresh
+</button>
+
+            </div>
+          </div>
+
+          <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
+            <div className="expand-inner">
+              {/* {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>} */}
+              {!loadingViz && visualizations.length === 0 && (
+  <div className="emptystate">No visualizations yet</div>
+)}
+
+
+              <div className="viz-list">
+                {visualizations.map((viz) => (
+                  <div key={viz.viz_id} className="viz-item">
+                    <div>
+                      <p className="data-card__name">{viz.filename || 'dataset'}</p>
+                      <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
+                    </div>
+
+                    <div className="viz-actions">
+                      <button type="button" onClick={() => loadVisualization(viz.viz_id)}>
+                        <img className="actionBtn" src={ViewIcon} alt="view" />
+                      </button>
+
+                      {viz.html_url && (
+                        // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                        //   <img className="actionBtn" src={blackPloticon} alt="download" />
+                        // </button>
+                        <button
+  type="button"
+  onClick={() => setFullScreenViz(viz)}
+>
+                          <img className="actionBtn" src={linechart} alt="download" />
+                        </button>
+                      )}
+
+                      <button 
+                      type="button" 
+                      className="danger" 
+                      // onClick={() => deleteVisualization(viz.viz_id)}
+                       onClick={() =>
+  setConfirmDelete({
+    open: true,
+    vizId: viz.viz_id
+  })
+}
+disabled={deletingViz === viz.viz_id}
 
                 </div>
               </div>
@@ -1939,6 +2033,28 @@ export default function ProjectVisualisation() {
           }}
         />
       )}
+    </div>
+     {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
+    {fullScreenViz && (
+      <div className="fullscreen-overlay">
+        <div className="fullscreen-content">
+
+          <button
+            className="fullscreen-close"
+            onClick={() => setFullScreenViz(null)}
+          >
+            ✕
+          </button>
+
+          <iframe
+            src={fullScreenViz.html_url}
+            title="Full Visualization"
+            className="fullscreen-frame"
+          />
+
+        </div>
+      </div>
+    )}
     </div>
   )
 }
