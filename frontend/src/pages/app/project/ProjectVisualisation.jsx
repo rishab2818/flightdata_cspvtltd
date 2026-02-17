@@ -61,6 +61,12 @@ const plotTypes3D =[
   { value: 'surface', label: '3D Surface' },
 
 ]
+const OVERPLOT_CARTESIAN_TYPES = [
+  { value: 'scatter', label: 'Scatter' },
+  { value: 'line', label: 'Line' },
+  { value: 'bar', label: 'Bar' },
+  { value: 'scatterline', label: 'Scatter Line' },
+]
 
 const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
 window.__FD_API_BASE__ = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -82,6 +88,7 @@ const newSeries = (n = 1) => ({
   xAxis: '',
   yAxis: '',
   zAxis: '',
+  seriesChartType: '',
   label: '',
   matVar: '',
   matXDim: 0,
@@ -247,8 +254,9 @@ const plotOptions =
     const y = s.yAxis || '-'
     const z = s.zAxis || '-'
     const f = s.jobId ? 'file✅' : 'file❌'
+    const seriesType = (s.seriesChartType || chartType || 'scatter').toLowerCase()
     if (chartType === 'contour') return `${ds} • ${f} • ${x} → ${y} → ${z}`
-    return `${ds} • ${f} • ${x} → ${y}`
+    return `${ds} • ${f} • ${x} → ${y} • ${seriesType}`
   }
 
   const getTags = (datasetType) => tagsByDataset[datasetType] || []
@@ -497,6 +505,10 @@ const fetchVisualizations = async (page = 1, reset = false) => {
         : plotOptions,
     [activeIsMat, matAllowedChartTypes, plotOptions]
   )
+  const canMixOverplot = useMemo(
+    () => !activeIsMat && OVERPLOT_CARTESIAN_TYPES.some((item) => item.value === chartType),
+    [activeIsMat, chartType]
+  )
   const matNeeds2D = useMemo(
     () => ['heatmap', 'contour', 'surface'].includes(chartType),
     [chartType]
@@ -611,6 +623,13 @@ const fetchVisualizations = async (page = 1, reset = false) => {
       setDimension('2d')
     }
   }, [activeIsMat, dimension])
+
+  useEffect(() => {
+    if (canMixOverplot) return
+    setSeriesList((prev) =>
+      prev.map((s) => (s.seriesChartType ? { ...s, seriesChartType: '' } : s))
+    )
+  }, [canMixOverplot])
 
   /* ================= submit ================= */
   const enabledSeries = useMemo(() => seriesList.filter((s) => s.enabled), [seriesList])
@@ -853,6 +872,9 @@ const fetchVisualizations = async (page = 1, reset = false) => {
               z_axis: requiresZ ? s.zAxis : undefined,
               x_scale: xScale,
               y_scale: yScale,
+              chart_type: canMixOverplot
+                ? ((s.seriesChartType || '').trim() || undefined)
+                : undefined,
               label: (s.label || '').trim() || buildAutoLabel(s),
               derived_columns: derivedColumns,
             }
@@ -1401,6 +1423,24 @@ const deleteVisualization = async (vizId) => {
           <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
           {activeAxisColumns.map((col) => (
             <option key={col} value={col}>{col}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="ps-field">
+        <label>Series Chart Type</label>
+        <select
+          value={activeSeries?.seriesChartType || ''}
+          onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
+          disabled={!canMixOverplot}
+        >
+          <option value="">
+            {canMixOverplot ? `Default (${chartType})` : 'Use bar/line/scatter/scatterline'}
+          </option>
+          {OVERPLOT_CARTESIAN_TYPES.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
           ))}
         </select>
       </div>

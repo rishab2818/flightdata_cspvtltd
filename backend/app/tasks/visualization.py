@@ -489,6 +489,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         requested_x_scales.add(series.get("x_scale" , "linear"))
         requested_y_scales.add(series.get("y_scale","linear"))
         df = item["frame"]
+        series_type = (series.get("chart_type") or chart_type or "scatter").lower().strip()
 
         label = series.get("label") or series.get("y_axis") or "Series"
         x_col = series.get("x_axis")
@@ -500,17 +501,17 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         if y_col in df.columns:
             df[y_col] = pd.to_numeric(df[y_col], errors="ignore")
 
-        if chart_type == "bar":
+        if series_type == "bar":
             fig.add_bar(name=label, x=df[x_col], y=df[y_col])
 
-        elif chart_type == "line":
+        elif series_type == "line":
             # Scattergl is faster even for lines in many cases
             fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="lines"))
 
-        elif chart_type == "scatter":
+        elif series_type == "scatter":
             fig.add_trace(go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers", opacity=0.8))
 
-        elif chart_type == "scatterline":
+        elif series_type == "scatterline":
             fig.add_trace(
                 go.Scattergl(
                     name=label,
@@ -521,7 +522,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 )
             )
 
-        elif chart_type == "polar":
+        elif series_type == "polar":
             fig.add_trace(
                 go.Scatterpolar(
                     name=label,
@@ -531,7 +532,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 )
             )
 
-        elif chart_type == "contour":
+        elif series_type == "contour":
             z_col = series.get("z_axis")
             grid = _build_contour_grid(df, x_col, y_col, z_col) if z_col else None
             if grid:
@@ -560,14 +561,14 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                     )
                 )
 
-        elif chart_type == "histogram":
+        elif series_type == "histogram":
             fig.add_trace(go.Histogram(name=label, x=df[y_col], opacity=0.75))
 
-        elif chart_type == "box":
+        elif series_type == "box":
             fig.add_trace(go.Box(name=label, y=df[y_col], boxpoints="outliers"))
 
         ## For the 3d plot 
-        elif chart_type == "scatter3d":
+        elif series_type == "scatter3d":
             z_col = series.get("z_axis")
 
             # ---- Validate axes ----
@@ -618,7 +619,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             scene_camera=dict(eye=dict(x=1.1, y=1.1, z=0.7))
             )
 
-        elif chart_type == "surface":
+        elif series_type == "surface":
             z_col = series.get("z_axis")
 
             # validate axes
@@ -675,7 +676,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         )
 
 
-        elif chart_type == "line3d":
+        elif series_type == "line3d":
             z_col = series.get("z_axis")
 
             if not x_col or not y_col or not z_col:
@@ -722,7 +723,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
 
 
 
-        elif chart_type == "violin":
+        elif series_type == "violin":
             fig.add_trace(
                 go.Violin(
                     name=label,
@@ -733,7 +734,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
                 )
             )
 
-        elif chart_type == "heatmap":
+        elif series_type == "heatmap":
             fig.add_trace(
                 go.Histogram2d(
                     name=label,

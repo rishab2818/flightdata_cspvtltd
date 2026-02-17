@@ -35,6 +35,7 @@ projects = ProjectRepository()
 
 # REQUIRED_VIZ_FIELDS = {"x_axis", "chart_type", "series"}
 REQUIRED_VIZ_FIELDS = {"chart_type", "series"}
+ALLOWED_2D_CARTESIAN = {"scatter", "line", "bar", "scatterline"}
 
 
 def _inject_url(doc: dict | None):
@@ -113,6 +114,7 @@ def _with_series(doc: dict | None):
 
     for item in doc.get("series", []):
         item.setdefault("label", item.get("y_axis"))
+        item.setdefault("chart_type", doc.get("chart_type", "scatter"))
 
     return doc
 
@@ -181,7 +183,15 @@ async def create_visualization(
             detail="Please include at least one Y axis series",
         )
 
-    requires_z = chart_type in {"contour", "scatter3d", "line3d", "surface"}
+    mixed_mode = any(str((item.chart_type or "")).strip() for item in payload.series)
+    if mixed_mode and chart_type not in ALLOWED_2D_CARTESIAN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Mixed overplot is supported only for chart types: "
+                + ", ".join(sorted(ALLOWED_2D_CARTESIAN))
+            ),
+        )
 
     series_docs = []
     for idx, item in enumerate(payload.series, start=1):
@@ -191,11 +201,27 @@ async def create_visualization(
                 status_code=404, detail=f"Dataset not found for series {idx}"
             )
 
-        if requires_z and not item.z_axis:
+        series_chart_type = ((item.chart_type or chart_type) or "scatter").lower().strip()
+        if mixed_mode and series_chart_type not in ALLOWED_2D_CARTESIAN:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Z axis is required for contour plots (series {idx})",
+                detail=(
+                    f"Series {idx} chart_type '{series_chart_type}' is not allowed in mixed overplot. "
+                    f"Allowed: {', '.join(sorted(ALLOWED_2D_CARTESIAN))}"
+                ),
             )
+        series_requires_z = False if mixed_mode else series_chart_type in {"contour", "scatter3d", "line3d", "surface"}
+        if mixed_mode and item.z_axis:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Z axis is not supported in mixed overplot mode (series {idx})",
+            )
+        if series_requires_z and not item.z_axis:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Z axis is required for {series_chart_type} plots (series {idx})",
+            )
+        z_axis_for_series = item.z_axis if series_requires_z else None
 
         derived_specs: list[dict] = []
         try:
@@ -209,13 +235,13 @@ async def create_visualization(
                 target_columns=[
                     item.x_axis,
                     item.y_axis,
-                    item.z_axis if requires_z else None,
+                    z_axis_for_series,
                 ],
             )
             available_cols = set(base_columns) | set(plan.derived_names)
             missing = [
                 col
-                for col in [item.x_axis, item.y_axis, item.z_axis if requires_z else None]
+                for col in [item.x_axis, item.y_axis, z_axis_for_series]
                 if col and col not in available_cols
             ]
             if missing:
@@ -237,10 +263,11 @@ async def create_visualization(
                 "job_id": item.job_id,
                 "x_axis": item.x_axis,
                 "y_axis": item.y_axis,
-                "z_axis": item.z_axis,
+                "z_axis": z_axis_for_series,
                 "x_scale":item.x_scale,
                 "y_scale" : item.y_scale,
                 "label": item.label or item.y_axis,
+                "chart_type": series_chart_type,
                 "derived_columns": derived_specs,
                 "filename": job.get("filename", "dataset"),
             }
