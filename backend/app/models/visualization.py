@@ -22,6 +22,10 @@ class VisualizationSeriesInput(BaseModel):
     y_axis: str = Field(..., description="Column to plot on Y axis for this series")
     z_axis: Optional[str] = Field(None, description="Column to plot on Z axis (contour)")
     label: Optional[str] = Field(None, description="Optional legend label override")
+    chart_type: Optional[str] = Field(
+        None,
+        description="Optional per-series chart type override for mixed 2D overplot",
+    )
     derived_columns: list[DerivedColumnInput] = Field(default_factory=list)
 
     # Extra Inputs for the log and semi log function 
