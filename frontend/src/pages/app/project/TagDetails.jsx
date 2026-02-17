@@ -62,6 +62,24 @@ const forceDownloadFromUrl = async (url, filename) => {
     window.URL.revokeObjectURL(objectUrl)
   }
 }
+const openPlotFullScreen = (viz) => {
+  if (!viz) return;
+
+  // Prefer backend-provided URL (best)
+  const raw = viz.html_url || viz.htmlUrl || viz.url;
+
+  if (raw) {
+    const full = raw.startsWith("http")
+      ? raw
+      : `${window.__FD_API_BASE__ || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}${raw}`;
+    window.open(full, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Fallback: if backend doesn't return html_url, download endpoint can be used
+  const fallback = `${window.__FD_API_BASE__ || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/visualizations/${viz.viz_id}/html`;
+  window.open(fallback, "_blank", "noopener,noreferrer");
+};
 
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
@@ -109,49 +127,40 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
           ? files.filter(f => !f.processed_key && !f.visualize_enabled)
           : []
 
-    // const rows =
-    //     tab === 'raw'
-    //         ? files
-    //         : tab === 'processed'
-    //             ? files.filter(f => f.processed_key)
-    //             : tab === 'others'
-    //                 ? files.filter(f => !f.processed_key && !f.visualize_enabled)
-    //                 : []
-
-    //  const handleView = async (file, canEdit) => {
-    //     if (isTabularFile(file) && file.processed_key) {
-    //       const editFlag = canEdit ? '1' : '0'
-    //       window.open(`/processed-preview/${file.job_id}?edit=${editFlag}`, '_blank', 'noopener,noreferrer')
-    //       return
-    //     }
-    
-    //     try {
-    //       const { url } = await ingestionApi.download(file.job_id)
-    //       if (canInlinePreview(file)) {
-    //         window.open(url, '_blank', 'noopener,noreferrer')
-    //       } else {
-    //         triggerDownload(url, file.filename)
-    //       }
-    //     } catch (err) {
-    //       window.alert(err?.response?.data?.detail || err.message || 'View failed')
-    //     }
-    //   }
-
-  const handleView = (file, tabName) => {
-  if (tabName === 'plot') {
-    // Open full visualization page for plots
-    window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
+//   const handleView = (file, tabName) => {
+//   if (tabName === 'plot') {
+//     // Open full visualization page for plots
+//     window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
    
 
-  } else if (tabName === 'processed' && file.processed_key) {
-    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
-  } else if (tabName === 'raw') {
-    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
-  } else {
-    // fallback for files that cannot be previewed
-    ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
+//   } else if (tabName === 'processed' && file.processed_key) {
+//     window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
+//   } else if (tabName === 'raw') {
+//     window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
+//   } else {
+//     // fallback for files that cannot be previewed
+//     ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
+//   }
+// }
+const handleView = (file, tabName) => {
+  if (tabName === 'plot') {
+    openPlotFullScreen(file);
+    return;
   }
-}
+
+  if (tabName === 'processed' && file.processed_key) {
+    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (tabName === 'raw') {
+    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename));
+};
+
 
 
     

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
+
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { matApi } from '../../../mat/matApi'
@@ -129,6 +130,13 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [tagsByDataset, setTagsByDataset] = useState({})
   const [filesByDatasetTag, setFilesByDatasetTag] = useState({})
   const [matMetaByJob, setMatMetaByJob] = useState({})
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
+//   const [showLeaveWarn, setShowLeaveWarn] = useState(false);
+// const [hasUnsavedCalc, setHasUnsavedCalc] = useState(false);
+
+
+
 
   /* ================= calculation tab state ================= */
   const [formulaCatalog, setFormulaCatalog] = useState([])
@@ -789,81 +797,187 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcInputs((prev) => prev.map((v, i) => (i === idx ? value : v)))
   }
 
-  const handleCalcPreview = async () => {
-    setCalcError(null)
-    if (!calcJobId) {
-      setCalcError('Select a file first')
-      return
-    }
-    if (!calcFormulaKey) {
-      setCalcError('Select a formula template')
-      return
-    }
-    if (!calcOutputColumn.trim()) {
-      setCalcError('Provide output column name')
-      return
-    }
-    if (calcInputs.some((c) => !c)) {
-      setCalcError('Select all required input columns')
-      return
+  // const handleCalcPreview = async () => {
+  //   setCalcError(null)
+  //   if (!calcJobId) {
+  //     setCalcError('Select a file first')
+  //     return
+  //   }
+  //   if (!calcFormulaKey) {
+  //     setCalcError('Select a formula template')
+  //     return
+  //   }
+  //   if (!calcOutputColumn.trim()) {
+  //     setCalcError('Provide output column name')
+  //     return
+  //   }
+  //   if (calcInputs.some((c) => !c)) {
+  //     setCalcError('Select all required input columns')
+  //     return
+  //   }
+
+  //   try {
+  //     setCalcProcessing(true)
+  //     // New formula attempt should clear any previous unsaved derived overlay.
+  //     setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
+  //     setCalcPreviewRows([])
+  //     const data = await calculationsApi.preview(calcJobId, {
+  //       formula_key: calcFormulaKey,
+  //       input_columns: calcInputs,
+  //       output_column: calcOutputColumn.trim(),
+  //       limit: 20,
+  //     })
+  //     setCalcPreviewRows(data?.rows || [])
+  //     const derived = data?.derived_column
+  //     if (derived?.name && derived?.expression) {
+  //       applyCalculationToVisualisation(calcDatasetType, calcTag, calcJobId, derived)
+  //     }
+  //   } catch (e) {
+  //     setCalcError(e?.response?.data?.detail || e.message || 'Formula preview failed')
+  //   } finally {
+  //     setCalcProcessing(false)
+  //   }
+  // }
+
+ const handleCalcPreview = async () => {
+  setCalcError(null);
+
+  if (!calcJobId) {
+    setCalcError('Select a file first');
+    return;
+  }
+  if (!calcFormulaKey) {
+    setCalcError('Select a formula template');
+    return;
+  }
+  if (!calcOutputColumn.trim()) {
+    setCalcError('Provide output column name');
+    return;
+  }
+  if (calcInputs.some((c) => !c)) {
+    setCalcError('Select all required input columns');
+    return;
+  }
+
+  try {
+    setCalcProcessing(true);
+
+    setSeriesList((prev) =>
+      prev.map((s) => ({ ...s, derivedColumns: [] }))
+    );
+
+    setCalcPreviewRows([]);
+
+    const data = await calculationsApi.preview(calcJobId, {
+      formula_key: calcFormulaKey,
+      input_columns: calcInputs,
+      output_column: calcOutputColumn.trim(),
+      limit: 20,
+    });
+
+    setCalcPreviewRows(data?.rows || []);
+
+    const derived = data?.derived_column;
+    if (derived?.name && derived?.expression) {
+      applyCalculationToVisualisation(
+        calcDatasetType,
+        calcTag,
+        calcJobId,
+        derived
+      );
     }
 
-    try {
-      setCalcProcessing(true)
-      // New formula attempt should clear any previous unsaved derived overlay.
-      setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
-      setCalcPreviewRows([])
-      const data = await calculationsApi.preview(calcJobId, {
-        formula_key: calcFormulaKey,
-        input_columns: calcInputs,
-        output_column: calcOutputColumn.trim(),
-        limit: 20,
-      })
-      setCalcPreviewRows(data?.rows || [])
-      const derived = data?.derived_column
-      if (derived?.name && derived?.expression) {
-        applyCalculationToVisualisation(calcDatasetType, calcTag, calcJobId, derived)
-      }
-    } catch (e) {
-      setCalcError(e?.response?.data?.detail || e.message || 'Formula preview failed')
-    } finally {
-      setCalcProcessing(false)
-    }
+    // ✅ POPUP MESSAGE HERE
+    setPopupType("success");
+    setPopupMessage(
+      "Formula processed successfully. Please save the derived column."
+    );
+
+  } catch (e) {
+    setCalcError(
+      e?.response?.data?.detail || e.message || 'Formula preview failed'
+    );
+
+    setPopupType("error");
+    setPopupMessage("Failed to process formula");
+
+  } finally {
+    setCalcProcessing(false);
+
+    setTimeout(() => {
+      setPopupMessage("");
+    }, 4000);
   }
+};
+
+
 
   const handleCalcSave = async () => {
-    setCalcError(null)
-    if (!calcJobId || !calcFormulaKey || !calcOutputColumn.trim() || calcInputs.some((c) => !c)) {
-      setCalcError('Complete file, formula, input columns and output name before saving')
-      return
-    }
-    try {
-      setCalcProcessing(true)
-      await calculationsApi.materialize(calcJobId, {
-        formula_key: calcFormulaKey,
-        input_columns: calcInputs,
-        output_column: calcOutputColumn.trim(),
-        limit: 20,
-      })
-      const key = `${calcDatasetType}::${calcTag}`
-      const list = await ingestionApi.listFilesInTag(projectId, calcDatasetType, calcTag)
-      const processed = (list || []).filter((f) => {
-        if (isMatFileName(f?.filename || '')) return true
-        return !!(f.processed_key && f.columns?.length)
-      })
-      setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }))
-      setCalcPreviewRows([])
-      setCalcOutputColumn('')
-      setCalcInputs(Array.from({ length: Number(selectedFormulaTemplate?.inputs?.length || 0) }, () => ''))
+  setCalcError(null);
 
-      // clear unsaved derived overlay after persistence
-      setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
-    } catch (e) {
-      setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed')
-    } finally {
-      setCalcProcessing(false)
-    }
+  if (!calcJobId || !calcFormulaKey || !calcOutputColumn.trim() || calcInputs.some((c) => !c)) {
+    setCalcError('Complete file, formula, input columns and output name before saving');
+    return;
   }
+
+  try {
+    setCalcProcessing(true);
+
+    await calculationsApi.materialize(calcJobId, {
+      formula_key: calcFormulaKey,
+      input_columns: calcInputs,
+      output_column: calcOutputColumn.trim(),
+      limit: 20,
+    });
+
+    const key = `${calcDatasetType}::${calcTag}`;
+
+    const list = await ingestionApi.listFilesInTag(
+      projectId,
+      calcDatasetType,
+      calcTag
+    );
+
+    const processed = (list || []).filter((f) => {
+      if (isMatFileName(f?.filename || '')) return true;
+      return !!(f.processed_key && f.columns?.length);
+    });
+
+    setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }));
+
+    setCalcPreviewRows([]);
+    setCalcOutputColumn('');
+    setCalcInputs(
+      Array.from(
+        { length: Number(selectedFormulaTemplate?.inputs?.length || 0) },
+        () => ''
+      )
+    );
+
+    // clear unsaved derived overlay after persistence
+    setSeriesList((prev) =>
+      prev.map((s) => ({ ...s, derivedColumns: [] }))
+    );
+
+    // ✅ SUCCESS POPUP HERE
+    setPopupType("success");
+    setPopupMessage("Calculated column saved successfully.");
+
+  } catch (e) {
+    setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed');
+
+    setPopupType("error");
+    setPopupMessage("Failed to save calculated column.");
+
+  } finally {
+    setCalcProcessing(false);
+
+    setTimeout(() => {
+      setPopupMessage("");
+    }, 3000);
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -1744,26 +1858,7 @@ const deleteVisualization = async (vizId) => {
   Remove
 </button>
 </div>
-                      // <button
-                      //   type="button"
-                      //   onClick={(e) => {
-                      //     e.stopPropagation()
-                      //     if (window.confirm('Remove this series?')) removeSeriesSlot(s.id)
-                      //   }}
-           
-                      //   style={{
-                      //     marginTop: 8,
-                      //     height: 32,
-                      //     width: '100%',
-                      //     borderRadius: 4,
-                      //     border: '1px solid #fecdd3',
-                      //     background: '#fff1f2',
-                      //     color: '#b91c1c',
-                      //     cursor: 'pointer',
-                      //   }}
-                      // >
-                      //   Remove
-                      // </button>
+                
                     )}
 
                   </div>
@@ -1847,7 +1942,7 @@ const deleteVisualization = async (vizId) => {
                 </div>
               </div>
             ))} */}
-        <div className="projectcard1">
+        {/* <div className="projectcard1">
           {tilePreview && (
             <div style={{ marginTop: 12 }}>
               <p className="summarylabel1">
@@ -1876,7 +1971,7 @@ const deleteVisualization = async (vizId) => {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
 
 
         {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
@@ -1885,12 +1980,7 @@ const deleteVisualization = async (vizId) => {
             <label className="text">Saved visualizations ({visualizations.length})</label>
 
             <div className="actionsrow__right">
-              {/* <button
-                type="button"
-                className="expand-btn"
-                onClick={() => setIsExpanded((p) => !p)}
-                aria-expanded={isExpanded}
-              > */}
+              
               <button
   type="button"
   className="expand-btn"
@@ -1994,8 +2084,6 @@ const deleteVisualization = async (vizId) => {
 }
 disabled={deletingViz === viz.viz_id}
 
-
-
                       >
                         <img className="actionBtn" src={Delete} alt="delete" />
                       </button>                                        
@@ -2049,6 +2137,13 @@ disabled={deletingViz === viz.viz_id}
   />
 )}     
     </div>
+    {popupMessage && (
+  <div className={`toast-popup ${popupType}`}>
+    {popupMessage}
+  </div>
+)}
+
+    
      {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
     {/* {fullScreenViz && (
       <div className="fullscreen-overlay">

@@ -721,6 +721,41 @@ min-width: 0;
   min-width: 0;
 }
 
+.toast-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 22px;
+  border-radius: 10px;
+  color: black;
+  font-size: 14px;
+  font-family: "Inter-regular",Helvetica;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  animation: slideDown 0.3s ease;
+}
+
+.toast-popup.success {
+  background: #F3F3F5;
+}
+
+.toast-popup.error {
+  background: #dc2626;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* .fullscreen-overlay {
   position: fixed;
   top: 0;
