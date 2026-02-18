@@ -300,8 +300,9 @@ min-width: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   gap: 12px;
   margin-top: 20px;
-    min-width: 0;
+  min-width: 0;
   overflow-x: hidden;
+  height: 90%;
 }
 
 .projectcard1 {
@@ -742,7 +743,7 @@ min-width: 0;
 }
 
 .toast-popup.error {
-  background: #dc2626;
+  background: #f37575;
 }
 
 @keyframes slideDown {

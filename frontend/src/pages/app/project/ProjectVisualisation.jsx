@@ -15,6 +15,7 @@ import ChartLine1 from '../../../assets/ChartLine1.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import linechart from "../../../assets/LineChart.svg";
+import EmptySection from "../../../components/common/EmptyProject";
 // import linechart25 from "../../assets/linechart25.svg";
 
 
@@ -117,7 +118,6 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 });
 
   const [deletingViz, setDeletingViz] = useState(null)
- const [fullScreenViz, setFullScreenViz] = useState(null);
 
   /* ================= series manager ================= */
   const [seriesList, setSeriesList] = useState([newSeries(1)])
@@ -128,7 +128,6 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [xScale, setXScale] = useState('linear')
   const [yScale, setYScale] = useState('linear')
   const [visualSectionTab, setVisualSectionTab] = useState('visualize')
-
 
   // whether the selected chart type requires a Z axis (used in render and submit)
   const requiresZ = ['contour', 'scatter3d', 'line3d', 'surface'].includes(chartType)
@@ -141,9 +140,6 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [popupType, setPopupType] = useState("success");
 //   const [showLeaveWarn, setShowLeaveWarn] = useState(false);
 // const [hasUnsavedCalc, setHasUnsavedCalc] = useState(false);
-
-
-
 
   /* ================= calculation tab state ================= */
   const [formulaCatalog, setFormulaCatalog] = useState([])
@@ -158,6 +154,12 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [calcProcessing, setCalcProcessing] = useState(false)
   const [calcError, setCalcError] = useState(null)
   const [tempVizId, setTempVizId] = useState(null)
+  const [perfCategoryKey, setPerfCategoryKey] = useState("");   // Performance
+  const [mode, setMode] = useState(""); // "basic" | "performance" | ""
+  // const activeCategoryKey = calcCategoryKey || perfCategoryKey;
+  const activeCategoryKey =
+  mode === "basic" ? calcCategoryKey : perfCategoryKey;
+
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
@@ -184,8 +186,36 @@ const [loadingSave, setLoadingSave] = useState(false);
     [seriesList, activeSeriesId]
   )
 
+  const showPopup = (message, type = "success") => {
+  setPopupMessage(message)
+  setPopupType(type)
+
+  // Keep popup visible for 7 seconds (change to 5000–10000 if needed)
+  setTimeout(() => {
+    setPopupMessage("")
+  }, 7000)
+}
+
+
   const [dimension, setDimension] = useState('2d')
 // const [plotType, setPlotType] = useState('')
+
+ const BASIC_KEYS = [
+  "algebra",
+  "trigonometric",
+  "log_exp",
+  "stats",
+  "magnitude",
+];
+
+const basicFormulas = formulaCatalog.filter(c =>
+  BASIC_KEYS.includes(c.key)
+);
+
+const performanceFormulas = formulaCatalog.filter(c =>
+  !BASIC_KEYS.includes(c.key)
+);
+
 
 const plotOptions =
   dimension === '2d' ? plotTypes2D : plotTypes3D
@@ -1334,8 +1364,8 @@ const deleteVisualization = async (vizId) => {
             </div>
 
           {/* <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}> */}
-            <div className="ps-field">
-              <label>Category</label>
+            {/* <div className="ps-field">
+              <label>Basic Calculation</label>
               <select
                 value={calcCategoryKey}
                 onChange={(e) => {
@@ -1350,8 +1380,64 @@ const deleteVisualization = async (vizId) => {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="ps-field">
+            </div> */}
+    <div className="ps-field">
+  <label>Basic</label>
+  <select
+  value={calcCategoryKey}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    setMode(value ? "basic" : "");   // set mode
+    setCalcCategoryKey(value);
+    setPerfCategoryKey("");
+
+    setCalcFormulaKey("");
+    setCalcPreviewRows([]);
+  }}
+  disabled={mode === "performance"}
+>
+  <option value="">Select</option>
+  {basicFormulas.map((c) => (
+    <option key={c.key} value={c.key}>
+      {c.label}
+    </option>
+  ))}
+</select>
+
+</div>
+
+
+<div className="ps-field">
+  <label>Performance</label>
+ <select
+  value={perfCategoryKey}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    setMode(value ? "performance" : "");
+    setPerfCategoryKey(value);
+    setCalcCategoryKey("");
+
+    setCalcFormulaKey("");
+    setCalcPreviewRows([]);
+  }}
+  disabled={mode === "basic"}
+>
+  <option value="">Select</option>
+  {performanceFormulas.map((c) => (
+    <option key={c.key} value={c.key}>
+      {c.label}
+    </option>
+  ))}
+</select>
+
+</div>
+
+
+
+
+            {/* <div className="ps-field">
               <label>Formula</label>
               <select
                 value={calcFormulaKey}
@@ -1368,7 +1454,35 @@ const deleteVisualization = async (vizId) => {
                   </option>
                 ))}
               </select>
-            </div>
+            </div> */}
+
+            <div className="ps-field">
+  <label>Formula</label>
+ <select
+  value={calcFormulaKey}
+  onChange={(e) => {
+    setCalcFormulaKey(e.target.value);
+    setCalcPreviewRows([]);
+  }}
+  disabled={!activeCategoryKey}
+>
+  <option value="">
+    {activeCategoryKey ? "Select" : "Select category first"}
+  </option>
+
+  {(formulaCatalog.find((c) => c.key === activeCategoryKey)?.templates || [])
+    .map((tpl) => (
+      <option key={tpl.key} value={tpl.key}>
+        {tpl.label}
+      </option>
+    ))}
+</select>
+
+
+</div>
+
+
+
             <div className="ps-field">
               <label>Mapped Inputs</label>
               <div className="summary-label" style={{ marginTop: 8 }}>
@@ -1386,7 +1500,7 @@ const deleteVisualization = async (vizId) => {
           
         <div
   className="Row calculation-row"
-  style={{ gridTemplateColumns: "repeat(6, minmax(180px, 1fr))" }}
+  style={{ gridTemplateColumns: "repeat(7, minmax(180px, 1fr))" }}
 >
 
   {(selectedFormulaTemplate?.inputs || []).length > 0 &&
@@ -1451,33 +1565,58 @@ const deleteVisualization = async (vizId) => {
   </div>
 
 
-          <div>
-            <p className="summary-label" style={{ marginBottom: 6, fontFamily:"inter-semi-bold, Helvetica",fontSize:"16px", fontWeight:600, color:"#000000"}}>Preview</p>
-            <div className="excel-preview">
-              {calcPreviewRows.length ? (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      {Object.keys(calcPreviewRows[0] || {}).map((k) => (
-                        <th key={k}>{k}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {calcPreviewRows.slice(0, 10).map((row, i) => (
-                      <tr key={`calc-row-${i}`}>
-                        {Object.keys(calcPreviewRows[0] || {}).map((k) => (
-                          <td key={`${i}-${k}`}>{String(row?.[k] ?? '')}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="empty-state">No preview yet. Process a formula to see results.</div>
-              )}
-            </div>
-          </div>
+        <div>
+  <p
+    className="summary-label"
+    style={{
+      marginBottom: 6,
+      fontFamily: "inter-semi-bold, Helvetica",
+      fontSize: "16px",
+      fontWeight: 600,
+      color: "#000000",
+    }}
+  >
+    Preview
+  </p>
+
+  <div className="excel-preview">
+    {calcPreviewRows.length ? (
+      <table className="data-table">
+        <thead>
+          <tr>
+            {Object.keys(calcPreviewRows[0] || {}).map((k) => (
+              <th key={k}>{k}</th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {calcPreviewRows.slice(0, 10).map((row, i) => (
+            <tr key={`calc-row-${i}`}>
+              {Object.keys(calcPreviewRows[0] || {}).map((k) => (
+                <td key={`${i}-${k}`}>
+                  {String(row?.[k] ?? "")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <div
+        style={{
+          height: 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <EmptySection />
+      </div>
+    )}
+  </div>
+</div>
+
         </div>
       )}
 
