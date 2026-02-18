@@ -12,6 +12,7 @@ import Newspaper from "../../assets/Newspaper.svg"
 import styles from "./DivisionalRecords.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
+
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 import DownloadSimple from "../../assets/DownloadSimple.svg";
