@@ -1345,7 +1345,7 @@ const deleteVisualization = async (vizId) => {
             </div>
 
             <div className="ps-field">
-              <label>File</label>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>File <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
               <select
                 value={calcJobId}
                 onChange={(e) => {
@@ -1530,7 +1530,7 @@ const deleteVisualization = async (vizId) => {
     ))}
 
   <div className="ps-field">
-    <label>Derived Column</label>
+    <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Derived Column <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
     <input
       className="input-control"
       value={calcOutputColumn}

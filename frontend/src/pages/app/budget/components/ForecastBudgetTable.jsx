@@ -73,7 +73,7 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
               <td>{row.hardware_need || '--'}</td>
               <td>{row.capital_or_revenue || '--'}</td>
               <td>{row.condemnation || '--'}</td>
-              <td>{row.remarks || '--'}</td>
+              <td>{row.note || '--'}</td>
               <td>
                 {row.original_name ? (
                   <button

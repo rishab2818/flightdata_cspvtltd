@@ -55,7 +55,7 @@ export const modalFields = [
   { label: 'Reusability for other projects', placeholder: 'Enter Yes/ No', key: 'cross_project_use' },
   { label: 'Necessary of using hardware technologies', placeholder: 'Enter Yes/ No', key: 'hardware_need' },
   { label: 'Initiation of condemnation of store', placeholder: 'Enter Yes/ No', key: 'condemnation' },
-  { label: 'Remarks', placeholder: 'Enter remarks', key: 'remarks', multiline: true },
+  { label: 'Note', placeholder: 'Enter Note', key: 'Note', multiline: true },
 ];
 
 export const defaultFormState = Object.fromEntries(modalFields.map((field) => [field.key, '']));
@@ -83,7 +83,7 @@ export const budgetExportColumns = (cashSplitLabel) => [
   { header: 'Initiation of condemnation of store', key: 'condemnation' },
   { header: 'Capital / Revenue', key: 'capital_or_revenue' },
 
-  { header: 'Remarks', key: 'remarks' },
+  { header: 'Note', key: 'Note' },
   {
     header: 'Attachment Name',
     accessor: (row) => row.original_name || '',

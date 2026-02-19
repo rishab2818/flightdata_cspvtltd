@@ -1,11 +1,3 @@
-// Improved ProjectsSection component.
-//
-// This file demonstrates how to use the centralised design tokens
-// (``COLORS`` and ``SPACING``) and the reusable ``Button`` component.
-// The behaviour and layout remain the same as the original
-// ``ProjectsSection``.  Only constant definitions and repetitive
-// styling have been refactored.
-
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectCard from './ProjectCard';
@@ -28,30 +20,42 @@ export default function ProjectsSectionImproved() {
   const { user } = useContext(AuthContext);
   const role = user?.role?.toUpperCase?.();
   const navigate = useNavigate();
+
   const [projects, setProjects] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
+
   const currentUserEmail = user?.email || 'unknown@example.com';
+
   const loadProjects = async () => {
     try {
       const data = await projectApi.list();
-      const sorted = (data || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const sorted = (data || [])
+        .slice()
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setProjects(sorted);
     } catch (err) {
       console.error('Failed to load projects', err);
       setProjects([]);
     }
   };
+
   useEffect(() => {
     loadProjects();
   }, []);
+
   const handleCreateProject = async (payloadFromModal) => {
     try {
       setCreating(true);
+
       const payload = {
         ...payloadFromModal,
-        member_emails: [currentUserEmail, ...(payloadFromModal.member_emails || [])],
+        member_emails: [
+          currentUserEmail,
+          ...(payloadFromModal.member_emails || []),
+        ],
       };
+
       await projectApi.create(payload);
       setShowModal(false);
       await loadProjects();
@@ -61,111 +65,115 @@ export default function ProjectsSectionImproved() {
       setCreating(false);
     }
   };
+
   const canCreate = role === 'GD' || role === 'DH';
+
   return (
- <div
-  style={{
-    width: '100%',
-    height: '100%',        // outer container full height
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between', // stretch content if needed
-  }}
->
-  <div
-    style={{
-      background: COLORS.background,
-      border: `1px solid ${COLORS.border}`,
-      borderRadius: "8px",
-      padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
-      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',      // key: make this container fill parent
-      overflow: 'hidden',  // prevent extra scroll
-    }}
-  >
-    {/* Header row */}
     <div
       style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        marginBottom: SPACING.md,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <img
-          src={folderOpen}
-          alt="Projects"
-          style={{ width: 30, height: 30, objectFit: 'contain' }}
-        />
-        <span
-          style={{
-            fontSize: 28,
-            fontWeight: 600,
-            color: '#000',
-            fontFamily: 'inter-semi-bold, Helvetica',
-          }}
-        >
-          Projects
-        </span>
-      </div>
-
-      {canCreate && (
-        <Button
-          onClick={() => setShowModal(true)}
-          variant="primary"
-          style={{
-            width: 200,
-            height: 44,
-            borderRadius: "4px",
-            fontFamily: 'inter-regular, Helvetica',
-            fontSize: 16,
-          }}
-        >
-          + New Project
-        </Button>
-      )}
-    </div>
-
-    {/* Content */}
-    <div
-      style={{
-        flex: 1,              // key: make content stretch to full height
-        overflowY: 'auto',    // scroll if too many projects
+        width: '100%',
+        height: 'calc(100vh - 100px)', // adjust based on header height
         display: 'flex',
         flexDirection: 'column',
-        gap: SPACING.md,
+        minHeight: 0, // IMPORTANT
       }}
     >
-      {projects.length === 0 ? (
-        <EmptySection />
-      ) : (
-        projects.map((p, i) => (
-          <ProjectCard
-            key={p._id || i}
-            name={p.project_name}
-            type="Aero Data"
-            date={formatDate(p.created_at)}
-            members={p.members?.length || 0}
-            desc={p.project_description}
-            onView={() => navigate(`/app/projects/${p._id}`)}
-          />
-        ))
-      )}
+      {/* Main Card */}
+      <div
+        style={{
+          background: COLORS.background,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: 8,
+          padding: `${SPACING.lg}px ${SPACING.lg + SPACING.sm}px`,
+          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0, // IMPORTANT
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            marginBottom: SPACING.md,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img
+              src={folderOpen}
+              alt="Projects"
+              style={{ width: 30, height: 30, objectFit: 'contain' }}
+            />
+            <span
+              style={{
+                fontSize: 28,
+                fontWeight: 600,
+                color: '#000',
+                fontFamily: 'inter-semi-bold, Helvetica',
+              }}
+            >
+              Projects
+            </span>
+          </div>
+
+          {canCreate && (
+            <Button
+              onClick={() => setShowModal(true)}
+              variant="primary"
+              style={{
+                width: 200,
+                height: 44,
+                borderRadius: 4,
+                fontFamily: 'inter-regular, Helvetica',
+                fontSize: 16,
+              }}
+            >
+              + New Project
+            </Button>
+          )}
+        </div>
+
+        {/* Scrollable Content */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0, // CRITICAL FOR SCROLL
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: SPACING.md,
+            paddingRight: 4,
+          }}
+        >
+          {projects.length === 0 ? (
+            <EmptySection />
+          ) : (
+            projects.map((p, i) => (
+              <ProjectCard
+                key={p._id || i}
+                name={p.project_name}
+                type="Aero Data"
+                date={formatDate(p.created_at)}
+                members={p.members?.length || 0}
+                desc={p.project_description}
+                onView={() => navigate(`/app/projects/${p._id}`)}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Modal */}
+      <NewProjectModal
+        open={showModal}
+        onClose={() => !creating && setShowModal(false)}
+        onSubmit={handleCreateProject}
+        loading={creating}
+      />
     </div>
-  </div>
-
-  {/* Modal */}
-  <NewProjectModal
-    open={showModal}
-    onClose={() => !creating && setShowModal(false)}
-    onSubmit={handleCreateProject}
-    loading={creating}
-  />
-</div>
-
   );
 }

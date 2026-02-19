@@ -216,7 +216,7 @@ export default function DivisionalRecords() {
           row.created_date ? new Date(row.created_date).toLocaleDateString("en-GB") : "",
       },
       { header: "Rating", key: "rating" },
-      { header: "Remarks", key: "remarks" },
+      { header: "Note", key: "remarks" },
       { header: "Attachment", accessor: (row) => row.original_name || "" },
     ];
 
@@ -255,7 +255,7 @@ export default function DivisionalRecords() {
         <table className={styles.table}>
           <thead>
             <tr>
-              {["Record Name", "Type", "Created Date", "Remarks", "Action"].map((col) => (
+              {["Record Name", "Type", "Created Date", "Note", "Action"].map((col) => (
                 <th key={col}>{col}</th>
               ))}
             </tr>

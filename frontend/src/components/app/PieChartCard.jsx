@@ -19,7 +19,7 @@ export default function PieChartCard({ title, value }) {
         background: "#fff",
         border: `1px solid ${BORDER}`,
         borderRadius: 8,
-        height: 343,
+        height: 333,
         padding: "35px 25px",
         display: "flex",
         flexDirection: "column",

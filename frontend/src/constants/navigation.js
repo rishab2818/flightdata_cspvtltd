@@ -39,27 +39,27 @@ export const PAGE_META = {
   "/app": { title: "Welcome!", subtitle: "" },
   "/app/minutes": {
     title: "Minutes of the Meeting",
-    subtitle: "Upload, manage, and track meeting minutes with task assignments",
+    // subtitle: "Upload, manage, and track meeting minutes with task assignments",
   },
-  "/app/student-engagement": { title: "Student Engagement", subtitle: "Description here" },
-  "/app/inventory-records": { title: "Procurement Records", subtitle: "Description here" },
-  "/app/budget-estimation": { title: "Budget Estimation", subtitle: "Description here" },
+  "/app/student-engagement": { title: "Student Engagement" },
+  "/app/inventory-records": { title: "Procurement Records"},
+  "/app/budget-estimation": { title: "Budget Estimation"},
   "/app/divisional-records": {
     title: "Divisional Records",
-    subtitle: "Keep budgets, AMC, and cyber updates aligned with documentation.",
+    // subtitle: "Keep budgets, AMC, and cyber updates aligned with documentation.",
   },
   "/app/customer-feedbacks": {
     title: "Customer Feedbacks Overview",
-    subtitle: "Description here",
+    // subtitle: "Description here",
   },
-  "/app/training-records": { title: "Training Records", subtitle: "Description here" },
+  "/app/training-records": { title: "Training Records" },
   "/app/technical-reports": {
     title: "Technical & Design Reports",
-    subtitle: "Manage your technical and design documentation",
+    // subtitle: "Manage your technical and design documentation",
   },
   "/app/digital-library": {
     title: "Digital Library",
-    subtitle: "Browse and manage your stored documents",
+    // subtitle: "Browse and manage your stored documents",
   },
   "/app/setting": { title: "Settings", subtitle: "" },
   "/admin": { title: "Dashboard", subtitle: "Admin" },
@@ -67,7 +67,7 @@ export const PAGE_META = {
   
   "/app/settings": { 
     title: "Settings jjkn", 
-    subtitle: "In this section, you can manage your account settings", 
+    // subtitle: "In this section, you can manage your account settings", 
   },
 };
 

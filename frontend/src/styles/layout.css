@@ -1,6 +1,7 @@
 .app-shell {
   display: flex;
   min-height: 100vh;
+  overflow: hidden;
   background: #f5f9ff;
   color: #0f172a;
 }
@@ -366,7 +367,7 @@
 
 .app-shell__main {
   flex: 1;
-  overflow: auto; 
+  /* overflow: auto;  */
   margin: 0 auto;
   padding: 12px 0px 12px 0px;
   width: 100%;

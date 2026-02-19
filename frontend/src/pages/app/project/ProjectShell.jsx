@@ -6,22 +6,15 @@ import '../../../styles/project.css'
 
 import Database2 from "../../../assets/Database2.svg";
 import GearFine from "../../../assets/GearFine.svg";
-import Report2 from "../../../assets/Report2.svg";
-import digital from "../../../assets/digital.svg";
+
 import chartLine from "../../../assets/ChartLine.svg";
 import ArrowLeft from "../../../assets/ArrowLeft.svg";
-import studentIcon from "../../../assets/UsersThree.svg";
-import inventoryIcon from "../../../assets/Truck.svg";
-import minutesIcon from "../../../assets/PresentationChart.svg";
+
 
 const navItems = [
   { key: 'overview', to: '', label: 'Project Overview', icon: Database2 },
   { key: 'visualisation', to: 'visualisation', label: 'Visualize', icon: chartLine },
-   { key: 'meeting', to: 'meeting', label: 'Minutes Of The Meeting', icon: minutesIcon },
-  { key: 'report', to: 'report', label: 'Technical Reports', icon: Report2 },
-  { key: 'digital', to: 'digital', label: 'Digital Library', icon: digital },
-  { key: 'student', to: 'student', label: 'Student Engagement', icon: studentIcon },
-  { key: 'procurement', to: 'procurement', label: 'Procurement Reports', icon: inventoryIcon  },
+   
   { key: 'settings', to: 'settings', label: 'Settings', icon: GearFine },
 ]
 

@@ -958,7 +958,7 @@ export default function TrainingRecords() {
                   "Start Date",
                   "End Date",
                   "Status",
-                  "Remarks",
+                  "Note",
                   "Action"
                 ].map((col) => (
                   <th
