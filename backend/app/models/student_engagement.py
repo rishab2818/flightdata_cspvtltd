@@ -11,6 +11,7 @@ class ApprovalStatus(str, Enum):
 
 
 class StudentEngagementCreate(BaseModel):
+    project_id: Optional[str] = None
     student: Optional[str] = None
     college_name: Optional[str] = None
     project_name: Optional[str] = None

@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
@@ -189,10 +189,16 @@ async def _download_url(section: RecordSection, record_id: str, user: CurrentUse
     return {"download_url": url, "original_name": row.get("original_name")}
 
 
-async def _list_records(section: RecordSection, user: CurrentUser):
+async def _list_records(
+    section: RecordSection, user: CurrentUser, project_id: Optional[str] = None
+):
     db = await get_db()
+    query = {"section": section.value, "owner_email": user.email}
+    if project_id:
+        query["project_id"] = project_id
+
     cursor = (
-        db.records.find({"section": section.value, "owner_email": user.email})
+        db.records.find(query)
         .sort("created_at", -1)
         .limit(500)
     )
@@ -295,8 +301,14 @@ async def create_divisional_record(
 
 
 @router.get("/divisional-records", response_model=List[DivisionalRecordOut])
-async def list_divisional_records(user: CurrentUser = Depends(get_current_user)):
-    rows = await _list_records(RecordSection.DIVISIONAL_RECORDS, user)
+async def list_divisional_records(
+    project_id: Optional[str] = Query(
+        default=None,
+        description="Optional project filter. If provided, only returns records for that project.",
+    ),
+    user: CurrentUser = Depends(get_current_user),
+):
+    rows = await _list_records(RecordSection.DIVISIONAL_RECORDS, user, project_id)
     return [
         DivisionalRecordOut(
             record_id=str(row["_id"]),
@@ -362,8 +374,14 @@ async def create_customer_feedback(
 
 
 @router.get("/customer-feedbacks", response_model=List[CustomerFeedbackOut])
-async def list_customer_feedbacks(user: CurrentUser = Depends(get_current_user)):
-    rows = await _list_records(RecordSection.CUSTOMER_FEEDBACKS, user)
+async def list_customer_feedbacks(
+    project_id: Optional[str] = Query(
+        default=None,
+        description="Optional project filter. If provided, only returns records for that project.",
+    ),
+    user: CurrentUser = Depends(get_current_user),
+):
+    rows = await _list_records(RecordSection.CUSTOMER_FEEDBACKS, user, project_id)
     return [
         CustomerFeedbackOut(
             record_id=str(row["_id"]),
@@ -429,8 +447,14 @@ async def create_technical_report(
 
 
 @router.get("/technical-reports", response_model=List[TechnicalReportOut])
-async def list_technical_reports(user: CurrentUser = Depends(get_current_user)):
-    rows = await _list_records(RecordSection.TECHNICAL_REPORTS, user)
+async def list_technical_reports(
+    project_id: Optional[str] = Query(
+        default=None,
+        description="Optional project filter. If provided, only returns reports for that project.",
+    ),
+    user: CurrentUser = Depends(get_current_user),
+):
+    rows = await _list_records(RecordSection.TECHNICAL_REPORTS, user, project_id)
     return [
         TechnicalReportOut(
             record_id=str(row["_id"]),
@@ -496,8 +520,14 @@ async def create_training_record(
 
 
 @router.get("/training-records", response_model=List[TrainingRecordOut])
-async def list_training_records(user: CurrentUser = Depends(get_current_user)):
-    rows = await _list_records(RecordSection.TRAINING_RECORDS, user)
+async def list_training_records(
+    project_id: Optional[str] = Query(
+        default=None,
+        description="Optional project filter. If provided, only returns records for that project.",
+    ),
+    user: CurrentUser = Depends(get_current_user),
+):
+    rows = await _list_records(RecordSection.TRAINING_RECORDS, user, project_id)
     return [
         TrainingRecordOut(
             record_id=str(row["_id"]),

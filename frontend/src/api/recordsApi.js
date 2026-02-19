@@ -43,8 +43,10 @@ export const recordsApi = {
   },
 
   // Divisional Records
-  listDivisional: async () => {
-    const { data } = await axiosClient.get("/api/records/divisional-records");
+  listDivisional: async (projectId) => {
+    const { data } = await axiosClient.get("/api/records/divisional-records", {
+      params: projectId ? { project_id: projectId } : undefined,
+    });
     return data;
   },
   createDivisional: async (payload) => {
@@ -74,8 +76,10 @@ export const recordsApi = {
   },
 
   // Customer Feedbacks
-  listFeedbacks: async () => {
-    const { data } = await axiosClient.get("/api/records/customer-feedbacks");
+  listFeedbacks: async (projectId) => {
+    const { data } = await axiosClient.get("/api/records/customer-feedbacks", {
+      params: projectId ? { project_id: projectId } : undefined,
+    });
     return data;
   },
   createFeedback: async (payload) => {
@@ -105,8 +109,10 @@ export const recordsApi = {
   },
 
   // Technical Reports
-  listTechnical: async () => {
-    const { data } = await axiosClient.get("/api/records/technical-reports");
+  listTechnical: async (projectId) => {
+    const { data } = await axiosClient.get("/api/records/technical-reports", {
+      params: projectId ? { project_id: projectId } : undefined,
+    });
     return data;
   },
   createTechnical: async (payload) => {
@@ -136,8 +142,10 @@ export const recordsApi = {
   },
 
   // Training Records
-  listTraining: async () => {
-    const { data } = await axiosClient.get("/api/records/training-records");
+  listTraining: async (projectId) => {
+    const { data } = await axiosClient.get("/api/records/training-records", {
+      params: projectId ? { project_id: projectId } : undefined,
+    });
     return data;
   },
   createTraining: async (payload) => {

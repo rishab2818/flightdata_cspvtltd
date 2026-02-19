@@ -566,6 +566,7 @@
 // }
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { FiPlus, FiUploadCloud, FiSearch } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
@@ -614,6 +615,7 @@ function StatusBadge({ status }) {
 
 /* --------------------- Main Component --------------------- */
 export default function TrainingRecords() {
+  const { projectId } = useParams();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -633,7 +635,7 @@ export default function TrainingRecords() {
     try {
       setLoading(true);
       setError("");
-      const data = await recordsApi.listTraining();
+      const data = await recordsApi.listTraining(projectId);
       setRecords(data);
     } catch (e) {
       console.error(e);
@@ -645,7 +647,7 @@ export default function TrainingRecords() {
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [projectId]);
 
   const filtered = useMemo(() => {
   const q = search.trim().toLowerCase();
@@ -1103,6 +1105,7 @@ export default function TrainingRecords() {
           onClose={closeModal}
           onCreated={loadRecords}
           editingRecord={editingRecord} // Pass the editing record
+          projectId={projectId}
           onUpdated={handleUpdate} // Handle successful update
         />
       )}
@@ -1162,7 +1165,7 @@ function Input({ label, style, ...rest }) {
 
 
 /* --------------------- Modal Component (Updated for Edit) --------------------- */
-function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
+function TrainingModal({ onClose, onCreated, onUpdated, editingRecord, projectId }) {
   const [form, setForm] = useState({
     trainee_name: "",
     training_name: "",
@@ -1234,6 +1237,7 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord }) {
       // 2. Prepare Payload
       const payload = {
         ...form,
+        project_id: projectId || undefined,
         start_date: form.start_date || undefined,
         end_date: form.end_date || undefined,
         storage_key,

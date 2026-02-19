@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { FiDownload, FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
@@ -112,6 +113,7 @@ function FiltersBar({ filters, setFilters, openModal }) {
 
 /* --------------------- Main Component --------------------- */
 export default function DivisionalRecords() {
+  const { projectId } = useParams();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -133,7 +135,7 @@ export default function DivisionalRecords() {
   const loadRecords = async () => {
     try {
       setLoading(true);
-      const data = await recordsApi.listDivisional();
+      const data = await recordsApi.listDivisional(projectId);
       setRecords(data);
     } catch {
       setError("Failed to load divisional records.");
@@ -144,7 +146,7 @@ export default function DivisionalRecords() {
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [projectId]);
 
   const handleView = async (row) => {
     try {
@@ -343,6 +345,7 @@ export default function DivisionalRecords() {
           onClose={() => setShowModal(false)}
           onCreated={loadRecords}
           editingRecord={editingRecord}
+          projectId={projectId}
           onUpdated={(updated) => {
             setRecords((prev) =>
               prev.map((r) => (r.record_id === updated.record_id ? updated : r))
@@ -379,7 +382,7 @@ function Input({ label, ...rest }) {
 
 /* --------------------- Modal --------------------- */
 
-function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
+function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, projectId }) {
   const [form, setForm] = useState({
     division_name: "",
     record_type: "Budget",
@@ -450,6 +453,7 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
       const payload = {
         ...form,
+        project_id: projectId || undefined,
         rating: form.rating === "" ? undefined : Number(form.rating || 0),
         created_date: form.created_date || undefined,
         storage_key,

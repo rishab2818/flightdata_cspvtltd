@@ -77,6 +77,7 @@ class SupplyOrderOut(SupplyOrderCreate):
 
 
 class DivisionalRecordCreate(BaseRecordFile):
+    project_id: Optional[str] = None
     division_name: Optional[str] = None
     record_type: Optional[str] = None
     created_date: Optional[date] = None
@@ -93,6 +94,7 @@ class DivisionalRecordOut(DivisionalRecordCreate):
 
 
 class CustomerFeedbackCreate(BaseRecordFile):
+    project_id: Optional[str] = None
     project_name: Optional[str] = None
     division: Optional[str] = None
     feedback_from: Optional[str] = None
@@ -110,11 +112,12 @@ class CustomerFeedbackOut(CustomerFeedbackCreate):
 
 
 class TechnicalReportCreate(BaseRecordFile):
+    project_id: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     report_type: Optional[str] = None
     created_date: Optional[date] = None
-    rating: Optional[float] = Field(0, ge=0)
+    # rating: Optional[float] = Field(0, ge=0)
 
 
 class TechnicalReportOut(TechnicalReportCreate):
@@ -126,6 +129,7 @@ class TechnicalReportOut(TechnicalReportCreate):
 
 
 class TrainingRecordCreate(BaseRecordFile):
+    project_id: Optional[str] = None
     trainee_name: Optional[str] = None
     training_name: Optional[str] = None
     training_type: Optional[str] = None

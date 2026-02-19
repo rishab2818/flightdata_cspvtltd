@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import {
   FiFileText,
   FiCalendar,
@@ -121,6 +122,9 @@ function convertDocToRow(doc) {
 /* =================== MAIN COMPONENT =================== */
 
 export default function MinutesOfTheMeeting() {
+  const { projectId: routeProjectId } = useParams();
+  const isProjectContext = Boolean(routeProjectId);
+
   const [activeSubsection, setActiveSubsection] = useState("tcm");
   const requiresProject = PROJECT_REQUIRED_TABS.includes(activeSubsection);
 
@@ -131,7 +135,7 @@ export default function MinutesOfTheMeeting() {
   const [search, setSearch] = useState("");
 
   const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState(routeProjectId || "");
   const [projectLoading, setProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState("");
 
@@ -216,6 +220,13 @@ export default function MinutesOfTheMeeting() {
   /* ---------------- effects ---------------- */
 
   useEffect(() => {
+    if (isProjectContext) {
+      setProjects([]);
+      setSelectedProjectId(routeProjectId || "");
+      setProjectError("");
+      return;
+    }
+
     if (requiresProject) {
       loadProjects();
     } else {
@@ -223,12 +234,14 @@ export default function MinutesOfTheMeeting() {
       setSelectedProjectId("");
       setProjectError("");
     }
-  }, [requiresProject, loadProjects]);
+  }, [isProjectContext, routeProjectId, requiresProject, loadProjects]);
 
   useEffect(() => {
-    const projectId = requiresProject ? selectedProjectId : undefined;
+    const projectId = isProjectContext
+      ? routeProjectId
+      : (requiresProject ? selectedProjectId : undefined);
 
-    if (requiresProject && !projectId && !projectLoading) {
+    if (!isProjectContext && requiresProject && !projectId && !projectLoading) {
       setRows([]);
       setError("Select a project to view meeting minutes.");
       setNextMeeting(null);
@@ -240,6 +253,8 @@ export default function MinutesOfTheMeeting() {
     loadMeeting(activeSubsection, projectId);
   }, [
     activeSubsection,
+    routeProjectId,
+    isProjectContext,
     selectedProjectId,
     requiresProject,
     projectLoading,
@@ -264,6 +279,10 @@ export default function MinutesOfTheMeeting() {
   const activeTab =
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
 
+  const effectiveProjectId = isProjectContext
+    ? routeProjectId
+    : (requiresProject ? selectedProjectId : undefined);
+
   const selectedProject = requiresProject
     ? projects.find((p) => (p?._id || p?.id) === selectedProjectId)
     : null;
@@ -271,7 +290,7 @@ export default function MinutesOfTheMeeting() {
   /* ---------------- handlers ---------------- */
 
   const handleUploadSuccess = () => {
-    loadData(activeSubsection, requiresProject ? selectedProjectId : undefined);
+    loadData(activeSubsection, effectiveProjectId);
   };
 
   const handleMeetingSave = async (values) => {
@@ -280,7 +299,7 @@ export default function MinutesOfTheMeeting() {
         title: values.title,
         meeting_date: values.meeting_date,
         meeting_time: values.meeting_time,
-        project_id: activeSubsection === "pmrc" ? selectedProjectId : undefined,
+        project_id: effectiveProjectId,
       };
   
       try {
@@ -357,7 +376,7 @@ const handleDownload = (row) => {
           onChange={setActiveSubsection}
         />
 
-        {requiresProject && (
+        {requiresProject && !isProjectContext && (
           <ProjectSelector
             projects={projects}
             loading={projectLoading}
@@ -373,7 +392,7 @@ const handleDownload = (row) => {
           loading={meetingLoading}
           error={meetingError}
           projectName={selectedProject?.project_name}
-          missingProject={requiresProject && !selectedProjectId}
+          missingProject={!isProjectContext && requiresProject && !selectedProjectId}
           projectLoading={projectLoading}
           onEdit={() => setShowMeetingModal(true)}
         />
@@ -408,9 +427,10 @@ const handleDownload = (row) => {
         subsection={activeSubsection}
         onUploaded={handleUploadSuccess}
         projectOptions={projects}
-        selectedProjectId={selectedProjectId}
+        selectedProjectId={effectiveProjectId || ""}
         onProjectChange={setSelectedProjectId}
-        requireProject={requiresProject}
+        requireProject={isProjectContext || requiresProject}
+        fixedProjectId={isProjectContext ? routeProjectId : undefined}
       />
 
       <NextMeetingModal

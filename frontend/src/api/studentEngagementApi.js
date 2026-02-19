@@ -10,9 +10,16 @@ export const studentEngagementApi = {
     return data;
   },
 
-  list: async (approvalStatus) => {
+  list: async (approvalStatus, projectId) => {
+    const params = {};
+    if (approvalStatus) {
+      params.approval_status = approvalStatus;
+    }
+    if (projectId) {
+      params.project_id = projectId;
+    }
     const { data } = await axiosClient.get("/api/student-engagements", {
-      params: approvalStatus ? { approval_status: approvalStatus } : {},
+      params,
     });
     return data;
   },
