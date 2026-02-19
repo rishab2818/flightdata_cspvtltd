@@ -1178,7 +1178,7 @@ def generate_visualization(self, viz_id: str):
     full_html=True,
     include_plotlyjs="cdn",
     config={"responsive": True},
-    post_script=post_script,
+    
 
 )
 
