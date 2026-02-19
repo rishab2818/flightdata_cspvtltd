@@ -715,7 +715,7 @@ export default function StudentEngagement() {
     </select>
   </label>
 
-   <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+   {/* <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
             <textarea
               value={form.remarks}
@@ -730,7 +730,7 @@ export default function StudentEngagement() {
                 resize: "none",
               }}
             />
-          </label>
+          </label> */}
 
  
   {/* <label className={`${styles.textAreaLabel} ${styles.fullWidth}`}>

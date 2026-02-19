@@ -1,4 +1,3 @@
-// src/pages/admin/AdminDashboard.jsx
 import React, { useState } from "react";
 import { Box } from "@mui/material";
 import UserOverview from "../../components/admin/UserOverview";
@@ -8,24 +7,31 @@ export default function AdminDashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-
+    <Box
+      sx={{
+        display: "flex",
+        height: "100%",
+        overflow: "hidden",   // ✅ no page scroll
+      }}
+    >
       {/* Right Main Content */}
       <Box
         sx={{
-          flexGrow: 1,
-          // padding: 3,
+          flex: 1,
           backgroundColor: "#F5f9ff",
           display: "flex",
           flexDirection: "column",
-          gap: 3,
+          gap: 2,
+          minHeight: 0,       // ✅ critical
+          overflow: "hidden",
+          p: 2,
         }}
       >
-
-        {/* Main Grid */}
+        {/* Grid */}
         <Box
           sx={{
-            width: "1450px",
+            flex: 1,
+            minHeight: 0,      // ✅ critical
             display: "grid",
             gap: 2,
             gridTemplateColumns: {
@@ -38,11 +44,15 @@ export default function AdminDashboard() {
             overflow: "hidden",
           }}
         >
-          <Box key={refreshKey}>
+          <Box key={refreshKey} sx={{ minHeight: 0 }}>
             <UserOverview />
           </Box>
 
-          <CreateUserCard onCreated={() => setRefreshKey((k) => k + 1)} />
+          <Box sx={{ minHeight: 0 }}>
+            <CreateUserCard
+              onCreated={() => setRefreshKey((k) => k + 1)}
+            />
+          </Box>
         </Box>
       </Box>
     </Box>

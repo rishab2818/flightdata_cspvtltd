@@ -205,76 +205,7 @@ export default function ProcessedPreviewPage() {
                 </div>
             </div>
 
-            {error && <div className="project-shell__error" style={{ marginTop: 12 }}>{error}</div>}
-            <div className="project-card" style={{ marginTop: 12, padding: 12, background: "#fafafa" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <strong>Derived Columns</strong>
-                    <button
-                        className="project-shell__nav-link"
-                        type="button"
-                        onClick={addDerived}
-                        disabled={!isEditable}
-                    >
-                        + Add Formula
-                    </button>
-                </div>
-                <div className="summary-label" style={{ marginTop: 8 }}>
-                    Formula example: <code>[Lift] / [Drag]</code>
-                </div>
-                {derivedColumns.map((item, idx) => (
-                    <div
-                        key={`derived-${idx}`}
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "220px 1fr 88px",
-                            gap: 10,
-                            marginTop: 10,
-                        }}
-                    >
-                        <input
-                            className="input-control"
-                            placeholder="column_name"
-                            value={item?.name || ""}
-                            onChange={(e) => updateDerived(idx, { name: e.target.value })}
-                            disabled={!isEditable}
-                        />
-                        <input
-                            className="input-control"
-                            placeholder="[A] / [B]"
-                            value={item?.expression || ""}
-                            onChange={(e) => updateDerived(idx, { expression: e.target.value })}
-                            disabled={!isEditable}
-                        />
-                        <button
-                            className="project-shell__nav-link"
-                            type="button"
-                            onClick={() => removeDerived(idx)}
-                            disabled={!isEditable}
-                            style={{ background: "#fff1f2", color: "#b91c1c", borderColor: "#fecdd3" }}
-                        >
-                            Remove
-                        </button>
-                    </div>
-                ))}
-                <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                    <button
-                        className="project-shell__nav-link"
-                        type="button"
-                        onClick={onPreviewDerived}
-                        disabled={loading || previewingDerived}
-                    >
-                        {previewingDerived ? "Previewing..." : "Preview Formula"}
-                    </button>
-                    <button
-                        className="project-shell__nav-link"
-                        type="button"
-                        onClick={onSaveDerived}
-                        disabled={!isEditable || loading || savingDerived}
-                    >
-                        {savingDerived ? "Saving..." : "Save Derived Into Data"}
-                    </button>
-                </div>
-            </div>
+           
             {loading && <div className="empty-state" style={{ marginTop: 12 }}>Loading preview…</div>}
 
             {!loading && !error && (

@@ -330,7 +330,13 @@ export default function UploadMinutesModal({
   return (
     <div className="modalOverlay">
       <div className="modalBox">
+        <div className="ModalHeader1">
         <h2 className="modalTitle">Upload Meeting Minutes</h2>
+         <button type="button" className="CloseButton" onClick={onClose}>
+            X
+          </button>
+          </div>
+        
 
         <form  autoComplete="off" onSubmit={handleSubmit} className="form">
 
@@ -386,7 +392,10 @@ export default function UploadMinutesModal({
 
           {/* Action Points */}
 <div>
-  <label className="label">Action Points</label>
+ <label className="label">
+  Action Points <span style={{ color: "red",fontSize: "22px" }}>*</span>
+</label>
+
 
   <div className="actionGrid">
     {/* Action Point */}
@@ -554,7 +563,7 @@ export default function UploadMinutesModal({
 
           {/* Meeting Date */}
           <div className="dateWrap">
-            <label className="label">Meeting Date</label>
+            <label className="label">Meeting Date <span style={{ color: "red",fontSize: "22px" }}>*</span></label>
             <div className="dateBox">
               {/* <FiCalendar size={16} className="dateIcon" /> */}
               <input
@@ -569,7 +578,7 @@ export default function UploadMinutesModal({
           {/* Tag + Action On */}
           <div className="row gap16">
             <div className="flex1">
-              <label className="label">Tag Name</label>
+              <label className="label">Tag Name <span style={{ color: "red",fontSize: "22px" }}>*</span></label>
               <input
   type="text"
   name={`tag-${Date.now()}`}     

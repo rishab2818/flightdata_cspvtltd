@@ -606,7 +606,7 @@ function NextMeetingBanner({
       <h3>Uploaded Meeting Minutes</h3>
 
     <div style={{display:"flex", alignItems:"center",gap:"20px"}}>
-    <div style={{flex:1, maxWidth:"550px", height:"39px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
+    <div style={{flex:1, maxWidth:"550px", height:"42px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
         <FiSearch size={16} color="#64748b" />
             <input
              style={{
@@ -900,6 +900,10 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
       <div className="ActionModalCard">
         <div className="ModalHeader1">
           <h3>My Action</h3>
+           <button type="button" className="CloseButton" onClick={onClose}>
+            X
+          </button>
+
         </div>
 
         <div className="ActionTabs1">

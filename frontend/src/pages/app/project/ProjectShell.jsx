@@ -6,8 +6,7 @@ import '../../../styles/project.css'
 
 import Database2 from "../../../assets/Database2.svg";
 import GearFine from "../../../assets/GearFine.svg";
-import Report2 from "../../../assets/Report2.svg";
-import digital from "../../../assets/digital.svg";
+
 import chartLine from "../../../assets/ChartLine.svg";
 import ArrowLeft from "../../../assets/ArrowLeft.svg";
 import studentIcon from "../../../assets/UsersThree.svg";
