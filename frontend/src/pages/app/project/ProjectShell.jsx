@@ -15,15 +15,17 @@ import minutesIcon from "../../../assets/PresentationChart.svg";
 import divisionalIcon from "../../../assets/Newspaper1.svg";
 import customerIcon from "../../../assets/customer.svg";
 import trainingIcon from "../../../assets/reports.svg";
+import Report2 from "../../../assets/Report2.svg"
+import digital from "../../../assets/digital.svg"
 
 const navItems = [
   { key: 'overview', to: '', label: 'Project Overview', icon: Database2 },
   { key: 'visualisation', to: 'visualisation', label: 'Visualize', icon: chartLine },
-   { key: 'meeting', to: 'meeting', label: 'Minutes Of The Meeting', icon: minutesIcon },
+  { key: 'meeting', to: 'meeting', label: 'Minutes Of The Meeting', icon: minutesIcon },
   { key: 'report', to: 'report', label: 'Technical Reports', icon: Report2 },
   { key: 'digital', to: 'digital', label: 'Digital Library', icon: digital },
   { key: 'student', to: 'student', label: 'Student Engagement', icon: studentIcon },
-  { key: 'procurement', to: 'procurement', label: 'Procurement Reports', icon: inventoryIcon  },
+  { key: 'procurement', to: 'procurement', label: 'Procurement Reports', icon: inventoryIcon },
   { key: 'divisional', to: 'divisional', label: 'Divisional Records', icon: divisionalIcon },
   { key: 'feedback', to: 'feedback', label: 'Customer Feedbacks', icon: customerIcon },
   { key: 'training', to: 'training', label: 'Training Records', icon: trainingIcon },
@@ -38,6 +40,12 @@ export default function ProjectShell() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const refreshProject = async () => {
+    const data = await projectApi.getById(projectId)
+    setProject(data)
+    setError(null)
+  }
+
   useEffect(() => {
     let mounted = true
       ; (async () => {
@@ -48,9 +56,13 @@ export default function ProjectShell() {
             setError(null)
           }
         } catch (err) {
-          setError(err?.response?.data?.detail || err.message)
+          if (mounted) {
+            setError(err?.response?.data?.detail || err.message)
+          }
         } finally {
-          setLoading(false)
+          if (mounted) {
+            setLoading(false)
+          }
         }
       })()
     return () => {
@@ -68,7 +80,7 @@ export default function ProjectShell() {
           <div className="project-shell__brand-text">Back</div>
         </div>
 
-         <div class="full-width-line"></div>
+        <div class="full-width-line"></div>
 
         <nav className="project-shell__nav1">
           {navItems.map((item) => (
@@ -101,7 +113,7 @@ export default function ProjectShell() {
         </header>
 
         {error && <div className="project-shell__error">{error}</div>}
-        {loading ? <div className="project-shell__loading">Loading project…</div> : <Outlet context={{ project }} />}
+        {loading ? <div className="project-shell__loading">Loading project…</div> : <Outlet context={{ project, refreshProject }} />}
       </div>
     </div>
   )

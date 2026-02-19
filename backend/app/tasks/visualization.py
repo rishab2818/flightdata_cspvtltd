@@ -1176,7 +1176,7 @@ def generate_visualization(self, viz_id: str):
             html = pio.to_html(
     fig,
     full_html=True,
-    include_plotlyjs="cdn",
+    include_plotlyjs=True,
     config={"responsive": True},
     
 
@@ -1421,7 +1421,7 @@ def generate_visualization(self, viz_id: str):
         html = pio.to_html(
     fig,
     full_html=True,
-    include_plotlyjs="cdn",
+    include_plotlyjs=True,
     config={"responsive": True},
     post_script=post_script
 )

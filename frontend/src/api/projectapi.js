@@ -29,4 +29,16 @@ export const projectApi = {
     const { data } = await axiosClient.get(`/api/projects/${projectId}`);
     return data;
   },
+  update: async (projectId, payload) => {
+    const { data } = await axiosClient.patch(`/api/projects/${projectId}`, payload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return data;
+  },
+  patchMembers: async (projectId, payload) => {
+    const { data } = await axiosClient.patch(`/api/projects/${projectId}/members`, payload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return data;
+  },
 };
