@@ -143,14 +143,14 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
             
           </div> */}
 
-          <div className="upload-field">
+          {/* <div className="upload-field">
             <label>Description</label>
             <input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Enter report description"
             />
-          </div>
+          </div> */}
 
           {error && <div className="upload-error">{error}</div>}
 

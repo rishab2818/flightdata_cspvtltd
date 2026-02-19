@@ -99,7 +99,7 @@
 }
 
 .select {
-  height: 36px;
+  height: 38px;
   min-width: 270px;
   padding: 10px 14px;
   background: #F3F3F5;
@@ -230,7 +230,7 @@
 .table td {
   text-align: left;
   padding: 12px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #0000001a;;
   font-size: 12px;
   color:#717182;
   font-family: "Inter-regular", Helvetica;

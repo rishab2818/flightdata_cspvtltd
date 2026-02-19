@@ -815,7 +815,7 @@ const onSelectSheet = (sheetName) => {
 
                             <div className="form-field">
 
-                                <label className="summaryLabel" style={{ marginTop: 20 }}>Folder / Tag Name</label>
+                                <label className="summaryLabel" style={{ marginTop: 20 }}>Folder / Tag Name <span style={{ color: "red",fontSize: "22px" }}>*</span></label>
                                 <input
                                     className="input"
                                     placeholder="Write File Name/Tag"
@@ -825,7 +825,7 @@ const onSelectSheet = (sheetName) => {
                             </div>
 
                             <div className="form-field">
-                                <label className="summaryLabel" style={{ marginTop: 10 }}>Data Type</label>
+                                <label className="summaryLabel" style={{ marginTop: 10 }}>Data Type <span style={{ color: "red",fontSize: "22px" }}>*</span></label>
                                 <select
                                     className="input-data"
                                     value={datasetType}

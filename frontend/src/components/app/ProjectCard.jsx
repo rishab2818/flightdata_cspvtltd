@@ -25,7 +25,9 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
     <div
       style={{
         width: '100%',
-        minHeight: 215,
+        height: 'auto',
+        maxHeight:300,
+        // overflow: 'hidden',
         // gap: '6px',
         borderTop: `1px solid ${COLORS.border}`,
         borderBottom: `1px solid ${COLORS.border}`,
@@ -33,11 +35,12 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
         padding: `25px 0px 25px 0px `,
         display: 'flex',
         flexDirection: 'column',
+        // gap:2,
       }}
     >
       {/* title + chips */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: "12px" }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap:12 }}>
           <h3
             style={{ fontSize: 16, fontWeight: 600, color: "#000000", margin: 0, fontFamily: "inter-semi-bold, Helvetica" }}
           >
@@ -92,7 +95,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
   fontFamily: "SF Pro, Helvetica, Arial, sans-serif",
   letterSpacing: "0px",
   lineHeight: "normal",   
-  flexGrow: 1,
+  flexGrow: 0,
   marginTop:"10px",
 }}
 
@@ -109,6 +112,7 @@ export default function ProjectCardImproved({ name, type, date, members, desc, o
           // marginTop: SPACING.md,
           fontSize: 14,
           color: COLORS.textMuted,
+      
         }}
       >
         {/* created + members group */}
