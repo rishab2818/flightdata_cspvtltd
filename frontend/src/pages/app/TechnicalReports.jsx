@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import totalRecordsIcon from "../../assets/bule_message.svg";
@@ -19,6 +20,7 @@ const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB
 
 /* --------------------- Main Component --------------------- */
 export default function TechnicalReports() {
+  const { projectId } = useParams();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +37,7 @@ export default function TechnicalReports() {
     try {
       setLoading(true);
       setError("");
-      const data = await recordsApi.listTechnical();
+      const data = await recordsApi.listTechnical(projectId);
       setRecords(data);
     } catch (e) {
       console.error(e);
@@ -47,7 +49,7 @@ export default function TechnicalReports() {
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [projectId]);
 
   // Filtered records based on search + type filter
   const filtered = useMemo(() => {
@@ -136,7 +138,7 @@ export default function TechnicalReports() {
         <CommonStatCard title="Design" value={records.filter((r) => r.report_type === "Design").length} icon={designicon} bg="#DCFCE7" />
       </div>
 
-     <div
+      <div
         style={{
           marginTop: 22,
           background: "#fff",
@@ -150,84 +152,84 @@ export default function TechnicalReports() {
           gap: 12
         }}
       >
-            <div style={{flex:1, maxWidth:"700px",height:"42px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
-                  <FiSearch size={16} color="#64748b" />
-                  <input
-                    style={{
-                      border: "none",
-                      outline: "none",
-                      minwidth: "350px",
-                      background: "transparent",
-                      flex: 1,
-                      gap:20,
-                      fontsize: "14px",
-                      color: "#0f172a",
-
-                    }}
-                    type="text"
-                    placeholder="Search reports, tags, projects..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-        </div>
-        <div style={{display:"inline-flex", gap:20}}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {/* <span style={{  color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Type</span> */}
-          <select
-            value={filters.type}
-            onChange={(e) => setFilters({ type: e.target.value })}
+        <div style={{ flex: 1, maxWidth: "700px", height: "42px", display: "flex", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderradius: "0px", padding: "12px 24px" }}>
+          <FiSearch size={16} color="#64748b" />
+          <input
             style={{
-              minWidth: "300px",
-              background: "#F3F3F5",
-              height: "42px",
-              borderRadius: "8px",
               border: "none",
-              padding: "0 12px",
-              paddingRight: 32, // space for arrow
-              color: "#374151",
-              fontSize: 14,
-              lineHeight: "36px",
-              appearance: "none",
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 12px center",
-              backgroundSize: "10px 6px",
+              outline: "none",
+              minwidth: "350px",
+              background: "transparent",
+              flex: 1,
+              gap: 20,
+              fontsize: "14px",
+              color: "#0f172a",
+
+            }}
+            type="text"
+            placeholder="Search reports, tags, projects..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div style={{ display: "inline-flex", gap: 20 }}>
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* <span style={{  color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Type</span> */}
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ type: e.target.value })}
+              style={{
+                minWidth: "300px",
+                background: "#F3F3F5",
+                height: "42px",
+                borderRadius: "8px",
+                border: "none",
+                padding: "0 12px",
+                paddingRight: 32, // space for arrow
+                color: "#374151",
+                fontSize: 14,
+                lineHeight: "36px",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/></svg>")`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                backgroundSize: "10px 6px",
+              }}
+            >
+              <option value="all">All Types</option>
+              <option value="Technical">Technical</option>
+              <option value="Design">Design</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+
+
+
+          <button
+            type="button"
+            onClick={() => { setEditingRecord(null); setShowModal(true); }} // Set editingRecord to null for new document
+            style={{
+              padding: "10px 16px",
+              background: PRIMARY,
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontWeight: 600,
+              cursor: "pointer",
+              height: "40px",
+              width: "200px",
             }}
           >
-            <option value="all">All Types</option>
-            <option value="Technical">Technical</option>
-            <option value="Design">Design</option>
-            <option value="Other">Other</option>
-          </select>
-        </label>
-
-    
-
-        <button
-          type="button"
-          onClick={() => { setEditingRecord(null); setShowModal(true); }} // Set editingRecord to null for new document
-          style={{
-            padding: "10px 16px",
-            background: PRIMARY,
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent:"center",
-            gap: 8,
-            fontWeight: 600,
-            cursor: "pointer",
-            height:"40px",
-            width:"200px",
-          }}
-        >
-          <img src={Report1} alt="Document"/>
-           Upload Document
-        </button>
-      </div>
+            <img src={Report1} alt="Document" />
+            Upload Document
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -274,7 +276,7 @@ export default function TechnicalReports() {
                   background: "#EFF7FF",
                 }}
               >
-                {["Report Name", "Description", "Type", "Created Date", "Ratings", "Action"].map((col) => (
+                {["Report Name", "Description", "Type", "Created Date", "Action"].map((col) => (
                   <th key={col} style={{ padding: "12px 16px", fontWeight: 600, borderBottom: `1px solid ${BORDER}` }}>
                     {col}
                   </th>
@@ -282,7 +284,7 @@ export default function TechnicalReports() {
               </tr>
             </thead>
 
-            <tbody style={{ textAlign: "left", fontSize: "12px", fontWeight: 400, color: "#717182",fontFamily:"Inter-Regular, Helvetica" }}>
+            <tbody style={{ textAlign: "left", fontSize: "12px", fontWeight: 400, color: "#717182", fontFamily: "Inter-Regular, Helvetica" }}>
               {loading && (
                 <tr>
                   <td colSpan={6} style={{ padding: 16, textAlign: "center" }}>
@@ -327,9 +329,9 @@ export default function TechnicalReports() {
                       <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {formatDate(row.created_date)}
                       </td>
-                      <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
+                      {/* <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {Number(row.rating || 0).toFixed(1)}
-                      </td>
+                      </td> */}
                       <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         <DocumentActions
                           doc={{ id: row.record_id, fileName: row.original_name }}
@@ -356,6 +358,7 @@ export default function TechnicalReports() {
           onCreated={handleCreated} // <-- Append new record instantly
           editingRecord={editingRecord}
           onUpdated={handleUpdate}
+          projectId={projectId}
         />
       )}
 
@@ -394,7 +397,7 @@ function Input({ label, style, ...rest }) {
 }
 
 /* --------------------- Modal Component --------------------- */
-function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
+function ReportModal({ onClose, onCreated, onUpdated, editingRecord, projectId }) {
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -415,7 +418,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
         description: editingRecord.description || "",
         report_type: editingRecord.report_type || "Technical",
         created_date: editingRecord.created_date ? editingRecord.created_date.split("T")[0] : "",
-        rating: editingRecord.rating ?? "",
+        // rating: editingRecord.rating ?? "",
       });
       setFile(null);
       setError("");
@@ -453,7 +456,8 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
       const payload = {
         ...form,
-        rating: form.rating === "" ? undefined : Number(form.rating || 0),
+        project_id: projectId || undefined,
+        // rating: form.rating === "" ? undefined : Number(form.rating || 0),
         created_date: form.created_date || undefined,
         storage_key,
         original_name,
@@ -482,7 +486,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12, zIndex: 100 }}>
-     <div
+      <div
         style={{
           width: "min(840px, 96vw)",
           background: "#fff",
@@ -556,23 +560,9 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 <option value="Other">Other</option>
               </select>
             </label >
-            <Input style={{borderRadius: "8px",background:"#F3F3F5",color:"#717182"}}label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
+            <Input style={{ borderRadius: "8px", background: "#F3F3F5", color: "#717182" }} label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
             {/* <Input label="Ratings" type="number" step="0.1" value={form.rating} onChange={(e) => onChange("rating", e.target.value)} /> */}
-                       <Input
-                             
-              label="Ratings"
-              type="number"
-              min={0}
-              max={5}
-              step="0.1"
-              value={form.rating}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === "" || (Number(value) >= 0 && Number(value) <= 5)) {
-                  onChange("rating", value);
-                }
-              }}
-            />
+
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
@@ -600,12 +590,12 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
               onClick={onClose}
               style={{
                 border: `1px solid #1976D2`,
-                 color: "#1976d2",
+                color: "#1976d2",
                 background: "#fff",
                 padding: "10px 16px",
                 borderRadius: "4px",
                 cursor: "pointer",
-                width:"100px",
+                width: "100px",
               }}
             >
               Cancel
@@ -628,7 +618,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord }) {
                 gap: "8px",
               }}
             >
-             <img src={load} alt="load" style={{width:"16px", height:"16px", color:"#fff" }}/>
+              <img src={load} alt="load" style={{ width: "16px", height: "16px", color: "#fff" }} />
               {submitting ? "Saving…" : editingRecord ? "Update" : "Upload"}
             </button>
           </div>

@@ -62,6 +62,7 @@ export default function UploadMinutesModal({
   selectedProjectId = "",
   onProjectChange,
   requireProject = false,
+  fixedProjectId = "",
 }) {
   const [meetingDate, setMeetingDate] = useState("");
   const [tag, setTag] = useState("");
@@ -74,6 +75,7 @@ export default function UploadMinutesModal({
   const [assigneeQuery, setAssigneeQuery] = useState("");
   const [assigneeOptions, setAssigneeOptions] = useState([]);
   const [projectId, setProjectId] = useState(selectedProjectId || "");
+  const projectLocked = Boolean(fixedProjectId);
 
   // For multi "Action on"
   const [actionOnInput, setActionOnInput] = useState("");
@@ -104,8 +106,8 @@ export default function UploadMinutesModal({
   };
 
   useEffect(() => {
-    setProjectId(selectedProjectId || "");
-  }, [selectedProjectId, open]);
+    setProjectId(fixedProjectId || selectedProjectId || "");
+  }, [fixedProjectId, selectedProjectId, open]);
 
   if (!open) return null;
 
@@ -121,7 +123,7 @@ export default function UploadMinutesModal({
     setAssigneeQuery("");
     setActionOnInput("");
     setActionOnList([]);
-    setProjectId(selectedProjectId || "");
+    setProjectId(fixedProjectId || selectedProjectId || "");
   };
 
   const handleCancel = () => {
@@ -351,7 +353,7 @@ export default function UploadMinutesModal({
               <p className="uploadHint">Supported formats: PDF/Word/any (up to backend limits)</p>
             </div>
           </div>
-          {requireProject && (
+          {requireProject && !projectLocked && (
             <div className="row gap16">
               <div className="flex1">
                 <label className="label">Select Project</label>
@@ -648,6 +650,5 @@ export default function UploadMinutesModal({
     </div>
   );
 }
-
 
 

@@ -120,12 +120,18 @@ async def create_student_engagement(
 @router.get("", response_model=List[StudentEngagementOut])
 async def list_student_engagements(
     approval_status: Optional[ApprovalStatus] = Query(None),
+    project_id: Optional[str] = Query(
+        default=None,
+        description="Optional project filter. If provided, only returns records for that project.",
+    ),
     user: CurrentUser = Depends(get_current_user),
 ):
     db = await get_db()
     query = {"owner_email": user.email}
     if approval_status:
         query["approval_status"] = approval_status.value
+    if project_id:
+        query["project_id"] = project_id
 
     cursor = db.student_engagements.find(query).sort("created_at", -1)
     rows = await cursor.to_list(length=500)
@@ -134,6 +140,7 @@ async def list_student_engagements(
     for row in rows:
         # Convert stored datetimes back to dates for response schema
         payload = {
+            "project_id": row.get("project_id"),
             "student": row.get("student"),
             "college_name": row.get("college_name"),
             "project_name": row.get("project_name"),

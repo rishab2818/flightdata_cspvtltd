@@ -82,6 +82,9 @@ export default function App() {
           <Route path="digital" element={<DigitalLibrary />} />
           <Route path="student" element={<StudentEngagement />} />
           <Route path="procurement" element={<InventoryRecords/>} />
+          <Route path="divisional" element={<DivisionalRecords />} />
+          <Route path="feedback" element={<CustomerFeedbacks />} />
+          <Route path="training" element={<TrainingRecords />} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
       </Route>

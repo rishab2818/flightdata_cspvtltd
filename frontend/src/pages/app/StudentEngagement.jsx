@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from "react-icons/fi";
@@ -94,6 +95,7 @@ function Modal({ title, onClose, children }) {
 /* -------------------- Main Component -------------------- */
 
 export default function StudentEngagement() {
+  const { projectId } = useParams();
   const [approvalFilter, setApprovalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -132,7 +134,7 @@ export default function StudentEngagement() {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const data = await studentEngagementApi.list();
+      const data = await studentEngagementApi.list(undefined, projectId);
       setRecords(data || []);
     } catch (err) {
       setError("Failed to load student engagement records");
@@ -143,7 +145,7 @@ export default function StudentEngagement() {
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [projectId]);
 
   const onChange = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -321,6 +323,7 @@ export default function StudentEngagement() {
 
       const payload = {
         ...form,
+        project_id: projectId || undefined,
         duration_months: form.duration_months
           ? Number(form.duration_months)
           : undefined,

@@ -604,6 +604,7 @@
 // }
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { FiPlus, FiUploadCloud } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
@@ -638,6 +639,7 @@ function Rating({ value }) {
 
 /* --------------------- Main Component --------------------- */
 export default function CustomerFeedbacks() {
+  const { projectId } = useParams();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -661,7 +663,7 @@ export default function CustomerFeedbacks() {
     try {
       setLoading(true);
       setError("");
-      const data = await recordsApi.listFeedbacks();
+      const data = await recordsApi.listFeedbacks(projectId);
       setRecords(data);
     } catch (e) {
       console.error(e);
@@ -673,7 +675,7 @@ export default function CustomerFeedbacks() {
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [projectId]);
 
   const filtered = useMemo(() => {
     return records.filter((row) => {
@@ -1054,6 +1056,7 @@ export default function CustomerFeedbacks() {
           onClose={closeModal}
           onCreated={loadRecords}
           editingRecord={editingRecord}
+          projectId={projectId}
           onUpdated={(updated) => {
             setRecords((prev) =>
               prev.map((r) =>
@@ -1117,7 +1120,7 @@ function Input({ label, style, ...rest }) {
 }
 
 /* --------------------- Modal Component --------------------- */
-function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
+function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord, projectId }) {
   const [form, setForm] = useState({
     project_name: "",
     division: "",
@@ -1186,6 +1189,7 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord }) {
       // 2. Prepare the final payload
       const payload = {
         ...form,
+        project_id: projectId || undefined,
         rating: form.rating === "" ? undefined : Number(form.rating || 0),
         // Ensure date is formatted correctly if needed, otherwise rely on API to handle ISO format
         feedback_date: form.feedback_date || undefined,
