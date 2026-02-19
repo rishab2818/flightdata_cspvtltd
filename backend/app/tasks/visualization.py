@@ -1174,11 +1174,14 @@ def generate_visualization(self, viz_id: str):
 )
 
             html = pio.to_html(
-            fig,
-    include_plotlyjs="cdn",
+    fig,
     full_html=True,
+    include_plotlyjs="cdn",
     config={"responsive": True},
+    post_script=post_script,
+
 )
+
 
             html_bytes = html.encode("utf-8")
             html_key = f"projects/{doc['project_id']}/visualizations/{viz_id}.html"
@@ -1398,20 +1401,7 @@ def generate_visualization(self, viz_id: str):
                 stats_for_js.append({})  # no LOD switching for these charts
 
         _set_status(redis, viz_id, states.STARTED, 60, "Building Plotly figure")
-#         fig = _build_figure(series_frames, chart_type)
-
-#         fig.update_layout(
-#     autosize=True,
-#     margin=dict(l=0, r=0, t=40, b=0)
-# )
-
-#         html = pio.to_html(
-#     fig,
-#     full_html=True,
-#     include_plotlyjs="cdn",
-#     config={
-#         "responsive": True
-#     }
+#         
 # )
         fig = _build_figure(series_frames, chart_type)
         fig.update_layout(
@@ -1432,7 +1422,8 @@ def generate_visualization(self, viz_id: str):
     fig,
     full_html=True,
     include_plotlyjs="cdn",
-    config={"responsive": True}
+    config={"responsive": True},
+    post_script=post_script
 )
 
 
@@ -1446,6 +1437,7 @@ def generate_visualization(self, viz_id: str):
             viz_id=viz_id,
             chart_type=chart_type,
             series_meta=series_meta_for_js,
+
             series_stats=stats_for_js,
         )
 
