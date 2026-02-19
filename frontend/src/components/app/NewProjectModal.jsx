@@ -14,7 +14,23 @@ import Button from '../common/Button';
 
 const BORDER = COLORS.border;
 
-export default function NewProjectModalImproved({ open, onClose, onSubmit, loading }) {
+const normalizeMembers = (members = []) =>
+  (members || [])
+    .map((m) => ({
+      email: m?.email || '',
+      name: m?.name || m?.full_name || m?.display_name || m?.email || '',
+    }))
+    .filter((m) => m.email);
+
+export default function NewProjectModalImproved({
+  open,
+  onClose,
+  onSubmit,
+  loading,
+  mode = 'create',
+  initialProject = null,
+}) {
+  const isEditMode = mode === 'edit';
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   // search + selection state
@@ -26,13 +42,13 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
   // reset form whenever we open
   useEffect(() => {
     if (open) {
-      setProjectName('');
-      setDescription('');
+      setProjectName(initialProject?.project_name || '');
+      setDescription(initialProject?.project_description || '');
       setSearchTerm('');
       setSearchResults([]);
-      setSelectedMembers([]);
+      setSelectedMembers(normalizeMembers(initialProject?.members));
     }
-  }, [open]);
+  }, [open, initialProject]);
 
   // debounce search and call /api/projects/member-search
   useEffect(() => {
@@ -117,7 +133,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
             color: COLORS.textPrimary,
           }}
         >
-          Add Project
+          {isEditMode ? 'Edit Project' : 'Add Project'}
         </h3>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <label style={{ fontSize: 14, color: COLORS.textSecondary }}>
@@ -127,6 +143,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
               required
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
+              disabled={isEditMode}
               style={{
                 width: '100%',
                 marginTop: SPACING.sm,
@@ -135,9 +152,16 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
                 border: `1px solid ${BORDER}`,
                 fontSize: 14,
                 background:"#F3F3F5",
+                opacity: isEditMode ? 0.7 : 1,
+                cursor: isEditMode ? 'not-allowed' : 'text',
               }}
             />
           </label>
+          {isEditMode && (
+            <div style={{ marginTop: -8, fontSize: 12, color: COLORS.textMuted }}>
+              Project name cannot be changed after creation.
+            </div>
+          )}
           <label style={{ fontSize: 14, color: COLORS.textSecondary }}>
             Description
             <textarea
@@ -266,7 +290,7 @@ export default function NewProjectModalImproved({ open, onClose, onSubmit, loadi
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create'}
+              {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save' : 'Create')}
             </Button>
           </div>
         </form>

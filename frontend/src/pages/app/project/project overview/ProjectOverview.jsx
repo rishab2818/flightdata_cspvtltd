@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 
 import UploadModal from './../ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../../api/ingestionApi'
+import { projectApi } from '../../../../api/projectapi'
+import { AuthContext } from '../../../../context/AuthContext'
 import './ProjectOverview.css'
 import TagDetails from './../TagDetails.jsx'
 import Plus from '../../../../assets/Plus.svg'
@@ -13,7 +15,7 @@ import PencilSimple from '../../../../assets/PencilSimple.svg'
 import ArrowRight from '../../../../assets/ArrowRight.svg'
 import ConfirmationModal from "../../../../components/common/ConfirmationModal";
 import SeeMoreText from "../../../../components/common/SeeMoreButton";
-import { FiCalendar, FiUser } from "react-icons/fi";
+import NewProjectModal from '../../../../components/app/NewProjectModal';
 
 
 const DATASET_TABS = [
@@ -25,7 +27,8 @@ const DATASET_TABS = [
 
 export default function ProjectUpload() {
   const { projectId } = useParams()
-  const { project } = useOutletContext()
+  const { user } = useContext(AuthContext)
+  const { project, refreshProject } = useOutletContext()
 
   const [activeDataset, setActiveDataset] = useState('cfd')
   const [tags, setTags] = useState([])
@@ -33,7 +36,11 @@ export default function ProjectUpload() {
 
   const [modal, setModal] = useState({ open: false, mode: 'create', tag: '' })
   const [deletingTag, setDeletingTag] = useState(null)
+  const [projectEditOpen, setProjectEditOpen] = useState(false)
+  const [savingProjectEdit, setSavingProjectEdit] = useState(false)
 
+ const role = user?.role?.toUpperCase?.();
+ const canEditProject = role === 'GD' || role === 'DH';
 
  const desc = project?.project_description || '';
 
@@ -221,6 +228,50 @@ const members = project?.members?.length || 0;
     setTimeout(refreshTagsAndAttachProgress, 1500)
   }
 
+  const normalizeEmail = (email) => (email || '').trim().toLowerCase()
+
+  const handleProjectEditSubmit = async (payload) => {
+    if (!canEditProject) return
+    setSavingProjectEdit(true)
+    try {
+      await projectApi.update(projectId, {
+        project_description: payload.project_description,
+      })
+
+      const existingMembers = project?.members || []
+      const existingByKey = new Map(
+        existingMembers
+          .map((m) => [normalizeEmail(m?.email), m?.email])
+          .filter(([k]) => Boolean(k))
+      )
+      const selectedByKey = new Map(
+        (payload.member_emails || [])
+          .map((email) => [normalizeEmail(email), email])
+          .filter(([k]) => Boolean(k))
+      )
+
+      const add_emails = [...selectedByKey.keys()]
+        .filter((k) => !existingByKey.has(k))
+        .map((k) => selectedByKey.get(k))
+      const remove_emails = [...existingByKey.keys()]
+        .filter((k) => !selectedByKey.has(k))
+        .map((k) => existingByKey.get(k))
+
+      if (add_emails.length > 0 || remove_emails.length > 0) {
+        await projectApi.patchMembers(projectId, { add_emails, remove_emails })
+      }
+
+      if (refreshProject) {
+        await refreshProject()
+      }
+      setProjectEditOpen(false)
+    } catch (err) {
+      window.alert(err?.response?.data?.detail || err.message || 'Failed to update project')
+    } finally {
+      setSavingProjectEdit(false)
+    }
+  }
+
   /* ================= Render ================= */
   return (
 
@@ -240,13 +291,15 @@ const members = project?.members?.length || 0;
 
     <span className="projectActive">Active</span>
 
-    <button className="edit-btn" title="Edit">
-      <img
-        style={{ width: "24px", height: "24px" }}
-        src={PencilSimple}
-        alt="pencil"
-      />
-    </button>
+    {canEditProject && (
+      <button className="edit-btn" title="Edit Project" onClick={() => setProjectEditOpen(true)} type="button">
+        <img
+          style={{ width: "24px", height: "24px" }}
+          src={PencilSimple}
+          alt="pencil"
+        />
+      </button>
+    )}
   </div>
 
   {/* ===== Description (Next Line) ===== */}
@@ -488,6 +541,15 @@ const members = project?.members?.length || 0;
           }
         />
       )}
+
+      <NewProjectModal
+        open={projectEditOpen}
+        onClose={() => !savingProjectEdit && setProjectEditOpen(false)}
+        onSubmit={handleProjectEditSubmit}
+        loading={savingProjectEdit}
+        mode="edit"
+        initialProject={project}
+      />
 
     </div>
 

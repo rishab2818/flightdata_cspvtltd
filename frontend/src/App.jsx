@@ -22,6 +22,7 @@ import Setting from './pages/app/Setting'
 import DigitalLibrary from './pages/app/DigitalLibrary'
 import BudgetEstimation from './pages/app/budget/BudgetEstimation'
 import ProtectedGDorDH from './routes/ProtectedGDorDH'
+import ProtectedAuth from './routes/ProtectedAuth'
 import AdminShell from './pages/admin/AdminShell'
 import Settings from './pages/admin/Settings'
 import ProjectShell from './pages/app/project/ProjectShell'
@@ -71,9 +72,8 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route element={<ProtectedGDorDH />}>
+      <Route element={<ProtectedAuth />}>
         <Route path="/app/projects/:projectId/*" element={<ProjectShell />}>
-
           <Route path="data" element={<ProjectOverview />} />
           <Route index element={<ProjectOverview />} />
           <Route path="visualisation" element={<ProjectVisualisation />} />
