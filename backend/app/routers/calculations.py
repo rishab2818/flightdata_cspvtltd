@@ -9,12 +9,17 @@ from uuid import uuid4
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from minio.error import S3Error
 from pydantic import BaseModel, Field
 
 from app.calculations.catalog import FORMULA_CATALOG, build_expression
 from app.calculations.derived import apply_derived_columns_to_frame
+from app.calculations.expression import (
+    build_expression_from_formula,
+    list_formula_functions,
+    normalize_formula_expression,
+)
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
@@ -65,15 +70,67 @@ def _update_numeric_stats(stats: dict, df: pd.DataFrame):
 
 
 class CalculationApplyIn(BaseModel):
-    formula_key: str = Field(..., description="Template key from formula catalog")
+    formula_key: str | None = Field(default=None, description="Template key from formula catalog")
     input_columns: list[str] = Field(default_factory=list)
+    formula_expression: str | None = Field(
+        default=None,
+        description="Free-form formula expression, e.g. sqrt(a+b)*(cos(a)+sin(b))",
+    )
+    variable_map: dict[str, str] = Field(
+        default_factory=dict,
+        description="Mapping from formula variables to dataset columns",
+    )
     output_column: str = Field(..., description="Derived column name")
     limit: int = Field(20, ge=1, le=200)
+
+
+class FormulaValidateIn(BaseModel):
+    formula_expression: str = Field(..., description="Expression to validate")
+
+
+def _resolve_expression(payload: CalculationApplyIn) -> tuple[str, str | None, list[str]]:
+    formula_expression = (payload.formula_expression or "").strip()
+    if formula_expression:
+        expr, normalized_formula, variables = build_expression_from_formula(
+            formula_expression,
+            payload.variable_map,
+        )
+        return expr, normalized_formula, variables
+
+    formula_key = (payload.formula_key or "").strip()
+    if not formula_key:
+        raise ValueError("Provide either formula_expression or formula_key")
+    expr = build_expression(formula_key, payload.input_columns)
+    return expr, None, []
 
 
 @router.get("/catalog")
 async def get_formula_catalog(user: CurrentUser = Depends(get_current_user)):
     return {"categories": FORMULA_CATALOG}
+
+
+@router.get("/functions")
+async def get_formula_functions(
+    query: str | None = Query(default=None, max_length=50),
+    user: CurrentUser = Depends(get_current_user),
+):
+    return {"functions": list_formula_functions(query)}
+
+
+@router.post("/validate")
+async def validate_formula(
+    payload: FormulaValidateIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    try:
+        normalized, variables = normalize_formula_expression(payload.formula_expression)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "formula_expression": payload.formula_expression.strip(),
+        "normalized_expression": normalized,
+        "variables": variables,
+    }
 
 
 @router.post("/jobs/{job_id}/preview")
@@ -102,7 +159,7 @@ async def preview_calculation(
         raise HTTPException(status_code=400, detail="output_column is required")
 
     try:
-        expr = build_expression(payload.formula_key, payload.input_columns)
+        expr, normalized_formula, variables = _resolve_expression(payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -118,6 +175,9 @@ async def preview_calculation(
         "job_id": job_id,
         "filename": job.get("filename"),
         "formula_key": payload.formula_key,
+        "formula_expression": (payload.formula_expression or "").strip() or None,
+        "normalized_formula_expression": normalized_formula,
+        "required_variables": variables,
         "expression": expr,
         "derived_column": {"name": output_column, "expression": expr},
         "columns": list(frame.columns),
@@ -147,7 +207,7 @@ async def materialize_calculation(
         raise HTTPException(status_code=400, detail="output_column is required")
 
     try:
-        expr = build_expression(payload.formula_key, payload.input_columns)
+        expr, _normalized_formula, _variables = _resolve_expression(payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

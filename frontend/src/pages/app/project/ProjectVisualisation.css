@@ -692,6 +692,118 @@ min-width: 0;
   min-width: 0;
 }
 
+.calc-formula-editor {
+  position: relative;
+}
+
+.calc-formula-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid #d4deea;
+  border-radius: 6px;
+  font-family: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.calc-formula-input:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+.calc-suggestion-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #d4deea;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(8, 35, 73, 0.14);
+  z-index: 15;
+}
+
+.calc-suggestion-item {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #edf2f8;
+  background: #ffffff;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calc-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.calc-suggestion-item:hover {
+  background: #f3f7fd;
+}
+
+.calc-suggestion-name {
+  color: #0f4076;
+  font-family: "Inter-Regular", Helvetica;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.calc-suggestion-meta {
+  color: #5f768f;
+  font-family: "Inter-Regular", Helvetica;
+  font-size: 12px;
+}
+
+.calc-syntax-preview {
+  border: 1px solid #d4deea;
+  border-radius: 6px;
+  background: #f8fbff;
+  min-height: 48px;
+  padding: 10px 12px;
+  font-family: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.calc-token--function {
+  color: #156c46;
+  font-weight: 700;
+}
+
+.calc-token--variable {
+  color: #0f4da8;
+  font-weight: 700;
+}
+
+.calc-token--number {
+  color: #7a3e05;
+}
+
+.calc-token--operator,
+.calc-token--paren {
+  color: #4f6277;
+}
+
+.calc-token--identifier {
+  color: #a33434;
+  text-decoration: underline dotted;
+}
+
+.calc-token--plain {
+  color: #273648;
+}
+
 
 /* .project-card,
 .project-cardpage,
@@ -799,5 +911,4 @@ min-width: 0;
   cursor: pointer;
   z-index: 10;
 } */
-
 
