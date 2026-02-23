@@ -31,13 +31,47 @@ export default function UploadForecastModal({
 
   if (!open) return null;
 
-  const handleChange = (key) => (e) => {
-    onChange({ ...values, [key]: e.target.value });
-  };
+  // const handleChange = (key) => (e) => {
+  //   onChange({ ...values, [key]: e.target.value });
+  // };
+
+  const handleChange = (key, type) => (e) => {
+  let value = e.target.value;
+
+  if (type === "number") {
+    // allow only numbers + decimal
+    if (!/^\d*\.?\d*$/.test(value)) return;
+  }
+
+  onChange({ ...values, [key]: value });
+};
+
+
+  const blockInvalidNumberChars = (e) => {
+  if (["e", "E", "+", "-"].includes(e.key)) {
+    e.preventDefault();
+  }
+};
+
+
+  // const handleSubmit = () => {
+  //   onSave?.({ values, file });
+  // };
 
   const handleSubmit = () => {
-    onSave?.({ values, file });
-  };
+
+  for (const field of modalFields) {
+    if (field.type === "number" && values[field.key]) {
+      if (isNaN(values[field.key])) {
+        alert(`${field.label} must be a number`);
+        return;
+      }
+    }
+  }
+
+
+  onSave?.({ values, file });
+};
 
   return (
     <div className={styles.modalOverlay}>
@@ -103,23 +137,77 @@ export default function UploadForecastModal({
                 </label>
 
                 {field.multiline ? (
+  <textarea
+    className={styles.modalTextarea}
+    placeholder={field.placeholder}
+    value={values[field.key] || ''}
+    onChange={handleChange(field.key, field.type)}
+    disabled={readOnly}
+  />
+) : field.type === "select" ? (
+  <select
+    className={styles.ModalSelect}
+    value={values[field.key] || ''}
+    onChange={handleChange(field.key, field.type)}
+    disabled={readOnly}
+  >
+    <option value="">Select</option>
+    {field.options?.map((opt) => (
+      <option key={opt} value={opt}>
+        {opt}
+      </option>
+    ))}
+  </select>
+) : (
+  <input
+    type="text"
+    inputMode={field.type === "number" ? "decimal" : "text"}
+    className={styles.modalInput}
+    placeholder={field.placeholder}
+    value={values[field.key] || ''}
+    onChange={handleChange(field.key, field.type)}
+    disabled={readOnly}
+    onWheel={(e) => e.target.blur()}
+    onKeyDown={field.type === "number" ? blockInvalidNumberChars : undefined}
+  />
+)}
+
+                {/* {field.multiline ? (
+                  // <textarea
+                  //   className={styles.modalTextarea}
+                  //   placeholder={field.placeholder}
+                  //   value={values[field.key] || ''}
+                  //   onChange={handleChange(field.key)}
+                  //   disabled={readOnly}
+                  // />
                   <textarea
-                    className={styles.modalTextarea}
-                    placeholder={field.placeholder}
-                    value={values[field.key] || ''}
-                    onChange={handleChange(field.key)}
-                    disabled={readOnly}
-                  />
+  className={styles.modalTextarea}
+  placeholder={field.placeholder}
+  value={values[field.key] || ''}
+  onChange={handleChange(field.key, field.type)}
+  disabled={readOnly}
+/>
                 ) : (
                   <input
-                    type={field.type || 'text'}
-                    className={styles.modalInput}
-                    placeholder={field.placeholder}
-                    value={values[field.key] || ''}
-                    onChange={handleChange(field.key)}
-                    disabled={readOnly}
-                  />
-                )}
+                  type="text"
+  inputMode={field.type === "number" ? "decimal" : "text"}
+  className={styles.modalInput}
+  placeholder={field.placeholder}
+  value={values[field.key] || ''}
+  onChange={handleChange(field.key, field.type)}
+  disabled={readOnly}
+  onWheel={(e) => e.target.blur()}
+  onKeyDown={field.type === "number" ? blockInvalidNumberChars : undefined}
+/>
+                  // <input
+                  //   type={field.type || 'text'}
+                  //   className={styles.modalInput}
+                  //   placeholder={field.placeholder}
+                  //   value={values[field.key] || ''}
+                  //   onChange={handleChange(field.key)}
+                  //   disabled={readOnly}
+                  // />
+                )} */}
               </div>
             ))}
           </div>
