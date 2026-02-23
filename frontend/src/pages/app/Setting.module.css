@@ -1,7 +1,3 @@
-.container {
-  padding: 20px 40px;
-}
-
 .card {
   background: #fff;
   border-radius: 0px;
@@ -17,6 +13,7 @@
   font-size: 22px;
   margin-bottom: 24px;
   font-weight: 600;
+  /* font-family: "Inter-Regular,Helvetica"; */
 }
 
 /* 2 column layout */
@@ -86,4 +83,48 @@
   margin-top: 10px;
   font-weight: 600;
   color: #2563eb;
+}
+
+.passwordField {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordField input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.passwordField span {
+  position: absolute;
+  right: 10px;
+  cursor: pointer;
+  color: #666;
+}
+
+.error {
+  background: #fee2e2;
+  color: #b91c1c;
+  margin-top: 8px;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success {
+  color: #208825;
+  background: #d2e6d4;
+  padding: 12px;
+  border-radius: 8px;
+  /* border: 1px solid #92db9b; */
+  font-size: 14px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
