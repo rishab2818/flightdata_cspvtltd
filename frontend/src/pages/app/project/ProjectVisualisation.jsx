@@ -5,7 +5,11 @@ import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { matApi } from '../../../mat/matApi'
 import { calculationsApi } from '../../../calculations/calculationsApi'
-import { flattenFormulaTemplates } from '../../../calculations/formulaHelpers'
+import {
+  applyFunctionSuggestion,
+  getFormulaTokenPrefix,
+  tokenizeFormula,
+} from '../../../calculations/formulaHelpers'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
 
 import './ProjectVisualisation.css'
@@ -142,23 +146,22 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 // const [hasUnsavedCalc, setHasUnsavedCalc] = useState(false);
 
   /* ================= calculation tab state ================= */
-  const [formulaCatalog, setFormulaCatalog] = useState([])
+  const calcFormulaInputRef = useRef(null)
+  const [calcFunctions, setCalcFunctions] = useState([])
   const [calcDatasetType, setCalcDatasetType] = useState('wind')
   const [calcTag, setCalcTag] = useState('')
   const [calcJobId, setCalcJobId] = useState('')
-  const [calcCategoryKey, setCalcCategoryKey] = useState('')
-  const [calcFormulaKey, setCalcFormulaKey] = useState('')
-  const [calcInputs, setCalcInputs] = useState([])
+  const [calcFormulaExpression, setCalcFormulaExpression] = useState('')
+  const [calcNormalizedExpression, setCalcNormalizedExpression] = useState('')
+  const [calcVariableNames, setCalcVariableNames] = useState([])
+  const [calcVariableMap, setCalcVariableMap] = useState({})
+  const [calcFormulaError, setCalcFormulaError] = useState('')
+  const [calcFormulaCursor, setCalcFormulaCursor] = useState(0)
   const [calcOutputColumn, setCalcOutputColumn] = useState('')
   const [calcPreviewRows, setCalcPreviewRows] = useState([])
   const [calcProcessing, setCalcProcessing] = useState(false)
   const [calcError, setCalcError] = useState(null)
   const [tempVizId, setTempVizId] = useState(null)
-  const [perfCategoryKey, setPerfCategoryKey] = useState("");   // Performance
-  const [mode, setMode] = useState(""); // "basic" | "performance" | ""
-  // const activeCategoryKey = calcCategoryKey || perfCategoryKey;
-  const activeCategoryKey =
-  mode === "basic" ? calcCategoryKey : perfCategoryKey;
 
 
   /* ================= visualization state ================= */
@@ -199,23 +202,6 @@ const [loadingSave, setLoadingSave] = useState(false);
 
   const [dimension, setDimension] = useState('2d')
 // const [plotType, setPlotType] = useState('')
-
- const BASIC_KEYS = [
-  "algebra",
-  "trigonometric",
-  "log_exp",
-  "stats",
-  "magnitude",
-];
-
-const basicFormulas = formulaCatalog.filter(c =>
-  BASIC_KEYS.includes(c.key)
-);
-
-const performanceFormulas = formulaCatalog.filter(c =>
-  !BASIC_KEYS.includes(c.key)
-);
-
 
 const plotOptions =
   dimension === '2d' ? plotTypes2D : plotTypes3D
@@ -311,13 +297,29 @@ const plotOptions =
     return map
   }, [filesByDatasetTag])
 
-  const formulaTemplateMap = useMemo(
-    () => flattenFormulaTemplates(formulaCatalog),
-    [formulaCatalog]
+  const calcFunctionNames = useMemo(() => {
+    const names = []
+    for (const fn of calcFunctions) {
+      if (fn?.name) names.push(fn.name)
+      if (fn?.engine_name && fn.engine_name !== fn.name) names.push(fn.engine_name)
+    }
+    return names
+  }, [calcFunctions])
+
+  const calcTokenPrefix = useMemo(
+    () => getFormulaTokenPrefix(calcFormulaExpression, calcFormulaCursor),
+    [calcFormulaExpression, calcFormulaCursor]
   )
-  const selectedFormulaTemplate = useMemo(
-    () => formulaTemplateMap[calcFormulaKey] || null,
-    [formulaTemplateMap, calcFormulaKey]
+  const calcFormulaSuggestions = useMemo(() => {
+    const token = (calcTokenPrefix?.token || '').trim().toLowerCase()
+    if (!token) return []
+    return calcFunctions
+      .filter((fn) => fn?.name?.toLowerCase().startsWith(token))
+      .slice(0, 8)
+  }, [calcFunctions, calcTokenPrefix])
+  const calcFormulaTokens = useMemo(
+    () => tokenizeFormula(calcFormulaExpression, calcFunctionNames, calcVariableNames),
+    [calcFormulaExpression, calcFunctionNames, calcVariableNames]
   )
 
   const calcFiles = useMemo(() => {
@@ -374,18 +376,12 @@ const plotOptions =
 
   useEffect(() => {
     calculationsApi
-      .catalog()
+      .functions()
       .then((data) => {
-        const categories = data?.categories || []
-        setFormulaCatalog(categories)
-        if (!categories.length) return
-        const firstCategory = categories[0]
-        const firstTemplate = firstCategory?.templates?.[0]
-        setCalcCategoryKey((prev) => prev || firstCategory?.key || '')
-        setCalcFormulaKey((prev) => prev || firstTemplate?.key || '')
+        setCalcFunctions(data?.functions || [])
       })
       .catch((e) => {
-        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load formula catalog')
+        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load formula functions')
       })
   }, [])
 
@@ -421,22 +417,37 @@ const plotOptions =
   }, [projectId, calcDatasetType, calcTag, filesByDatasetTag])
 
   useEffect(() => {
-    const n = Number(selectedFormulaTemplate?.inputs?.length || 0)
-    setCalcInputs((prev) => Array.from({ length: n }, (_, i) => prev[i] || ''))
-  }, [selectedFormulaTemplate?.key])
-
-  useEffect(() => {
-    if (!calcCategoryKey) return
-    const category = formulaCatalog.find((c) => c.key === calcCategoryKey)
-    const templates = category?.templates || []
-    if (!templates.length) {
-      setCalcFormulaKey('')
+    const expression = (calcFormulaExpression || '').trim()
+    if (!expression) {
+      setCalcFormulaError('')
+      setCalcNormalizedExpression('')
+      setCalcVariableNames([])
+      setCalcVariableMap({})
       return
     }
-    if (!templates.some((t) => t.key === calcFormulaKey)) {
-      setCalcFormulaKey(templates[0].key)
-    }
-  }, [calcCategoryKey, calcFormulaKey, formulaCatalog])
+    const timer = setTimeout(async () => {
+      try {
+        const data = await calculationsApi.validateFormula(calcFormulaExpression)
+        const variables = data?.variables || []
+        setCalcFormulaError('')
+        setCalcNormalizedExpression(data?.normalized_expression || '')
+        setCalcVariableNames(variables)
+        setCalcVariableMap((prev) => {
+          const next = {}
+          for (const variableName of variables) {
+            next[variableName] = prev[variableName] || ''
+          }
+          return next
+        })
+      } catch (e) {
+        setCalcNormalizedExpression('')
+        setCalcVariableNames([])
+        setCalcVariableMap({})
+        setCalcFormulaError(e?.response?.data?.detail || e.message || 'Invalid formula')
+      }
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [calcFormulaExpression])
 
   /* ================= saved visualizations ================= */
   // const fetchVisualizations = async () => {
@@ -842,51 +853,50 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     }
   }
 
-  const handleCalcInputChange = (idx, value) => {
-    setCalcInputs((prev) => prev.map((v, i) => (i === idx ? value : v)))
+  const handleCalcVariableMapChange = (variableName, columnName) => {
+    setCalcVariableMap((prev) => ({ ...prev, [variableName]: columnName }))
+    setCalcPreviewRows([])
   }
 
-  // const handleCalcPreview = async () => {
-  //   setCalcError(null)
-  //   if (!calcJobId) {
-  //     setCalcError('Select a file first')
-  //     return
-  //   }
-  //   if (!calcFormulaKey) {
-  //     setCalcError('Select a formula template')
-  //     return
-  //   }
-  //   if (!calcOutputColumn.trim()) {
-  //     setCalcError('Provide output column name')
-  //     return
-  //   }
-  //   if (calcInputs.some((c) => !c)) {
-  //     setCalcError('Select all required input columns')
-  //     return
-  //   }
+  const handleCalcFormulaChange = (value) => {
+    setCalcFormulaExpression(value)
+    setCalcPreviewRows([])
+  }
 
-  //   try {
-  //     setCalcProcessing(true)
-  //     // New formula attempt should clear any previous unsaved derived overlay.
-  //     setSeriesList((prev) => prev.map((s) => ({ ...s, derivedColumns: [] })))
-  //     setCalcPreviewRows([])
-  //     const data = await calculationsApi.preview(calcJobId, {
-  //       formula_key: calcFormulaKey,
-  //       input_columns: calcInputs,
-  //       output_column: calcOutputColumn.trim(),
-  //       limit: 20,
-  //     })
-  //     setCalcPreviewRows(data?.rows || [])
-  //     const derived = data?.derived_column
-  //     if (derived?.name && derived?.expression) {
-  //       applyCalculationToVisualisation(calcDatasetType, calcTag, calcJobId, derived)
-  //     }
-  //   } catch (e) {
-  //     setCalcError(e?.response?.data?.detail || e.message || 'Formula preview failed')
-  //   } finally {
-  //     setCalcProcessing(false)
-  //   }
-  // }
+  const handleCalcFormulaCursorChange = (event) => {
+    setCalcFormulaCursor(event.target.selectionStart || 0)
+  }
+
+  const handleInsertFormulaFunction = (functionName) => {
+    const input = calcFormulaInputRef.current
+    const cursor = input?.selectionStart ?? calcFormulaCursor
+    const next = applyFunctionSuggestion(calcFormulaExpression, cursor, functionName)
+    setCalcFormulaExpression(next.formula)
+    setCalcFormulaCursor(next.cursor)
+    setCalcPreviewRows([])
+    requestAnimationFrame(() => {
+      if (!input) return
+      input.focus()
+      input.setSelectionRange(next.cursor, next.cursor)
+    })
+  }
+
+  const handleCalcFormulaKeyDown = (event) => {
+    if (event.key === 'Tab' || event.key === 'Enter') {
+      if (!calcFormulaSuggestions.length) return
+      event.preventDefault()
+      handleInsertFormulaFunction(calcFormulaSuggestions[0].name)
+    }
+  }
+
+  const buildCalcVariableMapPayload = () => {
+    const payload = {}
+    for (const variableName of calcVariableNames) {
+      const mapped = (calcVariableMap[variableName] || '').trim()
+      if (mapped) payload[variableName] = mapped
+    }
+    return payload
+  }
 
  const handleCalcPreview = async () => {
   setCalcError(null);
@@ -895,16 +905,21 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcError('Select a file first');
     return;
   }
-  if (!calcFormulaKey) {
-    setCalcError('Select a formula template');
+  if (!calcFormulaExpression.trim()) {
+    setCalcError('Enter a formula');
     return;
   }
   if (!calcOutputColumn.trim()) {
     setCalcError('Provide output column name');
     return;
   }
-  if (calcInputs.some((c) => !c)) {
-    setCalcError('Select all required input columns');
+  if (calcFormulaError) {
+    setCalcError(calcFormulaError);
+    return;
+  }
+  const missingMappings = calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
+  if (missingMappings.length) {
+    setCalcError(`Map all variables before processing: ${missingMappings.join(', ')}`);
     return;
   }
 
@@ -918,8 +933,8 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcPreviewRows([]);
 
     const data = await calculationsApi.preview(calcJobId, {
-      formula_key: calcFormulaKey,
-      input_columns: calcInputs,
+      formula_expression: calcFormulaExpression.trim(),
+      variable_map: buildCalcVariableMapPayload(),
       output_column: calcOutputColumn.trim(),
       limit: 20,
     });
@@ -964,8 +979,25 @@ const fetchVisualizations = async (page = 1, reset = false) => {
   const handleCalcSave = async () => {
   setCalcError(null);
 
-  if (!calcJobId || !calcFormulaKey || !calcOutputColumn.trim() || calcInputs.some((c) => !c)) {
-    setCalcError('Complete file, formula, input columns and output name before saving');
+  if (!calcJobId) {
+    setCalcError('Select a file first');
+    return;
+  }
+  if (!calcFormulaExpression.trim()) {
+    setCalcError('Enter a formula');
+    return;
+  }
+  if (!calcOutputColumn.trim()) {
+    setCalcError('Provide output column name');
+    return;
+  }
+  if (calcFormulaError) {
+    setCalcError(calcFormulaError);
+    return;
+  }
+  const missingMappings = calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
+  if (missingMappings.length) {
+    setCalcError(`Map all variables before saving: ${missingMappings.join(', ')}`);
     return;
   }
 
@@ -973,8 +1005,8 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcProcessing(true);
 
     await calculationsApi.materialize(calcJobId, {
-      formula_key: calcFormulaKey,
-      input_columns: calcInputs,
+      formula_expression: calcFormulaExpression.trim(),
+      variable_map: buildCalcVariableMapPayload(),
       output_column: calcOutputColumn.trim(),
       limit: 20,
     });
@@ -996,12 +1028,6 @@ const fetchVisualizations = async (page = 1, reset = false) => {
 
     setCalcPreviewRows([]);
     setCalcOutputColumn('');
-    setCalcInputs(
-      Array.from(
-        { length: Number(selectedFormulaTemplate?.inputs?.length || 0) },
-        () => ''
-      )
-    );
 
     // clear unsaved derived overlay after persistence
     setSeriesList((prev) =>
@@ -1298,9 +1324,9 @@ const deleteVisualization = async (vizId) => {
         <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
-            {/* <p className="summary-label" style={{ margin: 0 }}>
-              Select Dataset → Tag → File, choose a formula template, map columns, then preview or save.
-            </p> */}
+            <p className="summary-label" style={{ margin: 0 }}>
+              Enter a formula, map detected variables to columns, preview, then save.
+            </p>
           </div>
 
           {calcError && <div className="project-shell__error">{calcError}</div>}
@@ -1363,206 +1389,112 @@ const deleteVisualization = async (vizId) => {
               </select>
             </div>
 
-          {/* <div className="ps-row" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}> */}
-            {/* <div className="ps-field">
-              <label>Basic Calculation</label>
-              <select
-                value={calcCategoryKey}
-                onChange={(e) => {
-                  setCalcCategoryKey(e.target.value)
-                  setCalcPreviewRows([])
-                }}
-              >
-                <option value="">Select</option>
-                {formulaCatalog.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-    <div className="ps-field">
-  <label>Basic</label>
-  <select
-  value={calcCategoryKey}
-  onChange={(e) => {
-    const value = e.target.value;
-
-    setMode(value ? "basic" : "");   // set mode
-    setCalcCategoryKey(value);
-    setPerfCategoryKey("");
-
-    setCalcFormulaKey("");
-    setCalcPreviewRows([]);
-  }}
-  disabled={mode === "performance"}
->
-  <option value="">Select</option>
-  {basicFormulas.map((c) => (
-    <option key={c.key} value={c.key}>
-      {c.label}
-    </option>
-  ))}
-</select>
-
-</div>
-
-
-<div className="ps-field">
-  <label>Performance</label>
- <select
-  value={perfCategoryKey}
-  onChange={(e) => {
-    const value = e.target.value;
-
-    setMode(value ? "performance" : "");
-    setPerfCategoryKey(value);
-    setCalcCategoryKey("");
-
-    setCalcFormulaKey("");
-    setCalcPreviewRows([]);
-  }}
-  disabled={mode === "basic"}
->
-  <option value="">Select</option>
-  {performanceFormulas.map((c) => (
-    <option key={c.key} value={c.key}>
-      {c.label}
-    </option>
-  ))}
-</select>
-
-</div>
-
-
-
-
-            {/* <div className="ps-field">
-              <label>Formula</label>
-              <select
-                value={calcFormulaKey}
-                onChange={(e) => {
-                  setCalcFormulaKey(e.target.value)
-                  setCalcPreviewRows([])
-                }}
-                disabled={!calcCategoryKey}
-              >
-                <option value="">{calcCategoryKey ? 'Select' : 'Select category first'}</option>
-                {(formulaCatalog.find((c) => c.key === calcCategoryKey)?.templates || []).map((tpl) => (
-                  <option key={tpl.key} value={tpl.key}>
-                    {tpl.label}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-
             <div className="ps-field">
-  <label>Formula</label>
- <select
-  value={calcFormulaKey}
-  onChange={(e) => {
-    setCalcFormulaKey(e.target.value);
-    setCalcPreviewRows([]);
-  }}
-  disabled={!activeCategoryKey}
->
-  <option value="">
-    {activeCategoryKey ? "Select" : "Select category first"}
-  </option>
-
-  {(formulaCatalog.find((c) => c.key === activeCategoryKey)?.templates || [])
-    .map((tpl) => (
-      <option key={tpl.key} value={tpl.key}>
-        {tpl.label}
-      </option>
-    ))}
-</select>
-
-
-</div>
-
-
-
-            <div className="ps-field">
-              <label>Mapped Inputs</label>
-              <div className="summary-label" style={{ marginTop: 8 }}>
-                {selectedFormulaTemplate?.inputs?.length || 0} input(s)
-              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Derived Column <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
+              <input
+                className="input-control"
+                value={calcOutputColumn}
+                onChange={(e) => setCalcOutputColumn(e.target.value)}
+                placeholder="derived_col_name"
+              />
             </div>
-          {/* </div> */}
           </div>
 
-          {/* {calcJob && (
-            <div className="summary-label">
-              Columns: {calcColumns.length ? calcColumns.join(', ') : 'No columns available'}
+          <div className="ps-field calc-formula-editor">
+            <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Formula <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
+            <textarea
+              ref={calcFormulaInputRef}
+              className="calc-formula-input"
+              value={calcFormulaExpression}
+              onChange={(e) => handleCalcFormulaChange(e.target.value)}
+              onClick={handleCalcFormulaCursorChange}
+              onKeyUp={handleCalcFormulaCursorChange}
+              onKeyDown={handleCalcFormulaKeyDown}
+              onSelect={handleCalcFormulaCursorChange}
+              spellCheck={false}
+              placeholder="Example: sqrt(a+b) * (cos(a) + sin(b))"
+            />
+            {calcFormulaSuggestions.length > 0 && (
+              <div className="calc-suggestion-list">
+                {calcFormulaSuggestions.map((fn) => (
+                  <button
+                    key={fn.name}
+                    type="button"
+                    className="calc-suggestion-item"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleInsertFormulaFunction(fn.name)}
+                  >
+                    <span className="calc-suggestion-name">{fn.name}</span>
+                    <span className="calc-suggestion-meta">{fn.example || ''}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="summary-label" style={{ marginTop: 6 }}>
+              Function autocomplete: type a function name, then press <code>Tab</code>/<code>Enter</code> or click suggestion.
             </div>
-          )} */}
-          
-        <div
-  className="Row calculation-row"
-  style={{ gridTemplateColumns: "repeat(7, minmax(180px, 1fr))" }}
->
+            {!!calcFormulaError && (
+              <div className="project-shell__error" style={{ marginTop: 8 }}>
+                {calcFormulaError}
+              </div>
+            )}
+            {!calcFormulaError && !!calcNormalizedExpression && calcNormalizedExpression !== calcFormulaExpression.trim() && (
+              <div className="summary-label" style={{ marginTop: 8 }}>
+                Normalized: <code>{calcNormalizedExpression}</code>
+              </div>
+            )}
+          </div>
 
-  {(selectedFormulaTemplate?.inputs || []).length > 0 &&
-    selectedFormulaTemplate.inputs.map((inputName, idx) => (
-      <div
-        className="ps-field"
-        key={`calc-input-${inputName}-${idx}`}
-      >
-        <label>{`Column ${inputName}`}</label>
-        <select
-          value={calcInputs[idx] || ''}
-          onChange={(e) =>
-            handleCalcInputChange(idx, e.target.value)
-          }
-          disabled={!calcJobId}
-        >
-          <option value="">
-            {calcJobId ? 'Select' : 'Select file first'}
-          </option>
-          {calcColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-      </div>
-    ))}
+          <div className="calc-syntax-preview">
+            {calcFormulaExpression ? (
+              calcFormulaTokens.map((part, idx) => (
+                <span key={`calc-token-${idx}`} className={`calc-token calc-token--${part.kind}`}>
+                  {part.token}
+                </span>
+              ))
+            ) : (
+              <span className="calc-token calc-token--plain">Formula syntax preview appears here.</span>
+            )}
+          </div>
 
-  <div className="ps-field">
-    <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Derived Column <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
-    <input
-      className="input-control"
-      value={calcOutputColumn}
-      onChange={(e) => setCalcOutputColumn(e.target.value)}
-      placeholder="derived_col_name"
-    />
-  </div>
+          <div className="Row calculation-row">
+            {(calcVariableNames || []).map((variableName) => (
+              <div className="ps-field" key={`calc-var-${variableName}`}>
+                <label>{`Column for ${variableName}`}</label>
+                <select
+                  value={calcVariableMap[variableName] || ''}
+                  onChange={(e) => handleCalcVariableMapChange(variableName, e.target.value)}
+                  disabled={!calcJobId}
+                >
+                  <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
+                  {calcColumns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
 
-
-  <div  style={{marginTop:'26px'}}>
-  <button
-    type="button"
-    
-    className="project-shell__nav-link"
-    onClick={handleCalcPreview}
-    disabled={calcProcessing}
-  >
-    {calcProcessing ? 'Processing…' : 'Process Formula'}
-  </button>
-  </div>
-  </div>
-  
-  <div style={{display:'flex',alignItems:"right", justifyContent:"right"}}>
-  <button
-    type="button"
-    className="project-shell__nav-save"
-    onClick={handleCalcSave}
-    disabled={calcProcessing}
-  >
-    {calcProcessing ? 'Saving…' : 'Save Derived Column'}
-  </button>
-  </div>
+          <div style={{display:'flex', justifyContent:'flex-end', gap: 12}}>
+            <button
+              type="button"
+              className="project-shell__nav-link"
+              onClick={handleCalcPreview}
+              disabled={calcProcessing}
+            >
+              {calcProcessing ? 'Processing…' : 'Process Formula'}
+            </button>
+            <button
+              type="button"
+              className="project-shell__nav-save"
+              onClick={handleCalcSave}
+              disabled={calcProcessing}
+            >
+              {calcProcessing ? 'Saving…' : 'Save Derived Column'}
+            </button>
+          </div>
 
 
         <div>
