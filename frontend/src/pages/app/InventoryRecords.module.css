@@ -476,8 +476,9 @@
 }
 
 .errorText {
-  color: #dc2626;
+  color: #d32f2f;
   font-size: 14px;
+  font-family: "Inter", sans-serif;
 }
 
 .modalFooter {

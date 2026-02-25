@@ -18,7 +18,7 @@ export const forecastColumns = (cashSplitLabel) => [
   'Sl. No.',
   'Division name',
   'Item',
-  'Item Descriptions',
+  // 'Item Descriptions',
   'QTY',
   'Existing Stock',
   'Previous Procurement date of similar Item',
@@ -30,14 +30,14 @@ export const forecastColumns = (cashSplitLabel) => [
   'Necessary of using hardware technologies',
   'Initiation of condemnation of store',
   'capital_or_revenue',
-  'Remarks',
+  'Note',
   'Attachment',
   'Action',
 ];
 
 export const modalFields = [
   { label: 'Enter Division Name', placeholder: 'Enter Division Name', key: 'division_name' },
-  { label: 'Descriptions', placeholder: 'Write descriptions', key: 'descriptions' },
+  // { label: 'Descriptions', placeholder: 'Write descriptions', key: 'descriptions',multiline: true,maxLength: 200 },
   { label: 'Enter Item', placeholder: 'Enter item', key: 'item' },
   { label: 'QTY', placeholder: 'Enter qty', key: 'qty', type: 'number' },
   { label: 'Existing Stock', placeholder: 'Enter Number', key: 'existing_stock',type: 'number' },
@@ -55,7 +55,7 @@ export const modalFields = [
   { label: 'Reusability for other projects', key: 'cross_project_use', type: 'select', options: ['Yes', 'No'] },
   { label: 'Necessary of using hardware technologies', key: 'hardware_need', type: 'select', options: ['Yes', 'No'] },
   { label: 'Initiation of condemnation of store', key: 'condemnation', type: 'select', options: ['Yes', 'No'] },
-  { label: 'Note', placeholder: 'Enter Note', key: 'Note', multiline: true },
+  { label: 'Note', placeholder: 'Enter Note', key: 'remarks', multiline: true,maxLength: 500 },
 ];
 
 export const defaultFormState = Object.fromEntries(modalFields.map((field) => [field.key, '']));
@@ -64,7 +64,7 @@ export const budgetExportColumns = (cashSplitLabel) => [
   { header: 'Forecast Year', key: 'forecast_year' },
   { header: 'Division name', key: 'division_name' },
   { header: 'Item', key: 'item' },
-  { header: 'Item Descriptions', key: 'descriptions' },
+  // { header: 'Item Descriptions', key: 'descriptions' },
   { header: 'QTY', key: 'qty' },
   { header: 'Existing Stock', key: 'existing_stock' },
   {
@@ -83,7 +83,7 @@ export const budgetExportColumns = (cashSplitLabel) => [
   { header: 'Initiation of condemnation of store', key: 'condemnation' },
   { header: 'Capital / Revenue', key: 'capital_or_revenue' },
 
-  { header: 'Note', key: 'Note' },
+  { header: 'Note', key: 'remarks' },
   {
     header: 'Attachment Name',
     accessor: (row) => row.original_name || '',

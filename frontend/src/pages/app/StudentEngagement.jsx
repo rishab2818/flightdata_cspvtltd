@@ -8,7 +8,7 @@ import Users from "../../assets/Users.svg";
 import Book1 from "../../assets/Book1.svg";
 import Ongoing from "../../assets/Ongoing.svg";
 import Cap from "../../assets/Cap.svg";
-import PresentationChart1 from "../../assets/PresentationChart1.svg"
+import Student1 from "../../assets/Student1.svg"
 import styles from "./StudentEngagement.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
@@ -288,6 +288,12 @@ export default function StudentEngagement() {
     e.preventDefault();
     setError("");
 
+    // 🔴 Require document upload
+if (!file && !existingFileMeta?.storage_key) {
+  setError("Please select a file to upload.");
+  return;
+}
+
     if (dateError) {
       setError(dateError);
       return;
@@ -454,7 +460,7 @@ export default function StudentEngagement() {
           />
         </div>
         <button className={styles.addBtn} onClick={openCreateModal}>
-          <img src={PresentationChart1} alt="Add Student"/>
+          <img style={{width:"22px",height:"22px"}} src={Student1} alt="Add Student"/>
           Add Student
         </button>
       </section>

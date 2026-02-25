@@ -20,6 +20,7 @@ export default function UploadForecastModal({
   existingFileName,
 }) {
   const [file, setFile] = useState(null);
+  const [error, setError] = useState("");
   const readOnly = mode === 'view';
 
   // reset file when modal closes
@@ -60,15 +61,21 @@ export default function UploadForecastModal({
 
   const handleSubmit = () => {
 
+  if (!file && !existingFileName) {
+    setError("Please select a file to upload.");
+    return;
+  }
+
+  setError("");
+
   for (const field of modalFields) {
     if (field.type === "number" && values[field.key]) {
       if (isNaN(values[field.key])) {
-        alert(`${field.label} must be a number`);
+        setError(`${field.label} must be a number`);
         return;
       }
     }
   }
-
 
   onSave?.({ values, file });
 };
@@ -137,13 +144,27 @@ export default function UploadForecastModal({
                 </label>
 
                 {field.multiline ? (
-  <textarea
-    className={styles.modalTextarea}
-    placeholder={field.placeholder}
-    value={values[field.key] || ''}
-    onChange={handleChange(field.key, field.type)}
-    disabled={readOnly}
-  />
+  <>
+    <textarea
+      className={styles.modalTextarea}
+      placeholder={field.placeholder}
+      value={values[field.key] || ''}
+      onChange={handleChange(field.key, field.type)}
+      disabled={readOnly}
+      maxLength={field.maxLength || 500}
+    />
+
+    <div
+      style={{
+        fontSize: 12,
+        textAlign: "right",
+        color:
+          (values[field.key] || "").length > 180 ? "red" : "#666",
+      }}
+    >
+      {(values[field.key] || "").length}/{field.maxLength || 500}
+    </div>
+  </>
 ) : field.type === "select" ? (
   <select
     className={styles.ModalSelect}
@@ -212,6 +233,12 @@ export default function UploadForecastModal({
             ))}
           </div>
         </div>
+
+        {error && (
+  <div style={{ color: "#d32f2f", marginBottom: 10, fontSize: 14, marginLeft:24,fontFamily: "Inter, sans-serif" }}>
+    {error}
+  </div>
+)}
 
         {/* ACTIONS */}
         <div className={styles.modalActions}>

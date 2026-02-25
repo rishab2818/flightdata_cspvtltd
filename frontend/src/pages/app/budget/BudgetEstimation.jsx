@@ -56,7 +56,7 @@ export default function BudgetEstimation() {
       const [showDeleteModal, setShowDeleteModal] = useState(false);
       const [recordToDelete, setRecordToDelete] = useState(null);
 
-      const { download, view, loadingFiles, errorFiles } = useDownload(budgetsApi.download);
+      const { download, loadingFiles, errorFiles } = useDownload(budgetsApi.download);
 
 
   const loadRows = useCallback(async () => {
@@ -136,6 +136,7 @@ export default function BudgetEstimation() {
   //   }
   // };
 
+
   /* -------------------- DELETE WITH CONFIRMATION -------------------- */
     const confirmDelete = async () => {
   if (!recordToDelete) return;
@@ -170,10 +171,10 @@ export default function BudgetEstimation() {
 //   download(record.record_id);
 // };
 
-const handleDownload = (row) => {
-  if (!row?.record_id) return;
-  download(row.record_id);
-};
+// const handleDownload = (row) => {
+//   if (!row?.record_id) return;
+//   download(row.record_id);
+// };
 
 
   const handleSubmit = async ({ values, file }) => {
@@ -248,6 +249,27 @@ const handleDownload = (row) => {
     }
   };
 
+  const handleEdit = (row) => {
+  setSelectedRow(row);
+  setIsEditOpen(true);
+};
+
+const handleView = async (row) => {
+  if (!row?.record_id) return;
+
+  const { download_url } = await budgetsApi.download(row.record_id);
+  const response = await fetch(download_url);
+  const blob = await response.blob();
+
+  const blobUrl = window.URL.createObjectURL(blob);
+  window.open(blobUrl, "_blank");
+};
+
+const handleDownload = (row) => {
+  if (!row?.record_id) return;
+  download(row.record_id);   // ✅ forces download
+};
+
   const handleExport = () => {
     downloadExcel({
       rows: sortedRows,
@@ -302,7 +324,9 @@ const handleDownload = (row) => {
           <ForecastBudgetTable
             columns={columns}
             rows={sortedRows}
-            onView={(row) => handleOpenModal('view', row)}
+            onView={handleView}
+            // onEdit={handleEdit}
+            // onView={(row) => handleOpenModal('view', row)}
             onEdit={(row) => handleOpenModal('edit', row)}
              onDelete={(row) => {
                        setRecordToDelete(row);
@@ -310,6 +334,14 @@ const handleDownload = (row) => {
                       }}
             onDownload={handleDownload}
           />
+//           <ForecastBudgetTable
+//   columns={columns}
+//   rows={rows}
+//   onView={handleView}       // ✅ file open
+//   onEdit={handleEdit}       // ✅ popup open
+//   onDelete={handleDelete}
+//   onDownload={handleDownload}
+// />
         )}
       </section>
 

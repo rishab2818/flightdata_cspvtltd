@@ -425,7 +425,9 @@
 
 .errorText {
   grid-column: span 2;
-  color: #d00;
+  color: #d32f2f;
+  font-size: 14px;
+  font-family: "Inter", sans-serif;
 }
 
 .modelFooter {

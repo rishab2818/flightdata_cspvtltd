@@ -118,7 +118,7 @@ export default function NewProjectModalImproved({
         style={{
           width: 520,
           background: COLORS.background,
-          borderRadius: 12,
+          borderRadius: 8,
           boxShadow: '0 4px 20px rgba(15,23,42,0.12)',
           border: `1px solid ${BORDER}`,
           padding: `${SPACING.lg + SPACING.md}px ${SPACING.lg}px ${SPACING.md}px`,
@@ -136,7 +136,7 @@ export default function NewProjectModalImproved({
           {isEditMode ? 'Edit Project' : 'Add Project'}
         </h3>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <label style={{ fontSize: 14, color: COLORS.textSecondary }}>
+          <label style={{ fontSize: 14, color: "#000000",fontFamily:"Inter-Regular, Helvetica" }}>
             Project Name
             <input
               type="text"
@@ -148,8 +148,9 @@ export default function NewProjectModalImproved({
                 width: '100%',
                 marginTop: SPACING.sm,
                 padding: `${SPACING.md}px ${SPACING.md + SPACING.sm}px`,
-                borderRadius: 6,
-                border: `1px solid ${BORDER}`,
+                borderRadius: 4,
+                border: "1px solid #e5e7eb",
+                // border: `1px solid ${BORDER}`,
                 fontSize: 14,
                 background:"#F3F3F5",
                 opacity: isEditMode ? 0.7 : 1,
@@ -162,7 +163,7 @@ export default function NewProjectModalImproved({
               Project name cannot be changed after creation.
             </div>
           )}
-          <label style={{ fontSize: 14, color: COLORS.textSecondary }}>
+          <label style={{ fontSize: 14, color: "#000000",fontFamily:"Inter-Regular, Helvetica"}}>
             Description
             <textarea
               required
@@ -172,8 +173,8 @@ export default function NewProjectModalImproved({
                 width: '100%',
                 marginTop: SPACING.sm,
                 padding: `${SPACING.md}px ${SPACING.md + SPACING.sm}px`,
-                borderRadius: 6,
-                border: `1px solid ${BORDER}`,
+                borderRadius: 4,
+                border: "1px solid #e5e7eb",
                 fontSize: 14,
                 minHeight: 80,
                 resize: 'none',
@@ -182,7 +183,7 @@ export default function NewProjectModalImproved({
             />
           </label>
           {/* Members search */}
-          <div style={{ fontSize: 14, color: COLORS.textSecondary }}>
+          <div style={{ fontSize: 14, color: "#000000",fontFamily:"Inter-Regular, Helvetica" }}>
             Add Members
             <input
               type="text"
@@ -193,8 +194,9 @@ export default function NewProjectModalImproved({
                 width: '100%',
                 marginTop: SPACING.sm,
                 padding: `${SPACING.md}px ${SPACING.md + SPACING.sm}px`,
-                borderRadius: 6,
-                border: `1px solid ${BORDER}`,
+                borderRadius: 4,
+                border: "1px solid #e5e7eb",
+                // border: `1px solid ${BORDER}`,
                 fontSize: 14,
                 background:"#F3F3F5",
               }}
@@ -204,8 +206,8 @@ export default function NewProjectModalImproved({
               <div
                 style={{
                   marginTop: SPACING.sm,
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER}`,
+                  borderRadius: 4,
+                  // border: `1px solid ${BORDER}`,
                   background: COLORS.background,
                   boxShadow: '0 4px 16px rgba(15,23,42,0.08)',
                   maxHeight: 160,
@@ -253,10 +255,11 @@ export default function NewProjectModalImproved({
                       gap: SPACING.sm,
                       padding: `${SPACING.sm}px ${SPACING.md}px`,
                       borderRadius: 999,
-                      background: COLORS.mutedBackground,
+                      border: "1px solid #e5e7eb",
+                      background:"#e3f2fd",
                       fontSize: 12,
                       color: COLORS.textPrimary,
-                      border: `1px solid ${BORDER}`,
+                      // border: `1px solid ${BORDER}`,
                     }}
                   >
                     {m.name || m.email}
@@ -286,10 +289,10 @@ export default function NewProjectModalImproved({
               marginTop: SPACING.md,
             }}
           >
-            <Button variant="secondary" type="button" onClick={onClose}>
+            <Button style={{width:"100px",cursor: "pointer",fontSize: "14px",borderRadius: "4px",border: "1px solid #1976d2",background: "#fff",color: "#1976d2",padding: "10px" }}variant="secondary" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={loading}>
+            <Button style={{width:"100px",cursor: "pointer",fontSize: "14px",borderRadius: "4px",background: "#1976d2",color: "#FFF",padding: "10px" }} variant="primary" type="submit" disabled={loading}>
               {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save' : 'Create')}
             </Button>
           </div>

@@ -256,7 +256,8 @@ select:focus {
 /* ---------- Errors ---------- */
 .errorText {
   color: #d32f2f;
-  font-size: 13px;
+  font-size: 14px;
+  font-family: "Inter", sans-serif;
 }
 
 /* ---------- Footer ---------- */

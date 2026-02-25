@@ -999,6 +999,7 @@ export default function CustomerFeedbacks() {
                           padding: "12px 16px",
                           color: "#475569",
                           borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                          width: "200px",
                         }}
                       >
                         {row.feedback_text}
@@ -1154,6 +1155,11 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord, projectId
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!file && !form.storage_key) {
+  setError("Please select a file to upload.");
+  return;
+}
 
     try {
       setSubmitting(true);
@@ -1322,24 +1328,36 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord, projectId
 
 
           </div>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
-            <textarea
-              value={form.feedback_text}
-              onChange={(e) => onChange("feedback_text", e.target.value)}
-              rows={3}
-              style={{
-                borderRadius: "8px",
-                border: `1px solid ${BORDER}`,
-                padding: 10,
-                background: "#F3F3F5",
-                resize: "none",
-              }}
-            />
-          </label>
+       <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+  <span style={{ color: "#475569", fontSize: 13 }}>Note</span>
+
+  <textarea
+    value={form.feedback_text || ""}
+    onChange={(e) => onChange("feedback_text", e.target.value)}
+    rows={3}
+    maxLength={500}
+    style={{
+      borderRadius: "8px",
+      border: `1px solid ${BORDER}`,
+      padding: 10,
+      background: "#F3F3F5",
+      resize: "none",
+    }}
+  />
+
+  <div
+    style={{
+      fontSize: 12,
+      textAlign: "right",
+      color: (form.feedback_text || "").length > 180 ? "red" : "#666",
+    }}
+  >
+    {(form.feedback_text || "").length}/500
+  </div>
+</label>
 
 
-          {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
+          {error && <p style={{ color: "#d32f2f",fontSize:"14px",fontFamily: "Inter, sans-serif", margin: 0 }}>{error}</p>}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <button
