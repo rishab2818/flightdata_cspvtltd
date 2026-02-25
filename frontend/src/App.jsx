@@ -34,6 +34,7 @@ import ProjectTagView from './pages/app/project/ProjectTagView'
 import ProcessedPreviewPage from './pages/app/project/ProcessedPreviewPage'
 import RawPreviewPage from './pages/app/project/RawPreviewPage'
 import ProjectVisualisationFullScreen from './pages/app/project/ProjectVisualisationFullScreen'
+// import ProjectMembersPage from './pages/app/project/ProjectMembersPage'
 
 export default function App() {
   return (
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="data" element={<ProjectOverview />} />
           <Route index element={<ProjectOverview />} />
           <Route path="visualisation" element={<ProjectVisualisation />} />
+          {/* <Route path="members" element={<ProjectMembersPage />} /> */}
           <Route path="meeting" element={<MinutesOfTheMeeting />} />
           <Route path="report" element={<TechnicalReports />} />
           <Route path="digital" element={<DigitalLibrary />} />
