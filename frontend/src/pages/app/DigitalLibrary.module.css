@@ -195,10 +195,11 @@
   padding: 16px;
   color: #475569;
   font-size: 14px;
+  font-family: "Inter", sans-serif;
 }
 
 .error {
-  color: #b91c1c;
+  color: #d32f2f;
 }
 
 .modalBackdrop {

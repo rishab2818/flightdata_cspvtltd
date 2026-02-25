@@ -19,6 +19,7 @@ import { documentsApi } from "../../api/documentsApi";
 import { meetingsApi } from "../../api/meetingsApi";
 import { projectApi } from "../../api/projectapi";
 import { useDownload } from "../../components/common/useDownload";
+import PresentationChart1 from "../../assets/PresentationChart1.svg";
 
 import "./MinutesOfTheMeeting.css";
 
@@ -633,7 +634,8 @@ function NextMeetingBanner({
           onClick={onUploadClick}
           className="UploadButton"
         >
-          <FiFileText size={16} />
+          {/* <FiFileText size={16} /> */}
+          <img src={PresentationChart1} alt="Record"/>
           <span>Upload Minutes</span>
         </button>
         </div>

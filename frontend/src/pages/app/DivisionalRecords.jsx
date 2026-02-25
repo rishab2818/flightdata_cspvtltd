@@ -299,7 +299,7 @@ export default function DivisionalRecords() {
                     ? new Date(row.created_date).toLocaleDateString("en-GB")
                     : "—"}
                 </td>
-                <td>{row.remarks || "—"}</td>
+                <td style={{width: "250px"}}>{row.remarks || "—"}</td>
                 <td className={styles.actionCol}>
                   {/* <DocumentActions
                     doc={{ id: row.record_id, fileName: row.original_name }}
@@ -424,6 +424,11 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
     e.preventDefault();
     setError("");
 
+    if (!file && !form.storage_key) {
+  setError("Please select a file to upload.");
+  return;
+}
+
     try {
       setSubmitting(true);
       let storage_key = form.storage_key,
@@ -532,10 +537,25 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
   }}
 />
 
-            <label >
+            {/* <label >
                <span className={styles.inputLabel}>Note</span>
               <textarea rows={3} value={form.remarks} onChange={(e) => onChange("remarks", e.target.value)} className={styles.textarea} /> 
-            </label>
+            </label> */}
+            <label>
+  <span className={styles.inputLabel}>Note</span>
+
+  <textarea
+    rows={3}
+    value={form.remarks || ""}
+    onChange={(e) => onChange("remarks", e.target.value)}
+    className={styles.textarea}
+    maxLength={500}
+  />
+
+  <div style={{ fontSize: 12, textAlign: "right",color: (form.remarks || "").length > 180 ? "red" : "#666" }}>
+    {(form.remarks || "").length}/500
+  </div>
+</label>
 
             {/* <label >
                 <span>Notes</span>

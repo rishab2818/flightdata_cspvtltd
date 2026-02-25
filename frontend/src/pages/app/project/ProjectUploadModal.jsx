@@ -1128,7 +1128,7 @@ const onSelectSheet = (sheetName) => {
                                                 </div>
                                             </div>
                                             
-                                            <label className="toggle" onClick={(e) => e.stopPropagation()}>
+                                            {/* <label className="toggle" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     checked={isTabular(item.file) ? item.visualize : false}
@@ -1136,7 +1136,7 @@ const onSelectSheet = (sheetName) => {
                                                     disabled={!isTabular(item.file)}
                                                 />
                                                 <span className="slider" />
-                                            </label>
+                                            </label> */}
                                         </div>
                                     ))}
                                 </div>
