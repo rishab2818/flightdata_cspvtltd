@@ -40,65 +40,65 @@ export default function Login() {
       <div className="login-card">
         <div class="login-content">
 
-        {/* LEFT */}
-        <div className="login-left">
-          <div className="brand">
-            <img src={Database} alt="db" />
-            <span>Data Visualisation</span>
-          </div>
+          {/* LEFT */}
+          <div className="login-left">
+            <div className="brand">
+              <img src={Database} alt="db" />
+              <span>Data Visualisation</span>
+            </div>
 
-          <h2>Login</h2>
-          <p className="subtitle">How do I get started?</p>
+            <h2>Login</h2>
+            <p className="subtitle">How do I get started?</p>
 
-          <form onSubmit={submit}>
-            <label>User Name</label>
-            <input
-              type="email"
-              placeholder="admin@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-
-            <label>Password</label>
-            <div className="password-box">
+            <form onSubmit={submit}>
+              <label>User Name</label>
               <input
-                type={showPassword ? 'text' : 'password'}  // ✅ toggle
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="email"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
 
-              <img
-  src={showPassword ? EyeSlash : ViewIcon}
-  alt={showPassword ? "hide password" : "show password"}
-  onClick={() => setShowPassword(prev => !prev)}
-  style={{ cursor: 'pointer' }}
-/>
+              <label>Password</label>
+              <div className="password-box">
+                <input
+                  type={showPassword ? 'text' : 'password'}  // ✅ toggle
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+
+                <img
+                  src={showPassword ? EyeSlash : ViewIcon}
+                  alt={showPassword ? "hide password" : "show password"}
+                  onClick={() => setShowPassword(prev => !prev)}
+                  style={{ cursor: 'pointer' }}
+                />
 
 
-              {/* <img
+                {/* <img
                 src={ViewIcon}
                 alt="view"
                 onClick={() => setShowPassword(!showPassword)} // ✅ click
                 style={{ cursor: 'pointer' }}
               /> */}
-            </div>
+              </div>
 
-            <button disabled={loading}>
-              {loading ? 'Signing in…' : 'LOGIN'}
-            </button>
-          </form>
+              <button disabled={loading}>
+                {loading ? 'Signing in…' : 'LOGIN'}
+              </button>
+            </form>
 
-          {error && <div className="error">{error}</div>}
-        </div>
+            {error && <div className="error">{error}</div>}
+          </div>
 
-        {/* RIGHT */}
-        <div className="login-right">
-          <img className="vector" src={Vector} alt="vector" />
-          <img className="plane" src={Airplane1} alt="airplane" />
-        </div>
+          {/* RIGHT */}
+          <div className="login-right">
+            <img className="vector" src={Vector} alt="vector" />
+            <img className="plane" src={Airplane1} alt="airplane" />
+          </div>
         </div>
 
       </div>

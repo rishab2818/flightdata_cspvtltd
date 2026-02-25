@@ -2,11 +2,19 @@ from __future__ import annotations
 
 from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.auth import CurrentUser, get_current_user
-from app.mat.reader import get_or_index_mat_metadata, read_mat_variable_preview
-from app.mat.schemas import MatVariablePreviewResponse, MatVariablesResponse
+from app.mat.reader import (
+    get_or_index_mat_metadata,
+    read_mat_variable_data_preview,
+    read_mat_variable_preview,
+)
+from app.mat.schemas import (
+    MatVariableDataPreviewResponse,
+    MatVariablePreviewResponse,
+    MatVariablesResponse,
+)
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 
@@ -73,4 +81,48 @@ async def mat_variable_preview(
         ndim=preview["ndim"],
         dtype=preview["dtype"],
         summary=preview.get("summary") or {},
+    )
+
+
+@router.get("/{job_id}/variable/{var_name:path}/data", response_model=MatVariableDataPreviewResponse)
+async def mat_variable_data_preview(
+    job_id: str,
+    var_name: str,
+    slice_expr: str | None = Query(default=None),
+    max_rows: int = Query(default=60, ge=1, le=500),
+    max_cols: int = Query(default=40, ge=1, le=200),
+    max_pages: int = Query(default=12, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+):
+    await _ensure_mat_job(job_id, user)
+
+    try:
+        preview = read_mat_variable_data_preview(
+            job_id=job_id,
+            var_name=unquote(var_name),
+            slice_expr=slice_expr,
+            max_rows=max_rows,
+            max_cols=max_cols,
+            max_pages=max_pages,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load MAT data preview: {exc}") from exc
+
+    return MatVariableDataPreviewResponse(
+        job_id=job_id,
+        variable=preview["variable"],
+        shape=preview["shape"],
+        display_shape=preview.get("display_shape") or "",
+        ndim=preview["ndim"],
+        dtype=preview["dtype"],
+        slice_expr=preview.get("slice_expr") or "",
+        result_shape=preview.get("result_shape") or [],
+        format=preview.get("format") or "scalar",
+        scalar=preview.get("scalar"),
+        table=preview.get("table"),
+        pages=preview.get("pages") or [],
+        truncated=bool(preview.get("truncated")),
+        message=preview.get("message"),
     )
