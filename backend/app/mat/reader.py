@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
+import math
 from datetime import datetime
 from typing import Any
 
@@ -14,6 +16,10 @@ from app.db.sync_mongo import get_sync_db
 from app.mat.indexing import detect_mat_version, index_mat
 from app.mat.schemas import MatFileIndex, MatSliceSpec
 from app.mat.slicing import coerce_coord_vector, normalize_axis_order, resolve_filters_to_indices
+
+_INT_TOKEN_RE = re.compile(r"^[+-]?\d+$")
+_RANGE_TOKEN_RE = re.compile(r"^([+-]?\d+)\s*:\s*([+-]?\d+)$")
+_STEP_RANGE_TOKEN_RE = re.compile(r"^([+-]?\d+)\s*:\s*([+-]?\d+)\s*:\s*([+-]?\d+)$")
 
 
 def _resolve_name(requested: str, candidates: list[str]) -> str | None:
@@ -414,6 +420,301 @@ def read_mat_variable_preview(job_id: str, var_name: str, max_values: int = 24) 
             "dtype": str(arr.dtype),
             "summary": summary,
         }
+    finally:
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
+
+
+def _dtype_to_matlab(dtype: Any) -> str:
+    dt = np.dtype(dtype)
+    if dt == np.dtype(np.float64):
+        return "double"
+    if dt == np.dtype(np.float32):
+        return "single"
+    if dt == np.dtype(np.int8):
+        return "int8"
+    if dt == np.dtype(np.uint8):
+        return "uint8"
+    if dt == np.dtype(np.int16):
+        return "int16"
+    if dt == np.dtype(np.uint16):
+        return "uint16"
+    if dt == np.dtype(np.int32):
+        return "int32"
+    if dt == np.dtype(np.uint32):
+        return "uint32"
+    if dt == np.dtype(np.int64):
+        return "int64"
+    if dt == np.dtype(np.uint64):
+        return "uint64"
+    if dt == np.dtype(np.bool_):
+        return "logical"
+    if np.issubdtype(dt, np.complexfloating):
+        return "double complex" if dt == np.dtype(np.complex128) else "single complex"
+    return str(dt)
+
+
+def _shape_text(shape: tuple[int, ...] | list[int]) -> str:
+    dims = [int(x) for x in shape]
+    if not dims:
+        return "1×1"
+    if len(dims) == 1:
+        # Preserve MATLAB-like visual for vectors in the viewer (row-oriented by default).
+        return f"1×{dims[0]}"
+    return "×".join(str(d) for d in dims)
+
+
+def _to_json_value(value: Any) -> Any:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, complex):
+        return f"{value.real}+{value.imag}i"
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
+def _table_from_matrix(values: np.ndarray, max_rows: int, max_cols: int) -> dict[str, Any]:
+    arr = np.asarray(values)
+    if arr.ndim != 2:
+        raise ValueError("Table conversion requires a 2D matrix")
+
+    rows_total, cols_total = int(arr.shape[0]), int(arr.shape[1])
+    rows_keep = min(rows_total, max_rows)
+    cols_keep = min(cols_total, max_cols)
+
+    headers = [str(i + 1) for i in range(cols_keep)]
+    rows: list[list[Any]] = []
+    for r in range(rows_keep):
+        row = [_to_json_value(arr[r, c]) for c in range(cols_keep)]
+        rows.append(row)
+
+    return {
+        "headers": headers,
+        "rows": rows,
+        "truncated": rows_keep < rows_total or cols_keep < cols_total,
+    }
+
+
+def _default_slice_tokens(ndim: int) -> list[str]:
+    if ndim <= 0:
+        return []
+    if ndim == 1:
+        return [":"]
+    if ndim == 2:
+        return [":", ":"]
+    return [":", ":"] + ["1"] * (ndim - 2)
+
+
+def _parse_slice_token(token: str, size: int) -> tuple[Any, str]:
+    tok = (token or "").strip()
+    if not tok or tok == ":":
+        return slice(None), ":"
+
+    if _INT_TOKEN_RE.match(tok):
+        idx = int(tok)
+        if idx < 1 or idx > size:
+            raise ValueError(f"Index {idx} out of bounds for dimension size {size}")
+        return idx - 1, str(idx)
+
+    m3 = _STEP_RANGE_TOKEN_RE.match(tok)
+    if m3:
+        start = int(m3.group(1))
+        step = int(m3.group(2))
+        end = int(m3.group(3))
+        if step == 0:
+            raise ValueError("Slice step cannot be zero")
+        if start < 1 or start > size or end < 1 or end > size:
+            raise ValueError(f"Slice '{tok}' is out of bounds for dimension size {size}")
+        stop = end if step > 0 else end - 2
+        return slice(start - 1, stop, step), f"{start}:{step}:{end}"
+
+    m2 = _RANGE_TOKEN_RE.match(tok)
+    if m2:
+        start = int(m2.group(1))
+        end = int(m2.group(2))
+        if start < 1 or start > size or end < 1 or end > size:
+            raise ValueError(f"Slice '{tok}' is out of bounds for dimension size {size}")
+        step = 1
+        return slice(start - 1, end, step), f"{start}:{end}"
+
+    raise ValueError(f"Unsupported slice token '{tok}'. Use ':', 'N', 'A:B', or 'A:S:B'")
+
+
+def _parse_matlab_slice(slice_expr: str | None, shape: tuple[int, ...]) -> tuple[tuple[Any, ...], str]:
+    ndim = len(shape)
+    if ndim == 0:
+        return tuple(), "()"
+
+    raw = (slice_expr or "").strip()
+    if raw.startswith("(") and raw.endswith(")"):
+        raw = raw[1:-1].strip()
+
+    if not raw:
+        tokens = _default_slice_tokens(ndim)
+    else:
+        tokens = [part.strip() for part in raw.split(",")]
+        if any(not tok for tok in tokens):
+            raise ValueError("Invalid slice expression")
+
+    if len(tokens) == 1 and tokens[0] == ":" and ndim > 1:
+        tokens = [":"] * ndim
+
+    if len(tokens) < ndim:
+        tokens = tokens + [":"] * (ndim - len(tokens))
+    elif len(tokens) > ndim:
+        raise ValueError(f"Slice expression has {len(tokens)} dimensions but variable has {ndim}")
+
+    indexer: list[Any] = []
+    normalized: list[str] = []
+    for dim, token in enumerate(tokens):
+        parsed, text = _parse_slice_token(token, int(shape[dim]))
+        indexer.append(parsed)
+        normalized.append(text)
+
+    return tuple(indexer), f"({', '.join(normalized)})"
+
+
+def _format_matlab_data_preview(
+    variable: str,
+    shape: tuple[int, ...],
+    dtype: Any,
+    slice_text: str,
+    result: np.ndarray,
+    max_rows: int,
+    max_cols: int,
+    max_pages: int,
+) -> dict[str, Any]:
+    values = np.asarray(result)
+    result_shape = [int(x) for x in values.shape]
+
+    payload: dict[str, Any] = {
+        "variable": variable,
+        "shape": [int(x) for x in shape],
+        "display_shape": _shape_text(shape),
+        "ndim": len(shape),
+        "dtype": _dtype_to_matlab(dtype),
+        "slice_expr": slice_text,
+        "result_shape": result_shape,
+        "format": "scalar",
+        "scalar": None,
+        "table": None,
+        "pages": [],
+        "truncated": False,
+        "message": None,
+    }
+
+    if values.ndim == 0:
+        payload["format"] = "scalar"
+        payload["scalar"] = _to_json_value(values.item())
+        return payload
+
+    if values.ndim == 1:
+        vec = values.reshape(1, -1)
+        table = _table_from_matrix(
+            vec,
+            max_rows=1,
+            max_cols=max_cols,
+        )
+        payload["format"] = "table"
+        payload["table"] = table
+        payload["truncated"] = bool(table.get("truncated"))
+        if payload["truncated"]:
+            payload["message"] = "Showing truncated vector preview."
+        return payload
+
+    if values.ndim == 2:
+        table = _table_from_matrix(values, max_rows=max_rows, max_cols=max_cols)
+        payload["format"] = "table"
+        payload["table"] = table
+        payload["truncated"] = bool(table.get("truncated"))
+        if payload["truncated"]:
+            payload["message"] = "Showing truncated matrix preview."
+        return payload
+
+    if values.ndim == 3:
+        page_total = int(values.shape[2])
+        page_keep = min(page_total, max_pages)
+        pages: list[dict[str, Any]] = []
+        truncated = page_keep < page_total
+        for page_idx in range(page_keep):
+            table = _table_from_matrix(values[:, :, page_idx], max_rows=max_rows, max_cols=max_cols)
+            truncated = truncated or bool(table.get("truncated"))
+            pages.append(
+                {
+                    "page": page_idx + 1,
+                    "headers": table["headers"],
+                    "rows": table["rows"],
+                    "truncated": bool(table.get("truncated")),
+                }
+            )
+        payload["format"] = "pages"
+        payload["pages"] = pages
+        payload["truncated"] = truncated
+        if truncated:
+            payload["message"] = "Showing truncated 3D preview."
+        return payload
+
+    raise ValueError("Slice result has more than 3 dimensions. Fix additional dimensions with explicit indices.")
+
+
+def read_mat_variable_data_preview(
+    job_id: str,
+    var_name: str,
+    slice_expr: str | None = None,
+    max_rows: int = 60,
+    max_cols: int = 40,
+    max_pages: int = 12,
+) -> dict[str, Any]:
+    max_rows = max(1, min(int(max_rows), 500))
+    max_cols = max(1, min(int(max_cols), 200))
+    max_pages = max(1, min(int(max_pages), 100))
+
+    job = _get_job_doc(job_id)
+    temp_path = _download_job_mat_to_temp(job)
+    try:
+        version = detect_mat_version(temp_path)
+        if version == "v7.3":
+            import h5py  # type: ignore
+
+            with h5py.File(temp_path, "r") as h5f:
+                resolved_var, dataset = _resolve_h5_dataset(h5f, var_name)
+                shape = tuple(int(x) for x in dataset.shape)
+                indexer, normalized_slice = _parse_matlab_slice(slice_expr, shape)
+                values = np.asarray(dataset[indexer])
+                return _format_matlab_data_preview(
+                    variable=resolved_var,
+                    shape=shape,
+                    dtype=dataset.dtype,
+                    slice_text=normalized_slice,
+                    result=values,
+                    max_rows=max_rows,
+                    max_cols=max_cols,
+                    max_pages=max_pages,
+                )
+
+        data = _legacy_data(temp_path)
+        values_map = _flatten_legacy_values(data)
+        resolved_var = _resolve_name(var_name, list(values_map.keys()))
+        if not resolved_var:
+            raise ValueError(f"Variable not found in MAT file: {var_name}")
+
+        arr = _to_numeric_array(values_map[resolved_var])
+        shape = tuple(int(x) for x in arr.shape)
+        indexer, normalized_slice = _parse_matlab_slice(slice_expr, shape)
+        values = np.asarray(arr[indexer])
+        return _format_matlab_data_preview(
+            variable=resolved_var,
+            shape=shape,
+            dtype=arr.dtype,
+            slice_text=normalized_slice,
+            result=values,
+            max_rows=max_rows,
+            max_cols=max_cols,
+            max_pages=max_pages,
+        )
     finally:
         try:
             os.remove(temp_path)

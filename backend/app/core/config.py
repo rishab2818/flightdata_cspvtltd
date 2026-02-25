@@ -21,8 +21,8 @@ class Settings(BaseSettings):
 
     # ---------- MinIO / object storage for user documents ----------
     # host:port for MinIO
-    minio_endpoint: str = Field(default="169.254.243.163:9000", alias="MINIO_ENDPOINT")
-    # minio_endpoint: str = Field(default="127.0.0.1:9000", alias="MINIO_ENDPOINT")
+    # minio_endpoint: str = Field(default="169.254.243.163:9000", alias="MINIO_ENDPOINT")
+    minio_endpoint: str = Field(default="127.0.0.1:9000", alias="MINIO_ENDPOINT")
     minio_access_key: str = Field(default="minioadmin", alias="MINIO_ACCESS_KEY")
     minio_secret_key: str = Field(default="minioadmin", alias="MINIO_SECRET_KEY")
     # False = http, True = https

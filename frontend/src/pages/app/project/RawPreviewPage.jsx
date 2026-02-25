@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { matApi } from '../../../mat/matApi'
+import MatlabPreviewPanel from '../../../mat/MatlabPreviewPanel'
 import * as XLSX from 'xlsx'
 import '../../../styles/project.css'
 
@@ -49,17 +50,18 @@ export default function RawPreviewPage() {
           ext = url.split('?')[0].split('.').pop().toLowerCase()
         }
 
-        const fileRes = await fetch(url)
-        const blob = await fileRes.blob()
-
         // TEXT
         if (['csv', 'txt', 'dat', 'c'].includes(ext)) {
+          const fileRes = await fetch(url)
+          const blob = await fileRes.blob()
           const text = await blob.text()
           setPreviewData({ type: 'text', data: text })
         }
 
         // EXCEL
         else if (['xls', 'xlsx'].includes(ext)) {
+          const fileRes = await fetch(url)
+          const blob = await fileRes.blob()
           const buffer = await blob.arrayBuffer()
           const workbook = XLSX.read(buffer)
           const sheetNames = workbook.SheetNames || []
@@ -79,18 +81,24 @@ export default function RawPreviewPage() {
 
         // PDF
         else if (ext === 'pdf') {
+          const fileRes = await fetch(url)
+          const blob = await fileRes.blob()
           objectUrl = URL.createObjectURL(blob)
           setPreviewData({ type: 'pdf', data: objectUrl })
         }
 
         // IMAGE
         else if (ext.match(/(png|jpg|jpeg|gif|svg)$/)) {
+          const fileRes = await fetch(url)
+          const blob = await fileRes.blob()
           objectUrl = URL.createObjectURL(blob)
           setPreviewData({ type: 'image', data: objectUrl })
         }
 
         // FALLBACK
         else {
+          const fileRes = await fetch(url)
+          const blob = await fileRes.blob()
           objectUrl = URL.createObjectURL(blob)
           setPreviewData({ type: 'download', data: objectUrl })
         }
@@ -244,30 +252,7 @@ export default function RawPreviewPage() {
 
           {/* MAT */}
           {previewData?.type === 'mat' && (
-            previewData.variables?.length ? (
-              <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left' }}>Variable</th>
-                    <th style={{ textAlign: 'left' }}>Shape</th>
-                    <th style={{ textAlign: 'left' }}>Dtype</th>
-                    <th style={{ textAlign: 'left' }}>Dimensions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.variables.map((v, i) => (
-                    <tr key={`${v.name}-${i}`}>
-                      <td>{v.name}</td>
-                      <td>{Array.isArray(v.shape) ? v.shape.join(' x ') : ''}</td>
-                      <td>{v.dtype || '-'}</td>
-                      <td>{v.ndims ?? '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="empty-state">No numeric arrays found in this MAT file.</div>
-            )
+            <MatlabPreviewPanel jobId={jobId} variables={previewData.variables || []} />
           )}
 
           {/* PDF */}

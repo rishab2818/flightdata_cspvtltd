@@ -12,4 +12,19 @@ export const matApi = {
     )
     return data
   },
+
+  variableData: async (jobId, varName, options = {}) => {
+    const { data } = await axiosClient.get(
+      `/api/mat/${jobId}/variable/${encodeURIComponent(varName)}/data`,
+      {
+        params: {
+          slice_expr: options.sliceExpr || undefined,
+          max_rows: options.maxRows || undefined,
+          max_cols: options.maxCols || undefined,
+          max_pages: options.maxPages || undefined,
+        },
+      }
+    )
+    return data
+  },
 }
