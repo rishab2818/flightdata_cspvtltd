@@ -967,8 +967,10 @@ export default function TrainingRecords() {
                     key={col}
                     style={{
                       padding: "12px 16px",
-                      fontWeight: 600,
+                      fontWeight: 500,
                       borderBottom: `1px solid ${BORDER}`,
+                      fontFamily:"Inter-Regular, Helvetica",
+                      fontSize: "14px",
                       flexshrink: 0,
                       zindex: 10, 
                     }}

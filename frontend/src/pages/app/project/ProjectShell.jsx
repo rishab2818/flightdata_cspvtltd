@@ -25,6 +25,7 @@ const navItems = [
   { key: 'report', to: 'report', label: 'Technical Reports', icon: Report2 },
   { key: 'digital', to: 'digital', label: 'Digital Library', icon: digital },
   { key: 'student', to: 'student', label: 'Student Engagement', icon: studentIcon },
+  // { key: 'members', to: 'members', label: 'Project Members', icon: studentIcon },
   { key: 'procurement', to: 'procurement', label: 'Procurement Reports', icon: inventoryIcon },
   { key: 'divisional', to: 'divisional', label: 'Divisional Records', icon: divisionalIcon },
   { key: 'feedback', to: 'feedback', label: 'Customer Feedbacks', icon: customerIcon },

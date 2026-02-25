@@ -924,8 +924,10 @@ export default function CustomerFeedbacks() {
                       key={col}
                       style={{
                         padding: "12px 16px",
-                        fontWeight: 600,
+                        fontWeight: 500,
                         textAlign: "left",
+                        fontFamily:"Inter-Regular, Helvetica",
+                        fontSize: "14px",
                         borderBottom: `1px solid ${BORDER}`, // Header separator
                       }}
                     >

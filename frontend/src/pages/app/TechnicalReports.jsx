@@ -277,7 +277,7 @@ export default function TechnicalReports() {
                 }}
               >
                 {["Report Name", "Type", "Created Date","Note", "Action"].map((col) => (
-                  <th key={col} style={{ padding: "12px 16px", fontWeight: 600, borderBottom: `1px solid ${BORDER}` }}>
+                  <th key={col} style={{ padding: "12px 16px",fontSize: "14px", fontWeight: 500, borderBottom: `1px solid ${BORDER}`,fontFamily:"Inter-Regular, Helvetica" }}>
                     {col}
                   </th>
                 ))}
