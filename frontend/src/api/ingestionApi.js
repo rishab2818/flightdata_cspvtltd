@@ -241,6 +241,13 @@ export const ingestionApi = {
     return data
   },
 
+  deleteDerivedColumn: async (jobId, columnName) => {
+    const { data } = await axiosClient.delete(
+      `/api/ingestion/jobs/${jobId}/processed/derived/${encodeURIComponent(columnName)}`
+    )
+    return data
+  },
+
 
 
 }

@@ -7,6 +7,7 @@ import math
 from datetime import datetime
 from typing import Any
 
+import numexpr as ne
 import numpy as np
 from bson import ObjectId
 
@@ -51,6 +52,34 @@ def _get_job_doc(job_id: str) -> dict:
     if not job:
         raise ValueError("MAT job not found")
     return job
+
+
+def _list_saved_derived_formulas(job: dict) -> list[dict[str, Any]]:
+    metadata = dict(job.get("metadata") or {})
+    items = metadata.get("mat_derived_formulas") or []
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def _resolve_saved_derived_formula(job: dict, var_name: str) -> dict[str, Any] | None:
+    formulas = _list_saved_derived_formulas(job)
+    if not formulas:
+        return None
+
+    by_name: dict[str, dict[str, Any]] = {}
+    names: list[str] = []
+    for item in formulas:
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        names.append(name)
+        by_name[name] = item
+
+    resolved = _resolve_name(var_name, names)
+    if not resolved:
+        return None
+    return by_name.get(resolved)
 
 
 def _download_job_mat_to_temp(job: dict) -> str:
@@ -365,6 +394,30 @@ def read_mat_slice(job_id: str, var_name: str, slice_spec: MatSliceSpec | dict[s
 
 def read_mat_variable_preview(job_id: str, var_name: str, max_values: int = 24) -> dict[str, Any]:
     job = _get_job_doc(job_id)
+    derived = _resolve_saved_derived_formula(job, var_name)
+    if derived:
+        arr_info = _read_derived_mat_variable_array(job_id=job_id, job=job, derived_item=derived, slice_expr=None)
+        values = np.asarray(arr_info["values"])
+        shape = [int(x) for x in arr_info["shape"]]
+        sample_index = tuple(slice(0, min(3, int(s))) for s in shape)
+        sample = np.asarray(values[sample_index])
+        flat = sample.reshape(-1)
+        summary = {
+            "sample_shape": [int(x) for x in sample.shape],
+            "sample_values": [float(x) for x in flat[: max(1, max_values)]],
+        }
+        if flat.size:
+            summary["sample_min"] = float(np.nanmin(flat))
+            summary["sample_max"] = float(np.nanmax(flat))
+        return {
+            "variable": arr_info["variable"],
+            "kind": "numeric_array",
+            "shape": shape,
+            "ndim": len(shape),
+            "dtype": arr_info["dtype"],
+            "summary": summary,
+        }
+
     temp_path = _download_job_mat_to_temp(job)
     try:
         version = detect_mat_version(temp_path)
@@ -660,6 +713,176 @@ def _format_matlab_data_preview(
     raise ValueError("Slice result has more than 3 dimensions. Fix additional dimensions with explicit indices.")
 
 
+def format_mat_variable_data_preview(
+    variable: str,
+    values: Any,
+    slice_expr: str | None = None,
+    max_rows: int = 60,
+    max_cols: int = 40,
+    max_pages: int = 12,
+) -> dict[str, Any]:
+    arr = np.asarray(values)
+    shape = tuple(int(x) for x in arr.shape)
+    dtype = arr.dtype
+    slice_text = str(slice_expr or "").strip() or "()"
+    return _format_matlab_data_preview(
+        variable=variable,
+        shape=shape,
+        dtype=dtype,
+        slice_text=slice_text,
+        result=arr,
+        max_rows=max_rows,
+        max_cols=max_cols,
+        max_pages=max_pages,
+    )
+
+
+def _read_source_mat_variable_array(
+    job: dict,
+    var_name: str,
+    slice_expr: str | None = None,
+) -> dict[str, Any]:
+    temp_path = _download_job_mat_to_temp(job)
+    try:
+        version = detect_mat_version(temp_path)
+        if version == "v7.3":
+            import h5py  # type: ignore
+
+            with h5py.File(temp_path, "r") as h5f:
+                resolved_var, dataset = _resolve_h5_dataset(h5f, var_name)
+                shape = tuple(int(x) for x in dataset.shape)
+                indexer, normalized_slice = _parse_matlab_slice(slice_expr, shape)
+                values = np.asarray(dataset[indexer])
+                return {
+                    "variable": resolved_var,
+                    "shape": [int(x) for x in shape],
+                    "ndim": len(shape),
+                    "dtype": _dtype_to_matlab(dataset.dtype),
+                    "slice_expr": normalized_slice,
+                    "values": values,
+                }
+
+        data = _legacy_data(temp_path)
+        values_map = _flatten_legacy_values(data)
+        resolved_var = _resolve_name(var_name, list(values_map.keys()))
+        if not resolved_var:
+            raise ValueError(f"Variable not found in MAT file: {var_name}")
+
+        arr = _to_numeric_array(values_map[resolved_var])
+        shape = tuple(int(x) for x in arr.shape)
+        indexer, normalized_slice = _parse_matlab_slice(slice_expr, shape)
+        values = np.asarray(arr[indexer])
+        return {
+            "variable": resolved_var,
+            "shape": [int(x) for x in shape],
+            "ndim": len(shape),
+            "dtype": _dtype_to_matlab(arr.dtype),
+            "slice_expr": normalized_slice,
+            "values": values,
+        }
+    finally:
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
+
+
+def _read_derived_mat_variable_array(
+    job_id: str,
+    job: dict,
+    derived_item: dict[str, Any],
+    slice_expr: str | None = None,
+    stack: set[str] | None = None,
+) -> dict[str, Any]:
+    name = str(derived_item.get("name") or "").strip()
+    if not name:
+        raise ValueError("Saved MAT derived variable is missing a name")
+
+    key = name.casefold()
+    active = stack if stack is not None else set()
+    if key in active:
+        raise ValueError(f"Circular MAT derived variable reference detected for '{name}'")
+
+    active.add(key)
+    try:
+        normalized_formula = str(derived_item.get("normalized_formula_expression") or "").strip()
+        if not normalized_formula:
+            normalized_formula = str(derived_item.get("formula_expression") or "").strip()
+        if not normalized_formula:
+            raise ValueError(f"Saved formula for '{name}' is empty")
+
+        variable_sources = derived_item.get("variable_sources") or {}
+        if not isinstance(variable_sources, dict) or not variable_sources:
+            raise ValueError(f"Saved formula mapping for '{name}' is missing")
+
+        local_env: dict[str, Any] = {}
+        for formula_var, source in variable_sources.items():
+            source_info = dict(source or {})
+            source_var = str(source_info.get("variable") or "").strip()
+            if not source_var:
+                raise ValueError(f"Saved formula mapping for '{name}' has an empty source variable")
+            source_slice = str(source_info.get("slice_expr") or "").strip() or None
+            source_array_info = _read_mat_variable_array(
+                job_id=job_id,
+                job=job,
+                var_name=source_var,
+                slice_expr=source_slice,
+                stack=active,
+            )
+            local_env[str(formula_var)] = np.asarray(source_array_info["values"])
+
+        try:
+            result = ne.evaluate(normalized_formula, local_dict=local_env)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Failed to evaluate saved MAT formula '{name}': {exc}") from exc
+
+        full_values = np.asarray(result)
+        if full_values.dtype.kind in {"O", "S", "U", "V"}:
+            raise ValueError(f"Saved MAT formula '{name}' produced a non-numeric result")
+
+        full_shape = tuple(int(x) for x in full_values.shape)
+        indexer, normalized_slice = _parse_matlab_slice(slice_expr, full_shape)
+        values = np.asarray(full_values[indexer])
+        return {
+            "variable": name,
+            "shape": [int(x) for x in full_shape],
+            "ndim": len(full_shape),
+            "dtype": _dtype_to_matlab(full_values.dtype),
+            "slice_expr": normalized_slice,
+            "values": values,
+        }
+    finally:
+        active.remove(key)
+
+
+def _read_mat_variable_array(
+    job_id: str,
+    job: dict,
+    var_name: str,
+    slice_expr: str | None = None,
+    stack: set[str] | None = None,
+) -> dict[str, Any]:
+    derived = _resolve_saved_derived_formula(job, var_name)
+    if derived:
+        return _read_derived_mat_variable_array(
+            job_id=job_id,
+            job=job,
+            derived_item=derived,
+            slice_expr=slice_expr,
+            stack=stack,
+        )
+    return _read_source_mat_variable_array(job=job, var_name=var_name, slice_expr=slice_expr)
+
+
+def read_mat_variable_array(
+    job_id: str,
+    var_name: str,
+    slice_expr: str | None = None,
+) -> dict[str, Any]:
+    job = _get_job_doc(job_id)
+    return _read_mat_variable_array(job_id=job_id, job=job, var_name=var_name, slice_expr=slice_expr)
+
+
 def read_mat_variable_data_preview(
     job_id: str,
     var_name: str,
@@ -672,54 +895,19 @@ def read_mat_variable_data_preview(
     max_cols = max(1, min(int(max_cols), 200))
     max_pages = max(1, min(int(max_pages), 100))
 
-    job = _get_job_doc(job_id)
-    temp_path = _download_job_mat_to_temp(job)
-    try:
-        version = detect_mat_version(temp_path)
-        if version == "v7.3":
-            import h5py  # type: ignore
-
-            with h5py.File(temp_path, "r") as h5f:
-                resolved_var, dataset = _resolve_h5_dataset(h5f, var_name)
-                shape = tuple(int(x) for x in dataset.shape)
-                indexer, normalized_slice = _parse_matlab_slice(slice_expr, shape)
-                values = np.asarray(dataset[indexer])
-                return _format_matlab_data_preview(
-                    variable=resolved_var,
-                    shape=shape,
-                    dtype=dataset.dtype,
-                    slice_text=normalized_slice,
-                    result=values,
-                    max_rows=max_rows,
-                    max_cols=max_cols,
-                    max_pages=max_pages,
-                )
-
-        data = _legacy_data(temp_path)
-        values_map = _flatten_legacy_values(data)
-        resolved_var = _resolve_name(var_name, list(values_map.keys()))
-        if not resolved_var:
-            raise ValueError(f"Variable not found in MAT file: {var_name}")
-
-        arr = _to_numeric_array(values_map[resolved_var])
-        shape = tuple(int(x) for x in arr.shape)
-        indexer, normalized_slice = _parse_matlab_slice(slice_expr, shape)
-        values = np.asarray(arr[indexer])
-        return _format_matlab_data_preview(
-            variable=resolved_var,
-            shape=shape,
-            dtype=arr.dtype,
-            slice_text=normalized_slice,
-            result=values,
-            max_rows=max_rows,
-            max_cols=max_cols,
-            max_pages=max_pages,
-        )
-    finally:
-        try:
-            os.remove(temp_path)
-        except Exception:
-            pass
+    arr_info = read_mat_variable_array(job_id, var_name, slice_expr)
+    values = np.asarray(arr_info["values"])
+    shape = tuple(int(x) for x in arr_info["shape"])
+    return _format_matlab_data_preview(
+        variable=arr_info["variable"],
+        shape=shape,
+        dtype=values.dtype,
+        slice_text=str(arr_info.get("slice_expr") or "()"),
+        result=values,
+        max_rows=max_rows,
+        max_cols=max_cols,
+        max_pages=max_pages,
+    )
 
 
 def index_mat_for_job(job_id: str, persist: bool = True) -> MatFileIndex:

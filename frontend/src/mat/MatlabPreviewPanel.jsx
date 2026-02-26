@@ -38,7 +38,7 @@ function PreviewTable({ headers = [], rows = [] }) {
   )
 }
 
-export default function MatlabPreviewPanel({ jobId, variables = [] }) {
+export default function MatlabPreviewPanel({ jobId, variables = [], onRefreshVariables }) {
   const numericVars = useMemo(
     () => (variables || []).filter((item) => item?.kind === 'numeric_array'),
     [variables]
@@ -49,6 +49,7 @@ export default function MatlabPreviewPanel({ jobId, variables = [] }) {
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [deletingVar, setDeletingVar] = useState('')
   const firstVarName = numericVars[0]?.name || ''
 
   const selectedMeta = useMemo(
@@ -98,6 +99,23 @@ export default function MatlabPreviewPanel({ jobId, variables = [] }) {
     loadVariableData(selectedVar, sliceExpr)
   }
 
+  const handleDeleteDerived = async (varName) => {
+    if (!jobId || !varName) return
+    if (!window.confirm(`Delete derived variable '${varName}'?`)) return
+    setError(null)
+    setDeletingVar(varName)
+    try {
+      await matApi.deleteDerived(jobId, varName)
+      if (typeof onRefreshVariables === 'function') {
+        await onRefreshVariables()
+      }
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'Failed to delete derived variable')
+    } finally {
+      setDeletingVar('')
+    }
+  }
+
   if (!numericVars.length) {
     return <div className="empty-state">No numeric arrays found in this MAT file.</div>
   }
@@ -108,10 +126,17 @@ export default function MatlabPreviewPanel({ jobId, variables = [] }) {
         {numericVars.map((item) => {
           const active = item.name === selectedVar
           return (
-            <button
+            <div
               key={item.name}
-              type="button"
               onClick={() => handleVariableSelect(item.name)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleVariableSelect(item.name)
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 width: '100%',
                 textAlign: 'left',
@@ -125,7 +150,24 @@ export default function MatlabPreviewPanel({ jobId, variables = [] }) {
             >
               <div style={{ fontWeight: 600 }}>{item.name}</div>
               <div className="summary-label">{toShapeText(item.shape)} {item.dtype ? `| ${item.dtype}` : ''}</div>
-            </button>
+              {item?.is_derived && (
+                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="project-shell__nav-link"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleDeleteDerived(item.name)
+                    }}
+                    disabled={deletingVar === item.name}
+                    style={{ padding: '4px 8px', height: 28, background: '#fff1f2', color: '#b91c1c', borderColor: '#fecdd3' }}
+                  >
+                    {deletingVar === item.name ? 'Deleting…' : 'Delete Derived'}
+                  </button>
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

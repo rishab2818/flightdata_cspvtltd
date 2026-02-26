@@ -84,6 +84,18 @@ const getExt = (name = '') => {
 
 const isMatFileName = (name = '') => getExt(name) === '.mat'
 
+const toMatShapeText = (shape) => {
+  if (!Array.isArray(shape) || !shape.length) return ''
+  return shape.join('x')
+}
+
+const defaultMatSliceExpr = (ndim) => {
+  if (!ndim || ndim <= 0) return ''
+  if (ndim === 1) return ':'
+  if (ndim === 2) return ':, :'
+  return [':', ':', ...Array(Math.max(0, ndim - 2)).fill('1')].join(', ')
+}
+
 const newSeries = (n = 1) => ({
   id: `s-${Date.now()}-${n}`,
   enabled: true,
@@ -159,6 +171,13 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [calcFormulaCursor, setCalcFormulaCursor] = useState(0)
   const [calcOutputColumn, setCalcOutputColumn] = useState('')
   const [calcPreviewRows, setCalcPreviewRows] = useState([])
+  const [calcMatVariableMap, setCalcMatVariableMap] = useState({})
+  const [calcMatPreview, setCalcMatPreview] = useState(null)
+  const [calcMatPreviewContext, setCalcMatPreviewContext] = useState(null)
+  const [calcMatSourcePreviewLoading, setCalcMatSourcePreviewLoading] = useState(false)
+  const [calcFilePreviewRows, setCalcFilePreviewRows] = useState([])
+  const [calcFilePreviewLoading, setCalcFilePreviewLoading] = useState(false)
+  const [calcFilePreviewError, setCalcFilePreviewError] = useState('')
   const [calcProcessing, setCalcProcessing] = useState(false)
   const [calcError, setCalcError] = useState(null)
   const [tempVizId, setTempVizId] = useState(null)
@@ -330,7 +349,70 @@ const plotOptions =
     () => calcFiles.find((f) => f.job_id === calcJobId) || null,
     [calcFiles, calcJobId]
   )
+  const calcIsMat = useMemo(
+    () => isMatFileName(calcJob?.filename || ''),
+    [calcJob?.filename]
+  )
   const calcColumns = useMemo(() => calcJob?.columns || [], [calcJob])
+  const calcMatMeta = useMemo(
+    () => matMetaByJob[calcJobId] || null,
+    [matMetaByJob, calcJobId]
+  )
+  const calcMatVars = useMemo(
+    () => (calcMatMeta?.variables || []).filter((item) => item?.kind === 'numeric_array'),
+    [calcMatMeta]
+  )
+  const calcFirstMappedMatSource = useMemo(() => {
+    for (const variableName of calcVariableNames || []) {
+      const source = calcMatVariableMap[variableName] || {}
+      const sourceVar = String(source.variable || '').trim()
+      if (!sourceVar) continue
+      return {
+        variable: sourceVar,
+        sliceExpr: String(source.sliceExpr || '').trim(),
+      }
+    }
+    return null
+  }, [calcVariableNames, calcMatVariableMap])
+  const calcDisplayPreviewRows = useMemo(
+    () => (calcPreviewRows.length ? calcPreviewRows : calcFilePreviewRows),
+    [calcPreviewRows, calcFilePreviewRows]
+  )
+  const showingCalculatedPreview = calcPreviewRows.length > 0
+  const calcIsSourceMatPreview = calcMatPreviewContext?.type === 'source'
+
+  const loadCalcMatSourcePreview = useCallback(
+    async (sourceVar, sourceSliceExpr = '') => {
+      const variable = String(sourceVar || '').trim()
+      if (!calcIsMat || !calcJobId || !variable) return
+
+      const sourceMeta = calcMatVars.find((item) => item?.name === variable)
+      const ndim = Number(sourceMeta?.ndim || sourceMeta?.shape?.length || 0)
+      const fallbackSliceExpr = defaultMatSliceExpr(ndim)
+      const effectiveSliceExpr = String(sourceSliceExpr || '').trim() || fallbackSliceExpr
+
+      try {
+        setCalcError(null)
+        setCalcMatSourcePreviewLoading(true)
+        const data = await matApi.variableData(calcJobId, variable, {
+          sliceExpr: effectiveSliceExpr || undefined,
+          maxRows: 60,
+          maxCols: 40,
+          maxPages: 12,
+        })
+        setCalcPreviewRows([])
+        setCalcMatPreview(data || null)
+        setCalcMatPreviewContext({ type: 'source', variable })
+      } catch (e) {
+        setCalcMatPreview(null)
+        setCalcMatPreviewContext(null)
+        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load MAT variable preview')
+      } finally {
+        setCalcMatSourcePreviewLoading(false)
+      }
+    },
+    [calcIsMat, calcJobId, calcMatVars]
+  )
 
   /* ================= load tags for datasetType (per active series) ================= */
   useEffect(() => {
@@ -417,12 +499,27 @@ const plotOptions =
   }, [projectId, calcDatasetType, calcTag, filesByDatasetTag])
 
   useEffect(() => {
+    if (!calcJobId || !calcIsMat) return
+    if (matMetaByJob[calcJobId]?.variables) return
+
+    matApi
+      .variables(calcJobId)
+      .then((data) => {
+        setMatMetaByJob((prev) => ({ ...prev, [calcJobId]: data }))
+      })
+      .catch((e) => {
+        setCalcError(e?.response?.data?.detail || e.message || 'Failed to load MAT variables')
+      })
+  }, [calcJobId, calcIsMat, matMetaByJob])
+
+  useEffect(() => {
     const expression = (calcFormulaExpression || '').trim()
     if (!expression) {
       setCalcFormulaError('')
       setCalcNormalizedExpression('')
       setCalcVariableNames([])
       setCalcVariableMap({})
+      setCalcMatVariableMap({})
       return
     }
     const timer = setTimeout(async () => {
@@ -448,6 +545,102 @@ const plotOptions =
     }, 250)
     return () => clearTimeout(timer)
   }, [calcFormulaExpression])
+
+  useEffect(() => {
+    setCalcMatVariableMap((prev) => {
+      const next = {}
+      for (const variableName of calcVariableNames) {
+        const current = prev[variableName] || {}
+        next[variableName] = {
+          variable: current.variable || '',
+          sliceExpr: current.sliceExpr || '',
+        }
+      }
+      return next
+    })
+  }, [calcVariableNames])
+
+  useEffect(() => {
+    if (!calcIsMat || !calcMatVars.length || !calcVariableNames.length) return
+    const defaultVar = calcMatVars[0]?.name || ''
+    if (!defaultVar) return
+    setCalcMatVariableMap((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const variableName of calcVariableNames) {
+        const current = next[variableName] || { variable: '', sliceExpr: '' }
+        if (!current.variable) {
+          next[variableName] = { ...current, variable: defaultVar }
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [calcIsMat, calcMatVars, calcVariableNames])
+
+  useEffect(() => {
+    if (!calcIsMat || !calcJobId || !calcFirstMappedMatSource?.variable) return
+    if (calcMatPreviewContext?.type === 'formula') return
+    if (
+      calcMatPreviewContext?.type === 'source' &&
+      calcMatPreviewContext?.variable === calcFirstMappedMatSource.variable &&
+      calcMatPreview
+    ) {
+      return
+    }
+    loadCalcMatSourcePreview(calcFirstMappedMatSource.variable, calcFirstMappedMatSource.sliceExpr)
+  }, [
+    calcIsMat,
+    calcJobId,
+    calcFirstMappedMatSource,
+    calcMatPreviewContext,
+    calcMatPreview,
+    loadCalcMatSourcePreview,
+  ])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!calcJobId) {
+      setCalcFilePreviewRows([])
+      setCalcFilePreviewError('')
+      setCalcFilePreviewLoading(false)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (isMatFileName(calcJob?.filename || '')) {
+      setCalcFilePreviewRows([])
+      setCalcFilePreviewError('')
+      setCalcFilePreviewLoading(false)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    setCalcFilePreviewLoading(true)
+    setCalcFilePreviewError('')
+
+    ingestionApi
+      .getProcessedPreview(calcJobId, 20)
+      .then((data) => {
+        if (cancelled) return
+        setCalcFilePreviewRows(data?.rows || [])
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setCalcFilePreviewRows([])
+        setCalcFilePreviewError(e?.response?.data?.detail || e.message || 'Failed to load file preview')
+      })
+      .finally(() => {
+        if (!cancelled) setCalcFilePreviewLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [calcJobId, calcJob?.filename])
 
   /* ================= saved visualizations ================= */
   // const fetchVisualizations = async () => {
@@ -856,11 +1049,38 @@ const fetchVisualizations = async (page = 1, reset = false) => {
   const handleCalcVariableMapChange = (variableName, columnName) => {
     setCalcVariableMap((prev) => ({ ...prev, [variableName]: columnName }))
     setCalcPreviewRows([])
+    setCalcMatPreview(null)
+    setCalcMatPreviewContext(null)
+  }
+
+  const handleCalcMatVariableMapChange = (variableName, patch) => {
+    let selectedVariable = ''
+    let selectedSliceExpr = ''
+    setCalcMatVariableMap((prev) => {
+      const next = {
+        ...prev,
+        [variableName]: {
+          ...(prev[variableName] || { variable: '', sliceExpr: '' }),
+          ...patch,
+        },
+      }
+      selectedVariable = String(next[variableName]?.variable || '').trim()
+      selectedSliceExpr = String(next[variableName]?.sliceExpr || '').trim()
+      return next
+    })
+    setCalcPreviewRows([])
+    setCalcMatPreview(null)
+    setCalcMatPreviewContext(null)
+    if (Object.prototype.hasOwnProperty.call(patch, 'variable') && selectedVariable) {
+      loadCalcMatSourcePreview(selectedVariable, selectedSliceExpr)
+    }
   }
 
   const handleCalcFormulaChange = (value) => {
     setCalcFormulaExpression(value)
     setCalcPreviewRows([])
+    setCalcMatPreview(null)
+    setCalcMatPreviewContext(null)
   }
 
   const handleCalcFormulaCursorChange = (event) => {
@@ -874,6 +1094,8 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcFormulaExpression(next.formula)
     setCalcFormulaCursor(next.cursor)
     setCalcPreviewRows([])
+    setCalcMatPreview(null)
+    setCalcMatPreviewContext(null)
     requestAnimationFrame(() => {
       if (!input) return
       input.focus()
@@ -898,6 +1120,21 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     return payload
   }
 
+  const buildCalcMatVariableMapPayload = () => {
+    const payload = {}
+    for (const variableName of calcVariableNames) {
+      const source = calcMatVariableMap[variableName] || {}
+      const variable = (source.variable || '').trim()
+      const sliceExpr = (source.sliceExpr || '').trim()
+      if (!variable) continue
+      payload[variableName] = {
+        variable,
+        slice_expr: sliceExpr || undefined,
+      }
+    }
+    return payload
+  }
+
  const handleCalcPreview = async () => {
   setCalcError(null);
 
@@ -917,7 +1154,10 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcError(calcFormulaError);
     return;
   }
-  const missingMappings = calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
+
+  const missingMappings = calcIsMat
+    ? calcVariableNames.filter((name) => !(calcMatVariableMap[name]?.variable || '').trim())
+    : calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
   if (missingMappings.length) {
     setCalcError(`Map all variables before processing: ${missingMappings.join(', ')}`);
     return;
@@ -925,36 +1165,51 @@ const fetchVisualizations = async (page = 1, reset = false) => {
 
   try {
     setCalcProcessing(true);
-
-    setSeriesList((prev) =>
-      prev.map((s) => ({ ...s, derivedColumns: [] }))
-    );
-
     setCalcPreviewRows([]);
+    setCalcMatPreview(null);
+    setCalcMatPreviewContext(null);
 
-    const data = await calculationsApi.preview(calcJobId, {
-      formula_expression: calcFormulaExpression.trim(),
-      variable_map: buildCalcVariableMapPayload(),
-      output_column: calcOutputColumn.trim(),
-      limit: 20,
-    });
-
-    setCalcPreviewRows(data?.rows || []);
-
-    const derived = data?.derived_column;
-    if (derived?.name && derived?.expression) {
-      applyCalculationToVisualisation(
-        calcDatasetType,
-        calcTag,
-        calcJobId,
-        derived
+    if (calcIsMat) {
+      const data = await calculationsApi.previewMat(calcJobId, {
+        formula_expression: calcFormulaExpression.trim(),
+        variable_map: buildCalcMatVariableMapPayload(),
+        output_variable: calcOutputColumn.trim(),
+      });
+      setCalcMatPreview(data || null);
+      setCalcMatPreviewContext({
+        type: 'formula',
+        variable: calcOutputColumn.trim(),
+      });
+    } else {
+      setSeriesList((prev) =>
+        prev.map((s) => ({ ...s, derivedColumns: [] }))
       );
+
+      const data = await calculationsApi.preview(calcJobId, {
+        formula_expression: calcFormulaExpression.trim(),
+        variable_map: buildCalcVariableMapPayload(),
+        output_column: calcOutputColumn.trim(),
+        limit: 20,
+      });
+
+      setCalcPreviewRows(data?.rows || []);
+
+      const derived = data?.derived_column;
+      if (derived?.name && derived?.expression) {
+        applyCalculationToVisualisation(
+          calcDatasetType,
+          calcTag,
+          calcJobId,
+          derived
+        );
+      }
     }
 
-    // ✅ POPUP MESSAGE HERE
     setPopupType("success");
     setPopupMessage(
-      "Formula processed successfully. Please save the derived column."
+      calcIsMat
+        ? "MAT formula processed successfully. Please save the derived variable."
+        : "Formula processed successfully. Please save the derived column."
     );
 
   } catch (e) {
@@ -995,7 +1250,9 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setCalcError(calcFormulaError);
     return;
   }
-  const missingMappings = calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
+  const missingMappings = calcIsMat
+    ? calcVariableNames.filter((name) => !(calcMatVariableMap[name]?.variable || '').trim())
+    : calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
   if (missingMappings.length) {
     setCalcError(`Map all variables before saving: ${missingMappings.join(', ')}`);
     return;
@@ -1004,45 +1261,59 @@ const fetchVisualizations = async (page = 1, reset = false) => {
   try {
     setCalcProcessing(true);
 
-    await calculationsApi.materialize(calcJobId, {
-      formula_expression: calcFormulaExpression.trim(),
-      variable_map: buildCalcVariableMapPayload(),
-      output_column: calcOutputColumn.trim(),
-      limit: 20,
-    });
+    if (calcIsMat) {
+      await calculationsApi.materializeMat(calcJobId, {
+        formula_expression: calcFormulaExpression.trim(),
+        variable_map: buildCalcMatVariableMapPayload(),
+        output_variable: calcOutputColumn.trim(),
+      });
+      try {
+        const refreshedMatMeta = await matApi.variables(calcJobId)
+        setMatMetaByJob((prev) => ({ ...prev, [calcJobId]: refreshedMatMeta || prev[calcJobId] }))
+      } catch (refreshErr) {
+        console.error(refreshErr)
+      }
+      setCalcMatPreview(null);
+      setCalcMatPreviewContext(null);
+      setCalcOutputColumn('');
+      setPopupType("success");
+      setPopupMessage("Calculated MAT variable saved successfully.");
+    } else {
+      await calculationsApi.materialize(calcJobId, {
+        formula_expression: calcFormulaExpression.trim(),
+        variable_map: buildCalcVariableMapPayload(),
+        output_column: calcOutputColumn.trim(),
+        limit: 20,
+      });
 
-    const key = `${calcDatasetType}::${calcTag}`;
+      const key = `${calcDatasetType}::${calcTag}`;
+      const list = await ingestionApi.listFilesInTag(
+        projectId,
+        calcDatasetType,
+        calcTag
+      );
+      const processed = (list || []).filter((f) => {
+        if (isMatFileName(f?.filename || '')) return true;
+        return !!(f.processed_key && f.columns?.length);
+      });
+      setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }));
 
-    const list = await ingestionApi.listFilesInTag(
-      projectId,
-      calcDatasetType,
-      calcTag
-    );
+      setCalcPreviewRows([]);
+      setCalcOutputColumn('');
 
-    const processed = (list || []).filter((f) => {
-      if (isMatFileName(f?.filename || '')) return true;
-      return !!(f.processed_key && f.columns?.length);
-    });
+      setSeriesList((prev) =>
+        prev.map((s) => ({ ...s, derivedColumns: [] }))
+      );
 
-    setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }));
-
-    setCalcPreviewRows([]);
-    setCalcOutputColumn('');
-
-    // clear unsaved derived overlay after persistence
-    setSeriesList((prev) =>
-      prev.map((s) => ({ ...s, derivedColumns: [] }))
-    );
-
-    // ✅ SUCCESS POPUP HERE
-    setPopupType("success");
-    setPopupMessage("Calculated column saved successfully.");
+      setPopupType("success");
+      setPopupMessage("Calculated column saved successfully.");
+    }
 
   } catch (e) {
     setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed');
 
     setPopupType("error");
-    setPopupMessage("Failed to save calculated column.");
+    setPopupMessage(calcIsMat ? "Failed to save calculated variable." : "Failed to save calculated column.");
 
   } finally {
     setCalcProcessing(false);
@@ -1325,7 +1596,7 @@ const deleteVisualization = async (vizId) => {
           <div>
             <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
             <p className="summary-label" style={{ margin: 0 }}>
-              Enter a formula, map detected variables to columns, preview, then save.
+              Enter a formula, map detected variables to sources, preview, then save.
             </p>
           </div>
 
@@ -1341,6 +1612,9 @@ const deleteVisualization = async (vizId) => {
                   setCalcTag('')
                   setCalcJobId('')
                   setCalcPreviewRows([])
+                  setCalcMatPreview(null)
+                  setCalcMatPreviewContext(null)
+                  setCalcMatVariableMap({})
                 }}
               >
                 {DATASET_TYPES.map((d) => (
@@ -1359,6 +1633,9 @@ const deleteVisualization = async (vizId) => {
                   setCalcTag(e.target.value)
                   setCalcJobId('')
                   setCalcPreviewRows([])
+                  setCalcMatPreview(null)
+                  setCalcMatPreviewContext(null)
+                  setCalcMatVariableMap({})
                 }}
               >
                 <option value="">Select</option>
@@ -1377,6 +1654,9 @@ const deleteVisualization = async (vizId) => {
                 onChange={(e) => {
                   setCalcJobId(e.target.value)
                   setCalcPreviewRows([])
+                  setCalcMatPreview(null)
+                  setCalcMatPreviewContext(null)
+                  setCalcMatVariableMap({})
                 }}
                 disabled={!calcTag}
               >
@@ -1390,12 +1670,14 @@ const deleteVisualization = async (vizId) => {
             </div>
 
             <div className="ps-field">
-              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Derived Column <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                {calcIsMat ? 'Derived Variable' : 'Derived Column'} <span style={{ color: "red",fontSize: "16px" }}>*</span>
+              </label>
               <input
                 className="input-control"
                 value={calcOutputColumn}
                 onChange={(e) => setCalcOutputColumn(e.target.value)}
-                placeholder="derived_col_name"
+                placeholder={calcIsMat ? 'derived_var_name' : 'derived_col_name'}
               />
             </div>
           </div>
@@ -1460,19 +1742,56 @@ const deleteVisualization = async (vizId) => {
           <div className="Row calculation-row">
             {(calcVariableNames || []).map((variableName) => (
               <div className="ps-field" key={`calc-var-${variableName}`}>
-                <label>{`Column for ${variableName}`}</label>
-                <select
-                  value={calcVariableMap[variableName] || ''}
-                  onChange={(e) => handleCalcVariableMapChange(variableName, e.target.value)}
-                  disabled={!calcJobId}
-                >
-                  <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
-                  {calcColumns.map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
-                </select>
+                {calcIsMat ? (
+                  <>
+                    <label>{`MAT source for ${variableName}`}</label>
+                    <select
+                      value={calcMatVariableMap[variableName]?.variable || ''}
+                      onChange={(e) =>
+                        handleCalcMatVariableMapChange(variableName, { variable: e.target.value })
+                      }
+                      disabled={!calcJobId || !calcMatVars.length}
+                    >
+                      <option value="">
+                        {!calcJobId
+                          ? 'Select file first'
+                          : !calcMatVars.length
+                            ? 'Loading MAT variables...'
+                            : 'Select variable'}
+                      </option>
+                      {calcMatVars.map((v) => (
+                        <option key={v.name} value={v.name}>
+                          {v.name} ({toMatShapeText(v.shape)}{v.dtype ? ` | ${v.dtype}` : ''})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      className="input-control"
+                      value={calcMatVariableMap[variableName]?.sliceExpr || ''}
+                      onChange={(e) =>
+                        handleCalcMatVariableMapChange(variableName, { sliceExpr: e.target.value })
+                      }
+                      placeholder="Slice (optional): :, : or :, :, 1"
+                      style={{ marginTop: 8 }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label>{`Column for ${variableName}`}</label>
+                    <select
+                      value={calcVariableMap[variableName] || ''}
+                      onChange={(e) => handleCalcVariableMapChange(variableName, e.target.value)}
+                      disabled={!calcJobId}
+                    >
+                      <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
+                      {calcColumns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -1492,7 +1811,7 @@ const deleteVisualization = async (vizId) => {
               onClick={handleCalcSave}
               disabled={calcProcessing}
             >
-              {calcProcessing ? 'Saving…' : 'Save Derived Column'}
+              {calcProcessing ? 'Saving…' : (calcIsMat ? 'Save Derived Variable' : 'Save Derived Column')}
             </button>
           </div>
 
@@ -1512,20 +1831,122 @@ const deleteVisualization = async (vizId) => {
   </p>
 
   <div className="excel-preview">
-    {calcPreviewRows.length ? (
+    {calcFilePreviewLoading ? (
+      <div
+        style={{
+          height: 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div className="summary-label">Loading selected file preview…</div>
+      </div>
+    ) : calcMatSourcePreviewLoading ? (
+      <div
+        style={{
+          height: 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div className="summary-label">Loading MAT variable preview…</div>
+      </div>
+    ) : calcMatPreview ? (
+      <div>
+        <div className="summary-label" style={{ marginBottom: 8 }}>
+          {calcIsSourceMatPreview
+            ? `Showing MAT source preview for ${calcMatPreviewContext?.variable || 'selected variable'}.`
+            : 'Showing calculated MAT output preview.'}
+        </div>
+        <div className="summary-label" style={{ marginBottom: 8 }}>
+          {calcMatPreview?.display_shape || toMatShapeText(calcMatPreview?.shape)}{calcMatPreview?.dtype ? ` | ${calcMatPreview.dtype}` : ''}{calcMatPreview?.slice_expr ? ` | ${calcMatPreview.slice_expr}` : ''}
+        </div>
+        {calcMatPreview?.format === 'scalar' && (
+          <div style={{ fontFamily: 'monospace' }}>
+            {String(calcMatPreview?.scalar ?? '')}
+          </div>
+        )}
+        {calcMatPreview?.format === 'table' && calcMatPreview?.table && (
+          <table className="data-table">
+            <thead>
+              <tr>
+                {calcMatPreview.table.headers.map((h) => (
+                  <th key={`mat-calc-head-${h}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(calcMatPreview.table.rows || []).map((row, rowIdx) => (
+                <tr key={`mat-calc-row-${rowIdx}`}>
+                  {(row || []).map((cell, colIdx) => (
+                    <td key={`mat-calc-cell-${rowIdx}-${colIdx}`}>{String(cell ?? '')}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {calcMatPreview?.format === 'pages' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {(calcMatPreview.pages || []).map((page) => (
+              <div key={`mat-calc-page-${page.page}`}>
+                <div className="summary-label" style={{ marginBottom: 6 }}>
+                  (:, :, {page.page})
+                </div>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {(page.headers || []).map((h) => (
+                        <th key={`mat-calc-page-head-${page.page}-${h}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(page.rows || []).map((row, rowIdx) => (
+                      <tr key={`mat-calc-page-row-${page.page}-${rowIdx}`}>
+                        {(row || []).map((cell, colIdx) => (
+                          <td key={`mat-calc-page-cell-${page.page}-${rowIdx}-${colIdx}`}>
+                            {String(cell ?? '')}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+        {calcMatPreview?.message && (
+          <div className="summary-label" style={{ marginTop: 8 }}>
+            {calcMatPreview.message}
+          </div>
+        )}
+      </div>
+    ) : calcDisplayPreviewRows.length ? (
+      <>
+      {calcJobId && (
+        <div className="summary-label" style={{ marginBottom: 8 }}>
+          {showingCalculatedPreview
+            ? 'Showing calculated output preview.'
+            : 'Showing selected file preview.'}
+        </div>
+      )}
       <table className="data-table">
         <thead>
           <tr>
-            {Object.keys(calcPreviewRows[0] || {}).map((k) => (
+            {Object.keys(calcDisplayPreviewRows[0] || {}).map((k) => (
               <th key={k}>{k}</th>
             ))}
           </tr>
         </thead>
 
         <tbody>
-          {calcPreviewRows.slice(0, 10).map((row, i) => (
+          {calcDisplayPreviewRows.slice(0, 10).map((row, i) => (
             <tr key={`calc-row-${i}`}>
-              {Object.keys(calcPreviewRows[0] || {}).map((k) => (
+              {Object.keys(calcDisplayPreviewRows[0] || {}).map((k) => (
                 <td key={`${i}-${k}`}>
                   {String(row?.[k] ?? "")}
                 </td>
@@ -1534,6 +1955,19 @@ const deleteVisualization = async (vizId) => {
           ))}
         </tbody>
       </table>
+      </>
+    ) : calcFilePreviewError ? (
+      <div
+        style={{
+          height: 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 12,
+        }}
+      >
+        <div className="project-shell__error">{calcFilePreviewError}</div>
+      </div>
     ) : (
       <div
         style={{

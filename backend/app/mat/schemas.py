@@ -14,6 +14,7 @@ class MatVariableIndex(BaseModel):
     ndim: int = 0
     dtype: str = ""
     kind: MatKind = "unsupported"
+    is_derived: bool = False
     coords_guess: list[str | None] | None = None
     coord_candidates: dict[str, list[str]] | None = None
 

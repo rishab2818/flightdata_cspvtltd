@@ -12,6 +12,9 @@ FORMULA_CATALOG: list[dict[str, Any]] = [
             {"key": "alg_sub", "label": "a - b", "inputs": ["a", "b"], "expr": "{a} - {b}"},
             {"key": "alg_mul", "label": "a * b", "inputs": ["a", "b"], "expr": "{a} * {b}"},
             {"key": "alg_div", "label": "a / b", "inputs": ["a", "b"], "expr": "{a} / {b}"},
+            {"key": "alg_square", "label": "a^2", "inputs": ["a"], "expr": "{a} * {a}"},
+            {"key": "alg_cube", "label": "a^3", "inputs": ["a"], "expr": "{a} * {a} * {a}"},
+            {"key": "alg_pow", "label": "a^b", "inputs": ["a", "b"], "expr": "{a} ** {b}"},
         ],
     },
     {
@@ -71,6 +74,48 @@ FORMULA_CATALOG: list[dict[str, Any]] = [
                 "label": "sqrt(a^2+b^2+c^2)",
                 "inputs": ["a", "b", "c"],
                 "expr": "sqrt(({a} * {a}) + ({b} * {b}) + ({c} * {c}))",
+            },
+        ],
+    },
+    {
+        "key": "units_and_angles",
+        "label": "Units / Angles",
+        "templates": [
+            {
+                "key": "ua_deg_to_rad",
+                "label": "rad = deg * pi/180",
+                "inputs": ["deg"],
+                "expr": "{deg} * 3.141592653589793 / 180",
+            },
+            {
+                "key": "ua_rad_to_deg",
+                "label": "deg = rad * 180/pi",
+                "inputs": ["rad"],
+                "expr": "{rad} * 180 / 3.141592653589793",
+            },
+            {
+                "key": "ua_mps_to_knots",
+                "label": "knots = m/s * 1.943844492",
+                "inputs": ["speed_mps"],
+                "expr": "{speed_mps} * 1.943844492",
+            },
+            {
+                "key": "ua_knots_to_mps",
+                "label": "m/s = knots * 0.514444",
+                "inputs": ["speed_knots"],
+                "expr": "{speed_knots} * 0.514444",
+            },
+            {
+                "key": "ua_temp_c_to_k",
+                "label": "K = C + 273.15",
+                "inputs": ["temp_c"],
+                "expr": "{temp_c} + 273.15",
+            },
+            {
+                "key": "ua_temp_k_to_c",
+                "label": "C = K - 273.15",
+                "inputs": ["temp_k"],
+                "expr": "{temp_k} - 273.15",
             },
         ],
     },

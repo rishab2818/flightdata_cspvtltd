@@ -20,6 +20,8 @@ export default function ProcessedPreviewPage() {
     const [previewingDerived, setPreviewingDerived] = useState(false)
     const [savingDerived, setSavingDerived] = useState(false)
     const [derivedColumns, setDerivedColumns] = useState([])
+    const [savedDerivedColumns, setSavedDerivedColumns] = useState([])
+    const [deletingDerivedName, setDeletingDerivedName] = useState("")
 
     const displayCols = useMemo(() => {
         return originalCols.map(c => (renameMap?.[c] ?? c))
@@ -34,6 +36,7 @@ export default function ProcessedPreviewPage() {
             setPersistedCols(data.original_columns || [])
             setRenameMap(data.rename_map || {})
             setRows(data.rows || [])
+            setSavedDerivedColumns(data.derived_columns || [])
         } catch (e) {
             setError(e?.response?.data?.detail || e.message || "Failed to load preview")
         } finally {
@@ -151,6 +154,23 @@ export default function ProcessedPreviewPage() {
         }
     }
 
+    const onDeleteSavedDerivedColumn = async (columnName) => {
+        const target = String(columnName || "").trim()
+        if (!target) return
+        if (!window.confirm(`Delete derived column '${target}'?`)) return
+
+        setError(null)
+        setDeletingDerivedName(target)
+        try {
+            await ingestionApi.deleteDerivedColumn(jobId, target)
+            await fetchPreview()
+        } catch (e) {
+            setError(e?.response?.data?.detail || e.message || "Delete derived column failed")
+        } finally {
+            setDeletingDerivedName("")
+        }
+    }
+
     return (
         <div className="project-page">
         <div className="project-card" style={{  width: "100%", margin: "0px auto", background: "#fff", padding: 24 }}>
@@ -207,6 +227,55 @@ export default function ProcessedPreviewPage() {
 
            
             {loading && <div className="empty-state" style={{ marginTop: 12 }}>Loading preview…</div>}
+
+            {!loading && !!savedDerivedColumns.length && (
+                <div style={{ marginTop: 12 }}>
+                    <strong>Saved Derived Columns</strong>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                        {savedDerivedColumns.map((item) => {
+                            const name = (item?.name || "").trim()
+                            const expression = (item?.expression || "").trim()
+                            if (!name) return null
+                            return (
+                                <div
+                                    key={`saved-derived-${name}`}
+                                    style={{
+                                        border: "1px solid #e5e7eb",
+                                        borderRadius: 8,
+                                        padding: 10,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        gap: 10,
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600 }}>{name}</div>
+                                        <div className="summary-label" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                                            {expression || "Expression unavailable"}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="project-shell__nav-link"
+                                        disabled={!isEditable || deletingDerivedName === name}
+                                        onClick={() => onDeleteSavedDerivedColumn(name)}
+                                        style={{
+                                            height: 34,
+                                            minWidth: 130,
+                                            background: '#fff1f2',
+                                            color: '#b91c1c',
+                                            borderColor: '#fecdd3',
+                                        }}
+                                    >
+                                        {deletingDerivedName === name ? "Deleting..." : "Delete Derived"}
+                                    </button>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             {!loading && !error && (
                 <div className="excel-preview" style={{ marginTop: 12, overflow: "auto",width:"100%" }}>

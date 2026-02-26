@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { matApi } from '../../../mat/matApi'
@@ -16,6 +16,12 @@ export default function RawPreviewPage() {
   const [error, setError] = useState(null)
   const [rowLimit, setRowLimit] = useState(20)
   const workbookRef = useRef(null)
+
+  const refreshMatVariables = useCallback(async () => {
+    if (!jobId) return
+    const matInfo = await matApi.variables(jobId)
+    setPreviewData({ type: 'mat', variables: matInfo?.variables || [] })
+  }, [jobId])
 
   useEffect(() => {
     if (!jobId) {
@@ -75,8 +81,7 @@ export default function RawPreviewPage() {
 
         // MAT
         else if (ext === 'mat') {
-          const matInfo = await matApi.variables(jobId)
-          setPreviewData({ type: 'mat', variables: matInfo?.variables || [] })
+          await refreshMatVariables()
         }
 
         // PDF
@@ -112,7 +117,7 @@ export default function RawPreviewPage() {
 
     fetchFile()
     return () => objectUrl && URL.revokeObjectURL(objectUrl)
-  }, [jobId])
+  }, [jobId, refreshMatVariables])
 
   return (
     <div className="project-page"> 
@@ -252,7 +257,11 @@ export default function RawPreviewPage() {
 
           {/* MAT */}
           {previewData?.type === 'mat' && (
-            <MatlabPreviewPanel jobId={jobId} variables={previewData.variables || []} />
+            <MatlabPreviewPanel
+              jobId={jobId}
+              variables={previewData.variables || []}
+              onRefreshVariables={refreshMatVariables}
+            />
           )}
 
           {/* PDF */}
