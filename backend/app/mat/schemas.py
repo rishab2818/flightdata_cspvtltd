@@ -21,6 +21,7 @@ class MatVariableIndex(BaseModel):
 
 class MatFileIndex(BaseModel):
     version: str
+    parser_revision: int = 1
     variables: list[MatVariableIndex] = Field(default_factory=list)
     coords_guess: dict[str, list[str | None]] = Field(default_factory=dict)
 

@@ -3,6 +3,7 @@ import { matApi } from './matApi'
 
 const toShapeText = (shape) => {
   if (!Array.isArray(shape) || !shape.length) return ''
+  if (shape.length === 1) return `${shape[0]}x1`
   return shape.join('x')
 }
 

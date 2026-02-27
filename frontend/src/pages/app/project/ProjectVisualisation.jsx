@@ -87,6 +87,7 @@ const isMatFileName = (name = '') => getExt(name) === '.mat'
 
 const toMatShapeText = (shape) => {
   if (!Array.isArray(shape) || !shape.length) return ''
+  if (shape.length === 1) return `${shape[0]}x1`
   return shape.join('x')
 }
 
@@ -173,8 +174,11 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [calcOutputColumn, setCalcOutputColumn] = useState('')
   const [calcPreviewRows, setCalcPreviewRows] = useState([])
   const [calcMatVariableMap, setCalcMatVariableMap] = useState({})
+  const [tempMatDerivedByJob, setTempMatDerivedByJob] = useState({})
   const [calcMatPreview, setCalcMatPreview] = useState(null)
   const [calcMatPreviewContext, setCalcMatPreviewContext] = useState(null)
+  const [calcPreviewMatVariable, setCalcPreviewMatVariable] = useState('')
+  const [calcPreviewMatSliceExpr, setCalcPreviewMatSliceExpr] = useState('')
   const [calcMatSourcePreviewLoading, setCalcMatSourcePreviewLoading] = useState(false)
   const [calcFilePreviewRows, setCalcFilePreviewRows] = useState([])
   const [calcFilePreviewLoading, setCalcFilePreviewLoading] = useState(false)
@@ -201,6 +205,7 @@ const [loadingSave, setLoadingSave] = useState(false);
   const [error, setError] = useState(null)
 
   const pollTimer = useRef(null)
+  const skipNextCalcMatAutoPreviewRef = useRef(false)
   const [isExpanded, setIsExpanded] = useState(true)
 
   /* ================= helpers ================= */
@@ -219,6 +224,92 @@ const [loadingSave, setLoadingSave] = useState(false);
   }, 7000)
 }
 
+  const upsertTempMatDerivedForJob = useCallback((jobId, previewData) => {
+    const safeJobId = String(jobId || '').trim()
+    const variableName = String(previewData?.derived_variable?.name || '').trim()
+    if (!safeJobId || !variableName) return
+
+    const normalizedFormula = String(
+      previewData?.normalized_formula_expression ||
+      previewData?.derived_variable?.formula_expression ||
+      ''
+    ).trim()
+    const variableSources =
+      previewData?.variable_sources && typeof previewData.variable_sources === 'object'
+        ? previewData.variable_sources
+        : {}
+
+    const shape = Array.isArray(previewData?.shape)
+      ? previewData.shape.map((dim) => Number(dim)).filter((dim) => Number.isFinite(dim))
+      : []
+    const dtype = String(previewData?.dtype || 'double')
+
+    const tempFormula = {
+      name: variableName,
+      formula_expression: normalizedFormula,
+      normalized_formula_expression: normalizedFormula,
+      required_variables: Array.isArray(previewData?.required_variables) ? previewData.required_variables : [],
+      variable_sources: variableSources,
+      result_shape: shape,
+      result_dtype: dtype,
+      temporary: true,
+    }
+
+    setTempMatDerivedByJob((prev) => {
+      const existing = Array.isArray(prev[safeJobId]) ? [...prev[safeJobId]] : []
+      const idx = existing.findIndex(
+        (item) => String(item?.name || '').trim().toLowerCase() === variableName.toLowerCase()
+      )
+      if (idx >= 0) existing[idx] = tempFormula
+      else existing.push(tempFormula)
+      return { ...prev, [safeJobId]: existing }
+    })
+
+    setMatMetaByJob((prev) => {
+      const currentMeta = prev[safeJobId] || {}
+      const currentVars = Array.isArray(currentMeta?.variables) ? [...currentMeta.variables] : []
+
+      const tempVar = {
+        name: variableName,
+        shape,
+        ndim: shape.length,
+        dtype,
+        kind: 'numeric_array',
+        is_derived: true,
+        is_temporary: true,
+        coords_guess: shape.length ? Array(shape.length).fill(null) : null,
+        coord_candidates: {},
+      }
+
+      const idx = currentVars.findIndex(
+        (item) => String(item?.name || '').trim().toLowerCase() === variableName.toLowerCase()
+      )
+      if (idx >= 0) currentVars[idx] = tempVar
+      else currentVars.push(tempVar)
+
+      return {
+        ...prev,
+        [safeJobId]: {
+          ...currentMeta,
+          variables: currentVars,
+        },
+      }
+    })
+  }, [])
+
+  const removeTempMatDerivedForJob = useCallback((jobId, variableName) => {
+    const safeJobId = String(jobId || '').trim()
+    const safeVariable = String(variableName || '').trim().toLowerCase()
+    if (!safeJobId || !safeVariable) return
+
+    setTempMatDerivedByJob((prev) => {
+      const existing = Array.isArray(prev[safeJobId]) ? prev[safeJobId] : []
+      const next = existing.filter(
+        (item) => String(item?.name || '').trim().toLowerCase() !== safeVariable
+      )
+      return { ...prev, [safeJobId]: next }
+    })
+  }, [])
 
   const [dimension, setDimension] = useState('2d')
 // const [plotType, setPlotType] = useState('')
@@ -363,24 +454,43 @@ const plotOptions =
     () => (calcMatMeta?.variables || []).filter((item) => item?.kind === 'numeric_array'),
     [calcMatMeta]
   )
-  const calcFirstMappedMatSource = useMemo(() => {
-    for (const variableName of calcVariableNames || []) {
-      const source = calcMatVariableMap[variableName] || {}
-      const sourceVar = String(source.variable || '').trim()
-      if (!sourceVar) continue
-      return {
-        variable: sourceVar,
-        sliceExpr: String(source.sliceExpr || '').trim(),
-      }
-    }
-    return null
-  }, [calcVariableNames, calcMatVariableMap])
   const calcDisplayPreviewRows = useMemo(
     () => (calcPreviewRows.length ? calcPreviewRows : calcFilePreviewRows),
     [calcPreviewRows, calcFilePreviewRows]
   )
   const showingCalculatedPreview = calcPreviewRows.length > 0
   const calcIsSourceMatPreview = calcMatPreviewContext?.type === 'source'
+
+  const syncVisualisationFromCalculation = useCallback((preferredMatVar = '') => {
+    if (!calcJobId) return
+
+    let targetSeriesId = null
+    setSeriesList((prev) => {
+      const base = prev.length ? [...prev] : [newSeries(1)]
+      const first = { ...base[0] }
+      targetSeriesId = first.id
+
+      first.datasetType = calcDatasetType || first.datasetType
+      first.tag = calcTag || first.tag
+      first.jobId = calcJobId
+
+      if (calcIsMat) {
+        if (preferredMatVar) {
+          first.matVar = preferredMatVar
+        } else if (!first.matVar) {
+          const vars = matMetaByJob[calcJobId]?.variables || []
+          first.matVar = vars[0]?.name || first.matVar
+        }
+      }
+
+      base[0] = first
+      return base
+    })
+
+    if (targetSeriesId) {
+      setActiveSeriesId(targetSeriesId)
+    }
+  }, [calcDatasetType, calcTag, calcJobId, calcIsMat, matMetaByJob])
 
   const loadCalcMatSourcePreview = useCallback(
     async (sourceVar, sourceSliceExpr = '') => {
@@ -391,16 +501,47 @@ const plotOptions =
       const ndim = Number(sourceMeta?.ndim || sourceMeta?.shape?.length || 0)
       const fallbackSliceExpr = defaultMatSliceExpr(ndim)
       const effectiveSliceExpr = String(sourceSliceExpr || '').trim() || fallbackSliceExpr
+      const tempDerived = (tempMatDerivedByJob[calcJobId] || []).find(
+        (item) => String(item?.name || '').trim().toLowerCase() === variable.toLowerCase()
+      )
 
       try {
         setCalcError(null)
         setCalcMatSourcePreviewLoading(true)
-        const data = await matApi.variableData(calcJobId, variable, {
-          sliceExpr: effectiveSliceExpr || undefined,
-          maxRows: 60,
-          maxCols: 40,
-          maxPages: 12,
-        })
+        let data = null
+        if (tempDerived) {
+          const sourceMap = tempDerived?.variable_sources && typeof tempDerived.variable_sources === 'object'
+            ? tempDerived.variable_sources
+            : {}
+          const variableMap = {}
+          Object.keys(sourceMap).forEach((formulaVar) => {
+            const source = sourceMap[formulaVar] || {}
+            const mappedVar = String(source.variable || '').trim()
+            if (!mappedVar) return
+            const mappedSlice = String(source.slice_expr || '').trim()
+            variableMap[formulaVar] = {
+              variable: mappedVar,
+              slice_expr: mappedSlice || undefined,
+            }
+          })
+
+          data = await calculationsApi.previewMat(calcJobId, {
+            formula_expression:
+              String(tempDerived?.normalized_formula_expression || tempDerived?.formula_expression || '').trim(),
+            variable_map: variableMap,
+            output_variable: variable,
+            max_rows: 60,
+            max_cols: 40,
+            max_pages: 12,
+          })
+        } else {
+          data = await matApi.variableData(calcJobId, variable, {
+            sliceExpr: effectiveSliceExpr || undefined,
+            maxRows: 60,
+            maxCols: 40,
+            maxPages: 12,
+          })
+        }
         setCalcPreviewRows([])
         setCalcMatPreview(data || null)
         setCalcMatPreviewContext({ type: 'source', variable })
@@ -412,7 +553,7 @@ const plotOptions =
         setCalcMatSourcePreviewLoading(false)
       }
     },
-    [calcIsMat, calcJobId, calcMatVars]
+    [calcIsMat, calcJobId, calcMatVars, tempMatDerivedByJob]
   )
 
   /* ================= load tags for datasetType (per active series) ================= */
@@ -580,22 +721,31 @@ const plotOptions =
   }, [calcIsMat, calcMatVars, calcVariableNames])
 
   useEffect(() => {
-    if (!calcIsMat || !calcJobId || !calcFirstMappedMatSource?.variable) return
-    if (calcMatPreviewContext?.type === 'formula') return
-    if (
-      calcMatPreviewContext?.type === 'source' &&
-      calcMatPreviewContext?.variable === calcFirstMappedMatSource.variable &&
-      calcMatPreview
-    ) {
+    if (!calcIsMat || !calcJobId) {
+      setCalcPreviewMatVariable('')
+      setCalcPreviewMatSliceExpr('')
       return
     }
-    loadCalcMatSourcePreview(calcFirstMappedMatSource.variable, calcFirstMappedMatSource.sliceExpr)
+    if (!calcMatVars.length) return
+
+    const availableNames = calcMatVars.map((item) => item.name)
+    setCalcPreviewMatVariable((prev) => {
+      if (prev && availableNames.includes(prev)) return prev
+      return availableNames[0] || ''
+    })
+  }, [calcIsMat, calcJobId, calcMatVars])
+
+  useEffect(() => {
+    if (!calcIsMat || !calcJobId || !calcPreviewMatVariable) return
+    if (skipNextCalcMatAutoPreviewRef.current) {
+      skipNextCalcMatAutoPreviewRef.current = false
+      return
+    }
+    loadCalcMatSourcePreview(calcPreviewMatVariable, calcPreviewMatSliceExpr)
   }, [
     calcIsMat,
     calcJobId,
-    calcFirstMappedMatSource,
-    calcMatPreviewContext,
-    calcMatPreview,
+    calcPreviewMatVariable,
     loadCalcMatSourcePreview,
   ])
 
@@ -1062,26 +1212,31 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
   }
 
   const handleCalcMatVariableMapChange = (variableName, patch) => {
-    let selectedVariable = ''
-    let selectedSliceExpr = ''
     setCalcMatVariableMap((prev) => {
-      const next = {
+      return {
         ...prev,
         [variableName]: {
           ...(prev[variableName] || { variable: '', sliceExpr: '' }),
           ...patch,
         },
       }
-      selectedVariable = String(next[variableName]?.variable || '').trim()
-      selectedSliceExpr = String(next[variableName]?.sliceExpr || '').trim()
-      return next
     })
     setCalcPreviewRows([])
     setCalcMatPreview(null)
     setCalcMatPreviewContext(null)
-    if (Object.prototype.hasOwnProperty.call(patch, 'variable') && selectedVariable) {
-      loadCalcMatSourcePreview(selectedVariable, selectedSliceExpr)
-    }
+  }
+
+  const handleCalcPreviewMatVariableChange = (variableName) => {
+    setCalcPreviewRows([])
+    setCalcMatPreview(null)
+    setCalcMatPreviewContext(null)
+    setCalcPreviewMatVariable(variableName)
+    setCalcPreviewMatSliceExpr('')
+  }
+
+  const handleCalcPreviewMatSliceApply = () => {
+    if (!calcIsMat || !calcJobId || !calcPreviewMatVariable) return
+    loadCalcMatSourcePreview(calcPreviewMatVariable, calcPreviewMatSliceExpr)
   }
 
   const handleCalcFormulaChange = (value) => {
@@ -1178,16 +1333,22 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
     setCalcMatPreviewContext(null);
 
     if (calcIsMat) {
+      const derivedVariableName = calcOutputColumn.trim();
       const data = await calculationsApi.previewMat(calcJobId, {
         formula_expression: calcFormulaExpression.trim(),
         variable_map: buildCalcMatVariableMapPayload(),
-        output_variable: calcOutputColumn.trim(),
+        output_variable: derivedVariableName,
       });
       setCalcMatPreview(data || null);
       setCalcMatPreviewContext({
         type: 'formula',
-        variable: calcOutputColumn.trim(),
+        variable: derivedVariableName,
       });
+      upsertTempMatDerivedForJob(calcJobId, data || {});
+      skipNextCalcMatAutoPreviewRef.current = true;
+      setCalcPreviewMatVariable(derivedVariableName);
+      setCalcPreviewMatSliceExpr('');
+      syncVisualisationFromCalculation(derivedVariableName);
     } else {
       setSeriesList((prev) =>
         prev.map((s) => ({ ...s, derivedColumns: [] }))
@@ -1275,6 +1436,7 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
         variable_map: buildCalcMatVariableMapPayload(),
         output_variable: calcOutputColumn.trim(),
       });
+      removeTempMatDerivedForJob(calcJobId, calcOutputColumn.trim());
       try {
         const refreshedMatMeta = await matApi.variables(calcJobId)
         setMatMetaByJob((prev) => ({ ...prev, [calcJobId]: refreshedMatMeta || prev[calcJobId] }))
@@ -1406,6 +1568,7 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
           var: varMeta.name,
           mapping,
           filters,
+          mat_derived_formulas: tempMatDerivedByJob[s.jobId] || [],
           chart_type: chartType,
         }
       } else {
@@ -1586,7 +1749,10 @@ const deleteVisualization = async (vizId) => {
         <button
           type="button"
           className={visualSectionTab === 'visualize' ? 'active' : ''}
-          onClick={() => setVisualSectionTab('visualize')}
+          onClick={() => {
+            syncVisualisationFromCalculation()
+            setVisualSectionTab('visualize')
+          }}
         >
           Visualisation
         </button>
@@ -1623,6 +1789,8 @@ const deleteVisualization = async (vizId) => {
                   setCalcMatPreview(null)
                   setCalcMatPreviewContext(null)
                   setCalcMatVariableMap({})
+                  setCalcPreviewMatVariable('')
+                  setCalcPreviewMatSliceExpr('')
                 }}
               >
                 {DATASET_TYPES.map((d) => (
@@ -1644,6 +1812,8 @@ const deleteVisualization = async (vizId) => {
                   setCalcMatPreview(null)
                   setCalcMatPreviewContext(null)
                   setCalcMatVariableMap({})
+                  setCalcPreviewMatVariable('')
+                  setCalcPreviewMatSliceExpr('')
                 }}
               >
                 <option value="">Select</option>
@@ -1665,6 +1835,8 @@ const deleteVisualization = async (vizId) => {
                   setCalcMatPreview(null)
                   setCalcMatPreviewContext(null)
                   setCalcMatVariableMap({})
+                  setCalcPreviewMatVariable('')
+                  setCalcPreviewMatSliceExpr('')
                 }}
                 disabled={!calcTag}
               >
@@ -1839,6 +2011,51 @@ const deleteVisualization = async (vizId) => {
   </p>
 
   <div className="excel-preview">
+    {calcIsMat && calcJobId && (
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12, flexWrap: 'wrap' }}>
+        <div className="ps-field" style={{ margin: 0, minWidth: 260 }}>
+          <label className="summary-label" style={{ margin: 0 }}>Preview variable</label>
+          <select
+            value={calcPreviewMatVariable}
+            onChange={(e) => handleCalcPreviewMatVariableChange(e.target.value)}
+            disabled={!calcMatVars.length}
+          >
+            <option value="">{!calcMatVars.length ? 'Loading MAT variables...' : 'Select variable'}</option>
+            {calcMatVars.map((v) => (
+              <option key={`calc-preview-var-${v.name}`} value={v.name}>
+                {v.name} ({toMatShapeText(v.shape)}{v.dtype ? ` | ${v.dtype}` : ''})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="ps-field" style={{ margin: 0, minWidth: 280 }}>
+          <label className="summary-label" style={{ margin: 0 }}>Slice (optional)</label>
+          <input
+            className="input-control"
+            value={calcPreviewMatSliceExpr}
+            onChange={(e) => setCalcPreviewMatSliceExpr(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              handleCalcPreviewMatSliceApply()
+            }}
+            placeholder=":, : or :, :, 1"
+          />
+        </div>
+
+        <button
+          type="button"
+          className="project-shell__nav-link"
+          onClick={handleCalcPreviewMatSliceApply}
+          disabled={!calcPreviewMatVariable || calcMatSourcePreviewLoading}
+          style={{ height: 36 }}
+        >
+          Apply
+        </button>
+      </div>
+    )}
+
     {calcFilePreviewLoading ? (
       <div
         style={{
@@ -1880,6 +2097,7 @@ const deleteVisualization = async (vizId) => {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: 56 }}></th>
                 {calcMatPreview.table.headers.map((h) => (
                   <th key={`mat-calc-head-${h}`}>{h}</th>
                 ))}
@@ -1888,6 +2106,7 @@ const deleteVisualization = async (vizId) => {
             <tbody>
               {(calcMatPreview.table.rows || []).map((row, rowIdx) => (
                 <tr key={`mat-calc-row-${rowIdx}`}>
+                  <th>{rowIdx + 1}</th>
                   {(row || []).map((cell, colIdx) => (
                     <td key={`mat-calc-cell-${rowIdx}-${colIdx}`}>{String(cell ?? '')}</td>
                   ))}
@@ -1906,6 +2125,7 @@ const deleteVisualization = async (vizId) => {
                 <table className="data-table">
                   <thead>
                     <tr>
+                      <th style={{ width: 56 }}></th>
                       {(page.headers || []).map((h) => (
                         <th key={`mat-calc-page-head-${page.page}-${h}`}>{h}</th>
                       ))}
@@ -1914,6 +2134,7 @@ const deleteVisualization = async (vizId) => {
                   <tbody>
                     {(page.rows || []).map((row, rowIdx) => (
                       <tr key={`mat-calc-page-row-${page.page}-${rowIdx}`}>
+                        <th>{rowIdx + 1}</th>
                         {(row || []).map((cell, colIdx) => (
                           <td key={`mat-calc-page-cell-${page.page}-${rowIdx}-${colIdx}`}>
                             {String(cell ?? '')}

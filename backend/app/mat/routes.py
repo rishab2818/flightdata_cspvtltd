@@ -11,6 +11,7 @@ from app.mat.reader import (
     read_mat_variable_preview,
 )
 from app.mat.schemas import (
+    MatFileIndex,
     MatVariableIndex,
     MatVariableDataPreviewResponse,
     MatVariablePreviewResponse,
@@ -84,12 +85,27 @@ def _merge_saved_derived_variables(job: dict, indexed):
     return indexed.model_copy(update={"variables": merged})
 
 
+def _has_ambiguous_legacy_vectors(indexed: MatFileIndex) -> bool:
+    if getattr(indexed, "version", "") != "legacy":
+        return False
+    if int(getattr(indexed, "parser_revision", 1) or 1) >= 2:
+        return False
+    for item in getattr(indexed, "variables", []) or []:
+        if item.kind != "numeric_array":
+            continue
+        if len(item.shape or []) == 1:
+            return True
+    return False
+
+
 @router.get("/{job_id}/variables", response_model=MatVariablesResponse)
 async def mat_variables(job_id: str, user: CurrentUser = Depends(get_current_user)):
     job = await _ensure_mat_job(job_id, user)
 
     try:
         indexed = get_or_index_mat_metadata(job_id)
+        if _has_ambiguous_legacy_vectors(indexed):
+            indexed = get_or_index_mat_metadata(job_id, force=True)
         indexed = _merge_saved_derived_variables(job, indexed)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

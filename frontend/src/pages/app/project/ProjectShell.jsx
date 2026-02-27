@@ -80,7 +80,7 @@ export default function ProjectShell() {
           <div className="project-shell__brand-text">Back</div>
         </div>
 
-        <div class="full-width-line"></div>
+        <div className="full-width-line"></div>
 
         <nav className="project-shell__nav1">
           {navItems.map((item) => (

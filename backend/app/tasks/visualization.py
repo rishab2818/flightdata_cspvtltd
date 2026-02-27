@@ -1121,6 +1121,7 @@ def generate_visualization(self, viz_id: str):
             var_name = request.get("var")
             mapping = request.get("mapping")
             filters = request.get("filters") or {}
+            derived_formulas = request.get("derived_formulas") or []
 
             if not job_id or not var_name or not isinstance(mapping, dict):
                 _update_db_status(
@@ -1135,7 +1136,12 @@ def generate_visualization(self, viz_id: str):
             _set_status(redis, viz_id, states.STARTED, 25, "Reading MAT slice")
             _update_db_status(db, viz_id, status=states.STARTED, progress=25, message="Reading MAT slice")
             slice_spec = build_slice_spec(chart_type=chart_type, mapping=mapping, filters=filters)
-            coords, values, labels = read_mat_slice(job_id, var_name, slice_spec)
+            coords, values, labels = read_mat_slice(
+                job_id,
+                var_name,
+                slice_spec,
+                temp_derived_formulas=derived_formulas,
+            )
 
 #             _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
 #             fig = _build_mat_figure(

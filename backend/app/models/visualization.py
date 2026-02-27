@@ -48,6 +48,7 @@ class VisualizationCreateRequest(BaseModel):
     var: Optional[str] = None
     mapping: Optional[dict[str, Any]] = None
     filters: dict[str, Any] = Field(default_factory=dict)
+    mat_derived_formulas: list[dict[str, Any]] = Field(default_factory=list)
     chart_type: str = Field(default="scatter", description="Type of chart to render")
 
 

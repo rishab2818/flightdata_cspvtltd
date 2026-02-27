@@ -210,6 +210,9 @@ async def create_visualization(
                 "var": payload.var,
                 "mapping": payload.mapping,
                 "filters": payload.filters or {},
+                "derived_formulas": [
+                    item for item in (payload.mat_derived_formulas or []) if isinstance(item, dict)
+                ],
             },
             dataset_type=payload.dataset_type,
             tag_name=payload.tag_name,
