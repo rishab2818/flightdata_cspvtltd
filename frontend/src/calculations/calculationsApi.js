@@ -28,4 +28,14 @@ export const calculationsApi = {
     const { data } = await axiosClient.post(`/api/calculations/jobs/${jobId}/materialize`, payload)
     return data
   },
+
+  previewMat: async (jobId, payload) => {
+    const { data } = await axiosClient.post(`/api/calculations/jobs/${jobId}/mat/preview`, payload)
+    return data
+  },
+
+  materializeMat: async (jobId, payload) => {
+    const { data } = await axiosClient.post(`/api/calculations/jobs/${jobId}/mat/materialize`, payload)
+    return data
+  },
 }

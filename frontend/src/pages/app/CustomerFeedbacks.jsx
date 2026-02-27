@@ -622,6 +622,8 @@ import FileUploadBox from "../../components/common/FileUploadBox";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 import { useDownload } from "../../components/common/useDownload";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 
 const BORDER = "#E2E8F0";
@@ -640,9 +642,6 @@ function Rating({ value }) {
 /* --------------------- Main Component --------------------- */
 export default function CustomerFeedbacks() {
   const { projectId } = useParams();
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
   // For editing the document
@@ -658,24 +657,33 @@ export default function CustomerFeedbacks() {
 //   (recordId) => recordsApi.downloadFeedback(recordId)
 // );
 
+  const fetchRecordsPage = React.useCallback(
+    async ({ page, limit }) => {
+      const data = await recordsApi.listFeedbacks(projectId, { page, limit });
+      return data || [];
+    },
+    [projectId]
+  );
 
-  const loadRecords = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const data = await recordsApi.listFeedbacks(projectId);
-      setRecords(data);
-    } catch (e) {
-      console.error(e);
-      setError("Failed to load customer feedbacks.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    items: records,
+    setItems: setRecords,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchRecordsPage,
+    deps: [projectId],
+    errorMessage: "Failed to load customer feedbacks.",
+  });
 
-  useEffect(() => {
-    loadRecords();
-  }, [projectId]);
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const filtered = useMemo(() => {
     return records.filter((row) => {
@@ -1051,13 +1059,19 @@ export default function CustomerFeedbacks() {
                 })}
             </tbody>
           </table>
+          {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+          {loadingMore && (
+            <div style={{ paddingTop: 8, textAlign: "center", color: "#64748b" }}>
+              Loading more...
+            </div>
+          )}
         </div>
       </div>
 
       {showModal && (
         <FeedbackModal
           onClose={closeModal}
-          onCreated={loadRecords}
+          onCreated={(created) => setRecords((prev) => [created, ...prev])}
           editingRecord={editingRecord}
           projectId={projectId}
           onUpdated={(updated) => {

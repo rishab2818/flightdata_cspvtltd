@@ -19,7 +19,8 @@ import { documentsApi } from "../../api/documentsApi";
 import { meetingsApi } from "../../api/meetingsApi";
 import { projectApi } from "../../api/projectapi";
 import { useDownload } from "../../components/common/useDownload";
-import PresentationChart1 from "../../assets/PresentationChart1.svg";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 import "./MinutesOfTheMeeting.css";
 
@@ -129,10 +130,6 @@ export default function MinutesOfTheMeeting() {
   const [activeSubsection, setActiveSubsection] = useState("tcm");
   const requiresProject = PROJECT_REQUIRED_TABS.includes(activeSubsection);
 
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
   const [search, setSearch] = useState("");
 
   const [projects, setProjects] = useState([]);
@@ -153,6 +150,11 @@ export default function MinutesOfTheMeeting() {
 
   const [selectedActions, setSelectedActions] = useState([]);
   const [showActionsModal, setShowActionsModal] = useState(false);
+
+  const effectiveProjectId = isProjectContext
+    ? routeProjectId
+    : (requiresProject ? selectedProjectId : undefined);
+  const missingProjectSelection = !isProjectContext && requiresProject && !effectiveProjectId;
 
  const {
   download,
@@ -177,7 +179,7 @@ export default function MinutesOfTheMeeting() {
     try {
       setProjectLoading(true);
       setProjectError("");
-      const list = await projectApi.list();
+      const list = await projectApi.list({ page: 1, limit: 200 });
       setProjects(list || []);
       if (!selectedProjectId && list?.length) {
         setSelectedProjectId(list[0]?._id || list[0]?.id || "");
@@ -190,18 +192,32 @@ export default function MinutesOfTheMeeting() {
     }
   }, [selectedProjectId]);
 
-  const loadData = useCallback(async (subsection, projectId) => {
-    try {
-      setLoading(true);
-      const data = await documentsApi.listMinutes(subsection, projectId);
-      setRows(data.map(convertDocToRow));
-    } catch {
-      setError("Failed to load minutes.");
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchMinutesPage = useCallback(
+    async ({ page, limit }) => {
+      const data = await documentsApi.listMinutes(activeSubsection, effectiveProjectId, {
+        page,
+        limit,
+      });
+      return (data || []).map(convertDocToRow);
+    },
+    [activeSubsection, effectiveProjectId]
+  );
+
+  const {
+    items: rows,
+    setItems: setRows,
+    loading,
+    loadingMore,
+    error: loadError,
+    hasMore,
+    loadMore,
+    refresh: refreshRows,
+  } = useLazyCollection({
+    fetchPage: fetchMinutesPage,
+    deps: [activeSubsection, effectiveProjectId],
+    enabled: !missingProjectSelection,
+    errorMessage: "Failed to load minutes.",
+  });
 
   const loadMeeting = useCallback(async (subsection, projectId) => {
     try {
@@ -238,28 +254,16 @@ export default function MinutesOfTheMeeting() {
   }, [isProjectContext, routeProjectId, requiresProject, loadProjects]);
 
   useEffect(() => {
-    const projectId = isProjectContext
-      ? routeProjectId
-      : (requiresProject ? selectedProjectId : undefined);
-
-    if (!isProjectContext && requiresProject && !projectId && !projectLoading) {
-      setRows([]);
-      setError("Select a project to view meeting minutes.");
+    if (missingProjectSelection) {
       setNextMeeting(null);
       return;
     }
 
-    setError("");
-    loadData(activeSubsection, projectId);
-    loadMeeting(activeSubsection, projectId);
+    loadMeeting(activeSubsection, effectiveProjectId);
   }, [
     activeSubsection,
-    routeProjectId,
-    isProjectContext,
-    selectedProjectId,
-    requiresProject,
-    projectLoading,
-    loadData,
+    effectiveProjectId,
+    missingProjectSelection,
     loadMeeting,
   ]);
 
@@ -280,18 +284,18 @@ export default function MinutesOfTheMeeting() {
   const activeTab =
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
 
-  const effectiveProjectId = isProjectContext
-    ? routeProjectId
-    : (requiresProject ? selectedProjectId : undefined);
-
   const selectedProject = requiresProject
     ? projects.find((p) => (p?._id || p?.id) === selectedProjectId)
     : null;
+  const minutesError =
+    missingProjectSelection && !projectLoading
+      ? "Select a project to view meeting minutes."
+      : loadError;
 
   /* ---------------- handlers ---------------- */
 
   const handleUploadSuccess = () => {
-    loadData(activeSubsection, effectiveProjectId);
+    refreshRows();
   };
 
   const handleMeetingSave = async (values) => {
@@ -407,14 +411,16 @@ const handleDownload = (row) => {
         <MinutesTable
           rows={filteredRows}
           loading={loading}
-          error={error}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          error={minutesError}
           onViewAction={(a) => {
             setSelectedActions(a);
             setShowActionsModal(true);
           }}
           onEdit={setEditingDoc}
           onDelete={handleDeleteDocument} 
-          setRows={setRows}
           download={download}
           view={view}
           loadingFiles={loadingFiles}
@@ -644,7 +650,27 @@ function NextMeetingBanner({
   );
 }
 
-function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, setRows, download, view, loadingFiles, errorFiles, }) {
+function MinutesTable({
+  rows,
+  loading,
+  loadingMore,
+  hasMore,
+  onLoadMore,
+  error,
+  onViewAction,
+  onEdit,
+  onDelete,
+  download,
+  view,
+  loadingFiles,
+  errorFiles,
+}) {
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore,
+  });
+
   return (
     <div className="TableGrid">
       <table className="Table">
@@ -717,6 +743,12 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, s
             ))}
         </tbody>
       </table>
+      {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+      {loadingMore && (
+        <div className="helperText" style={{ textAlign: "center", paddingTop: 8 }}>
+          Loading more...
+        </div>
+      )}
     </div>
   );
 }

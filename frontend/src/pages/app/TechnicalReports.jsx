@@ -13,6 +13,8 @@ import EmptySection from "../../components/common/EmptyProject";
 import CommonStatCard from "../../components/common/common_card/common_card";
 import { FiSearch } from "react-icons/fi";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
@@ -21,9 +23,6 @@ const formatDate = (value) => (value ? new Date(value).toLocaleDateString("en-GB
 /* --------------------- Main Component --------------------- */
 export default function TechnicalReports() {
   const { projectId } = useParams();
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all" });
   const [showModal, setShowModal] = useState(false);
@@ -32,24 +31,33 @@ export default function TechnicalReports() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
 
-  // Load records initially
-  const loadRecords = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const data = await recordsApi.listTechnical(projectId);
-      setRecords(data);
-    } catch (e) {
-      console.error(e);
-      setError("Failed to load technical reports.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchRecordsPage = React.useCallback(
+    async ({ page, limit }) => {
+      const data = await recordsApi.listTechnical(projectId, { page, limit });
+      return data || [];
+    },
+    [projectId]
+  );
 
-  useEffect(() => {
-    loadRecords();
-  }, [projectId]);
+  const {
+    items: records,
+    setItems: setRecords,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchRecordsPage,
+    deps: [projectId],
+    errorMessage: "Failed to load technical reports.",
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   // Filtered records based on search + type filter
   const filtered = useMemo(() => {
@@ -349,6 +357,12 @@ export default function TechnicalReports() {
                 })}
             </tbody>
           </table>
+          {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+          {loadingMore && (
+            <div style={{ paddingTop: 8, textAlign: "center", color: "#64748b" }}>
+              Loading more...
+            </div>
+          )}
         </div>
       </div>
 

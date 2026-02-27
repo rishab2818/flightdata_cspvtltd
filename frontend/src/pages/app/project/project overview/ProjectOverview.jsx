@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 
 import UploadModal from './../ProjectUploadModal.jsx'
@@ -16,6 +16,8 @@ import ArrowRight from '../../../../assets/ArrowRight.svg'
 import ConfirmationModal from "../../../../components/common/ConfirmationModal";
 import SeeMoreText from "../../../../components/common/SeeMoreButton";
 import NewProjectModal from '../../../../components/app/NewProjectModal';
+import { useLazyCollection } from '../../../../hooks/useLazyCollection';
+import { useInfiniteScrollTrigger } from '../../../../hooks/useInfiniteScrollTrigger';
 
 
 const DATASET_TABS = [
@@ -31,7 +33,6 @@ export default function ProjectUpload() {
   const { project, refreshProject } = useOutletContext()
 
   const [activeDataset, setActiveDataset] = useState('cfd')
-  const [tags, setTags] = useState([])
   const [selectedTag, setSelectedTag] = useState(null)
 
   const [modal, setModal] = useState({ open: false, mode: 'create', tag: '' })
@@ -62,11 +63,44 @@ const members = project?.members?.length || 0;
 
   /* ================= Polling helpers ================= */
   const pollingRef = useRef(new Map()) // jobId -> intervalId
+  const tagProgressSeqRef = useRef(0)
 
   const [confirmDelete, setConfirmDelete] = useState({
     open: false,
     tagName: null,
   })
+
+  const fetchTagsPage = useCallback(async ({ page, limit }) => {
+    const tagRows = await ingestionApi.listTags(projectId, activeDataset, { page, limit })
+    return tagRows || []
+  }, [projectId, activeDataset])
+
+  const {
+    items: tags,
+    setItems: setTags,
+    loading: tagsLoading,
+    loadingMore: tagsLoadingMore,
+    error: tagsError,
+    hasMore: tagsHasMore,
+    loadMore: loadMoreTags,
+    refresh: refreshTags,
+  } = useLazyCollection({
+    fetchPage: fetchTagsPage,
+    deps: [projectId, activeDataset],
+    errorMessage: 'Failed to load tags.',
+    pageSize: 30,
+    enabled: !selectedTag,
+  })
+
+  const loadMoreTagsRef = useInfiniteScrollTrigger({
+    enabled: !selectedTag,
+    hasMore: tagsHasMore,
+    isLoading: tagsLoading || tagsLoadingMore,
+    onLoadMore: loadMoreTags,
+  })
+
+  // const date = project?.created_at
+  // const members = project?.members?.length || 0
 
   const stopPolling = (jobId) => {
     const t = pollingRef.current.get(jobId)
@@ -106,66 +140,43 @@ const members = project?.members?.length || 0;
     pollingRef.current.set(jobId, timer)
   }
 
-  const handleViewMembers = () => {
-  setProjectMembers(project?.members || []);
-  setShowMembersModal(true);
-};
-  /* ================= Refresh tags + attach polling ================= */
-  // const refreshTagsAndAttachProgress = async () => {
-  //   const tagRows = await ingestionApi.listTags(projectId, activeDataset)
-  //   setTags(tagRows || [])
+  const syncTagProgress = useCallback(async (tagRows) => {
+    const rows = Array.isArray(tagRows) ? tagRows : []
+    if (!rows.length) {
+      setTagJobMap({})
+      stopAllPolling()
+      return
+    }
 
-  //   const map = {}
-  //   for (const t of tagRows || []) {
-  //     try {
-  //       const files = await ingestionApi.listFilesInTag(projectId, activeDataset, t.tag_name)
-  //       if (files?.length) {
-  //         const latestJobId = files[0]?.job_id
-  //         if (latestJobId) {
-  //           map[t.tag_name] = latestJobId
-  //           pollJob(latestJobId)
-  //         }
-  //       }
-  //     } catch {
-  //       // ignore per-tag failure
-  //     }
-  //   }
-  //   setTagJobMap(map)
-  // }
-
-  const refreshTagsAndAttachProgress = async () => {
-  try {
-    const tagRows = await ingestionApi.listTags(projectId, activeDataset)
-    setTags(tagRows || [])
-
-    if (!tagRows?.length) return
-
-    const fileResults = await Promise.all(
-      tagRows.map((t) =>
-        ingestionApi
-          .listFilesInTag(projectId, activeDataset, t.tag_name)
-          .then((files) => ({ tag: t.tag_name, files }))
-          .catch(() => ({ tag: t.tag_name, files: [] }))
-      )
+    const seq = ++tagProgressSeqRef.current
+    const entries = await Promise.all(
+      rows.map(async (tag) => {
+        try {
+          const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tag.tag_name, {
+            page: 1,
+            limit: 1,
+          })
+          return [tag.tag_name, files?.[0]?.job_id || null]
+        } catch {
+          return [tag.tag_name, null]
+        }
+      })
     )
 
-    const map = {}
+    if (tagProgressSeqRef.current !== seq) return
 
-    fileResults.forEach(({ tag, files }) => {
-      if (files?.length) {
-        const latestJobId = files[0]?.job_id
-        if (latestJobId) {
-          map[tag] = latestJobId
-          pollJob(latestJobId)
-        }
-      }
-    })
+    const nextTagJobMap = {}
+    for (const [tagName, jobId] of entries) {
+      if (jobId) nextTagJobMap[tagName] = jobId
+    }
 
-    setTagJobMap(map)
-  } catch (err) {
-    console.error(err)
-  }
-}
+    const nextJobIds = new Set(Object.values(nextTagJobMap))
+    for (const [jobId] of pollingRef.current.entries()) {
+      if (!nextJobIds.has(jobId)) stopPolling(jobId)
+    }
+    setTagJobMap(nextTagJobMap)
+    for (const jobId of nextJobIds) pollJob(jobId)
+  }, [projectId, activeDataset])
 
   /* ================= Dataset / project change ================= */
   // useEffect(() => {
@@ -202,49 +213,32 @@ const members = project?.members?.length || 0;
   }
 }, [projectId, activeDataset])
 
-  /* ================= Delete tag ================= */
-  // const handleDeleteTag = async (tagName) => {
-  //   if (!window.confirm(`Delete "${tagName}" and all files inside it? This cannot be undone.`)) return
+  useEffect(() => {
+    if (selectedTag || tagsLoading || tagsError) return
+    void syncTagProgress(tags)
+  }, [selectedTag, tags, tagsLoading, tagsError, syncTagProgress])
 
-  //   setDeletingTag(tagName)
-  //   try {
-  //     const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tagName)
-  //     await Promise.all(
-  //       (files || []).map((file) =>
-  //         file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
-  //       )
-  //     )
+  const listAllFilesInTag = useCallback(async (tagName) => {
+    const allFiles = []
+    let page = 1
+    const limit = 200
 
-  //     setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
-  //     setTagJobMap((prev) => {
-  //       const copy = { ...prev }
-  //       delete copy[tagName]
-  //       return copy
-  //     })
+    while (true) {
+      const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tagName, { page, limit })
+      if (!files?.length) break
+      allFiles.push(...files)
+      if (files.length < limit) break
+      page += 1
+    }
 
-  //     if (selectedTag === tagName) setSelectedTag(null)
-  //   } catch (err) {
-  //     window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
-  //   } finally {
-  //     setDeletingTag(null)
-  //   }
-  // }
-
-  // const onCloseModal = async () => {
-  //   setModal({ open: false, mode: 'create', tag: '' })
-  //   await refreshTagsAndAttachProgress()
-  //   setTimeout(refreshTagsAndAttachProgress, 1500)
-  // }
+    return allFiles
+  }, [projectId, activeDataset])
 
   const handleDeleteTag = async (tagName) => {
     setDeletingTag(tagName)
 
     try {
-      const files = await ingestionApi.listFilesInTag(
-        projectId,
-        activeDataset,
-        tagName
-      )
+      const files = await listAllFilesInTag(tagName)
 
       await Promise.all(
         (files || []).map((file) =>
@@ -259,6 +253,10 @@ const members = project?.members?.length || 0;
         delete copy[tagName]
         return copy
       })
+      const removedJobId = tagJobMap[tagName]
+      if (removedJobId) {
+        stopPolling(removedJobId)
+      }
 
       if (selectedTag === tagName) setSelectedTag(null)
     } catch (err) {
@@ -273,8 +271,10 @@ const members = project?.members?.length || 0;
 
   const onCloseModal = async () => {
     setModal({ open: false, mode: 'create', tag: '' })
-    await refreshTagsAndAttachProgress()
-    setTimeout(refreshTagsAndAttachProgress, 1500)
+    await refreshTags()
+    setTimeout(() => {
+      void refreshTags()
+    }, 1500)
   }
 
   const normalizeEmail = (email) => (email || '').trim().toLowerCase()
@@ -350,23 +350,6 @@ const members = project?.members?.length || 0;
       </button>
     )}
   </div>
-
-  {/* ===== Description (Next Line) ===== */}
-  {/* <div
-    style={{
-      fontSize: "12px",
-      fontWeight: 400,
-      color: "#514F4F",
-      fontFamily: "SF Pro, Helvetica, Arial, sans-serif",
-      marginTop: 8,
-      marginBottom: 12,
-      maxWidth: "100%",
-    }}
-  >
-    <span style={{ color: "red" }}>{desc}</span>
-
-    {/* <SeeMoreText text={desc} /> */}
-  {/* </div>  */}
 
   {/* ===== Description ===== */}
 {desc && (
@@ -526,6 +509,30 @@ const members = project?.members?.length || 0;
               </tr>
             </thead>
             <tbody>
+              {tagsLoading && tags.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 16, textAlign: 'center' }}>
+                    Loading tags...
+                  </td>
+                </tr>
+              )}
+
+              {!tagsLoading && tagsError && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 16, textAlign: 'center', color: '#b42318' }}>
+                    {tagsError}
+                  </td>
+                </tr>
+              )}
+
+              {!tagsLoading && !tagsError && tags.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 16, textAlign: 'center' }}>
+                    No tags found.
+                  </td>
+                </tr>
+              )}
+
               {tags.map((tag) => {
                 const jobId = tagJobMap[tag.tag_name]
                 const jp = jobId ? jobProgress[jobId] : null
@@ -612,6 +619,13 @@ const members = project?.members?.length || 0;
               })}
             </tbody>
           </table>
+
+          <div ref={loadMoreTagsRef} style={{ height: 1 }} />
+          {tagsLoadingMore && (
+            <div className="summary-label" style={{ padding: '8px 0 0 0' }}>
+              Loading more tags...
+            </div>
+          )}
         </div>
       )}
 

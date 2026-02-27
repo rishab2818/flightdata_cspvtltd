@@ -3,9 +3,12 @@ from __future__ import annotations
 import io
 import os
 import tempfile
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+import numexpr as ne
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -23,6 +26,7 @@ from app.calculations.expression import (
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
+from app.mat.reader import format_mat_variable_data_preview, read_mat_variable_array
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
 
@@ -88,6 +92,80 @@ class FormulaValidateIn(BaseModel):
     formula_expression: str = Field(..., description="Expression to validate")
 
 
+class MatFormulaInputIn(BaseModel):
+    variable: str = Field(..., description="MAT variable name")
+    slice_expr: str | None = Field(default=None, description="MATLAB-style slice expression")
+
+
+class MatCalculationApplyIn(BaseModel):
+    formula_expression: str = Field(..., description="Free-form formula expression")
+    variable_map: dict[str, MatFormulaInputIn] = Field(
+        default_factory=dict,
+        description="Mapping from formula variable names to MAT variable + optional slice",
+    )
+    output_variable: str = Field(..., description="Derived MAT variable name")
+    max_rows: int = Field(default=60, ge=1, le=500)
+    max_cols: int = Field(default=40, ge=1, le=200)
+    max_pages: int = Field(default=12, ge=1, le=100)
+
+
+def _ensure_mat_job_or_raise(job: dict):
+    filename = (job.get("filename") or "").lower()
+    if not filename.endswith(".mat"):
+        raise HTTPException(status_code=400, detail="Selected file is not a MAT file")
+
+
+def _evaluate_mat_formula_payload(
+    job_id: str,
+    payload: MatCalculationApplyIn,
+) -> tuple[str, list[str], dict[str, dict[str, Any]], np.ndarray]:
+    normalized_formula, variables = normalize_formula_expression(payload.formula_expression)
+
+    missing = [name for name in variables if name not in payload.variable_map]
+    if missing:
+        raise ValueError(f"Missing MAT variable mapping for: {', '.join(missing)}")
+
+    unexpected = [name for name in payload.variable_map if name not in set(variables)]
+    if unexpected:
+        raise ValueError(f"Unknown variable(s) in mapping: {', '.join(unexpected)}")
+
+    local_env: dict[str, Any] = {}
+    source_map: dict[str, dict[str, Any]] = {}
+    for formula_var in variables:
+        source = payload.variable_map.get(formula_var)
+        source_var = str(source.variable or "").strip() if source else ""
+        if not source_var:
+            raise ValueError(f"Missing MAT source variable for '{formula_var}'")
+
+        source_slice = str(source.slice_expr or "").strip() if source else ""
+        array_info = read_mat_variable_array(
+            job_id=job_id,
+            var_name=source_var,
+            slice_expr=source_slice or None,
+        )
+        values = np.asarray(array_info["values"])
+        local_env[formula_var] = values
+        source_map[formula_var] = {
+            "variable": array_info["variable"],
+            "slice_expr": array_info["slice_expr"],
+            "shape": array_info["shape"],
+            "dtype": array_info["dtype"],
+        }
+
+    try:
+        result = ne.evaluate(normalized_formula, local_dict=local_env)
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(f"Failed to evaluate MAT formula: {exc}") from exc
+
+    result_arr = np.asarray(result)
+    if result_arr.dtype.kind in {"O", "S", "U", "V"}:
+        raise ValueError("MAT formula result is non-numeric")
+    if result_arr.size > 2_000_000:
+        raise ValueError("MAT formula result is too large for preview")
+
+    return normalized_formula, variables, source_map, result_arr
+
+
 def _resolve_expression(payload: CalculationApplyIn) -> tuple[str, str | None, list[str]]:
     formula_expression = (payload.formula_expression or "").strip()
     if formula_expression:
@@ -130,6 +208,100 @@ async def validate_formula(
         "formula_expression": payload.formula_expression.strip(),
         "normalized_expression": normalized,
         "variables": variables,
+    }
+
+
+@router.post("/jobs/{job_id}/mat/preview")
+async def preview_mat_calculation(
+    job_id: str,
+    payload: MatCalculationApplyIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    job = await ingestions.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(job["project_id"], user)
+    _ensure_mat_job_or_raise(job)
+
+    output_variable = (payload.output_variable or "").strip()
+    if not output_variable:
+        raise HTTPException(status_code=400, detail="output_variable is required")
+
+    try:
+        normalized_formula, variables, source_map, result_arr = _evaluate_mat_formula_payload(job_id, payload)
+        preview = format_mat_variable_data_preview(
+            variable=output_variable,
+            values=result_arr,
+            slice_expr="(formula)",
+            max_rows=payload.max_rows,
+            max_cols=payload.max_cols,
+            max_pages=payload.max_pages,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "job_id": job_id,
+        "filename": job.get("filename"),
+        "formula_expression": payload.formula_expression.strip(),
+        "normalized_formula_expression": normalized_formula,
+        "required_variables": variables,
+        "variable_sources": source_map,
+        "derived_variable": {"name": output_variable, "formula_expression": normalized_formula},
+        **preview,
+    }
+
+
+@router.post("/jobs/{job_id}/mat/materialize")
+async def materialize_mat_calculation(
+    job_id: str,
+    payload: MatCalculationApplyIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    job = await ingestions.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(job["project_id"], user)
+    _ensure_mat_job_or_raise(job)
+
+    output_variable = (payload.output_variable or "").strip()
+    if not output_variable:
+        raise HTTPException(status_code=400, detail="output_variable is required")
+
+    try:
+        normalized_formula, variables, source_map, result_arr = _evaluate_mat_formula_payload(job_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    metadata = dict(job.get("metadata") or {})
+    existing = list(metadata.get("mat_derived_formulas") or [])
+    existing = [item for item in existing if (item or {}).get("name") != output_variable]
+
+    now = datetime.utcnow().isoformat()
+    saved_item = {
+        "name": output_variable,
+        "formula_expression": payload.formula_expression.strip(),
+        "normalized_formula_expression": normalized_formula,
+        "required_variables": variables,
+        "variable_sources": source_map,
+        "result_shape": [int(x) for x in result_arr.shape],
+        "result_dtype": str(result_arr.dtype),
+        "saved_at": now,
+    }
+    existing.append(saved_item)
+    metadata["mat_derived_formulas"] = existing
+
+    await ingestions.update_job_fields(
+        job_id,
+        {
+            "metadata": metadata,
+        },
+    )
+
+    return {
+        "ok": True,
+        "job_id": job_id,
+        "saved": saved_item,
     }
 
 

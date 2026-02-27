@@ -210,6 +210,9 @@ async def create_visualization(
                 "var": payload.var,
                 "mapping": payload.mapping,
                 "filters": payload.filters or {},
+                "derived_formulas": [
+                    item for item in (payload.mat_derived_formulas or []) if isinstance(item, dict)
+                ],
             },
             dataset_type=payload.dataset_type,
             tag_name=payload.tag_name,
@@ -612,10 +615,13 @@ async def visualization_download(viz_id: str, user: CurrentUser = Depends(get_cu
 
 @router.get("/project/{project_id}", response_model=list[VisualizationOut])
 async def list_project_visualizations(
-    project_id: str, user: CurrentUser = Depends(get_current_user)
+    project_id: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_member(project_id, user)
-    docs = await repo.list_for_project(project_id)
+    docs = await repo.list_for_project(project_id, page=page, limit=limit)
 
     output = []
     for doc in docs:

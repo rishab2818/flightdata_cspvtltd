@@ -118,10 +118,22 @@ def _attach_coord_guesses(index: MatFileIndex) -> MatFileIndex:
     return index.model_copy(update={"variables": patched_vars, "coords_guess": coords_guess})
 
 
+def _is_mat_struct(value: Any) -> bool:
+    return hasattr(value, "_fieldnames") and isinstance(getattr(value, "_fieldnames"), (list, tuple))
+
+
+def _iter_mat_struct_fields(value: Any):
+    for field_name in getattr(value, "_fieldnames", []) or []:
+        if not isinstance(field_name, str):
+            continue
+        yield field_name, getattr(value, field_name, None)
+
+
 def _index_legacy(path: str) -> MatFileIndex:
     from scipy.io import loadmat  # type: ignore
 
-    raw = loadmat(path, struct_as_record=False, squeeze_me=False, simplify_cells=True)
+    # Keep native MATLAB dimensionality (for example 14x1 vs 1x14 vectors).
+    raw = loadmat(path, struct_as_record=False, squeeze_me=False, simplify_cells=False)
     top = {k: v for k, v in raw.items() if not k.startswith("__")}
 
     seen: set[int] = set()
@@ -186,6 +198,14 @@ def _index_legacy(path: str) -> MatFileIndex:
                     dtype="cell",
                     kind="cell",
                 )
+            elif _is_mat_struct(value):
+                variables[path_name] = MatVariableIndex(
+                    name=path_name,
+                    shape=[],
+                    ndim=0,
+                    dtype="struct",
+                    kind="struct",
+                )
             else:
                 _put(path_name, value)
 
@@ -209,6 +229,13 @@ def _index_legacy(path: str) -> MatFileIndex:
                 _walk(v, next_path)
             return
 
+        if _is_mat_struct(value):
+            seen.add(obj_id)
+            for field_name, field_value in _iter_mat_struct_fields(value):
+                next_path = f"{path_name}.{field_name}" if path_name else field_name
+                _walk(field_value, next_path)
+            return
+
         try:
             arr = np.asarray(value)
         except Exception:
@@ -216,6 +243,15 @@ def _index_legacy(path: str) -> MatFileIndex:
 
         if arr.dtype.kind == "O":
             seen.add(obj_id)
+            # Common MATLAB container shape for scalar struct/cell wrappers.
+            if arr.size == 1:
+                try:
+                    child = arr.reshape(-1)[0]
+                except Exception:
+                    child = None
+                if child is not None:
+                    _walk(child, path_name)
+                    return
             for idx, child in np.ndenumerate(arr):
                 idx_text = ",".join(str(int(i)) for i in idx)
                 next_path = f"{path_name}[{idx_text}]"
@@ -226,7 +262,7 @@ def _index_legacy(path: str) -> MatFileIndex:
         _walk(value, str(name))
 
     variables_list = sorted(variables.values(), key=lambda item: item.name.lower())
-    return MatFileIndex(version="legacy", variables=variables_list)
+    return MatFileIndex(version="legacy", parser_revision=2, variables=variables_list)
 
 
 def _kind_from_h5_node(node) -> tuple[str, str]:
@@ -284,7 +320,7 @@ def _index_v73(path: str) -> MatFileIndex:
             )
 
     variables.sort(key=lambda item: item.name.lower())
-    return MatFileIndex(version="v7.3", variables=variables)
+    return MatFileIndex(version="v7.3", parser_revision=2, variables=variables)
 
 
 def index_mat(path: str) -> MatFileIndex:

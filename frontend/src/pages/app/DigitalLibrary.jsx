@@ -12,6 +12,8 @@ import Delete from '../../assets/Delete.svg'
 import PencilSimple from '../../assets/PencilSimple.svg'
 import ViewIcon from '../../assets/ViewIcon.svg'
 import DownloadSimple from '../../assets/DownloadSimple.svg'
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 
 
@@ -54,9 +56,6 @@ const toIsoInput = (value) => {
 };
 
 export default function DigitalLibrary() {
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("newest");
@@ -81,23 +80,36 @@ export default function DigitalLibrary() {
     docDate: doc.doc_date,
   }), []);
 
-  const loadDocuments = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const data = await documentsApi.listBySection("digital_library");
-      setDocuments(data.map(mapDocument));
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load your documents. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [mapDocument]);
+  const fetchDocumentsPage = useCallback(
+    async ({ page, limit }) => {
+      const data = await documentsApi.listBySection("digital_library", {
+        page,
+        limit,
+      });
+      return (data || []).map(mapDocument);
+    },
+    [mapDocument]
+  );
 
-  React.useEffect(() => {
-    loadDocuments();
-  }, [loadDocuments]);
+  const {
+    items: documents,
+    setItems: setDocuments,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchDocumentsPage,
+    deps: ["digital_library"],
+    errorMessage: "Unable to load your documents. Please try again.",
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const handleUploaded = (doc) => {
     setDocuments((prev) => [mapDocument(doc), ...prev]);
@@ -356,6 +368,12 @@ const confirmDelete = async () => {
             </tbody>
           </table>
         </div>
+        {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+        {loadingMore && (
+          <div className={styles.loading} style={{ paddingTop: 8 }}>
+            Loading more...
+          </div>
+        )}
       </div>
 
       <DigitalLibraryUploadModal
