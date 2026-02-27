@@ -3,8 +3,9 @@ import { axiosClient } from "../lib/axiosClient";
 
 export const documentsApi = {
   // List only *my* Minutes of Meeting documents for a specific subsection
-  listMinutes: async (subsection, projectId) => {
-    const params = { section: "minutes_of_meeting" };
+  listMinutes: async (subsection, projectId, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { section: "minutes_of_meeting", page, limit };
     if (subsection) {
       params.subsection = subsection; // "tcm" | "pmrc" | "ebm" | "gdm"
     }
@@ -16,8 +17,9 @@ export const documentsApi = {
   },
 
   // Generic list by section (no subsection)
-  listBySection: async (section) => {
-    const params = { section }; // e.g. "inventory_records"
+  listBySection: async (section, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { section, page, limit }; // e.g. "inventory_records"
     const { data } = await axiosClient.get("/api/documents", { params });
     return data; // array of UserDocumentOut
   },

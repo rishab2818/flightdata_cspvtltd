@@ -582,6 +582,8 @@ import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 import { useDownload } from "../../components/common/useDownload";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 
 const BORDER = "#E2E8F0";
@@ -616,9 +618,6 @@ function StatusBadge({ status }) {
 /* --------------------- Main Component --------------------- */
 export default function TrainingRecords() {
   const { projectId } = useParams();
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
@@ -631,23 +630,33 @@ export default function TrainingRecords() {
   
       const { download, view, loadingFiles, errorFiles } = useDownload(recordsApi.downloadTraining);
 
-  const loadRecords = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const data = await recordsApi.listTraining(projectId);
-      setRecords(data);
-    } catch (e) {
-      console.error(e);
-      setError("Failed to load training records.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchRecordsPage = React.useCallback(
+    async ({ page, limit }) => {
+      const data = await recordsApi.listTraining(projectId, { page, limit });
+      return data || [];
+    },
+    [projectId]
+  );
 
-  useEffect(() => {
-    loadRecords();
-  }, [projectId]);
+  const {
+    items: records,
+    setItems: setRecords,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchRecordsPage,
+    deps: [projectId],
+    errorMessage: "Failed to load training records.",
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const filtered = useMemo(() => {
   const q = search.trim().toLowerCase();
@@ -1097,13 +1106,19 @@ export default function TrainingRecords() {
                 })}
             </tbody>
           </table>
+          {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+          {loadingMore && (
+            <div style={{ paddingTop: 8, textAlign: "center", color: "#64748b" }}>
+              Loading more...
+            </div>
+          )}
         </div>
       </div>
 
       {showModal && (
         <TrainingModal
           onClose={closeModal}
-          onCreated={loadRecords}
+          onCreated={(created) => setRecords((prev) => [created, ...prev])}
           editingRecord={editingRecord} // Pass the editing record
           projectId={projectId}
           onUpdated={handleUpdate} // Handle successful update

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectCard from './ProjectCard';
 import NewProjectModal from './NewProjectModal';
@@ -8,6 +8,8 @@ import { COLORS, SPACING } from '../../styles/constants';
 import Button from '../common/Button';
 import folderOpen from '../../assets/FolderOpen.svg';
 import EmptySection from '../common/EmptyProject';
+import { useLazyCollection } from '../../hooks/useLazyCollection';
+import { useInfiniteScrollTrigger } from '../../hooks/useInfiniteScrollTrigger';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -21,28 +23,35 @@ export default function ProjectsSectionImproved() {
   const role = user?.role?.toUpperCase?.();
   const navigate = useNavigate();
 
-  const [projects, setProjects] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const currentUserEmail = user?.email || 'unknown@example.com';
 
-  const loadProjects = async () => {
-    try {
-      const data = await projectApi.list();
-      const sorted = (data || [])
-        .slice()
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setProjects(sorted);
-    } catch (err) {
-      console.error('Failed to load projects', err);
-      setProjects([]);
-    }
-  };
-
-  useEffect(() => {
-    loadProjects();
+  const fetchProjectsPage = useCallback(async ({ page, limit }) => {
+    const data = await projectApi.list({ page, limit });
+    return data || [];
   }, []);
+
+  const {
+    items: projects,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useLazyCollection({
+    fetchPage: fetchProjectsPage,
+    deps: [currentUserEmail],
+    errorMessage: 'Failed to load projects.',
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const handleCreateProject = async (payloadFromModal) => {
     try {
@@ -58,7 +67,7 @@ export default function ProjectsSectionImproved() {
 
       await projectApi.create(payload);
       setShowModal(false);
-      await loadProjects();
+      await refresh();
     } catch (err) {
       console.error('Error creating project', err);
     } finally {
@@ -149,20 +158,30 @@ export default function ProjectsSectionImproved() {
             paddingRight: 4,
           }}
         >
-          {projects.length === 0 ? (
+          {loading && projects.length === 0 ? (
+            <div style={{ color: '#64748b', fontSize: 14 }}>Loading projects...</div>
+          ) : error ? (
+            <div style={{ color: '#b91c1c', fontSize: 14 }}>{error}</div>
+          ) : projects.length === 0 ? (
             <EmptySection />
           ) : (
-            projects.map((p, i) => (
-              <ProjectCard
-                key={p._id || i}
-                name={p.project_name}
-                type="Aero Data"
-                date={formatDate(p.created_at)}
-                members={p.members?.length || 0}
-                desc={p.project_description}
-                onView={() => navigate(`/app/projects/${p._id}`)}
-              />
-            ))
+            <>
+              {projects.map((p, i) => (
+                <ProjectCard
+                  key={p._id || i}
+                  name={p.project_name}
+                  type="Aero Data"
+                  date={formatDate(p.created_at)}
+                  members={p.members?.length || 0}
+                  desc={p.project_description}
+                  onView={() => navigate(`/app/projects/${p._id}`)}
+                />
+              ))}
+              {hasMore && <div ref={loadMoreRef} style={{ height: 1 }} />}
+              {loadingMore && (
+                <div style={{ color: '#64748b', fontSize: 14 }}>Loading more...</div>
+              )}
+            </>
           )}
         </div>
       </div>

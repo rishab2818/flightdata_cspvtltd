@@ -11,6 +11,7 @@ import {
   tokenizeFormula,
 } from '../../../calculations/formulaHelpers'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
+import { useInfiniteScrollTrigger } from "../../../hooks/useInfiniteScrollTrigger";
 
 import './ProjectVisualisation.css'
 
@@ -185,7 +186,7 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
 
   /* ================= visualization state ================= */
   const [visualizations, setVisualizations] = useState([])
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 30;
 
 const [vizPage, setVizPage] = useState(1);
 const [hasMoreViz, setHasMoreViz] = useState(true);
@@ -789,6 +790,13 @@ const fetchVisualizations = async (page = 1, reset = false) => {
     setLoadingViz(false)
   }
 }
+
+const savedVizLoadRef = useInfiniteScrollTrigger({
+  enabled: isExpanded,
+  hasMore: isExpanded && hasMoreViz,
+  isLoading: loadingViz,
+  onLoadMore: () => fetchVisualizations(vizPage + 1),
+})
 
   /* ================= columns for active series ================= */
   const activeFiles = useMemo(() => {
@@ -2637,18 +2645,12 @@ disabled={deletingViz === viz.viz_id}
                 ))}
               </div>
 
-              {isExpanded && hasMoreViz && (
-  <div style={{ textAlign: 'center', marginTop: 12 }}>
-    <button
-      type="button"
-      className="project-shell__nav-link"
-      disabled={loadingViz}
-      onClick={() => fetchVisualizations(vizPage + 1)}
-    >
-      {loadingViz ? 'Loading…' : 'Load more'}
-    </button>
-  </div>
-)}
+              {isExpanded && hasMoreViz && <div ref={savedVizLoadRef} style={{ height: 1 }} />}
+              {isExpanded && loadingViz && visualizations.length > 0 && (
+                <div style={{ textAlign: 'center', marginTop: 12, color: '#64748b' }}>
+                  Loading more...
+                </div>
+              )}
 
             </div>
           </div>

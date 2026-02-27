@@ -190,7 +190,11 @@ async def _download_url(section: RecordSection, record_id: str, user: CurrentUse
 
 
 async def _list_records(
-    section: RecordSection, user: CurrentUser, project_id: Optional[str] = None
+    section: RecordSection,
+    user: CurrentUser,
+    project_id: Optional[str] = None,
+    page: int = 1,
+    limit: int = 30,
 ):
     db = await get_db()
     query = {"section": section.value, "owner_email": user.email}
@@ -200,9 +204,10 @@ async def _list_records(
     cursor = (
         db.records.find(query)
         .sort("created_at", -1)
-        .limit(500)
+        .skip((page - 1) * limit)
+        .limit(limit)
     )
-    return await cursor.to_list(length=500)
+    return await cursor.to_list(length=limit)
 
 
 @router.post("/inventory-records", response_model=SupplyOrderOut)
@@ -227,8 +232,12 @@ async def create_supply_order(
 
 
 @router.get("/inventory-records", response_model=List[SupplyOrderOut])
-async def list_supply_orders(user: CurrentUser = Depends(get_current_user)):
-    rows = await _list_records(RecordSection.INVENTORY_RECORDS, user)
+async def list_supply_orders(
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+):
+    rows = await _list_records(RecordSection.INVENTORY_RECORDS, user, page=page, limit=limit)
     results: List[SupplyOrderOut] = []
     for row in rows:
         row_data = {k: row.get(k) for k in SupplyOrderCreate.model_fields.keys()}
@@ -306,9 +315,11 @@ async def list_divisional_records(
         default=None,
         description="Optional project filter. If provided, only returns records for that project.",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
-    rows = await _list_records(RecordSection.DIVISIONAL_RECORDS, user, project_id)
+    rows = await _list_records(RecordSection.DIVISIONAL_RECORDS, user, project_id, page=page, limit=limit)
     return [
         DivisionalRecordOut(
             record_id=str(row["_id"]),
@@ -379,9 +390,11 @@ async def list_customer_feedbacks(
         default=None,
         description="Optional project filter. If provided, only returns records for that project.",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
-    rows = await _list_records(RecordSection.CUSTOMER_FEEDBACKS, user, project_id)
+    rows = await _list_records(RecordSection.CUSTOMER_FEEDBACKS, user, project_id, page=page, limit=limit)
     return [
         CustomerFeedbackOut(
             record_id=str(row["_id"]),
@@ -452,9 +465,11 @@ async def list_technical_reports(
         default=None,
         description="Optional project filter. If provided, only returns reports for that project.",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
-    rows = await _list_records(RecordSection.TECHNICAL_REPORTS, user, project_id)
+    rows = await _list_records(RecordSection.TECHNICAL_REPORTS, user, project_id, page=page, limit=limit)
     return [
         TechnicalReportOut(
             record_id=str(row["_id"]),
@@ -525,9 +540,11 @@ async def list_training_records(
         default=None,
         description="Optional project filter. If provided, only returns records for that project.",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
-    rows = await _list_records(RecordSection.TRAINING_RECORDS, user, project_id)
+    rows = await _list_records(RecordSection.TRAINING_RECORDS, user, project_id, page=page, limit=limit)
     return [
         TrainingRecordOut(
             record_id=str(row["_id"]),

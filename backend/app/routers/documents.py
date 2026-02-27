@@ -239,6 +239,8 @@ async def list_user_documents(
         None,
         description="Optional project filter (only returns docs linked to the project)",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
     """List all documents of the current user for a given section (and optional subsection)."""
@@ -266,8 +268,13 @@ async def list_user_documents(
             )
         query["project_id"] = project_id
 
-    cursor = db.user_documents.find(query).sort("uploaded_at", -1)
-    rows = await cursor.to_list(length=500)
+    cursor = (
+        db.user_documents.find(query)
+        .sort("uploaded_at", -1)
+        .skip((page - 1) * limit)
+        .limit(limit)
+    )
+    rows = await cursor.to_list(length=limit)
 
     results: List[UserDocumentOut] = []
     for row in rows:

@@ -127,15 +127,16 @@ class VisualizationRepository:
         doc.pop("_id", None)
         return doc
 
-    async def list_for_project(self, project_id: str) -> List[dict]:
+    async def list_for_project(self, project_id: str, page: int = 1, limit: int = 30) -> List[dict]:
         db = await get_db()
         cursor = (
             db[self.collection_name]
             .find({"project_id": project_id})
             .sort("created_at", -1)
-            .limit(50)
+            .skip((page - 1) * limit)
+            .limit(limit)
         )
-        docs = await cursor.to_list(length=50)
+        docs = await cursor.to_list(length=limit)
         for doc in docs:
             doc["viz_id"] = str(doc["_id"])
             doc.pop("_id", None)

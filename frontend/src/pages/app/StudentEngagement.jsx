@@ -17,6 +17,8 @@ import Delete from '../../assets/Delete.svg'
 import PencilSimple from '../../assets/PencilSimple.svg'
 import ViewIcon from '../../assets/ViewIcon.svg'
 import DownloadSimple from '../../assets/DownloadSimple.svg'
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 
 const BADGE_COLORS = {
@@ -99,9 +101,6 @@ export default function StudentEngagement() {
   const [approvalFilter, setApprovalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [editingRecord, setEditingRecord] = useState(null);
   const [existingFileMeta, setExistingFileMeta] = useState(null);
 
@@ -129,23 +128,39 @@ export default function StudentEngagement() {
 
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
 
   /* -------------------- Fetch -------------------- */
-  const loadRecords = async () => {
-    setLoading(true);
-    try {
-      const data = await studentEngagementApi.list(undefined, projectId);
-      setRecords(data || []);
-    } catch (err) {
-      setError("Failed to load student engagement records");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchRecordsPage = React.useCallback(
+    async ({ page, limit }) => {
+      const data = await studentEngagementApi.list(undefined, projectId, {
+        page,
+        limit,
+      });
+      return data || [];
+    },
+    [projectId]
+  );
 
-  useEffect(() => {
-    loadRecords();
-  }, [projectId]);
+  const {
+    items: records,
+    setItems: setRecords,
+    loading,
+    loadingMore,
+    error: loadError,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchRecordsPage,
+    deps: [projectId],
+    errorMessage: "Failed to load student engagement records",
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const onChange = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -241,7 +256,7 @@ export default function StudentEngagement() {
     setFile(null);
     setExistingFileMeta(null);
     setEditingRecord(null);
-    setError("");
+    setFormError("");
     setDateError("");
   };
 
@@ -286,10 +301,10 @@ export default function StudentEngagement() {
   /* -------------------- Submit -------------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setFormError("");
 
     if (dateError) {
-      setError(dateError);
+      setFormError(dateError);
       return;
     }
 
@@ -360,7 +375,7 @@ export default function StudentEngagement() {
       setShowModal(false);
       resetFormState();
     } catch (err) {
-      setError("Unable to save student engagement record. Please check the details.");
+      setFormError("Unable to save student engagement record. Please check the details.");
     } finally {
       setSubmitting(false);
     }
@@ -492,15 +507,15 @@ export default function StudentEngagement() {
               </tr>
             )}
 
-            {!loading && error && (
+            {!loading && loadError && (
               <tr>
                 <td className="TableError" colSpan={10}>
-                  {error}
+                  {loadError}
                 </td>
               </tr>
             )}
 
-            {!loading && !error && filtered.length === 0 && (
+            {!loading && !loadError && filtered.length === 0 && (
               <tr >
                 <td colSpan={10} style={{ padding: 0 }}>
                   <div
@@ -520,7 +535,7 @@ export default function StudentEngagement() {
             )}
 
             {!loading &&
-              !error &&
+              !loadError &&
               filtered.map((row) => (
                 <tr key={row.record_id}>
                   <td className={styles.bold}>{row.student || "—"}</td>
@@ -599,6 +614,12 @@ export default function StudentEngagement() {
               ))}
           </tbody>
         </table>
+        {hasMore && !loadError && <div ref={loadMoreRef} style={{ height: 1 }} />}
+        {loadingMore && (
+          <div style={{ paddingTop: 8, textAlign: "center", color: "#64748b" }}>
+            Loading more...
+          </div>
+        )}
       </div>
 
       {/* Form Modal */}
@@ -873,7 +894,7 @@ export default function StudentEngagement() {
               </button>
             </div>
 
-            {error && <div className={styles.errorMsg}>{error}</div>}
+            {formError && <div className={styles.errorMsg}>{formError}</div>}
           </form>
         </Modal>
       )}

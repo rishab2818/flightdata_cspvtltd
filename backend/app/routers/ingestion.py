@@ -7,7 +7,7 @@ from uuid import uuid4
 from typing import Any, Dict
 from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response, Query
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.auth import CurrentUser, get_current_user
@@ -18,6 +18,7 @@ from app.core.system_info import describe_autoscale
 from app.models.ingestion import IngestionBatchCreateResponse, IngestionCreateResponse, IngestionJobOut, IngestionStatus
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
+from app.db.mongo import get_db
 from app.calculations.derived import (
     apply_derived_columns_to_frame,
     normalize_derived_columns,
@@ -29,6 +30,7 @@ import pyarrow.parquet as pq
 import io
 import pandas as pd
 from minio.error import S3Error
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
@@ -459,14 +461,12 @@ async def job_status(job_id: str, user: CurrentUser = Depends(get_current_user))
     )
 
 
-# for the fetching the data from the tag list 
-from fastapi import Query
-from app.db.mongo import get_db
-
 @router.get("/project/{project_id}/tags")
 async def list_tags(
     project_id: str,
     dataset_type: str = Query(...),
+    page: int = Query(1, ge=1),
+    limit: int = Query(200, ge=1, le=500),
     user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_project_member(project_id, user)
@@ -482,9 +482,11 @@ async def list_tags(
             "visualize_count": {"$sum": {"$cond": ["$visualize_enabled", 1, 0]}},
         }},
         {"$sort": {"latest_created_at": -1}},
+        {"$skip": (page - 1) * limit},
+        {"$limit": limit},
     ]
 
-    rows = await db["ingestion_jobs"].aggregate(pipeline).to_list(length=500)
+    rows = await db["ingestion_jobs"].aggregate(pipeline).to_list(length=limit)
     # clean mongo types
     for r in rows:
         r.pop("_id", None)
@@ -499,23 +501,26 @@ async def list_files_in_tag(
     project_id: str,
     tag_name: str,
     dataset_type: str = Query(...),
+    page: int = Query(1, ge=1),
+    limit: int = Query(200, ge=1, le=500),
     user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_project_member(project_id, user)
 
-    docs = await repo.list_for_project(project_id)
+    db = await get_db()
+    cursor = (
+        db["ingestion_jobs"]
+        .find({"project_id": project_id, "dataset_type": dataset_type, "tag_name": tag_name})
+        .sort("created_at", -1)
+        .skip((page - 1) * limit)
+        .limit(limit)
+    )
+    docs = await cursor.to_list(length=limit)
+    for d in docs:
+        d["job_id"] = str(d["_id"])
+        d.pop("_id", None)
+    return docs
 
-    rows = [
-        d for d in docs
-        if d.get("dataset_type") == dataset_type
-        and d.get("tag_name") == tag_name
-    ]
-
-    return rows
-
-
-# for the edit 
-from pydantic import BaseModel
 
 class TagRenameIn(BaseModel):
     dataset_type: str

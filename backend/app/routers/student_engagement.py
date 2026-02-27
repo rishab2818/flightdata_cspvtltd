@@ -124,6 +124,8 @@ async def list_student_engagements(
         default=None,
         description="Optional project filter. If provided, only returns records for that project.",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
     db = await get_db()
@@ -133,8 +135,13 @@ async def list_student_engagements(
     if project_id:
         query["project_id"] = project_id
 
-    cursor = db.student_engagements.find(query).sort("created_at", -1)
-    rows = await cursor.to_list(length=500)
+    cursor = (
+        db.student_engagements.find(query)
+        .sort("created_at", -1)
+        .skip((page - 1) * limit)
+        .limit(limit)
+    )
+    rows = await cursor.to_list(length=limit)
 
     results: List[StudentEngagementOut] = []
     for row in rows:

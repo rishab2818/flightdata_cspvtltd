@@ -19,6 +19,8 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 import DownloadSimple from "../../assets/DownloadSimple.svg";
 import load from "../../assets/load.svg"
 import { useDownload } from "../../components/common/useDownload";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
@@ -114,9 +116,6 @@ function FiltersBar({ filters, setFilters, openModal }) {
 /* --------------------- Main Component --------------------- */
 export default function DivisionalRecords() {
   const { projectId } = useParams();
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [filters, setFilters] = useState({ type: "all" });
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -132,21 +131,33 @@ export default function DivisionalRecords() {
     setShowModal(true);
   };
 
-  const loadRecords = async () => {
-    try {
-      setLoading(true);
-      const data = await recordsApi.listDivisional(projectId);
-      setRecords(data);
-    } catch {
-      setError("Failed to load divisional records.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchRecordsPage = React.useCallback(
+    async ({ page, limit }) => {
+      const data = await recordsApi.listDivisional(projectId, { page, limit });
+      return data || [];
+    },
+    [projectId]
+  );
 
-  useEffect(() => {
-    loadRecords();
-  }, [projectId]);
+  const {
+    items: records,
+    setItems: setRecords,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchRecordsPage,
+    deps: [projectId],
+    errorMessage: "Failed to load divisional records.",
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const handleView = async (row) => {
     try {
@@ -339,11 +350,17 @@ export default function DivisionalRecords() {
             ))}
           </tbody>
         </table>
+        {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+        {loadingMore && (
+          <div className={styles.centerText} style={{ paddingTop: 8 }}>
+            Loading more...
+          </div>
+        )}
       </div>
       {showModal && (
         <DivisionalModal
           onClose={() => setShowModal(false)}
-          onCreated={loadRecords}
+          onCreated={(created) => setRecords((prev) => [created, ...prev])}
           editingRecord={editingRecord}
           projectId={projectId}
           onUpdated={(updated) => {

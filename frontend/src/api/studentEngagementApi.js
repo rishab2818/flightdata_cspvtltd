@@ -10,8 +10,9 @@ export const studentEngagementApi = {
     return data;
   },
 
-  list: async (approvalStatus, projectId) => {
-    const params = {};
+  list: async (approvalStatus, projectId, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { page, limit };
     if (approvalStatus) {
       params.approval_status = approvalStatus;
     }

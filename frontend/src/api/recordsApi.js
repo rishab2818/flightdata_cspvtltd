@@ -12,8 +12,9 @@ export const recordsApi = {
   },
 
   // Inventory Records
-  listInventory: async () => {
-    const { data } = await axiosClient.get("/api/records/inventory-records");
+  listInventory: async (pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const { data } = await axiosClient.get("/api/records/inventory-records", { params: { page, limit } });
     return data;
   },
   createInventory: async (payload) => {
@@ -43,10 +44,11 @@ export const recordsApi = {
   },
 
   // Divisional Records
-  listDivisional: async (projectId) => {
-    const { data } = await axiosClient.get("/api/records/divisional-records", {
-      params: projectId ? { project_id: projectId } : undefined,
-    });
+  listDivisional: async (projectId, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { page, limit };
+    if (projectId) params.project_id = projectId;
+    const { data } = await axiosClient.get("/api/records/divisional-records", { params });
     return data;
   },
   createDivisional: async (payload) => {
@@ -76,10 +78,11 @@ export const recordsApi = {
   },
 
   // Customer Feedbacks
-  listFeedbacks: async (projectId) => {
-    const { data } = await axiosClient.get("/api/records/customer-feedbacks", {
-      params: projectId ? { project_id: projectId } : undefined,
-    });
+  listFeedbacks: async (projectId, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { page, limit };
+    if (projectId) params.project_id = projectId;
+    const { data } = await axiosClient.get("/api/records/customer-feedbacks", { params });
     return data;
   },
   createFeedback: async (payload) => {
@@ -109,10 +112,11 @@ export const recordsApi = {
   },
 
   // Technical Reports
-  listTechnical: async (projectId) => {
-    const { data } = await axiosClient.get("/api/records/technical-reports", {
-      params: projectId ? { project_id: projectId } : undefined,
-    });
+  listTechnical: async (projectId, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { page, limit };
+    if (projectId) params.project_id = projectId;
+    const { data } = await axiosClient.get("/api/records/technical-reports", { params });
     return data;
   },
   createTechnical: async (payload) => {
@@ -142,10 +146,11 @@ export const recordsApi = {
   },
 
   // Training Records
-  listTraining: async (projectId) => {
-    const { data } = await axiosClient.get("/api/records/training-records", {
-      params: projectId ? { project_id: projectId } : undefined,
-    });
+  listTraining: async (projectId, pagination = {}) => {
+    const { page = 1, limit = 30 } = pagination;
+    const params = { page, limit };
+    if (projectId) params.project_id = projectId;
+    const { data } = await axiosClient.get("/api/records/training-records", { params });
     return data;
   },
   createTraining: async (payload) => {

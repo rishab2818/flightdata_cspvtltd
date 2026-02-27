@@ -17,6 +17,8 @@ import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import FileUploadBox from "../../components/common/FileUploadBox";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 const BORDER = "#E2E8F0";
 
@@ -113,9 +115,6 @@ function QuantityDisplay({ quantity, assignees = [], onManage }) {
 /*-------------------------- Main Component ----------------------*/
 
 export default function InventoryRecords() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
@@ -135,23 +134,33 @@ export default function InventoryRecords() {
     setShowModal(true);
   };
 
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const data = await recordsApi.listInventory();
-      setOrders(
-        (data || []).map((item) => ({
-          ...item,
-          quantity_assignees: item.quantity_assignees ?? [],
-        }))
-      );
-    } catch (e) {
-      setError("Failed to load inventory records.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchOrdersPage = React.useCallback(async ({ page, limit }) => {
+    const data = await recordsApi.listInventory({ page, limit });
+    return (data || []).map((item) => ({
+      ...item,
+      quantity_assignees: item.quantity_assignees ?? [],
+    }));
+  }, []);
+
+  const {
+    items: orders,
+    setItems: setOrders,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+  } = useLazyCollection({
+    fetchPage: fetchOrdersPage,
+    deps: ["inventory-records"],
+    errorMessage: "Failed to load inventory records.",
+  });
+
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const buildPayloadFromOrder = (order) => ({
     so_number: order.so_number || "",
@@ -186,10 +195,6 @@ export default function InventoryRecords() {
       prev.map((o) => (o.record_id === order.record_id ? updated : o))
     );
   };
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
 
   // const handleView = async (row) => {
   //   try {
@@ -486,13 +491,23 @@ export default function InventoryRecords() {
               ))}
           </tbody>
         </table>
+        {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+        {loadingMore && <div style={{ paddingTop: 8, color: "#64748b" }}>Loading more...</div>}
       </div>
 
       {/* Modal */}
       {showModal && (
         <SupplyOrderModal
           onClose={() => setShowModal(false)}
-          onCreated={loadOrders}
+          onCreated={(created) =>
+            setOrders((prev) => [
+              {
+                ...created,
+                quantity_assignees: created?.quantity_assignees ?? [],
+              },
+              ...prev,
+            ])
+          }
           onUpdated={(updated) => {
             setOrders((prev) =>
               prev.map((o) => (o.record_id === updated.record_id ? updated : o))
