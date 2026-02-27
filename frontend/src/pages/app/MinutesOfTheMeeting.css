@@ -335,7 +335,7 @@
 
 .LightModalCard {
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 20px;
   width: 520px;
   max-width: 92vw;
@@ -497,10 +497,11 @@
 }
 
 .ActionListItem {
+  margin-top: 10px;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   padding: 10px 12px;
-  background: #f8fafc;
+  background: #f3f3f5;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -562,6 +563,7 @@ border-radius: 4px;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;
+  font-family: "Inter-Regular",Helvetica;
 }
 
 .chip {
@@ -609,7 +611,8 @@ border-radius: 4px;
 
 .ActionDescription {
   font-size: 13px;
-  color: #0f172a;
+  color: #000000;
+  font-family: "Inter-Regular",Helvetica;
 }
 
 /* Align center for View Action and Actions columns */

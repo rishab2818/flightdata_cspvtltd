@@ -1,26 +1,24 @@
 // src/api/projectapi.js
-import { axiosClient } from '../lib/axiosClient';
+import { axiosClient } from "../lib/axiosClient";
 
 export const projectApi = {
-  // GET http://127.0.0.1:8000/api/projects/count
-  // axiosClient already handles baseURL + token header
   getCounts: async () => {
-    const { data } = await axiosClient.get('/api/projects/count');
-    return data; // expected shape: see comment in StatsCards
+    const { data } = await axiosClient.get("/api/projects/count");
+    return data;
   },
   list: async () => {
-    const { data } = await axiosClient.get('/api/projects');
+    const { data } = await axiosClient.get("/api/projects");
     return data;
   },
   create: async (payload) => {
-    const { data } = await axiosClient.post('/api/projects', payload, {
-      headers: { 'Content-Type': 'application/json' },
+    const { data } = await axiosClient.post("/api/projects", payload, {
+      headers: { "Content-Type": "application/json" },
     });
     return data;
   },
   memberSearch: async (q) => {
     if (!q) return [];
-    const { data } = await axiosClient.get('/api/projects/member-search', {
+    const { data } = await axiosClient.get("/api/projects/member-search", {
       params: { q },
     });
     return data;
@@ -31,18 +29,30 @@ export const projectApi = {
   },
   update: async (projectId, payload) => {
     const { data } = await axiosClient.patch(`/api/projects/${projectId}`, payload, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
     return data;
   },
   patchMembers: async (projectId, payload) => {
     const { data } = await axiosClient.patch(`/api/projects/${projectId}/members`, payload, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
     return data;
   },
-//   getMembers: async (projectId) => {
-//   const { data } = await axiosClient.get(`/api/projects/${projectId}/members`);
+
+//   // Project-only file search
+//   searchFiles: async (projectId, query) => {
+//     if (!query) return [];
+//     const { data } = await axiosClient.get(`/api/projects/${projectId}/search`, {
+//       params: { q: query },
+//     });
+//     return data;
+//   },
+
+//   // ✅ Global search across all files in the app
+//   searchAllFiles: async (query) => {
+//   if (!query) return [];
+//   const { data } = await axiosClient.get("/api/files/search", { params: { q: query } });
 //   return data;
 // },
 };

@@ -791,7 +791,7 @@ export default function CustomerFeedbacks() {
         <CommonStatCard title="Total Feedbacks" value={records.length} icon={totalRecord} bg="#DBEAFE" />
         <CommonStatCard title="Average Rating" value={averageRating} icon={avergaeRating} bg="#DCFCE7" />
         {/* Placeholder for Pending Review (currently just showing total count again) */}
-        <CommonStatCard title="Pending Review" value={records.length} icon={pending_review} bg="#FFEDD4" />
+        {/* <CommonStatCard title="Pending Review" value={records.length} icon={pending_review} bg="#FFEDD4" /> */}
       </div>
 
       {/* FILTER SECTION CARD */}

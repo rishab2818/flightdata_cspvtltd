@@ -19,3 +19,4 @@ export function attachUnauthorizedHandler(onUnauthorized) {
 axiosClient.interceptors.request.use((config) => {
   const t = storage.getToken(); if (t) config.headers.Authorization = `Bearer ${t}`; return config
 })
+
