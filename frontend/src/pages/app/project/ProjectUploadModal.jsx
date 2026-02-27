@@ -818,7 +818,7 @@ const onSelectSheet = (sheetName) => {
                                 <label className="summaryLabel" style={{ marginTop: 20 }}>Folder / Tag Name <span style={{ color: "red",fontSize: "22px" }}>*</span></label>
                                 <input
                                     className="input"
-                                    placeholder="Write File Name/Tag"
+                                    placeholder="Write Folder / Tag Name"
                                     value={tagName}
                                     onChange={(e) => setTagName(e.target.value)}
                                 />

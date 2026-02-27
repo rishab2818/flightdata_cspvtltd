@@ -22,6 +22,15 @@ const INLINE_EXTENSIONS = new Set([
   '.csv',
 ])
 
+const OTHERS_EXTENSIONS = new Set([
+  '.pdf',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg'
+])
+
 const getExtension = (name = '') => {
   const idx = name.lastIndexOf('.')
   return idx >= 0 ? name.slice(idx).toLowerCase() : ''
@@ -120,13 +129,19 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
   tab === 'plot'
     ? plots
     : tab === 'raw'
-      ? files
-      : tab === 'processed'
-        ? files.filter(f => f.processed_key)
-        : tab === 'others'
-          ? files.filter(f => !f.processed_key && !f.visualize_enabled)
-          : []
-
+      ? files.filter(f => isTabularFile(f) && !f.processed_key)
+    : tab === 'processed'
+      ? files.filter(f => f.processed_key)
+    : tab === 'others'
+      ? files.filter(f => {
+          const ext = getExtension(f?.filename || '')
+          return (
+            !f.processed_key &&
+            !f.visualize_enabled &&
+            OTHERS_EXTENSIONS.has(ext)
+          )
+        })
+    : []
 //   const handleView = (file, tabName) => {
 //   if (tabName === 'plot') {
 //     // Open full visualization page for plots
