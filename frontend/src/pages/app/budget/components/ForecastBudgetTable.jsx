@@ -58,7 +58,7 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
               <td>{idx + 1}</td>
               <td>{row.division_name || '--'}</td>
               <td>{row.item || '--'}</td>
-              <td>{row.descriptions || '--'}</td>
+              {/* <td>{row.descriptions || '--'}</td> */}
               <td>{row.qty ?? '--'}</td>
               <td>{row.existing_stock ?? '--'}</td>
               <td>{formatDate(row.previous_procurement_date)}</td>
@@ -73,7 +73,7 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
               <td>{row.hardware_need || '--'}</td>
               <td>{row.capital_or_revenue || '--'}</td>
               <td>{row.condemnation || '--'}</td>
-              <td>{row.note || '--'}</td>
+              <td>{row.remarks || '--'}</td>
               <td>
                 {row.original_name ? (
                   <button

@@ -284,8 +284,8 @@ export default function TechnicalReports() {
                   background: "#EFF7FF",
                 }}
               >
-                {["Report Name", "Description", "Type", "Created Date", "Action"].map((col) => (
-                  <th key={col} style={{ padding: "12px 16px", fontWeight: 600, borderBottom: `1px solid ${BORDER}` }}>
+                {["Report Name", "Type", "Created Date","Note", "Action"].map((col) => (
+                  <th key={col} style={{ padding: "12px 16px",fontSize: "14px", fontWeight: 500, borderBottom: `1px solid ${BORDER}`,fontFamily:"Inter-Regular, Helvetica" }}>
                     {col}
                   </th>
                 ))}
@@ -328,7 +328,7 @@ export default function TechnicalReports() {
                       <td style={{ padding: "12px 16px", fontWeight: 600, borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
                         {row.name}
                       </td>
-                      <td style={{ padding: "12px 16px", color: "#475569", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
+                      <td style={{ padding: "12px 16px", color: "#475569", borderBottom: isLast ? "none" : `1px solid ${BORDER}`, width:"200px" }}>
                         {row.description}
                       </td>
                       <td style={{ padding: "12px 16px", borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
@@ -414,9 +414,9 @@ function Input({ label, style, ...rest }) {
 function ReportModal({ onClose, onCreated, onUpdated, editingRecord, projectId }) {
   const [form, setForm] = useState({
     name: "",
-    description: "",
     report_type: "Technical",
     created_date: "",
+    description: "",
     rating: "",
   });
   const [file, setFile] = useState(null);
@@ -443,6 +443,11 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord, projectId }
     e.preventDefault();
     setError("");
     setSubmitting(true);
+
+    if (!file && !form.storage_key) {
+  setError("Please select a file to upload.");
+  return;
+}
 
     try {
       let storage_key = editingRecord ? editingRecord.storage_key : null;
@@ -584,6 +589,7 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord, projectId }
               value={form.description}
               onChange={(e) => onChange("description", e.target.value)}
               rows={3}
+              maxLength={500}
               style={{
                 borderRadius: 8,
                 border: `1px solid ${BORDER}`,
@@ -592,11 +598,20 @@ function ReportModal({ onClose, onCreated, onUpdated, editingRecord, projectId }
                 resize: "none",
               }}
             />
+            <div
+    style={{
+      fontSize: 12,
+      textAlign: "right",
+      color: (form.description || "").length > 180 ? "red" : "#666",
+    }}
+  >
+    {(form.description || "").length}/500
+  </div>
           </label>
 
 
 
-          {error && <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>}
+          {error && <p style={{ color: "#d32f2f",fontSize:"14px",fontFamily: "Inter, sans-serif", margin: 0 }}>{error}</p>}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <button

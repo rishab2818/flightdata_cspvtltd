@@ -39,7 +39,7 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      setError("Please choose a file to upload.");
+      setError("Please select a file to upload.");
       return;
     }
     if (!tag.trim()) {

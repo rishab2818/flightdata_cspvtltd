@@ -7,7 +7,7 @@ import Users from "../../assets/Users.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
 import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
-import FileText from "../../assets/FileText.svg"
+import FileText1 from "../../assets/FileText1.svg"
 import load from "../../assets/load.svg";
 import { useDownload } from "../../components/common/useDownload";
 
@@ -48,6 +48,18 @@ const calculateDurationMonths = (start, end) => {
   }
 
   return Math.max(months, 1);
+};
+
+const getAutoStatus = (startDate, deliveryDate) => {
+  if (!startDate || !deliveryDate) return "Ongoing";
+
+  const today = new Date();
+  const start = new Date(startDate);
+  const end = new Date(deliveryDate);
+
+  if (today < start) return "Upcoming";
+  if (today > end) return "Completed";
+  return "Ongoing";
 };
 
 /*------------------------- Stat Card --------------------------*/
@@ -382,7 +394,7 @@ export default function InventoryRecords() {
 
         {/* Upload Button */}
         <button className={styles.uploadBtn} onClick={openModal}>
-           <img src={FileText} alt="Record"/>
+           <img src={FileText1} alt="Record"/>
            Procurement Record
         </button>
       </div>
@@ -474,7 +486,10 @@ export default function InventoryRecords() {
                   <td>{row.pl_ppl_number || "—"}</td>
                   <td>{formatAmount(row.amount)}</td>
                   <td>
-                    <StatusBadge status={row.status || "Ongoing"} />
+                    {/* <StatusBadge status={row.status || "Ongoing"} /> */}
+                    <StatusBadge
+  status={getAutoStatus(row.start_date, row.delivery_date)}
+/>
                   </td>
                   <td className="cell cell-center">
                       <DocumentActions
@@ -591,6 +606,13 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
   );
 
   useEffect(() => {
+  if (form.start_date && form.delivery_date) {
+    const autoStatus = getAutoStatus(form.start_date, form.delivery_date);
+    setForm((prev) => ({ ...prev, status: autoStatus }));
+  }
+}, [form.start_date, form.delivery_date]);
+
+  useEffect(() => {
     if (!editingOrder) return;
 
     setForm({
@@ -639,9 +661,15 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
     }
   }, [form.start_date, form.delivery_date]);
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!file && !form.storage_key) {
+  setError("Please select a file to upload.");
+  return;
+}
 
     if (form.start_date && form.delivery_date) {
       const start = new Date(form.start_date);
@@ -837,15 +865,21 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
 
               <Input
                 label="PL/PPL Number"
+                type="number"
                 value={form.pl_ppl_number}
                 onChange={(e) => onChange("pl_ppl_number", e.target.value)}
               />
 
-              <Input
+              {/* <Input
                 label="Status"
                 value={form.status}
                 onChange={(e) => onChange("status", e.target.value)}
-              />
+              /> */}
+              <Input
+  label="Status"
+  value={form.status}
+  readOnly
+/>
             </div>
             </div>
 
