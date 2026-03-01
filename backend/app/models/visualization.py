@@ -38,6 +38,24 @@ class VisualizationSeriesOut(VisualizationSeriesInput):
     filename: str
 
 
+MatlabLikeMode = Literal["plot_y", "plot_xy", "plot3"]
+
+
+class MatVariableSliceInput(BaseModel):
+    var: str = Field(..., description="MAT variable name")
+    slice_expr: Optional[str] = Field(
+        None,
+        description="Optional MATLAB-style slice expression (e.g. (:,:,1))",
+    )
+
+
+class MatlabLikeRequestInput(BaseModel):
+    mode: MatlabLikeMode
+    x: Optional[MatVariableSliceInput] = None
+    y: Optional[MatVariableSliceInput] = None
+    z: Optional[MatVariableSliceInput] = None
+
+
 class VisualizationCreateRequest(BaseModel):
     project_id: str = Field(..., description="Project ID the visualization belongs to")
     source_type: SourceType = Field(default="tabular")
@@ -48,6 +66,8 @@ class VisualizationCreateRequest(BaseModel):
     var: Optional[str] = None
     mapping: Optional[dict[str, Any]] = None
     filters: dict[str, Any] = Field(default_factory=dict)
+    slice_expr: Optional[str] = None
+    mat_request: Optional[MatlabLikeRequestInput] = None
     mat_derived_formulas: list[dict[str, Any]] = Field(default_factory=list)
     chart_type: str = Field(default="scatter", description="Type of chart to render")
 

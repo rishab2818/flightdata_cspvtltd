@@ -178,10 +178,10 @@ async def create_visualization(
         raise HTTPException(status_code=400, detail="source_type must be 'tabular' or 'mat'")
 
     if source_type == "mat":
-        if not payload.job_id or not payload.var or not payload.mapping:
+        if not payload.job_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MAT visualization requires job_id, var, and mapping",
+                detail="MAT visualization requires job_id",
             )
 
         job = await ingestions.get_job(payload.job_id)
@@ -191,12 +191,83 @@ async def create_visualization(
         if not str(job.get("filename", "")).lower().endswith(".mat"):
             raise HTTPException(status_code=400, detail="Selected dataset is not a MAT file")
 
-        allowed = {"line", "scatter", "heatmap", "contour", "surface"}
+        allowed = {"line", "scatter", "heatmap", "contour", "surface", "scatter3d", "line3d"}
         if chart_type not in allowed:
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported MAT chart_type '{chart_type}'. Allowed: {', '.join(sorted(allowed))}",
             )
+
+        matlab_like_request = payload.mat_request.model_dump(exclude_none=True) if payload.mat_request else None
+
+        def _sanitize_mat_axis(axis_obj: dict | None):
+            if not isinstance(axis_obj, dict):
+                return None
+            var_name = str(axis_obj.get("var") or "").strip()
+            if not var_name:
+                return None
+            raw_slice = str(axis_obj.get("slice_expr") or "").strip()
+            return {
+                "var": var_name,
+                "slice_expr": raw_slice or None,
+            }
+
+        if matlab_like_request:
+            mode = str(matlab_like_request.get("mode") or "").strip().lower()
+            if mode not in {"plot_y", "plot_xy", "plot3"}:
+                raise HTTPException(status_code=400, detail="mat_request.mode must be plot_y, plot_xy, or plot3")
+
+            if mode in {"plot_y", "plot_xy"} and chart_type not in {"line", "scatter"}:
+                raise HTTPException(
+                    status_code=400,
+                    detail="mat_request.mode plot_y/plot_xy supports chart_type line or scatter only",
+                )
+            if mode == "plot3" and chart_type not in {"line3d", "scatter3d"}:
+                raise HTTPException(
+                    status_code=400,
+                    detail="mat_request.mode plot3 supports chart_type line3d or scatter3d only",
+                )
+
+            x_axis = _sanitize_mat_axis(matlab_like_request.get("x"))
+            y_axis = _sanitize_mat_axis(matlab_like_request.get("y"))
+            z_axis = _sanitize_mat_axis(matlab_like_request.get("z"))
+
+            if mode == "plot_y" and not y_axis:
+                raise HTTPException(status_code=400, detail="mat_request.y.var is required for mode=plot_y")
+            if mode == "plot_xy" and (not x_axis or not y_axis):
+                raise HTTPException(status_code=400, detail="mat_request.x.var and mat_request.y.var are required for mode=plot_xy")
+            if mode == "plot3" and (not x_axis or not y_axis or not z_axis):
+                raise HTTPException(
+                    status_code=400,
+                    detail="mat_request.x.var, mat_request.y.var, and mat_request.z.var are required for mode=plot3",
+                )
+
+            mat_request_payload = {
+                "job_id": payload.job_id,
+                "mode": mode,
+                "x": x_axis,
+                "y": y_axis,
+                "z": z_axis,
+                "derived_formulas": [
+                    item for item in (payload.mat_derived_formulas or []) if isinstance(item, dict)
+                ],
+            }
+        else:
+            if not payload.var or not payload.mapping:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="MAT visualization requires either mat_request or legacy var + mapping",
+                )
+            mat_request_payload = {
+                "job_id": payload.job_id,
+                "var": payload.var,
+                "mapping": payload.mapping,
+                "filters": payload.filters or {},
+                "slice_expr": (payload.slice_expr or "").strip() or None,
+                "derived_formulas": [
+                    item for item in (payload.mat_derived_formulas or []) if isinstance(item, dict)
+                ],
+            }
 
         viz_id = await repo.create(
             payload.project_id,
@@ -205,15 +276,7 @@ async def create_visualization(
             series=[],
             filename=job.get("filename", "dataset"),
             source_type="mat",
-            mat_request={
-                "job_id": payload.job_id,
-                "var": payload.var,
-                "mapping": payload.mapping,
-                "filters": payload.filters or {},
-                "derived_formulas": [
-                    item for item in (payload.mat_derived_formulas or []) if isinstance(item, dict)
-                ],
-            },
+            mat_request=mat_request_payload,
             dataset_type=payload.dataset_type,
             tag_name=payload.tag_name,
         )

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { projectApi } from '../../../api/projectapi'
 import TopBarActions from '../../../components/layout/TopBarActions'
+import ProjectSearchButton from '../../../projectSearch/components/ProjectSearchButton'
 import '../../../styles/project.css'
 
 import Database2 from "../../../assets/Database2.svg";
@@ -109,7 +110,10 @@ export default function ProjectShell() {
               </p>
             </div>
           </div>
-          <TopBarActions />
+          <div className="project-shell__header-right">
+            <ProjectSearchButton projectId={projectId} />
+            <TopBarActions />
+          </div>
         </header>
 
         {error && <div className="project-shell__error">{error}</div>}

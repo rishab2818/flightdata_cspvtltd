@@ -121,6 +121,12 @@
   align-items: center;
 }
 
+.project-shell__header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .project-shell__header-main {
   display: flex;
   align-items: center;

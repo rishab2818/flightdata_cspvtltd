@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { useOutletContext, useParams } from 'react-router-dom'
+import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 
 import UploadModal from './../ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../../api/ingestionApi'
@@ -29,11 +29,14 @@ const DATASET_TABS = [
 
 export default function ProjectUpload() {
   const { projectId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useContext(AuthContext)
   const { project, refreshProject } = useOutletContext()
 
   const [activeDataset, setActiveDataset] = useState('cfd')
   const [selectedTag, setSelectedTag] = useState(null)
+  const searchDatasetType = String(searchParams.get('datasetType') || '').trim().toLowerCase()
+  const searchTagName = String(searchParams.get('tagName') || '').trim()
 
   const [modal, setModal] = useState({ open: false, mode: 'create', tag: '' })
   const [deletingTag, setDeletingTag] = useState(null)
@@ -189,6 +192,24 @@ const members = project?.members?.length || 0;
       stopAllPolling()
     }
   }, [projectId, activeDataset])
+
+  useEffect(() => {
+    if (!searchTagName) return
+
+    const hasValidDataset = DATASET_TABS.some((tab) => tab.key === searchDatasetType)
+    if (hasValidDataset && activeDataset !== searchDatasetType) {
+      setActiveDataset(searchDatasetType)
+    }
+    if (selectedTag !== searchTagName) {
+      setSelectedTag(searchTagName)
+    }
+
+    // Consume one-time deep-link params from project search while keeping user state local.
+    const next = new URLSearchParams(searchParams)
+    next.delete('datasetType')
+    next.delete('tagName')
+    setSearchParams(next, { replace: true })
+  }, [activeDataset, searchDatasetType, searchParams, searchTagName, selectedTag, setSearchParams])
 
   useEffect(() => {
     if (selectedTag || tagsLoading || tagsError) return
