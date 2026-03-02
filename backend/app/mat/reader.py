@@ -445,21 +445,22 @@ def read_mat_slice(
     var_name: str,
     slice_spec: MatSliceSpec | dict[str, Any],
     temp_derived_formulas: list[dict[str, Any]] | None = None,
+    pre_slice_expr: str | None = None,
 ):
     job = _get_job_doc(job_id)
     mat_meta = ((job.get("metadata") or {}).get("mat")) or {}
     if not isinstance(slice_spec, MatSliceSpec):
         slice_spec = MatSliceSpec(**slice_spec)
 
-    # Temporary formulas exist only in request payload, so evaluate them in-memory
-    # before applying visualization slicing.
+    # Temporary formulas exist only in request payload, and slice_expr can reshape
+    # the view in MATLAB syntax before axis-mapping. Handle both in-memory first.
     derived = _resolve_derived_formula(job, var_name, temp_derived_formulas=temp_derived_formulas)
-    if derived:
+    if derived or (pre_slice_expr and str(pre_slice_expr).strip()):
         arr_info = _read_mat_variable_array(
             job_id=job_id,
             job=job,
             var_name=var_name,
-            slice_expr=None,
+            slice_expr=(str(pre_slice_expr).strip() or None),
             temp_derived_formulas=temp_derived_formulas,
         )
         arr = np.asarray(arr_info["values"])

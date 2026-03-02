@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useOutletContext, useParams } from 'react-router-dom'
+import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
@@ -21,6 +21,10 @@ import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import linechart from "../../../assets/LineChart.svg";
 import EmptySection from "../../../components/common/EmptyProject";
+import MatPlotBuilder from '../../../matlabPlotBuilder/components/MatPlotBuilder'
+import MatZoomLoaderOverlay from '../../../matlabPlotBuilder/components/MatZoomLoaderOverlay'
+import { useMatZoomLoader } from '../../../matlabPlotBuilder/hooks/useMatZoomLoader'
+import { openMatPreviewInNewTab } from '../../../matlabPlotBuilder/utils/previewUrl'
 // import linechart25 from "../../assets/linechart25.svg";
 
 
@@ -98,6 +102,60 @@ const defaultMatSliceExpr = (ndim) => {
   return [':', ':', ...Array(Math.max(0, ndim - 2)).fill('1')].join(', ')
 }
 
+const MAT_SERIES_DEFAULTS = {
+  matVar: '',
+  matSliceExpr: '',
+  matMode: 'plot_y',
+  matXVar: '',
+  matYVar: '',
+  matZVar: '',
+  matXSlice: '',
+  matYSlice: '',
+  matZSlice: '',
+}
+
+const normalizeMatMode = (chartType, mode) => {
+  const chart = String(chartType || '').toLowerCase().trim()
+  if (chart === 'line3d' || chart === 'scatter3d') return 'plot3'
+  return mode === 'plot_xy' ? 'plot_xy' : 'plot_y'
+}
+
+const normalizeSliceExpr = (value) => String(value || '').trim()
+
+const formatMatSignaturePart = (varName, sliceExpr) => {
+  const safeVar = String(varName || '').trim()
+  if (!safeVar) return ''
+  const safeSlice = normalizeSliceExpr(sliceExpr)
+  return `${safeVar}(${safeSlice || ':'})`
+}
+
+const buildMatSignatureText = (series, chartType) => {
+  const mode = normalizeMatMode(chartType, series?.matMode)
+  const yVar = String(series?.matYVar || series?.matVar || '').trim()
+  const ySlice = normalizeSliceExpr(series?.matYSlice || series?.matSliceExpr || '')
+  const xVar = String(series?.matXVar || '').trim()
+  const xSlice = normalizeSliceExpr(series?.matXSlice || '')
+  const zVar = String(series?.matZVar || '').trim()
+  const zSlice = normalizeSliceExpr(series?.matZSlice || '')
+
+  if (mode === 'plot3') {
+    return `Plot3(${[
+      formatMatSignaturePart(xVar, xSlice),
+      formatMatSignaturePart(yVar, ySlice),
+      formatMatSignaturePart(zVar, zSlice),
+    ].filter(Boolean).join(', ')})`
+  }
+
+  if (mode === 'plot_xy') {
+    return `Plot(${[
+      formatMatSignaturePart(xVar, xSlice),
+      formatMatSignaturePart(yVar, ySlice),
+    ].filter(Boolean).join(', ')})`
+  }
+
+  return `Plot(${formatMatSignaturePart(yVar, ySlice)})`
+}
+
 const newSeries = (n = 1) => ({
   id: `s-${Date.now()}-${n}`,
   enabled: true,
@@ -110,10 +168,7 @@ const newSeries = (n = 1) => ({
   zAxis: '',
   seriesChartType: '',
   label: '',
-  matVar: '',
-  matXDim: 0,
-  matYDim: 1,
-  matFilters: {},
+  ...MAT_SERIES_DEFAULTS,
   derivedColumns: [],
 })
 
@@ -123,6 +178,8 @@ export default function ProjectVisualisation() {
   }, [])
 
   const { projectId } = useParams()
+  const [searchParams] = useSearchParams()
+  const requestedVizId = String(searchParams.get('vizId') || '').trim()
   const { project } = useOutletContext()
 
   const [confirmDelete, setConfirmDelete] = useState({
@@ -205,7 +262,9 @@ const [loadingSave, setLoadingSave] = useState(false);
   const [error, setError] = useState(null)
 
   const pollTimer = useRef(null)
+  const matPlotFrameRef = useRef(null)
   const skipNextCalcMatAutoPreviewRef = useRef(false)
+  const autoLoadedVizRef = useRef('')
   const [isExpanded, setIsExpanded] = useState(true)
 
   /* ================= helpers ================= */
@@ -332,11 +391,11 @@ const plotOptions =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesList])
 
-  const updateActiveSeries = (patch) => {
+  const updateActiveSeries = useCallback((patch) => {
     setSeriesList((prev) =>
       prev.map((s) => (s.id === activeSeriesId ? { ...s, ...patch } : s))
     )
-  }
+  }, [activeSeriesId])
 
   const setSeriesEnabled = (id, enabled) => {
     setSeriesList((prev) => prev.map((s) => (s.id === id ? { ...s, enabled } : s)))
@@ -382,10 +441,7 @@ const plotOptions =
     const job = jobsById[s.jobId]
     const mat = isMatFileName(job?.filename || '')
     if (mat) {
-      const varName = s.matVar || '-'
-      const xDim = Number.isInteger(Number(s.matXDim)) ? `dim${s.matXDim}` : '-'
-      const yDim = Number.isInteger(Number(s.matYDim)) ? `, dim${s.matYDim}` : ''
-      return `${ds} • MAT • ${varName} • ${xDim}${yDim}`
+      return `${ds} • MAT • ${buildMatSignatureText(s, chartType)}`
     }
     const x = s.xAxis || '-'
     const y = s.yAxis || '-'
@@ -477,9 +533,11 @@ const plotOptions =
       if (calcIsMat) {
         if (preferredMatVar) {
           first.matVar = preferredMatVar
+          first.matYVar = preferredMatVar
         } else if (!first.matVar) {
           const vars = matMetaByJob[calcJobId]?.variables || []
           first.matVar = vars[0]?.name || first.matVar
+          first.matYVar = first.matVar
         }
       }
 
@@ -985,16 +1043,16 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
     [matMetaByJob, activeSeries?.jobId]
   )
   const activeMatVars = useMemo(
-    () => (activeMatMeta?.variables || []).filter((v) => v?.kind === 'numeric_array'),
+    () => (activeMatMeta?.variables || []),
     [activeMatMeta]
   )
-  const activeMatVar = useMemo(() => {
-    if (!activeMatVars.length) return null
-    return activeMatVars.find((v) => v.name === activeSeries?.matVar) || activeMatVars[0]
-  }, [activeMatVars, activeSeries?.matVar])
+  const activeMatNumericVars = useMemo(
+    () => activeMatVars.filter((v) => v?.kind === 'numeric_array'),
+    [activeMatVars]
+  )
 
   const matAllowedChartTypes = useMemo(
-    () => new Set(['line', 'scatter', 'heatmap', 'contour', 'surface']),
+    () => new Set(['line', 'scatter', 'line3d', 'scatter3d']),
     []
   )
   const activeChartOptions = useMemo(
@@ -1008,34 +1066,6 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
     () => !activeIsMat && OVERPLOT_CARTESIAN_TYPES.some((item) => item.value === chartType),
     [activeIsMat, chartType]
   )
-  const matNeeds2D = useMemo(
-    () => ['heatmap', 'contour', 'surface'].includes(chartType),
-    [chartType]
-  )
-  const matSelectedDims = useMemo(() => {
-    const dims = []
-    const x = Number(activeSeries?.matXDim)
-    if (Number.isInteger(x) && x >= 0) dims.push(x)
-    if (matNeeds2D) {
-      const y = Number(activeSeries?.matYDim)
-      if (Number.isInteger(y) && y >= 0 && y !== x) dims.push(y)
-    }
-    return dims
-  }, [activeSeries?.matXDim, activeSeries?.matYDim, matNeeds2D])
-  const matRemainingDims = useMemo(() => {
-    if (!activeMatVar) return []
-    const ndim = Number(activeMatVar.ndim || activeMatVar.shape?.length || 0)
-    const allDims = Array.from({ length: ndim }, (_, i) => i)
-    return allDims.filter((dim) => !matSelectedDims.includes(dim))
-  }, [activeMatVar, matSelectedDims])
-
-  const getMatCoordGuess = useCallback((matVar, dim) => {
-    if (!matVar) return null
-    const fromList = Array.isArray(matVar.coords_guess) ? matVar.coords_guess[dim] : null
-    if (typeof fromList === 'string' && fromList) return fromList
-    const candidates = matVar?.coord_candidates?.[String(dim)] || []
-    return candidates[0] || null
-  }, [])
 
   useEffect(() => {
     const jobId = activeSeries?.jobId
@@ -1054,60 +1084,46 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
 
   useEffect(() => {
     if (!activeIsMat || !activeMatVars.length || !activeSeriesId) return
+    const preferred =
+      activeMatNumericVars.find((item) => item?.name === activeSeries?.matYVar) ||
+      activeMatNumericVars.find((item) => item?.name === activeSeries?.matVar) ||
+      activeMatNumericVars[0]
+    if (!preferred) return
 
-    const chosenVar = activeMatVars.find((v) => v.name === activeSeries?.matVar) || activeMatVars[0]
-    const ndim = Number(chosenVar?.ndim || chosenVar?.shape?.length || 0)
-    if (ndim <= 0) return
-
-    let nextX = Number(activeSeries?.matXDim)
-    if (!Number.isInteger(nextX) || nextX < 0 || nextX >= ndim) nextX = 0
-
-    let nextY = Number(activeSeries?.matYDim)
-    if (matNeeds2D) {
-      if (!Number.isInteger(nextY) || nextY < 0 || nextY >= ndim || nextY === nextX) {
-        nextY = Array.from({ length: ndim }, (_, i) => i).find((i) => i !== nextX) ?? nextX
-      }
-    }
-
-    const nextFilters = { ...(activeSeries?.matFilters || {}) }
-    for (let dim = 0; dim < ndim; dim += 1) {
-      if (dim === nextX || (matNeeds2D && dim === nextY)) {
-        delete nextFilters[dim]
-        continue
-      }
-      const maxIdx = Math.max(0, Number(chosenVar?.shape?.[dim] || 1) - 1)
-      const cur = Number(nextFilters[dim] ?? 0)
-      const clamped = Math.max(0, Math.min(maxIdx, Number.isFinite(cur) ? cur : 0))
-      nextFilters[dim] = clamped
-    }
-
-    const needsUpdate =
-      activeSeries?.matVar !== chosenVar.name ||
-      Number(activeSeries?.matXDim) !== nextX ||
-      (matNeeds2D ? Number(activeSeries?.matYDim) !== nextY : activeSeries?.matYDim !== '') ||
-      JSON.stringify(activeSeries?.matFilters || {}) !== JSON.stringify(nextFilters)
-
-    if (!needsUpdate) return
-
-    updateActiveSeries({
-      matVar: chosenVar.name,
-      matXDim: nextX,
-      matYDim: matNeeds2D ? nextY : '',
-      matFilters: nextFilters,
+    const nextMode = normalizeMatMode(chartType, activeSeries?.matMode)
+    const patch = {
+      matMode: nextMode,
+      matVar: preferred.name,
+      matYVar: activeSeries?.matYVar || preferred.name,
+      matYSlice: activeSeries?.matYSlice || activeSeries?.matSliceExpr || '',
       xAxis: '',
       yAxis: '',
       zAxis: '',
       derivedColumns: [],
-    })
+    }
+
+    if (nextMode === 'plot3') {
+      patch.matXVar = activeSeries?.matXVar || preferred.name
+      patch.matZVar = activeSeries?.matZVar || preferred.name
+    }
+
+    const needsUpdate = Object.entries(patch).some(([key, value]) => activeSeries?.[key] !== value)
+    if (needsUpdate) {
+      updateActiveSeries(patch)
+    }
   }, [
     activeIsMat,
+    activeMatNumericVars,
     activeMatVars,
+    activeSeries?.matYVar,
+    activeSeries?.matMode,
     activeSeries?.matVar,
-    activeSeries?.matXDim,
-    activeSeries?.matYDim,
-    activeSeries?.matFilters,
+    activeSeries?.matYSlice,
+    activeSeries?.matSliceExpr,
+    activeSeries?.matXVar,
+    activeSeries?.matZVar,
     activeSeriesId,
-    matNeeds2D,
+    chartType,
   ])
 
   useEffect(() => {
@@ -1137,10 +1153,7 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
     const ds = datasetLabel(s.datasetType)
     const job = jobsById[s.jobId]
     if (isMatFileName(job?.filename || '')) {
-      const varName = s.matVar || 'MAT variable'
-      const dims = [s.matXDim]
-      if (matNeeds2D) dims.push(s.matYDim)
-      return `${ds} | ${varName} | ${dims.filter((d) => d !== '' && d != null).map((d) => `dim${d}`).join(' × ')}`
+      return `${ds} | ${buildMatSignatureText(s, chartType)}`
     }
     const x = s.xAxis || ''
     const y = s.yAxis || ''
@@ -1522,52 +1535,66 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
           throw new Error('Only one MAT series is supported per plot.')
         }
         if (!matAllowedChartTypes.has(chartType)) {
-          throw new Error('MAT supports line, scatter, heatmap, contour, and surface charts.')
+          throw new Error('MAT supports line, scatter, line3d, and scatter3d charts.')
         }
 
         const s = matSeries[0]
+        const mode = normalizeMatMode(chartType, s.matMode)
         const jobMeta = matMetaByJob[s.jobId]
         const vars = jobMeta?.variables || []
-        const varMeta = vars.find((v) => v.name === s.matVar) || vars[0]
-        if (!varMeta) {
-          throw new Error('Select a MAT variable before plotting.')
+
+        const toAxisPayload = (variableName, sliceExpr, label) => {
+          const safeVar = String(variableName || '').trim()
+          if (!safeVar) {
+            throw new Error(`Select ${label} variable.`)
+          }
+          const safeSlice = normalizeSliceExpr(sliceExpr)
+          return {
+            var: safeVar,
+            slice_expr: safeSlice || undefined,
+          }
         }
 
-        const ndim = Number(varMeta.ndim || varMeta.shape?.length || 0)
-        const xDim = Number(s.matXDim)
-        const yDim = Number(s.matYDim)
-        if (!Number.isInteger(xDim) || xDim < 0 || xDim >= ndim) {
-          throw new Error('Select a valid MAT X dimension.')
-        }
-        if (matNeeds2D && (!Number.isInteger(yDim) || yDim < 0 || yDim >= ndim || yDim === xDim)) {
-          throw new Error('Select a valid MAT Y dimension.')
+        const yVar = String(s.matYVar || s.matVar || '').trim()
+        const ySlice = normalizeSliceExpr(s.matYSlice || s.matSliceExpr || '')
+        const xVar = String(s.matXVar || '').trim()
+        const xSlice = normalizeSliceExpr(s.matXSlice || '')
+        const zVar = String(s.matZVar || '').trim()
+        const zSlice = normalizeSliceExpr(s.matZSlice || '')
+
+        const selectedNames = [yVar]
+        if (mode !== 'plot_y') selectedNames.push(xVar)
+        if (mode === 'plot3') selectedNames.push(zVar)
+
+        if (!selectedNames.every((item) => String(item || '').trim())) {
+          throw new Error('Select required MAT variables for the chosen MATLAB signature.')
         }
 
-        const selectedDims = matNeeds2D ? [xDim, yDim] : [xDim]
-        const mapping = {
-          x: { dim: xDim, coord: getMatCoordGuess(varMeta, xDim) || undefined },
-        }
-        if (matNeeds2D) {
-          mapping.y = { dim: yDim, coord: getMatCoordGuess(varMeta, yDim) || undefined }
-        }
-
-        const filters = {}
-        for (let dim = 0; dim < ndim; dim += 1) {
-          if (selectedDims.includes(dim)) continue
-          const key = getMatCoordGuess(varMeta, dim) || `dim_${dim}`
-          const maxIdx = Math.max(0, Number(varMeta?.shape?.[dim] || 1) - 1)
-          const raw = Number(s?.matFilters?.[dim] ?? 0)
-          const idx = Math.max(0, Math.min(maxIdx, Number.isFinite(raw) ? raw : 0))
-          filters[key] = idx
+        if (Array.isArray(vars) && vars.length) {
+          const byName = new Map(vars.map((item) => [String(item?.name || '').toLowerCase(), item]))
+          for (const variableName of selectedNames) {
+            const entry = byName.get(String(variableName || '').toLowerCase())
+            if (!entry) {
+              throw new Error(`MAT variable "${variableName}" was not found in the selected file.`)
+            }
+            if (entry?.kind !== 'numeric_array') {
+              throw new Error(`MAT variable "${variableName}" is not numeric and cannot be plotted.`)
+            }
+          }
         }
 
         requestPayload = {
           project_id: projectId,
           source_type: 'mat',
+          dataset_type: s.datasetType || null,
+          tag_name: s.tag || null,
           job_id: s.jobId,
-          var: varMeta.name,
-          mapping,
-          filters,
+          mat_request: {
+            mode,
+            x: mode !== 'plot_y' ? toAxisPayload(xVar, xSlice, 'X') : undefined,
+            y: toAxisPayload(yVar, ySlice, 'Y'),
+            z: mode === 'plot3' ? toAxisPayload(zVar, zSlice, 'Z') : undefined,
+          },
           mat_derived_formulas: tempMatDerivedByJob[s.jobId] || [],
           chart_type: chartType,
         }
@@ -1658,7 +1685,7 @@ pollVisualization(res.viz_id)
 
 
 
-  const loadVisualization = async (vizId) => {
+  const loadVisualization = useCallback(async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
       setActiveViz(detail)
@@ -1668,7 +1695,14 @@ pollVisualization(res.viz_id)
     } catch (e) {
       setError(e?.response?.data?.detail || e.message || 'Failed to load visualization')
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!requestedVizId) return
+    if (autoLoadedVizRef.current === requestedVizId) return
+    autoLoadedVizRef.current = requestedVizId
+    loadVisualization(requestedVizId)
+  }, [loadVisualization, requestedVizId])
 
   // const deleteVisualization = async (vizId) => {
   //   if (!window.confirm('Delete this visualization?')) return
@@ -1728,7 +1762,15 @@ const deleteVisualization = async (vizId) => {
     const on = enabledSeries.filter((s) => {
       if (!s.jobId) return false
       const job = jobsById[s.jobId]
-      if (isMatFileName(job?.filename || '')) return !!s.matVar
+      if (isMatFileName(job?.filename || '')) {
+        const mode = normalizeMatMode(chartType, s.matMode)
+        const hasY = !!String(s?.matYVar || s?.matVar || '').trim()
+        const hasX = !!String(s?.matXVar || '').trim()
+        const hasZ = !!String(s?.matZVar || '').trim()
+        if (mode === 'plot3') return hasX && hasY && hasZ
+        if (mode === 'plot_xy') return hasX && hasY
+        return hasY
+      }
       return !!(s.xAxis && s.yAxis)
     })
     if (!on.length) return null
@@ -1740,6 +1782,15 @@ const deleteVisualization = async (vizId) => {
       })),
     }
   }, [enabledSeries, chartType, jobsById, buildAutoLabel])
+
+  const { isLoading: matZoomLoading } = useMatZoomLoader({
+    iframeRef: matPlotFrameRef,
+    enabled: activeIsMat && !!plotHtml,
+    onZoomUpdate: useCallback(async () => {}, []),
+    debounceMs: 120,
+    minLoaderMs: 80,
+    showDelayMs: 180,
+  })
 
   /* ================= UI ================= */
   return (
@@ -2242,10 +2293,7 @@ const deleteVisualization = async (vizId) => {
                   xAxis: '',
                   yAxis: '',
                   zAxis: '',
-                  matVar: '',
-                  matXDim: 0,
-                  matYDim: 1,
-                  matFilters: {},
+                  ...MAT_SERIES_DEFAULTS,
                   derivedColumns: [],
                 })
               }
@@ -2269,10 +2317,7 @@ const deleteVisualization = async (vizId) => {
                   xAxis: '',
                   yAxis: '',
                   zAxis: '',
-                  matVar: '',
-                  matXDim: 0,
-                  matYDim: 1,
-                  matFilters: {},
+                  ...MAT_SERIES_DEFAULTS,
                   derivedColumns: [],
                 })
               }
@@ -2296,10 +2341,7 @@ const deleteVisualization = async (vizId) => {
                   xAxis: '',
                   yAxis: '',
                   zAxis: '',
-                  matVar: '',
-                  matXDim: 0,
-                  matYDim: 1,
-                  matFilters: {},
+                  ...MAT_SERIES_DEFAULTS,
                   derivedColumns: [],
                 })
               }
@@ -2312,54 +2354,75 @@ const deleteVisualization = async (vizId) => {
                 </option>
               ))}
             </select>
+            {activeIsMat && (
+              <button
+                type="button"
+                className="project-shell__nav-link"
+                style={{ marginTop: 8, width: 100 }}
+                disabled={!activeSeries?.jobId}
+                onClick={() =>
+                  openMatPreviewInNewTab({
+                    projectId,
+                    datasetType: activeSeries?.datasetType,
+                    tagName: activeSeries?.tag,
+                    jobId: activeSeries?.jobId,
+                  })
+                }
+              >
+                <img src={ViewIcon} alt="view" style={{ width: 14, height: 14 }} />
+                View
+              </button>
+            )}
           </div>
 
 
-            <div className="ps-field">
-            <label>Plot Type</label>
-            <select
-    value={dimension}
-    onChange={(e) => {
-      setDimension(e.target.value)
-    }}
-    disabled={activeIsMat}
-  >
-    <option value="2d">2D</option>
-    <option value="3d">3D</option>
-  </select>
-          </div>
+          {!activeIsMat && (
+            <>
+              <div className="ps-field">
+                <label>Plot Type</label>
+                <select
+                  value={dimension}
+                  onChange={(e) => {
+                    setDimension(e.target.value)
+                  }}
+                >
+                  <option value="2d">2D</option>
+                  <option value="3d">3D</option>
+                </select>
+              </div>
 
-      <div className="ps-field">
-  <label>Chart Type</label>
-  <select
-    value={chartType}
-    onChange={(e) => setChartType(e.target.value)}
-  >
-    <option value="">Select Chart Type</option>
-    {activeChartOptions.map((item) => (
-      <option key={item.value} value={item.value}>
-        {item.label}
-      </option>
-    ))}
-  </select>
-</div>
+              <div className="ps-field">
+                <label>Chart Type</label>
+                <select
+                  value={chartType}
+                  onChange={(e) => setChartType(e.target.value)}
+                >
+                  <option value="">Select Chart Type</option>
+                  {activeChartOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
+              <div className="ps-field">
+                <label>X Scale</label>
+                <select value={xScale} onChange={(e) => setXScale(e.target.value)}>
+                  <option value="linear">Linear</option>
+                  <option value="log">Log</option>
+                </select>
+              </div>
 
-<div className="ps-field">
-  <label>X Scale</label>
-  <select value={xScale} onChange={(e) => setXScale(e.target.value)} disabled={activeIsMat}>
-    <option value="linear">Linear</option>
-    <option value="log">Log</option>
-  </select>
-</div>
-
-<div className="ps-field">
-  <label>Y Scale</label>
-  <select value={yScale} onChange={(e) => setYScale(e.target.value)} disabled={activeIsMat}>
-    <option value="linear">Linear</option>
-    <option value="log">Log</option>
-  </select>
-</div>
+              <div className="ps-field">
+                <label>Y Scale</label>
+                <select value={yScale} onChange={(e) => setYScale(e.target.value)}>
+                  <option value="linear">Linear</option>
+                  <option value="log">Log</option>
+                </select>
+              </div>
+            </>
+          )}
 
            {/* <div className="ps-field">
             <label>Chart Type</label>
@@ -2374,183 +2437,113 @@ const deleteVisualization = async (vizId) => {
          
         </div>
 
-         <div
-  className="ps-row"
-  style={{
-    display: 'grid',
-    gap: '14px',
-    marginBottom: '14px',
-    gridTemplateColumns:
-      chartType === 'contour' || dimension === '3d'
-        ? 'repeat(7, minmax(0, 1fr))'
-        : 'repeat(7, minmax(0, 1fr))',
-  }}
->
-  {!activeIsMat && (
-    <>
-      <div className="ps-field">
-        <label>X Axis</label>
-        <select
-          value={activeSeries?.xAxis || ''}
-          onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
-          disabled={!activeSeries?.jobId}
-        >
-          <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-          {activeAxisColumns.map((col) => (
-            <option key={col} value={col}>{col}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="ps-field">
-        <label>Y Axis</label>
-        <select
-          value={activeSeries?.yAxis || ''}
-          onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
-          disabled={!activeSeries?.jobId}
-        >
-          <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-          {activeAxisColumns.map((col) => (
-            <option key={col} value={col}>{col}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="ps-field">
-        <label>Series Chart Type</label>
-        <select
-          value={activeSeries?.seriesChartType || ''}
-          onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
-          disabled={!canMixOverplot}
-        >
-          <option value="">
-            {canMixOverplot ? `Default (${chartType})` : 'Use bar/line/scatter/scatterline'}
-          </option>
-          {OVERPLOT_CARTESIAN_TYPES.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {requiresZ && (
-        <div className="ps-field">
-          <label>Z Axis</label>
-          <select
-            value={activeSeries?.zAxis || ''}
-            onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
-            disabled={!activeSeries?.jobId}
+        {!activeIsMat && (
+          <div
+            className="ps-row"
+            style={{
+              display: 'grid',
+              gap: '14px',
+              marginBottom: '14px',
+              gridTemplateColumns:
+                chartType === 'contour' || dimension === '3d'
+                  ? 'repeat(7, minmax(0, 1fr))'
+                  : 'repeat(7, minmax(0, 1fr))',
+            }}
           >
-            <option value="">Select</option>
-            {activeAxisColumns.map((col) => (
-              <option key={col} value={col}>{col}</option>
-            ))}
-          </select>
-        </div>
-      )}
-    </>
-  )}
+            <div className="ps-field">
+              <label>X Axis</label>
+              <select
+                value={activeSeries?.xAxis || ''}
+                onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
+                disabled={!activeSeries?.jobId}
+              >
+                <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                {activeAxisColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
 
-  {activeIsMat && (
-    <>
-      <div className="ps-field">
-        <label>MAT Variable</label>
-        <select
-          value={activeSeries?.matVar || activeMatVar?.name || ''}
-          onChange={(e) =>
-            updateActiveSeries({
-              matVar: e.target.value,
-              matFilters: {},
-            })
-          }
-          disabled={!activeSeries?.jobId || !activeMatVars.length}
-        >
-          <option value="">{activeSeries?.jobId ? 'Select variable' : 'Select file first'}</option>
-          {activeMatVars.map((v) => (
-            <option key={v.name} value={v.name}>
-              {v.name} ({Array.isArray(v.shape) ? v.shape.join('×') : ''})
-            </option>
-          ))}
-        </select>
-      </div>
+            <div className="ps-field">
+              <label>Y Axis</label>
+              <select
+                value={activeSeries?.yAxis || ''}
+                onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+                disabled={!activeSeries?.jobId}
+              >
+                <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                {activeAxisColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
 
-      <div className="ps-field">
-        <label>X Dimension</label>
-        <select
-          value={String(activeSeries?.matXDim ?? '')}
-          onChange={(e) => updateActiveSeries({ matXDim: Number(e.target.value) })}
-          disabled={!activeMatVar}
-        >
-          {Array.from({ length: Number(activeMatVar?.ndim || 0) }, (_, dim) => (
-            <option key={`mat-x-${dim}`} value={dim}>
-              {`Dim ${dim}${getMatCoordGuess(activeMatVar, dim) ? ` (${getMatCoordGuess(activeMatVar, dim)})` : ''}`}
-            </option>
-          ))}
-        </select>
-      </div>
+            <div className="ps-field">
+              <label>Series Chart Type</label>
+              <select
+                value={activeSeries?.seriesChartType || ''}
+                onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
+                disabled={!canMixOverplot}
+              >
+                <option value="">
+                  {canMixOverplot ? `Default (${chartType})` : 'Use bar/line/scatter/scatterline'}
+                </option>
+                {OVERPLOT_CARTESIAN_TYPES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {matNeeds2D && (
-        <div className="ps-field">
-          <label>Y Dimension</label>
-          <select
-            value={String(activeSeries?.matYDim ?? '')}
-            onChange={(e) => updateActiveSeries({ matYDim: Number(e.target.value) })}
-            disabled={!activeMatVar}
-          >
-            {Array.from({ length: Number(activeMatVar?.ndim || 0) }, (_, dim) => (
-              <option key={`mat-y-${dim}`} value={dim} disabled={dim === Number(activeSeries?.matXDim)}>
-                {`Dim ${dim}${getMatCoordGuess(activeMatVar, dim) ? ` (${getMatCoordGuess(activeMatVar, dim)})` : ''}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+            {requiresZ && (
+              <div className="ps-field">
+                <label>Z Axis</label>
+                <select
+                  value={activeSeries?.zAxis || ''}
+                  onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
+                  disabled={!activeSeries?.jobId}
+                >
+                  <option value="">Select</option>
+                  {activeAxisColumns.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-      {matRemainingDims.map((dim) => {
-        const maxIdx = Math.max(0, Number(activeMatVar?.shape?.[dim] || 1) - 1)
-        const label = getMatCoordGuess(activeMatVar, dim) || `Dim ${dim}`
-        return (
-          <div className="ps-field" key={`mat-filter-${dim}`}>
-            <label>{`${label} filter`}</label>
-            <input
-              type="number"
-              min={0}
-              max={maxIdx}
-              value={Number(activeSeries?.matFilters?.[dim] ?? 0)}
-              onChange={(e) =>
-                updateActiveSeries({
-                  matFilters: {
-                    ...(activeSeries?.matFilters || {}),
-                    [dim]: Number(e.target.value || 0),
-                  },
-                })
-              }
-            />
+            <div className="ps-field">
+              <label>Plot Name (Optional)</label>
+              <input
+                placeholder="Defaults to Dataset | X → Y"
+                value={activeSeries?.label || ''}
+                onChange={(e) => updateActiveSeries({ label: e.target.value })}
+              />
+            </div>
+
+            <div className="ps-field">
+              <button type="submit" className="plot-btn" disabled={loading}>
+                <img src={ChartLine1} alt="chart" />
+                {loading ? 'Generating…' : 'Generate Plot'}
+              </button>
+            </div>
           </div>
-        )
-      })}
-    </>
-  )}
+        )}
 
-  {/* Plot Name */}
-  <div className="ps-field">
-    <label>Plot Name (Optional)</label>
-    <input
-      placeholder="Defaults to Dataset | X → Y"
-      value={activeSeries?.label || ''}
-      onChange={(e) => updateActiveSeries({ label: e.target.value })}
-    />
-  </div>
-
-  {/* Generate Button */}
-  <div className="ps-field">
-    <button type="submit"  className="plot-btn" disabled={loading}>
-      <img src={ChartLine1} alt="chart" />
-      {loading ? 'Generating…' : 'Generate Plot'}
-    </button>
-  </div>
-</div>
+        {activeIsMat && (
+          <MatPlotBuilder
+            projectId={projectId}
+            datasetType={activeSeries?.datasetType}
+            tagName={activeSeries?.tag}
+            jobId={activeSeries?.jobId}
+            chartType={chartType}
+            onChartTypeChange={setChartType}
+            series={activeSeries}
+            onSeriesChange={updateActiveSeries}
+            loading={loading}
+            showViewAction={false}
+          />
+        )}
 
         {/* ===== Series Manager (KEPT) ===== */}
         <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
@@ -2562,9 +2555,10 @@ const deleteVisualization = async (vizId) => {
                 type="button"
                 className="project-shell__nav-link"
                 onClick={addSeriesSlot}
+                disabled={activeIsMat}
                 style={{ height: 36, padding: '0 12px' }}
               >
-                + Over Plot
+                {activeIsMat ? 'MAT supports one plot' : '+ Over Plot'}
               </button>
             </div>
 
@@ -2681,10 +2675,12 @@ const deleteVisualization = async (vizId) => {
 </div>
 
 
-        <div className="Plot-preview" >
+        <div className="Plot-preview" style={{ position: 'relative' }}>
+          {activeIsMat && <MatZoomLoaderOverlay active={matZoomLoading} />}
           {plotHtml ? (
             <iframe
               title="plot"
+              ref={activeIsMat ? matPlotFrameRef : undefined}
               srcDoc={plotHtml}
               style={{ width: '100%', height: '100%', border: 'none' }}
             />

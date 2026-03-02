@@ -1,3 +1,9 @@
+import React, { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { projectApi } from '../../../api/projectapi'
+import TopBarActions from '../../../components/layout/TopBarActions'
+import ProjectSearchButton from '../../../projectSearch/components/ProjectSearchButton'
+import '../../../styles/project.css'
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { projectApi } from "../../../api/projectapi";
@@ -267,8 +273,10 @@ export default function ProjectShell() {
               </div> */}
             </div>
           </div>
-
-          <TopBarActions />
+          <div className="project-shell__header-right">
+            <ProjectSearchButton projectId={projectId} />
+            <TopBarActions />
+          </div>
         </header>
 
         {error && <div className="project-shell__error">{error}</div>}
