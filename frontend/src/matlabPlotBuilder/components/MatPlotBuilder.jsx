@@ -279,99 +279,51 @@ export default function MatPlotBuilder({
         )}
       </div>
 
-      <div className="mat-plot-builder__workspace">
-        <div className="mat-plot-builder__browser">
-          <div className="mat-plot-builder__panel-title">MAT Workspace</div>
-          {varsLoading && <div className="summary-label">Loading MAT variables...</div>}
-          {!!varsError && <div className="project-shell__error">{varsError}</div>}
-          {!varsLoading && !variables.length && (
-            <div className="summary-label">No variables found for this MAT file.</div>
-          )}
-          {variables.map((item) => (
-            <button
-              key={item?.name}
-              type="button"
-              className={`mat-plot-builder__var-item ${focusedVar === item?.name ? 'is-active' : ''}`}
-              onClick={() => setFocusedVar(item?.name)}
-            >
-              <div className="mat-plot-builder__var-top">
-                <span>{item?.name}</span>
-                {item?.is_derived && <span className="mat-plot-builder__badge">Derived</span>}
-              </div>
-              <div className="summary-label">
-                {item?.kind || '-'} | {item?.dtype || '-'} | {shapeText(item?.shape)}
-              </div>
-            </button>
-          ))}
-        </div>
+      <div className="mat-plot-builder__panel">
+        <div className="mat-plot-builder__panel-title"> Plot Builder</div>
 
-        <div className="mat-plot-builder__controls">
-          <div className="mat-plot-builder__panel">
-            <div className="mat-plot-builder__panel-title">Variable Detail</div>
-            {focusedDetailLoading && <div className="summary-label">Loading variable detail...</div>}
-            {!!focusedDetailError && <div className="project-shell__error">{focusedDetailError}</div>}
-            {!focusedDetailLoading && !focusedDetailError && focusedDetail && (
-              <div className="mat-plot-builder__detail-list">
-                <div className="summary-label">Variable: {focusedDetail.variable}</div>
-                <div className="summary-label">Type: {focusedDetail.kind}</div>
-                <div className="summary-label">DType: {focusedDetail.dtype}</div>
-                <div className="summary-label">Shape: {shapeText(focusedDetail.shape)}</div>
-                {extractDims(focusedDetail.shape).map((item) => (
-                  <div key={`${focusedDetail.variable}-${item.index}`} className="summary-label">
-                    {item.label}: {item.size}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {(mode === 'plot_xy' || mode === 'plot3') && (
+          <MatVariablePicker
+            label="X Variable"
+            variables={numericVariables}
+            valueVar={xVar}
+            valueSlice={xSlice}
+            onVarChange={(value) => onSeriesChange({ matXVar: value })}
+            onSliceChange={(value) => onSeriesChange({ matXSlice: value })}
+            preview={previewByAxis.x}
+            required
+            disabled={!jobId}
+          />
+        )}
 
-          <div className="mat-plot-builder__panel">
-            <div className="mat-plot-builder__panel-title"> Plot Builder</div>
+        <MatVariablePicker
+          label="Y Variable"
+          variables={numericVariables}
+          valueVar={yVar}
+          valueSlice={ySlice}
+          onVarChange={(value) => onSeriesChange({ matYVar: value, matVar: value })}
+          onSliceChange={(value) => onSeriesChange({ matYSlice: value, matSliceExpr: value })}
+          preview={previewByAxis.y}
+          required
+          disabled={!jobId}
+        />
 
-            {(mode === 'plot_xy' || mode === 'plot3') && (
-              <MatVariablePicker
-                label="X Variable"
-                variables={numericVariables}
-                valueVar={xVar}
-                valueSlice={xSlice}
-                onVarChange={(value) => onSeriesChange({ matXVar: value })}
-                onSliceChange={(value) => onSeriesChange({ matXSlice: value })}
-                preview={previewByAxis.x}
-                required
-                disabled={!jobId}
-              />
-            )}
+        {mode === 'plot3' && (
+          <MatVariablePicker
+            label="Z Variable"
+            variables={numericVariables}
+            valueVar={zVar}
+            valueSlice={zSlice}
+            onVarChange={(value) => onSeriesChange({ matZVar: value })}
+            onSliceChange={(value) => onSeriesChange({ matZSlice: value })}
+            preview={previewByAxis.z}
+            required
+            disabled={!jobId}
+          />
+        )}
 
-            <MatVariablePicker
-              label="Y Variable"
-              variables={numericVariables}
-              valueVar={yVar}
-              valueSlice={ySlice}
-              onVarChange={(value) => onSeriesChange({ matYVar: value, matVar: value })}
-              onSliceChange={(value) => onSeriesChange({ matYSlice: value, matSliceExpr: value })}
-              preview={previewByAxis.y}
-              required
-              disabled={!jobId}
-            />
-
-            {mode === 'plot3' && (
-              <MatVariablePicker
-                label="Z Variable"
-                variables={numericVariables}
-                valueVar={zVar}
-                valueSlice={zSlice}
-                onVarChange={(value) => onSeriesChange({ matZVar: value })}
-                onSliceChange={(value) => onSeriesChange({ matZSlice: value })}
-                preview={previewByAxis.z}
-                required
-                disabled={!jobId}
-              />
-            )}
-
-            <div className="mat-plot-builder__preview-text">
-              Slice Preview: {signatureText || 'Select variable(s)'} | Empty slice means full variable (`:`).
-            </div>
-          </div>
+        <div className="mat-plot-builder__preview-text">
+          Slice Preview: {signatureText || 'Select variable(s)'} | Empty slice means full variable (`:`).
         </div>
       </div>
 

@@ -53,7 +53,7 @@ const CHART_TYPES = [
 ]
 
 const plotTypes2D = [
-   { value: 'scatter', label: 'Scatter' },
+  { value: 'scatter', label: 'Scatter' },
   { value: 'line', label: 'Line' },
   { value: 'bar', label: 'Bar' },
   // Add plaor 
@@ -66,7 +66,7 @@ const plotTypes2D = [
   { value: 'scatterline', label: 'Scatter Line' },
 ]
 
-const plotTypes3D =[
+const plotTypes3D = [
   { value: 'scatter3d', label: '3D Scatter' },
   { value: 'line3d', label: '3D Line' },
   { value: 'surface', label: '3D Surface' },
@@ -183,14 +183,14 @@ export default function ProjectVisualisation() {
   const { project } = useOutletContext()
 
   const [confirmDelete, setConfirmDelete] = useState({
-  open: false,
-  vizId: null,
-})
+    open: false,
+    vizId: null,
+  })
 
-const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
-  open: false,
-  seriesId: null,
-});
+  const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
+    open: false,
+    seriesId: null,
+  });
 
   const [deletingViz, setDeletingViz] = useState(null)
 
@@ -213,8 +213,8 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [matMetaByJob, setMatMetaByJob] = useState({})
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
-//   const [showLeaveWarn, setShowLeaveWarn] = useState(false);
-// const [hasUnsavedCalc, setHasUnsavedCalc] = useState(false);
+  //   const [showLeaveWarn, setShowLeaveWarn] = useState(false);
+  // const [hasUnsavedCalc, setHasUnsavedCalc] = useState(false);
 
   /* ================= calculation tab state ================= */
   const calcFormulaInputRef = useRef(null)
@@ -249,10 +249,10 @@ const [confirmRemoveSeries, setConfirmRemoveSeries] = useState({
   const [visualizations, setVisualizations] = useState([])
   const PAGE_SIZE = 30;
 
-const [vizPage, setVizPage] = useState(1);
-const [hasMoreViz, setHasMoreViz] = useState(true);
-const [loadingViz, setLoadingViz] = useState(false);
-const [loadingSave, setLoadingSave] = useState(false);
+  const [vizPage, setVizPage] = useState(1);
+  const [hasMoreViz, setHasMoreViz] = useState(true);
+  const [loadingViz, setLoadingViz] = useState(false);
+  const [loadingSave, setLoadingSave] = useState(false);
 
   const [activeViz, setActiveViz] = useState(null)
   const [plotHtml, setPlotHtml] = useState('')
@@ -274,14 +274,14 @@ const [loadingSave, setLoadingSave] = useState(false);
   )
 
   const showPopup = (message, type = "success") => {
-  setPopupMessage(message)
-  setPopupType(type)
+    setPopupMessage(message)
+    setPopupType(type)
 
-  // Keep popup visible for 7 seconds (change to 5000–10000 if needed)
-  setTimeout(() => {
-    setPopupMessage("")
-  }, 7000)
-}
+    // Keep popup visible for 7 seconds (change to 5000–10000 if needed)
+    setTimeout(() => {
+      setPopupMessage("")
+    }, 7000)
+  }
 
   const upsertTempMatDerivedForJob = useCallback((jobId, previewData) => {
     const safeJobId = String(jobId || '').trim()
@@ -371,10 +371,10 @@ const [loadingSave, setLoadingSave] = useState(false);
   }, [])
 
   const [dimension, setDimension] = useState('2d')
-// const [plotType, setPlotType] = useState('')
+  // const [plotType, setPlotType] = useState('')
 
-const plotOptions =
-  dimension === '2d' ? plotTypes2D : plotTypes3D
+  const plotOptions =
+    dimension === '2d' ? plotTypes2D : plotTypes3D
 
 
   // keep activeSeriesId always valid
@@ -457,7 +457,7 @@ const plotOptions =
   const jobsById = useMemo(() => {
     const map = {}
     Object.values(filesByDatasetTag).forEach((list) => {
-      ;(list || []).forEach((job) => {
+      ; (list || []).forEach((job) => {
         if (job?.job_id) map[job.job_id] = job
       })
     })
@@ -867,144 +867,144 @@ const plotOptions =
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [projectId])
 
-// const fetchVisualizations = async (page = 1, reset = false) => {
-//   if (loadingViz) return;
+  // const fetchVisualizations = async (page = 1, reset = false) => {
+  //   if (loadingViz) return;
 
-//   setLoadingViz(true);
-//   try {
-//     const res = await visualizationApi.listForProject(projectId, {
-//       page,
-//       limit: PAGE_SIZE,
-//     });
+  //   setLoadingViz(true);
+  //   try {
+  //     const res = await visualizationApi.listForProject(projectId, {
+  //       page,
+  //       limit: PAGE_SIZE,
+  //     });
 
-//     const list = res || [];
+  //     const list = res || [];
 
-//     setVisualizations((prev) =>
-//       reset ? list : [...prev, ...list]
-//     );
+  //     setVisualizations((prev) =>
+  //       reset ? list : [...prev, ...list]
+  //     );
 
-//     // ✅ ONLY update hasMore when loading next page
-//     if (!reset) {
-//       setHasMoreViz(list.length >= PAGE_SIZE);
-//     }
+  //     // ✅ ONLY update hasMore when loading next page
+  //     if (!reset) {
+  //       setHasMoreViz(list.length >= PAGE_SIZE);
+  //     }
 
-//     setVizPage(page);
-//   } catch (e) {
-//     setError(
-//       e?.response?.data?.detail ||
-//       e.message ||
-//       'Failed to load visualizations'
-//     );
-//   } finally {
-//     setLoadingViz(false);
-//   }
-// };
+  //     setVizPage(page);
+  //   } catch (e) {
+  //     setError(
+  //       e?.response?.data?.detail ||
+  //       e.message ||
+  //       'Failed to load visualizations'
+  //     );
+  //   } finally {
+  //     setLoadingViz(false);
+  //   }
+  // };
 
-// const handleSaveVisualization = async () => {
-//   if (!plotHtml) return; // safety check
-//   setLoadingSave(true);
-//   try {
-//     await visualizationApi.save({
-//       project_id: projectId,
-//       html: plotHtml,
-//       series: seriesList,
-//       chart_type: chartType,
-//       name: activeSeries?.label || 'Plot',
-//     });
-//     setStatusMessage('Visualization saved successfully.');
-//     fetchVisualizations(1, true); // refresh saved visualizations list
-//   } catch (err) {
-//     setStatusMessage('Failed to save visualization.');
-//   } finally {
-//     setLoadingSave(false);
-//   }
-// };
+  // const handleSaveVisualization = async () => {
+  //   if (!plotHtml) return; // safety check
+  //   setLoadingSave(true);
+  //   try {
+  //     await visualizationApi.save({
+  //       project_id: projectId,
+  //       html: plotHtml,
+  //       series: seriesList,
+  //       chart_type: chartType,
+  //       name: activeSeries?.label || 'Plot',
+  //     });
+  //     setStatusMessage('Visualization saved successfully.');
+  //     fetchVisualizations(1, true); // refresh saved visualizations list
+  //   } catch (err) {
+  //     setStatusMessage('Failed to save visualization.');
+  //   } finally {
+  //     setLoadingSave(false);
+  //   }
+  // };
 
-const handleSaveVisualization = async () => {
-  try {
-    setLoadingSave(true)
+  const handleSaveVisualization = async () => {
+    try {
+      setLoadingSave(true)
 
-    await fetchVisualizations(1, true)
+      await fetchVisualizations(1, true)
 
-    setStatusMessage("Visualization saved successfully ✅")
+      setStatusMessage("Visualization saved successfully ✅")
 
-  } catch (err) {
-    console.error(err)
-  } finally {
-    setLoadingSave(false)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingSave(false)
+    }
   }
-}
 
-const handleFullScreen = (viz) => {
-  if (!viz?.html_url) return;
+  const handleFullScreen = (viz) => {
+    if (!viz?.html_url) return;
 
-  const url = viz.html_url.startsWith("http")
-    ? viz.html_url
-    : `${window.__FD_API_BASE__}${viz.html_url}`;
+    const url = viz.html_url.startsWith("http")
+      ? viz.html_url
+      : `${window.__FD_API_BASE__}${viz.html_url}`;
 
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
-const handleGeneratePlot = async () => {
-  try {
-    setLoading(true)
+  const handleGeneratePlot = async () => {
+    try {
+      setLoading(true)
 
-    const res = await visualizationApi.create(requestPayload)
+      const res = await visualizationApi.create(requestPayload)
 
-    setTempVizId(res.viz_id)   // store temporary id
-    pollVisualization(res.viz_id)
+      setTempVizId(res.viz_id)   // store temporary id
+      pollVisualization(res.viz_id)
 
-    setStatusMessage("Preview ready. Click Save Visualization.")
+      setStatusMessage("Preview ready. Click Save Visualization.")
 
-  } catch (err) {
-    console.error(err)
-    setStatusMessage("Failed to generate plot")
-  } finally {
-    setLoading(false)
+    } catch (err) {
+      console.error(err)
+      setStatusMessage("Failed to generate plot")
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
-const fetchVisualizations = async (page = 1, reset = false) => {
-  if (loadingViz) return
+  const fetchVisualizations = async (page = 1, reset = false) => {
+    if (loadingViz) return
 
-  setLoadingViz(true)
+    setLoadingViz(true)
 
-  try {
-    const res = await visualizationApi.listForProject(projectId, {
-      page,
-      limit: PAGE_SIZE,
-    })
+    try {
+      const res = await visualizationApi.listForProject(projectId, {
+        page,
+        limit: PAGE_SIZE,
+      })
 
-    console.log("LIST API RESPONSE:", res)
+      console.log("LIST API RESPONSE:", res)
 
-    const list = Array.isArray(res)
-      ? res
-      : res?.items || res?.data || []
+      const list = Array.isArray(res)
+        ? res
+        : res?.items || res?.data || []
 
-    setVisualizations(prev =>
-      reset ? list : [...prev, ...list]
-    )
+      setVisualizations(prev =>
+        reset ? list : [...prev, ...list]
+      )
 
-    setHasMoreViz(list.length >= PAGE_SIZE)
-    setVizPage(page)
+      setHasMoreViz(list.length >= PAGE_SIZE)
+      setVizPage(page)
 
-  } catch (e) {
-    setError(
-      e?.response?.data?.detail ||
-      e.message ||
-      'Failed to load visualizations'
-    )
-  } finally {
-    setLoadingViz(false)
+    } catch (e) {
+      setError(
+        e?.response?.data?.detail ||
+        e.message ||
+        'Failed to load visualizations'
+      )
+    } finally {
+      setLoadingViz(false)
+    }
   }
-}
 
-const savedVizLoadRef = useInfiniteScrollTrigger({
-  enabled: isExpanded,
-  hasMore: isExpanded && hasMoreViz,
-  isLoading: loadingViz,
-  onLoadMore: () => fetchVisualizations(vizPage + 1),
-})
+  const savedVizLoadRef = useInfiniteScrollTrigger({
+    enabled: isExpanded,
+    hasMore: isExpanded && hasMoreViz,
+    isLoading: loadingViz,
+    onLoadMore: () => fetchVisualizations(vizPage + 1),
+  })
 
   /* ================= columns for active series ================= */
   const activeFiles = useMemo(() => {
@@ -1311,201 +1311,201 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
     return payload
   }
 
- const handleCalcPreview = async () => {
-  setCalcError(null);
+  const handleCalcPreview = async () => {
+    setCalcError(null);
 
-  if (!calcJobId) {
-    setCalcError('Select a file first');
-    return;
-  }
-  if (!calcFormulaExpression.trim()) {
-    setCalcError('Enter a formula');
-    return;
-  }
-  if (!calcOutputColumn.trim()) {
-    setCalcError('Provide output column name');
-    return;
-  }
-  if (calcFormulaError) {
-    setCalcError(calcFormulaError);
-    return;
-  }
-
-  const missingMappings = calcIsMat
-    ? calcVariableNames.filter((name) => !(calcMatVariableMap[name]?.variable || '').trim())
-    : calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
-  if (missingMappings.length) {
-    setCalcError(`Map all variables before processing: ${missingMappings.join(', ')}`);
-    return;
-  }
-
-  try {
-    setCalcProcessing(true);
-    setCalcPreviewRows([]);
-    setCalcMatPreview(null);
-    setCalcMatPreviewContext(null);
-
-    if (calcIsMat) {
-      const derivedVariableName = calcOutputColumn.trim();
-      const data = await calculationsApi.previewMat(calcJobId, {
-        formula_expression: calcFormulaExpression.trim(),
-        variable_map: buildCalcMatVariableMapPayload(),
-        output_variable: derivedVariableName,
-      });
-      setCalcMatPreview(data || null);
-      setCalcMatPreviewContext({
-        type: 'formula',
-        variable: derivedVariableName,
-      });
-      upsertTempMatDerivedForJob(calcJobId, data || {});
-      skipNextCalcMatAutoPreviewRef.current = true;
-      setCalcPreviewMatVariable(derivedVariableName);
-      setCalcPreviewMatSliceExpr('');
-      syncVisualisationFromCalculation(derivedVariableName);
-    } else {
-      setSeriesList((prev) =>
-        prev.map((s) => ({ ...s, derivedColumns: [] }))
-      );
-
-      const data = await calculationsApi.preview(calcJobId, {
-        formula_expression: calcFormulaExpression.trim(),
-        variable_map: buildCalcVariableMapPayload(),
-        output_column: calcOutputColumn.trim(),
-        limit: 20,
-      });
-
-      setCalcPreviewRows(data?.rows || []);
-
-      const derived = data?.derived_column;
-      if (derived?.name && derived?.expression) {
-        applyCalculationToVisualisation(
-          calcDatasetType,
-          calcTag,
-          calcJobId,
-          derived
-        );
-      }
+    if (!calcJobId) {
+      setCalcError('Select a file first');
+      return;
+    }
+    if (!calcFormulaExpression.trim()) {
+      setCalcError('Enter a formula');
+      return;
+    }
+    if (!calcOutputColumn.trim()) {
+      setCalcError('Provide output column name');
+      return;
+    }
+    if (calcFormulaError) {
+      setCalcError(calcFormulaError);
+      return;
     }
 
-    setPopupType("success");
-    setPopupMessage(
-      calcIsMat
-        ? "MAT formula processed successfully. Please save the derived variable."
-        : "Formula processed successfully. Please save the derived column."
-    );
+    const missingMappings = calcIsMat
+      ? calcVariableNames.filter((name) => !(calcMatVariableMap[name]?.variable || '').trim())
+      : calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
+    if (missingMappings.length) {
+      setCalcError(`Map all variables before processing: ${missingMappings.join(', ')}`);
+      return;
+    }
 
-  } catch (e) {
-    setCalcError(
-      e?.response?.data?.detail || e.message || 'Formula preview failed'
-    );
+    try {
+      setCalcProcessing(true);
+      setCalcPreviewRows([]);
+      setCalcMatPreview(null);
+      setCalcMatPreviewContext(null);
 
-    setPopupType("error");
-    setPopupMessage("Failed to process formula");
+      if (calcIsMat) {
+        const derivedVariableName = calcOutputColumn.trim();
+        const data = await calculationsApi.previewMat(calcJobId, {
+          formula_expression: calcFormulaExpression.trim(),
+          variable_map: buildCalcMatVariableMapPayload(),
+          output_variable: derivedVariableName,
+        });
+        setCalcMatPreview(data || null);
+        setCalcMatPreviewContext({
+          type: 'formula',
+          variable: derivedVariableName,
+        });
+        upsertTempMatDerivedForJob(calcJobId, data || {});
+        skipNextCalcMatAutoPreviewRef.current = true;
+        setCalcPreviewMatVariable(derivedVariableName);
+        setCalcPreviewMatSliceExpr('');
+        syncVisualisationFromCalculation(derivedVariableName);
+      } else {
+        setSeriesList((prev) =>
+          prev.map((s) => ({ ...s, derivedColumns: [] }))
+        );
 
-  } finally {
-    setCalcProcessing(false);
+        const data = await calculationsApi.preview(calcJobId, {
+          formula_expression: calcFormulaExpression.trim(),
+          variable_map: buildCalcVariableMapPayload(),
+          output_column: calcOutputColumn.trim(),
+          limit: 20,
+        });
 
-    setTimeout(() => {
-      setPopupMessage("");
-    }, 4000);
-  }
-};
+        setCalcPreviewRows(data?.rows || []);
+
+        const derived = data?.derived_column;
+        if (derived?.name && derived?.expression) {
+          applyCalculationToVisualisation(
+            calcDatasetType,
+            calcTag,
+            calcJobId,
+            derived
+          );
+        }
+      }
+
+      setPopupType("success");
+      setPopupMessage(
+        calcIsMat
+          ? "MAT formula processed successfully. Please save the derived variable."
+          : "Formula processed successfully. Please save the derived column."
+      );
+
+    } catch (e) {
+      setCalcError(
+        e?.response?.data?.detail || e.message || 'Formula preview failed'
+      );
+
+      setPopupType("error");
+      setPopupMessage("Failed to process formula");
+
+    } finally {
+      setCalcProcessing(false);
+
+      setTimeout(() => {
+        setPopupMessage("");
+      }, 4000);
+    }
+  };
 
 
 
   const handleCalcSave = async () => {
-  setCalcError(null);
+    setCalcError(null);
 
-  if (!calcJobId) {
-    setCalcError('Select a file first');
-    return;
-  }
-  if (!calcFormulaExpression.trim()) {
-    setCalcError('Enter a formula');
-    return;
-  }
-  if (!calcOutputColumn.trim()) {
-    setCalcError('Provide output column name');
-    return;
-  }
-  if (calcFormulaError) {
-    setCalcError(calcFormulaError);
-    return;
-  }
-  const missingMappings = calcIsMat
-    ? calcVariableNames.filter((name) => !(calcMatVariableMap[name]?.variable || '').trim())
-    : calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
-  if (missingMappings.length) {
-    setCalcError(`Map all variables before saving: ${missingMappings.join(', ')}`);
-    return;
-  }
-
-  try {
-    setCalcProcessing(true);
-
-    if (calcIsMat) {
-      await calculationsApi.materializeMat(calcJobId, {
-        formula_expression: calcFormulaExpression.trim(),
-        variable_map: buildCalcMatVariableMapPayload(),
-        output_variable: calcOutputColumn.trim(),
-      });
-      removeTempMatDerivedForJob(calcJobId, calcOutputColumn.trim());
-      try {
-        const refreshedMatMeta = await matApi.variables(calcJobId)
-        setMatMetaByJob((prev) => ({ ...prev, [calcJobId]: refreshedMatMeta || prev[calcJobId] }))
-      } catch (refreshErr) {
-        console.error(refreshErr)
-      }
-      setCalcMatPreview(null);
-      setCalcMatPreviewContext(null);
-      setCalcOutputColumn('');
-      setPopupType("success");
-      setPopupMessage("Calculated MAT variable saved successfully.");
-    } else {
-      await calculationsApi.materialize(calcJobId, {
-        formula_expression: calcFormulaExpression.trim(),
-        variable_map: buildCalcVariableMapPayload(),
-        output_column: calcOutputColumn.trim(),
-        limit: 20,
-      });
-
-      const key = `${calcDatasetType}::${calcTag}`;
-      const list = await ingestionApi.listFilesInTag(
-        projectId,
-        calcDatasetType,
-        calcTag
-      );
-      const processed = (list || []).filter((f) => {
-        if (isMatFileName(f?.filename || '')) return true;
-        return !!(f.processed_key && f.columns?.length);
-      });
-      setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }));
-
-      setCalcPreviewRows([]);
-      setCalcOutputColumn('');
-
-      setSeriesList((prev) =>
-        prev.map((s) => ({ ...s, derivedColumns: [] }))
-      );
-
-      setPopupType("success");
-      setPopupMessage("Calculated column saved successfully.");
+    if (!calcJobId) {
+      setCalcError('Select a file first');
+      return;
+    }
+    if (!calcFormulaExpression.trim()) {
+      setCalcError('Enter a formula');
+      return;
+    }
+    if (!calcOutputColumn.trim()) {
+      setCalcError('Provide output column name');
+      return;
+    }
+    if (calcFormulaError) {
+      setCalcError(calcFormulaError);
+      return;
+    }
+    const missingMappings = calcIsMat
+      ? calcVariableNames.filter((name) => !(calcMatVariableMap[name]?.variable || '').trim())
+      : calcVariableNames.filter((name) => !(calcVariableMap[name] || '').trim())
+    if (missingMappings.length) {
+      setCalcError(`Map all variables before saving: ${missingMappings.join(', ')}`);
+      return;
     }
 
-  } catch (e) {
-    setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed');
+    try {
+      setCalcProcessing(true);
 
-    setPopupType("error");
-    setPopupMessage(calcIsMat ? "Failed to save calculated variable." : "Failed to save calculated column.");
+      if (calcIsMat) {
+        await calculationsApi.materializeMat(calcJobId, {
+          formula_expression: calcFormulaExpression.trim(),
+          variable_map: buildCalcMatVariableMapPayload(),
+          output_variable: calcOutputColumn.trim(),
+        });
+        removeTempMatDerivedForJob(calcJobId, calcOutputColumn.trim());
+        try {
+          const refreshedMatMeta = await matApi.variables(calcJobId)
+          setMatMetaByJob((prev) => ({ ...prev, [calcJobId]: refreshedMatMeta || prev[calcJobId] }))
+        } catch (refreshErr) {
+          console.error(refreshErr)
+        }
+        setCalcMatPreview(null);
+        setCalcMatPreviewContext(null);
+        setCalcOutputColumn('');
+        setPopupType("success");
+        setPopupMessage("Calculated MAT variable saved successfully.");
+      } else {
+        await calculationsApi.materialize(calcJobId, {
+          formula_expression: calcFormulaExpression.trim(),
+          variable_map: buildCalcVariableMapPayload(),
+          output_column: calcOutputColumn.trim(),
+          limit: 20,
+        });
 
-  } finally {
-    setCalcProcessing(false);
+        const key = `${calcDatasetType}::${calcTag}`;
+        const list = await ingestionApi.listFilesInTag(
+          projectId,
+          calcDatasetType,
+          calcTag
+        );
+        const processed = (list || []).filter((f) => {
+          if (isMatFileName(f?.filename || '')) return true;
+          return !!(f.processed_key && f.columns?.length);
+        });
+        setFilesByDatasetTag((prev) => ({ ...prev, [key]: processed }));
 
-    setTimeout(() => {
-      setPopupMessage("");
-    }, 3000);
-  }
-};
+        setCalcPreviewRows([]);
+        setCalcOutputColumn('');
+
+        setSeriesList((prev) =>
+          prev.map((s) => ({ ...s, derivedColumns: [] }))
+        );
+
+        setPopupType("success");
+        setPopupMessage("Calculated column saved successfully.");
+      }
+
+    } catch (e) {
+      setCalcError(e?.response?.data?.detail || e.message || 'Formula save failed');
+
+      setPopupType("error");
+      setPopupMessage(calcIsMat ? "Failed to save calculated variable." : "Failed to save calculated column.");
+
+    } finally {
+      setCalcProcessing(false);
+
+      setTimeout(() => {
+        setPopupMessage("");
+      }, 3000);
+    }
+  };
 
 
   const handleSubmit = async (e) => {
@@ -1627,18 +1627,18 @@ const savedVizLoadRef = useInfiniteScrollTrigger({
         }
 
         const firstSeries = payloadSeries.length
-  ? configured.find(s => s.jobId === payloadSeries[0].job_id)
-  : null
+          ? configured.find(s => s.jobId === payloadSeries[0].job_id)
+          : null
 
 
-requestPayload = {
-  project_id: projectId,
-  source_type: 'tabular',
-  dataset_type: firstSeries?.datasetType || null,
-  tag_name: firstSeries?.tag || null,
-  chart_type: chartType,
-  series: payloadSeries,
-}
+        requestPayload = {
+          project_id: projectId,
+          source_type: 'tabular',
+          dataset_type: firstSeries?.datasetType || null,
+          tag_name: firstSeries?.tag || null,
+          chart_type: chartType,
+          series: payloadSeries,
+        }
 
 
         // requestPayload = {
@@ -1652,7 +1652,7 @@ requestPayload = {
       }
 
       const res = await visualizationApi.create(requestPayload)
-pollVisualization(res.viz_id)
+      pollVisualization(res.viz_id)
 
     } catch (err) {
       setError(err?.response?.data?.detail || err.message || 'Failed to create visualization')
@@ -1661,27 +1661,27 @@ pollVisualization(res.viz_id)
     }
   }
 
- const pollVisualization = async (vizId) => {
-  try {
-    const detail = await visualizationApi.detail(vizId)
+  const pollVisualization = async (vizId) => {
+    try {
+      const detail = await visualizationApi.detail(vizId)
 
-    setActiveViz(detail)
-    setPlotHtml(detail.html || '')
+      setActiveViz(detail)
+      setPlotHtml(detail.html || '')
 
-    if (detail.status === 'SUCCESS') {
-      setStatusMessage("Preview ready. Click Save Visualization.")  // ✅ HERE
-    } else {
-      setStatusMessage(detail.message || detail.status)
+      if (detail.status === 'SUCCESS') {
+        setStatusMessage("Preview ready. Click Save Visualization.")  // ✅ HERE
+      } else {
+        setStatusMessage(detail.message || detail.status)
+      }
+
+      if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
+        pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
+      }
+
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
     }
-
-    if (!['SUCCESS', 'FAILURE'].includes(detail.status)) {
-      pollTimer.current = setTimeout(() => pollVisualization(vizId), 1500)
-    }
-
-  } catch (e) {
-    setError(e?.response?.data?.detail || e.message || 'Failed to poll visualization')
   }
-}
 
 
 
@@ -1719,31 +1719,31 @@ pollVisualization(res.viz_id)
   //     setError(e?.response?.data?.detail || e.message || 'Failed to delete visualization')
   //   }
   // }
-const deleteVisualization = async (vizId) => {
-  setDeletingViz(vizId)
-  try {
-    await visualizationApi.remove(vizId)
+  const deleteVisualization = async (vizId) => {
+    setDeletingViz(vizId)
+    try {
+      await visualizationApi.remove(vizId)
 
-    setVisualizations((prev) =>
-      prev.filter((v) => v.viz_id !== vizId)
-    )
+      setVisualizations((prev) =>
+        prev.filter((v) => v.viz_id !== vizId)
+      )
 
-    if (activeViz?.viz_id === vizId) {
-      setActiveViz(null)
-      setPlotHtml('')
-      setStatusMessage('Select data to begin')
+      if (activeViz?.viz_id === vizId) {
+        setActiveViz(null)
+        setPlotHtml('')
+        setStatusMessage('Select data to begin')
+      }
+    } catch (e) {
+      setError(
+        e?.response?.data?.detail ||
+        e.message ||
+        'Failed to delete visualization'
+      )
+    } finally {
+      setDeletingViz(null)
+      setConfirmDelete({ open: false, tagName: null })
     }
-  } catch (e) {
-    setError(
-      e?.response?.data?.detail ||
-      e.message ||
-      'Failed to delete visualization'
-    )
-  } finally {
-    setDeletingViz(null)
-    setConfirmDelete({ open: false, tagName: null })
   }
-}
 
   /* =============
   
@@ -1786,7 +1786,7 @@ const deleteVisualization = async (vizId) => {
   const { isLoading: matZoomLoading } = useMatZoomLoader({
     iframeRef: matPlotFrameRef,
     enabled: activeIsMat && !!plotHtml,
-    onZoomUpdate: useCallback(async () => {}, []),
+    onZoomUpdate: useCallback(async () => { }, []),
     debounceMs: 120,
     minLoaderMs: 80,
     showDelayMs: 180,
@@ -1795,636 +1795,636 @@ const deleteVisualization = async (vizId) => {
   /* ================= UI ================= */
   return (
     <div className="CardWapper">
-    <div className="project-cardpage">
-      <div className="Tablist" style={{ marginBottom: 12 }}>
-        <button
-          type="button"
-          className={visualSectionTab === 'visualize' ? 'active' : ''}
-          onClick={() => {
-            syncVisualisationFromCalculation()
-            setVisualSectionTab('visualize')
-          }}
-        >
-          Visualisation
-        </button>
-        <button
-          type="button"
-          className={visualSectionTab === 'calculation' ? 'active' : ''}
-          onClick={() => setVisualSectionTab('calculation')}
-        >
-          Calculation
-        </button>
-      </div>
-
-      {visualSectionTab === 'calculation' && (
-        <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
-            <p className="summary-label" style={{ margin: 0 }}>
-              Enter a formula, map detected variables to sources, preview, then save.
-            </p>
-          </div>
-
-          {calcError && <div className="project-shell__error">{calcError}</div>}
-
-          <div className="Row calculation-row">
-            <div className="ps-field">
-              <label>Dataset</label>
-              <select
-                value={calcDatasetType}
-                onChange={(e) => {
-                  setCalcDatasetType(e.target.value)
-                  setCalcTag('')
-                  setCalcJobId('')
-                  setCalcPreviewRows([])
-                  setCalcMatPreview(null)
-                  setCalcMatPreviewContext(null)
-                  setCalcMatVariableMap({})
-                  setCalcPreviewMatVariable('')
-                  setCalcPreviewMatSliceExpr('')
-                }}
-              >
-                {DATASET_TYPES.map((d) => (
-                  <option key={d.key} value={d.key}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="ps-field">
-              <label>Tag</label>
-              <select
-                value={calcTag}
-                onChange={(e) => {
-                  setCalcTag(e.target.value)
-                  setCalcJobId('')
-                  setCalcPreviewRows([])
-                  setCalcMatPreview(null)
-                  setCalcMatPreviewContext(null)
-                  setCalcMatVariableMap({})
-                  setCalcPreviewMatVariable('')
-                  setCalcPreviewMatSliceExpr('')
-                }}
-              >
-                <option value="">Select</option>
-                {getTags(calcDatasetType).map((t) => (
-                  <option key={t.tag_name} value={t.tag_name}>
-                    {t.tag_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="ps-field">
-              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>File <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
-              <select
-                value={calcJobId}
-                onChange={(e) => {
-                  setCalcJobId(e.target.value)
-                  setCalcPreviewRows([])
-                  setCalcMatPreview(null)
-                  setCalcMatPreviewContext(null)
-                  setCalcMatVariableMap({})
-                  setCalcPreviewMatVariable('')
-                  setCalcPreviewMatSliceExpr('')
-                }}
-                disabled={!calcTag}
-              >
-                <option value="">{calcTag ? 'Select' : 'Select tag first'}</option>
-                {calcFiles.map((f) => (
-                  <option key={f.job_id} value={f.job_id}>
-                    {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="ps-field">
-              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                {calcIsMat ? 'Derived Variable' : 'Derived Column'} <span style={{ color: "red",fontSize: "16px" }}>*</span>
-              </label>
-              <input
-                className="input-control"
-                value={calcOutputColumn}
-                onChange={(e) => setCalcOutputColumn(e.target.value)}
-                placeholder={calcIsMat ? 'derived_var_name' : 'derived_col_name'}
-              />
-            </div>
-          </div>
-
-          <div className="ps-field calc-formula-editor">
-            <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Formula <span style={{ color: "red",fontSize: "16px" }}>*</span></label>
-            <textarea
-              ref={calcFormulaInputRef}
-              className="calc-formula-input"
-              value={calcFormulaExpression}
-              onChange={(e) => handleCalcFormulaChange(e.target.value)}
-              onClick={handleCalcFormulaCursorChange}
-              onKeyUp={handleCalcFormulaCursorChange}
-              onKeyDown={handleCalcFormulaKeyDown}
-              onSelect={handleCalcFormulaCursorChange}
-              spellCheck={false}
-              placeholder="Example: sqrt(a+b) * (cos(a) + sin(b))"
-            />
-            {calcFormulaSuggestions.length > 0 && (
-              <div className="calc-suggestion-list">
-                {calcFormulaSuggestions.map((fn) => (
-                  <button
-                    key={fn.name}
-                    type="button"
-                    className="calc-suggestion-item"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleInsertFormulaFunction(fn.name)}
-                  >
-                    <span className="calc-suggestion-name">{fn.name}</span>
-                    <span className="calc-suggestion-meta">{fn.example || ''}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="summary-label" style={{ marginTop: 6 }}>
-              Function autocomplete: type a function name, then press <code>Tab</code>/<code>Enter</code> or click suggestion.
-            </div>
-            {!!calcFormulaError && (
-              <div className="project-shell__error" style={{ marginTop: 8 }}>
-                {calcFormulaError}
-              </div>
-            )}
-            {!calcFormulaError && !!calcNormalizedExpression && calcNormalizedExpression !== calcFormulaExpression.trim() && (
-              <div className="summary-label" style={{ marginTop: 8 }}>
-                Normalized: <code>{calcNormalizedExpression}</code>
-              </div>
-            )}
-          </div>
-
-          <div className="calc-syntax-preview">
-            {calcFormulaExpression ? (
-              calcFormulaTokens.map((part, idx) => (
-                <span key={`calc-token-${idx}`} className={`calc-token calc-token--${part.kind}`}>
-                  {part.token}
-                </span>
-              ))
-            ) : (
-              <span className="calc-token calc-token--plain">Formula syntax preview appears here.</span>
-            )}
-          </div>
-
-          <div className="Row calculation-row">
-            {(calcVariableNames || []).map((variableName) => (
-              <div className="ps-field" key={`calc-var-${variableName}`}>
-                {calcIsMat ? (
-                  <>
-                    <label>{`MAT source for ${variableName}`}</label>
-                    <select
-                      value={calcMatVariableMap[variableName]?.variable || ''}
-                      onChange={(e) =>
-                        handleCalcMatVariableMapChange(variableName, { variable: e.target.value })
-                      }
-                      disabled={!calcJobId || !calcMatVars.length}
-                    >
-                      <option value="">
-                        {!calcJobId
-                          ? 'Select file first'
-                          : !calcMatVars.length
-                            ? 'Loading MAT variables...'
-                            : 'Select variable'}
-                      </option>
-                      {calcMatVars.map((v) => (
-                        <option key={v.name} value={v.name}>
-                          {v.name} ({toMatShapeText(v.shape)}{v.dtype ? ` | ${v.dtype}` : ''})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      className="input-control"
-                      value={calcMatVariableMap[variableName]?.sliceExpr || ''}
-                      onChange={(e) =>
-                        handleCalcMatVariableMapChange(variableName, { sliceExpr: e.target.value })
-                      }
-                      placeholder="Slice (optional): :, : or :, :, 1"
-                      style={{ marginTop: 8 }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <label>{`Column for ${variableName}`}</label>
-                    <select
-                      value={calcVariableMap[variableName] || ''}
-                      onChange={(e) => handleCalcVariableMapChange(variableName, e.target.value)}
-                      disabled={!calcJobId}
-                    >
-                      <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
-                      {calcColumns.map((col) => (
-                        <option key={col} value={col}>
-                          {col}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div style={{display:'flex', justifyContent:'flex-end', gap: 12}}>
-            <button
-              type="button"
-              className="project-shell__nav-link"
-              onClick={handleCalcPreview}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Processing…' : 'Process Formula'}
-            </button>
-            <button
-              type="button"
-              className="project-shell__nav-save"
-              onClick={handleCalcSave}
-              disabled={calcProcessing}
-            >
-              {calcProcessing ? 'Saving…' : (calcIsMat ? 'Save Derived Variable' : 'Save Derived Column')}
-            </button>
-          </div>
-
-
-        <div>
-  <p
-    className="summary-label"
-    style={{
-      marginBottom: 6,
-      fontFamily: "inter-semi-bold, Helvetica",
-      fontSize: "16px",
-      fontWeight: 600,
-      color: "#000000",
-    }}
-  >
-    Preview
-  </p>
-
-  <div className="excel-preview">
-    {calcIsMat && calcJobId && (
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12, flexWrap: 'wrap' }}>
-        <div className="ps-field" style={{ margin: 0, minWidth: 260 }}>
-          <label className="summary-label" style={{ margin: 0 }}>Preview variable</label>
-          <select
-            value={calcPreviewMatVariable}
-            onChange={(e) => handleCalcPreviewMatVariableChange(e.target.value)}
-            disabled={!calcMatVars.length}
-          >
-            <option value="">{!calcMatVars.length ? 'Loading MAT variables...' : 'Select variable'}</option>
-            {calcMatVars.map((v) => (
-              <option key={`calc-preview-var-${v.name}`} value={v.name}>
-                {v.name} ({toMatShapeText(v.shape)}{v.dtype ? ` | ${v.dtype}` : ''})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="ps-field" style={{ margin: 0, minWidth: 280 }}>
-          <label className="summary-label" style={{ margin: 0 }}>Slice (optional)</label>
-          <input
-            className="input-control"
-            value={calcPreviewMatSliceExpr}
-            onChange={(e) => setCalcPreviewMatSliceExpr(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter') return
-              e.preventDefault()
-              handleCalcPreviewMatSliceApply()
+      <div className="project-cardpage">
+        <div className="Tablist" style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className={visualSectionTab === 'visualize' ? 'active' : ''}
+            onClick={() => {
+              syncVisualisationFromCalculation()
+              setVisualSectionTab('visualize')
             }}
-            placeholder=":, : or :, :, 1"
-          />
+          >
+            Visualisation
+          </button>
+          <button
+            type="button"
+            className={visualSectionTab === 'calculation' ? 'active' : ''}
+            onClick={() => setVisualSectionTab('calculation')}
+          >
+            Calculation
+          </button>
         </div>
 
-        <button
-          type="button"
-          className="project-shell__nav-link"
-          onClick={handleCalcPreviewMatSliceApply}
-          disabled={!calcPreviewMatVariable || calcMatSourcePreviewLoading}
-          style={{ height: 36 }}
-        >
-          Apply
-        </button>
-      </div>
-    )}
+        {visualSectionTab === 'calculation' && (
+          <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
+              <p className="summary-label" style={{ margin: 0 }}>
+                Enter a formula, map detected variables to sources, preview, then save.
+              </p>
+            </div>
 
-    {calcFilePreviewLoading ? (
-      <div
-        style={{
-          height: 300,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div className="summary-label">Loading selected file preview…</div>
-      </div>
-    ) : calcMatSourcePreviewLoading ? (
-      <div
-        style={{
-          height: 300,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div className="summary-label">Loading MAT variable preview…</div>
-      </div>
-    ) : calcMatPreview ? (
-      <div>
-        <div className="summary-label" style={{ marginBottom: 8 }}>
-          {calcIsSourceMatPreview
-            ? `Showing MAT source preview for ${calcMatPreviewContext?.variable || 'selected variable'}.`
-            : 'Showing calculated MAT output preview.'}
-        </div>
-        <div className="summary-label" style={{ marginBottom: 8 }}>
-          {calcMatPreview?.display_shape || toMatShapeText(calcMatPreview?.shape)}{calcMatPreview?.dtype ? ` | ${calcMatPreview.dtype}` : ''}{calcMatPreview?.slice_expr ? ` | ${calcMatPreview.slice_expr}` : ''}
-        </div>
-        {calcMatPreview?.format === 'scalar' && (
-          <div style={{ fontFamily: 'monospace' }}>
-            {String(calcMatPreview?.scalar ?? '')}
-          </div>
-        )}
-        {calcMatPreview?.format === 'table' && calcMatPreview?.table && (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: 56 }}></th>
-                {calcMatPreview.table.headers.map((h) => (
-                  <th key={`mat-calc-head-${h}`}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(calcMatPreview.table.rows || []).map((row, rowIdx) => (
-                <tr key={`mat-calc-row-${rowIdx}`}>
-                  <th>{rowIdx + 1}</th>
-                  {(row || []).map((cell, colIdx) => (
-                    <td key={`mat-calc-cell-${rowIdx}-${colIdx}`}>{String(cell ?? '')}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {calcMatPreview?.format === 'pages' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {(calcMatPreview.pages || []).map((page) => (
-              <div key={`mat-calc-page-${page.page}`}>
-                <div className="summary-label" style={{ marginBottom: 6 }}>
-                  (:, :, {page.page})
-                </div>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 56 }}></th>
-                      {(page.headers || []).map((h) => (
-                        <th key={`mat-calc-page-head-${page.page}-${h}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(page.rows || []).map((row, rowIdx) => (
-                      <tr key={`mat-calc-page-row-${page.page}-${rowIdx}`}>
-                        <th>{rowIdx + 1}</th>
-                        {(row || []).map((cell, colIdx) => (
-                          <td key={`mat-calc-page-cell-${page.page}-${rowIdx}-${colIdx}`}>
-                            {String(cell ?? '')}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-        )}
-        {calcMatPreview?.message && (
-          <div className="summary-label" style={{ marginTop: 8 }}>
-            {calcMatPreview.message}
-          </div>
-        )}
-      </div>
-    ) : calcDisplayPreviewRows.length ? (
-      <>
-      {calcJobId && (
-        <div className="summary-label" style={{ marginBottom: 8 }}>
-          {showingCalculatedPreview
-            ? 'Showing calculated output preview.'
-            : 'Showing selected file preview.'}
-        </div>
-      )}
-      <table className="data-table">
-        <thead>
-          <tr>
-            {Object.keys(calcDisplayPreviewRows[0] || {}).map((k) => (
-              <th key={k}>{k}</th>
-            ))}
-          </tr>
-        </thead>
+            {calcError && <div className="project-shell__error">{calcError}</div>}
 
-        <tbody>
-          {calcDisplayPreviewRows.slice(0, 10).map((row, i) => (
-            <tr key={`calc-row-${i}`}>
-              {Object.keys(calcDisplayPreviewRows[0] || {}).map((k) => (
-                <td key={`${i}-${k}`}>
-                  {String(row?.[k] ?? "")}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </>
-    ) : calcFilePreviewError ? (
-      <div
-        style={{
-          height: 300,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 12,
-        }}
-      >
-        <div className="project-shell__error">{calcFilePreviewError}</div>
-      </div>
-    ) : (
-      <div
-        style={{
-          height: 300,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <EmptySection />
-      </div>
-    )}
-  </div>
-</div>
-
-        </div>
-      )}
-
-      {visualSectionTab === 'visualize' && (
-        <>
-      {/* ================= TOP: SETTINGS (old UI classes) ================= */}
-      <form onSubmit={handleSubmit} className="plot-settings">
-        <div className="tableHeader">Plot Setting</div>
-
-        {error && (
-          <div className="project-shell__error" style={{ marginBottom: 10 }}>
-            {error}
-          </div>
-        )}
-
-
-        {/* ===== Editor (aligned with old UI grid) ===== */}
-        <div className="ps-row">
-          <div className="ps-field">
-            <label>Dataset</label>
-            <select
-              value={activeSeries?.datasetType || 'wind'}
-              onChange={(e) =>
-                updateActiveSeries({
-                  datasetType: e.target.value,
-                  tag: '',
-                  jobId: '',
-                  xAxis: '',
-                  yAxis: '',
-                  zAxis: '',
-                  ...MAT_SERIES_DEFAULTS,
-                  derivedColumns: [],
-                })
-              }
-            >
-              {DATASET_TYPES.map((d) => (
-                <option key={d.key} value={d.key}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="ps-field">
-            <label>Tag</label>
-            <select
-              value={activeSeries?.tag || ''}
-              onChange={(e) =>
-                updateActiveSeries({
-                  tag: e.target.value,
-                  jobId: '',
-                  xAxis: '',
-                  yAxis: '',
-                  zAxis: '',
-                  ...MAT_SERIES_DEFAULTS,
-                  derivedColumns: [],
-                })
-              }
-            >
-              <option value="">Select</option>
-              {getTags(activeSeries?.datasetType).map((t) => (
-                <option key={t.tag_name} value={t.tag_name}>
-                  {t.tag_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="ps-field">
-            <label>File</label>
-            <select 
-              value={activeSeries?.jobId || ''}
-              onChange={(e) =>
-                updateActiveSeries({
-                  jobId: e.target.value,
-                  xAxis: '',
-                  yAxis: '',
-                  zAxis: '',
-                  ...MAT_SERIES_DEFAULTS,
-                  derivedColumns: [],
-                })
-              }
-              disabled={!activeSeries?.tag}
-            >
-              <option className="FileSelect" value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
-              {activeFiles.map((f) => (
-                <option  className="FileSelect" key={f.job_id} value={f.job_id}>
-                  {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
-                </option>
-              ))}
-            </select>
-            {activeIsMat && (
-              <button
-                type="button"
-                className="project-shell__nav-link"
-                style={{ marginTop: 8, width: 100 }}
-                disabled={!activeSeries?.jobId}
-                onClick={() =>
-                  openMatPreviewInNewTab({
-                    projectId,
-                    datasetType: activeSeries?.datasetType,
-                    tagName: activeSeries?.tag,
-                    jobId: activeSeries?.jobId,
-                  })
-                }
-              >
-                <img src={ViewIcon} alt="view" style={{ width: 14, height: 14 }} />
-                View
-              </button>
-            )}
-          </div>
-
-
-          {!activeIsMat && (
-            <>
+            <div className="Row calculation-row">
               <div className="ps-field">
-                <label>Plot Type</label>
+                <label>Dataset</label>
                 <select
-                  value={dimension}
+                  value={calcDatasetType}
                   onChange={(e) => {
-                    setDimension(e.target.value)
+                    setCalcDatasetType(e.target.value)
+                    setCalcTag('')
+                    setCalcJobId('')
+                    setCalcPreviewRows([])
+                    setCalcMatPreview(null)
+                    setCalcMatPreviewContext(null)
+                    setCalcMatVariableMap({})
+                    setCalcPreviewMatVariable('')
+                    setCalcPreviewMatSliceExpr('')
                   }}
                 >
-                  <option value="2d">2D</option>
-                  <option value="3d">3D</option>
-                </select>
-              </div>
-
-              <div className="ps-field">
-                <label>Chart Type</label>
-                <select
-                  value={chartType}
-                  onChange={(e) => setChartType(e.target.value)}
-                >
-                  <option value="">Select Chart Type</option>
-                  {activeChartOptions.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
+                  {DATASET_TYPES.map((d) => (
+                    <option key={d.key} value={d.key}>
+                      {d.label}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="ps-field">
-                <label>X Scale</label>
-                <select value={xScale} onChange={(e) => setXScale(e.target.value)}>
-                  <option value="linear">Linear</option>
-                  <option value="log">Log</option>
+                <label>Tag</label>
+                <select
+                  value={calcTag}
+                  onChange={(e) => {
+                    setCalcTag(e.target.value)
+                    setCalcJobId('')
+                    setCalcPreviewRows([])
+                    setCalcMatPreview(null)
+                    setCalcMatPreviewContext(null)
+                    setCalcMatVariableMap({})
+                    setCalcPreviewMatVariable('')
+                    setCalcPreviewMatSliceExpr('')
+                  }}
+                >
+                  <option value="">Select</option>
+                  {getTags(calcDatasetType).map((t) => (
+                    <option key={t.tag_name} value={t.tag_name}>
+                      {t.tag_name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="ps-field">
-                <label>Y Scale</label>
-                <select value={yScale} onChange={(e) => setYScale(e.target.value)}>
-                  <option value="linear">Linear</option>
-                  <option value="log">Log</option>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>File <span style={{ color: "red", fontSize: "16px" }}>*</span></label>
+                <select
+                  value={calcJobId}
+                  onChange={(e) => {
+                    setCalcJobId(e.target.value)
+                    setCalcPreviewRows([])
+                    setCalcMatPreview(null)
+                    setCalcMatPreviewContext(null)
+                    setCalcMatVariableMap({})
+                    setCalcPreviewMatVariable('')
+                    setCalcPreviewMatSliceExpr('')
+                  }}
+                  disabled={!calcTag}
+                >
+                  <option value="">{calcTag ? 'Select' : 'Select tag first'}</option>
+                  {calcFiles.map((f) => (
+                    <option key={f.job_id} value={f.job_id}>
+                      {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
+                    </option>
+                  ))}
                 </select>
               </div>
-            </>
-          )}
 
-           {/* <div className="ps-field">
+              <div className="ps-field">
+                <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                  {calcIsMat ? 'Derived Variable' : 'Derived Column'} <span style={{ color: "red", fontSize: "16px" }}>*</span>
+                </label>
+                <input
+                  className="input-control"
+                  value={calcOutputColumn}
+                  onChange={(e) => setCalcOutputColumn(e.target.value)}
+                  placeholder={calcIsMat ? 'derived_var_name' : 'derived_col_name'}
+                />
+              </div>
+            </div>
+
+            <div className="ps-field calc-formula-editor">
+              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Formula <span style={{ color: "red", fontSize: "16px" }}>*</span></label>
+              <textarea
+                ref={calcFormulaInputRef}
+                className="calc-formula-input"
+                value={calcFormulaExpression}
+                onChange={(e) => handleCalcFormulaChange(e.target.value)}
+                onClick={handleCalcFormulaCursorChange}
+                onKeyUp={handleCalcFormulaCursorChange}
+                onKeyDown={handleCalcFormulaKeyDown}
+                onSelect={handleCalcFormulaCursorChange}
+                spellCheck={false}
+                placeholder="Example: sqrt(a+b) * (cos(a) + sin(b))"
+              />
+              {calcFormulaSuggestions.length > 0 && (
+                <div className="calc-suggestion-list">
+                  {calcFormulaSuggestions.map((fn) => (
+                    <button
+                      key={fn.name}
+                      type="button"
+                      className="calc-suggestion-item"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleInsertFormulaFunction(fn.name)}
+                    >
+                      <span className="calc-suggestion-name">{fn.name}</span>
+                      <span className="calc-suggestion-meta">{fn.example || ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="summary-label" style={{ marginTop: 6 }}>
+                Function autocomplete: type a function name, then press <code>Tab</code>/<code>Enter</code> or click suggestion.
+              </div>
+              {!!calcFormulaError && (
+                <div className="project-shell__error" style={{ marginTop: 8 }}>
+                  {calcFormulaError}
+                </div>
+              )}
+              {!calcFormulaError && !!calcNormalizedExpression && calcNormalizedExpression !== calcFormulaExpression.trim() && (
+                <div className="summary-label" style={{ marginTop: 8 }}>
+                  Normalized: <code>{calcNormalizedExpression}</code>
+                </div>
+              )}
+            </div>
+
+            <div className="calc-syntax-preview">
+              {calcFormulaExpression ? (
+                calcFormulaTokens.map((part, idx) => (
+                  <span key={`calc-token-${idx}`} className={`calc-token calc-token--${part.kind}`}>
+                    {part.token}
+                  </span>
+                ))
+              ) : (
+                <span className="calc-token calc-token--plain">Formula syntax preview appears here.</span>
+              )}
+            </div>
+
+            <div className="Row calculation-row">
+              {(calcVariableNames || []).map((variableName) => (
+                <div className="ps-field" key={`calc-var-${variableName}`}>
+                  {calcIsMat ? (
+                    <>
+                      <label>{`MAT source for ${variableName}`}</label>
+                      <select
+                        value={calcMatVariableMap[variableName]?.variable || ''}
+                        onChange={(e) =>
+                          handleCalcMatVariableMapChange(variableName, { variable: e.target.value })
+                        }
+                        disabled={!calcJobId || !calcMatVars.length}
+                      >
+                        <option value="">
+                          {!calcJobId
+                            ? 'Select file first'
+                            : !calcMatVars.length
+                              ? 'Loading MAT variables...'
+                              : 'Select variable'}
+                        </option>
+                        {calcMatVars.map((v) => (
+                          <option key={v.name} value={v.name}>
+                            {v.name} ({toMatShapeText(v.shape)}{v.dtype ? ` | ${v.dtype}` : ''})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="input-control"
+                        value={calcMatVariableMap[variableName]?.sliceExpr || ''}
+                        onChange={(e) =>
+                          handleCalcMatVariableMapChange(variableName, { sliceExpr: e.target.value })
+                        }
+                        placeholder="Slice (optional): :, : or :, :, 1"
+                        style={{ marginTop: 8 }}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label>{`Column for ${variableName}`}</label>
+                      <select
+                        value={calcVariableMap[variableName] || ''}
+                        onChange={(e) => handleCalcVariableMapChange(variableName, e.target.value)}
+                        disabled={!calcJobId}
+                      >
+                        <option value="">{calcJobId ? 'Select' : 'Select file first'}</option>
+                        {calcColumns.map((col) => (
+                          <option key={col} value={col}>
+                            {col}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                type="button"
+                className="project-shell__nav-link"
+                onClick={handleCalcPreview}
+                disabled={calcProcessing}
+              >
+                {calcProcessing ? 'Processing…' : 'Process Formula'}
+              </button>
+              <button
+                type="button"
+                className="project-shell__nav-save"
+                onClick={handleCalcSave}
+                disabled={calcProcessing}
+              >
+                {calcProcessing ? 'Saving…' : (calcIsMat ? 'Save Derived Variable' : 'Save Derived Column')}
+              </button>
+            </div>
+
+
+            <div>
+              <p
+                className="summary-label"
+                style={{
+                  marginBottom: 6,
+                  fontFamily: "inter-semi-bold, Helvetica",
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#000000",
+                }}
+              >
+                Preview
+              </p>
+
+              <div className="excel-preview">
+                {calcIsMat && calcJobId && (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12, flexWrap: 'wrap' }}>
+                    <div className="ps-field" style={{ margin: 0, minWidth: 260 }}>
+                      <label className="summary-label" style={{ margin: 0 }}>Preview variable</label>
+                      <select
+                        value={calcPreviewMatVariable}
+                        onChange={(e) => handleCalcPreviewMatVariableChange(e.target.value)}
+                        disabled={!calcMatVars.length}
+                      >
+                        <option value="">{!calcMatVars.length ? 'Loading MAT variables...' : 'Select variable'}</option>
+                        {calcMatVars.map((v) => (
+                          <option key={`calc-preview-var-${v.name}`} value={v.name}>
+                            {v.name} ({toMatShapeText(v.shape)}{v.dtype ? ` | ${v.dtype}` : ''})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="ps-field" style={{ margin: 0, minWidth: 280 }}>
+                      <label className="summary-label" style={{ margin: 0 }}>Slice (optional)</label>
+                      <input
+                        className="input-control"
+                        value={calcPreviewMatSliceExpr}
+                        onChange={(e) => setCalcPreviewMatSliceExpr(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return
+                          e.preventDefault()
+                          handleCalcPreviewMatSliceApply()
+                        }}
+                        placeholder=":, : or :, :, 1"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="project-shell__nav-link"
+                      onClick={handleCalcPreviewMatSliceApply}
+                      disabled={!calcPreviewMatVariable || calcMatSourcePreviewLoading}
+                      style={{ height: 36 }}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+
+                {calcFilePreviewLoading ? (
+                  <div
+                    style={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div className="summary-label">Loading selected file preview…</div>
+                  </div>
+                ) : calcMatSourcePreviewLoading ? (
+                  <div
+                    style={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div className="summary-label">Loading MAT variable preview…</div>
+                  </div>
+                ) : calcMatPreview ? (
+                  <div>
+                    <div className="summary-label" style={{ marginBottom: 8 }}>
+                      {calcIsSourceMatPreview
+                        ? `Showing MAT source preview for ${calcMatPreviewContext?.variable || 'selected variable'}.`
+                        : 'Showing calculated MAT output preview.'}
+                    </div>
+                    <div className="summary-label" style={{ marginBottom: 8 }}>
+                      {calcMatPreview?.display_shape || toMatShapeText(calcMatPreview?.shape)}{calcMatPreview?.dtype ? ` | ${calcMatPreview.dtype}` : ''}{calcMatPreview?.slice_expr ? ` | ${calcMatPreview.slice_expr}` : ''}
+                    </div>
+                    {calcMatPreview?.format === 'scalar' && (
+                      <div style={{ fontFamily: 'monospace' }}>
+                        {String(calcMatPreview?.scalar ?? '')}
+                      </div>
+                    )}
+                    {calcMatPreview?.format === 'table' && calcMatPreview?.table && (
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: 56 }}></th>
+                            {calcMatPreview.table.headers.map((h) => (
+                              <th key={`mat-calc-head-${h}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(calcMatPreview.table.rows || []).map((row, rowIdx) => (
+                            <tr key={`mat-calc-row-${rowIdx}`}>
+                              <th>{rowIdx + 1}</th>
+                              {(row || []).map((cell, colIdx) => (
+                                <td key={`mat-calc-cell-${rowIdx}-${colIdx}`}>{String(cell ?? '')}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {calcMatPreview?.format === 'pages' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {(calcMatPreview.pages || []).map((page) => (
+                          <div key={`mat-calc-page-${page.page}`}>
+                            <div className="summary-label" style={{ marginBottom: 6 }}>
+                              (:, :, {page.page})
+                            </div>
+                            <table className="data-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: 56 }}></th>
+                                  {(page.headers || []).map((h) => (
+                                    <th key={`mat-calc-page-head-${page.page}-${h}`}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(page.rows || []).map((row, rowIdx) => (
+                                  <tr key={`mat-calc-page-row-${page.page}-${rowIdx}`}>
+                                    <th>{rowIdx + 1}</th>
+                                    {(row || []).map((cell, colIdx) => (
+                                      <td key={`mat-calc-page-cell-${page.page}-${rowIdx}-${colIdx}`}>
+                                        {String(cell ?? '')}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {calcMatPreview?.message && (
+                      <div className="summary-label" style={{ marginTop: 8 }}>
+                        {calcMatPreview.message}
+                      </div>
+                    )}
+                  </div>
+                ) : calcDisplayPreviewRows.length ? (
+                  <>
+                    {calcJobId && (
+                      <div className="summary-label" style={{ marginBottom: 8 }}>
+                        {showingCalculatedPreview
+                          ? 'Showing calculated output preview.'
+                          : 'Showing selected file preview.'}
+                      </div>
+                    )}
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          {Object.keys(calcDisplayPreviewRows[0] || {}).map((k) => (
+                            <th key={k}>{k}</th>
+                          ))}
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {calcDisplayPreviewRows.slice(0, 10).map((row, i) => (
+                          <tr key={`calc-row-${i}`}>
+                            {Object.keys(calcDisplayPreviewRows[0] || {}).map((k) => (
+                              <td key={`${i}-${k}`}>
+                                {String(row?.[k] ?? "")}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                ) : calcFilePreviewError ? (
+                  <div
+                    style={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 12,
+                    }}
+                  >
+                    <div className="project-shell__error">{calcFilePreviewError}</div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <EmptySection />
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {visualSectionTab === 'visualize' && (
+          <>
+            {/* ================= TOP: SETTINGS (old UI classes) ================= */}
+            <form onSubmit={handleSubmit} className="plot-settings">
+              <div className="tableHeader">Plot Setting</div>
+
+              {error && (
+                <div className="project-shell__error" style={{ marginBottom: 10 }}>
+                  {error}
+                </div>
+              )}
+
+
+              {/* ===== Editor (aligned with old UI grid) ===== */}
+              <div className="ps-row">
+                <div className="ps-field">
+                  <label>Dataset</label>
+                  <select
+                    value={activeSeries?.datasetType || 'wind'}
+                    onChange={(e) =>
+                      updateActiveSeries({
+                        datasetType: e.target.value,
+                        tag: '',
+                        jobId: '',
+                        xAxis: '',
+                        yAxis: '',
+                        zAxis: '',
+                        ...MAT_SERIES_DEFAULTS,
+                        derivedColumns: [],
+                      })
+                    }
+                  >
+                    {DATASET_TYPES.map((d) => (
+                      <option key={d.key} value={d.key}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="ps-field">
+                  <label>Tag</label>
+                  <select
+                    value={activeSeries?.tag || ''}
+                    onChange={(e) =>
+                      updateActiveSeries({
+                        tag: e.target.value,
+                        jobId: '',
+                        xAxis: '',
+                        yAxis: '',
+                        zAxis: '',
+                        ...MAT_SERIES_DEFAULTS,
+                        derivedColumns: [],
+                      })
+                    }
+                  >
+                    <option value="">Select</option>
+                    {getTags(activeSeries?.datasetType).map((t) => (
+                      <option key={t.tag_name} value={t.tag_name}>
+                        {t.tag_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="ps-field">
+                  <label>File</label>
+                  <select
+                    value={activeSeries?.jobId || ''}
+                    onChange={(e) =>
+                      updateActiveSeries({
+                        jobId: e.target.value,
+                        xAxis: '',
+                        yAxis: '',
+                        zAxis: '',
+                        ...MAT_SERIES_DEFAULTS,
+                        derivedColumns: [],
+                      })
+                    }
+                    disabled={!activeSeries?.tag}
+                  >
+                    <option className="FileSelect" value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
+                    {activeFiles.map((f) => (
+                      <option className="FileSelect" key={f.job_id} value={f.job_id}>
+                        {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
+                      </option>
+                    ))}
+                  </select>
+                  {activeIsMat && (
+                    <button
+                      type="button"
+                      className="project-shell__nav-link"
+                      style={{ marginTop: 8, width: 100 }}
+                      disabled={!activeSeries?.jobId}
+                      onClick={() =>
+                        openMatPreviewInNewTab({
+                          projectId,
+                          datasetType: activeSeries?.datasetType,
+                          tagName: activeSeries?.tag,
+                          jobId: activeSeries?.jobId,
+                        })
+                      }
+                    >
+                      <img src={ViewIcon} alt="view" style={{ width: 14, height: 14 }} />
+                      View
+                    </button>
+                  )}
+                </div>
+
+
+                {!activeIsMat && (
+                  <>
+                    <div className="ps-field">
+                      <label>Plot Type</label>
+                      <select
+                        value={dimension}
+                        onChange={(e) => {
+                          setDimension(e.target.value)
+                        }}
+                      >
+                        <option value="2d">2D</option>
+                        <option value="3d">3D</option>
+                      </select>
+                    </div>
+
+                    <div className="ps-field">
+                      <label>Chart Type</label>
+                      <select
+                        value={chartType}
+                        onChange={(e) => setChartType(e.target.value)}
+                      >
+                        <option value="">Select Chart Type</option>
+                        {activeChartOptions.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="ps-field">
+                      <label>X Scale</label>
+                      <select value={xScale} onChange={(e) => setXScale(e.target.value)}>
+                        <option value="linear">Linear</option>
+                        <option value="log">Log</option>
+                      </select>
+                    </div>
+
+                    <div className="ps-field">
+                      <label>Y Scale</label>
+                      <select value={yScale} onChange={(e) => setYScale(e.target.value)}>
+                        <option value="linear">Linear</option>
+                        <option value="log">Log</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {/* <div className="ps-field">
             <label>Chart Type</label>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
               {CHART_TYPES.map((c) => (
@@ -2434,123 +2434,123 @@ const deleteVisualization = async (vizId) => {
               ))}
             </select>
           </div>  */}
-         
-        </div>
 
-        {!activeIsMat && (
-          <div
-            className="ps-row"
-            style={{
-              display: 'grid',
-              gap: '14px',
-              marginBottom: '14px',
-              gridTemplateColumns:
-                chartType === 'contour' || dimension === '3d'
-                  ? 'repeat(7, minmax(0, 1fr))'
-                  : 'repeat(7, minmax(0, 1fr))',
-            }}
-          >
-            <div className="ps-field">
-              <label>X Axis</label>
-              <select
-                value={activeSeries?.xAxis || ''}
-                onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
-                disabled={!activeSeries?.jobId}
-              >
-                <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-                {activeAxisColumns.map((col) => (
-                  <option key={col} value={col}>{col}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="ps-field">
-              <label>Y Axis</label>
-              <select
-                value={activeSeries?.yAxis || ''}
-                onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
-                disabled={!activeSeries?.jobId}
-              >
-                <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-                {activeAxisColumns.map((col) => (
-                  <option key={col} value={col}>{col}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="ps-field">
-              <label>Series Chart Type</label>
-              <select
-                value={activeSeries?.seriesChartType || ''}
-                onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
-                disabled={!canMixOverplot}
-              >
-                <option value="">
-                  {canMixOverplot ? `Default (${chartType})` : 'Use bar/line/scatter/scatterline'}
-                </option>
-                {OVERPLOT_CARTESIAN_TYPES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {requiresZ && (
-              <div className="ps-field">
-                <label>Z Axis</label>
-                <select
-                  value={activeSeries?.zAxis || ''}
-                  onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
-                  disabled={!activeSeries?.jobId}
-                >
-                  <option value="">Select</option>
-                  {activeAxisColumns.map((col) => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
               </div>
-            )}
 
-            <div className="ps-field">
-              <label>Plot Name (Optional)</label>
-              <input
-                placeholder="Defaults to Dataset | X → Y"
-                value={activeSeries?.label || ''}
-                onChange={(e) => updateActiveSeries({ label: e.target.value })}
-              />
-            </div>
+              {!activeIsMat && (
+                <div
+                  className="ps-row"
+                  style={{
+                    display: 'grid',
+                    gap: '14px',
+                    marginBottom: '14px',
+                    gridTemplateColumns:
+                      chartType === 'contour' || dimension === '3d'
+                        ? 'repeat(7, minmax(0, 1fr))'
+                        : 'repeat(7, minmax(0, 1fr))',
+                  }}
+                >
+                  <div className="ps-field">
+                    <label>X Axis</label>
+                    <select
+                      value={activeSeries?.xAxis || ''}
+                      onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
+                      disabled={!activeSeries?.jobId}
+                    >
+                      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeAxisColumns.map((col) => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="ps-field">
-              <button type="submit" className="plot-btn" disabled={loading}>
-                <img src={ChartLine1} alt="chart" />
-                {loading ? 'Generating…' : 'Generate Plot'}
-              </button>
-            </div>
-          </div>
-        )}
+                  <div className="ps-field">
+                    <label>Y Axis</label>
+                    <select
+                      value={activeSeries?.yAxis || ''}
+                      onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+                      disabled={!activeSeries?.jobId}
+                    >
+                      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeAxisColumns.map((col) => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
 
-        {activeIsMat && (
-          <MatPlotBuilder
-            projectId={projectId}
-            datasetType={activeSeries?.datasetType}
-            tagName={activeSeries?.tag}
-            jobId={activeSeries?.jobId}
-            chartType={chartType}
-            onChartTypeChange={setChartType}
-            series={activeSeries}
-            onSeriesChange={updateActiveSeries}
-            loading={loading}
-            showViewAction={false}
-          />
-        )}
+                  <div className="ps-field">
+                    <label>Series Chart Type</label>
+                    <select
+                      value={activeSeries?.seriesChartType || ''}
+                      onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
+                      disabled={!canMixOverplot}
+                    >
+                      <option value="">
+                        {canMixOverplot ? `Default (${chartType})` : 'Use bar/line/scatter/scatterline'}
+                      </option>
+                      {OVERPLOT_CARTESIAN_TYPES.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-        {/* ===== Series Manager (KEPT) ===== */}
-        <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-          <div className="ps-field" style={{ gridColumn: 'span 4' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <label style={{fontSize: "16px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica", marginBottom: 0 }}>Plot ({seriesList.length})</label>
+                  {requiresZ && (
+                    <div className="ps-field">
+                      <label>Z Axis</label>
+                      <select
+                        value={activeSeries?.zAxis || ''}
+                        onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
+                        disabled={!activeSeries?.jobId}
+                      >
+                        <option value="">Select</option>
+                        {activeAxisColumns.map((col) => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
+                  <div className="ps-field">
+                    <label>Plot Name (Optional)</label>
+                    <input
+                      placeholder="Defaults to Dataset | X → Y"
+                      value={activeSeries?.label || ''}
+                      onChange={(e) => updateActiveSeries({ label: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="ps-field">
+                    <button type="submit" className="plot-btn" disabled={loading}>
+                      <img src={ChartLine1} alt="chart" />
+                      {loading ? 'Generating…' : 'Generate Plot'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeIsMat && (
+                <MatPlotBuilder
+                  projectId={projectId}
+                  datasetType={activeSeries?.datasetType}
+                  tagName={activeSeries?.tag}
+                  jobId={activeSeries?.jobId}
+                  chartType={chartType}
+                  onChartTypeChange={setChartType}
+                  series={activeSeries}
+                  onSeriesChange={updateActiveSeries}
+                  loading={loading}
+                  showViewAction={false}
+                />
+              )}
+
+              {/* ===== Series Manager (KEPT) ===== */}
+              <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                <div className="ps-field" style={{ gridColumn: 'span 4' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <label style={{ fontSize: "16px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica", marginBottom: 0 }}>Plot ({seriesList.length})</label>
+                    {/* 
               <button
                 type="button"
                 className="project-shell__nav-link"
@@ -2559,141 +2559,141 @@ const deleteVisualization = async (vizId) => {
                 style={{ height: 36, padding: '0 12px' }}
               >
                 {activeIsMat ? 'MAT supports one plot' : '+ Over Plot'}
-              </button>
-            </div>
-
-            {/* series chips list */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
-              {seriesList.map((s, idx) => {
-                const active = s.id === activeSeriesId
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => setActiveSeriesId(s.id)}
-                    style={{
-                      border: active ? '2px solid #1976D2' : '1px solid #00000026',
-                      // background: active ? '#eef6ff' : '#fff',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      cursor: 'pointer',
-                      minWidth: 220,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                      <div style={{ fontSize: "14px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica" }}>Plot {idx + 1}</div>
-
-                      <label className="toggle" style={{ margin: 0 }}>
-                        <input
-                          type="checkbox"
-                          checked={!!s.enabled}
-                          onChange={(e) => setSeriesEnabled(s.id, e.target.checked)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="slider" />
-                        <span className="toggle-text">{s.enabled ? 'ON' : 'OFF'}</span>
-                      </label>
-                    </div>
-
-                    <div  style={{ fontSize:"12px",fontWeight:"400",fontFamily:"inter-Regular,Helvetica",marginTop: 8, alignItems: 'flex-start' }}>
-                      {seriesSummary(s)}
-                    </div>
-                    {seriesList.length > 1 && (
-
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <button
-  type="button"
-  onClick={(e) => {
-    e.stopPropagation();
-    setConfirmRemoveSeries({ open: true, seriesId: s.id });
-  }}
-  style={{
-    marginTop: 8,
-    height: 24,
-    display:'flex',
-    alignItems:'center',
-    justifyContent:'center',
-    width: '40%',
-    borderRadius: 4,
-    border: '1px solid #fecdd3',
-    background: '#fff1f2',
-    color: '#b91c1c',
-    cursor: 'pointer',
-    fontSize:'12px',
-    fontWeight: 400,
-    fontFamily:"Inter-Regular,Helvetica",
-  }}
->
-  Remove
-</button>
-</div>
-                
-                    )}
-
+              </button> */}
                   </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+
+                  {/* series chips list */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
+                    {seriesList.map((s, idx) => {
+                      const active = s.id === activeSeriesId
+                      return (
+                        <div
+                          key={s.id}
+                          onClick={() => setActiveSeriesId(s.id)}
+                          style={{
+                            border: active ? '2px solid #1976D2' : '1px solid #00000026',
+                            // background: active ? '#eef6ff' : '#fff',
+                            borderRadius: 6,
+                            padding: '8px 10px',
+                            cursor: 'pointer',
+                            minWidth: 220,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                            <div style={{ fontSize: "14px", fontWeight: 600, fontFamily: "Inter-semiBold, Helvetica" }}>Plot {idx + 1}</div>
+
+                            <label className="toggle" style={{ margin: 0 }}>
+                              <input
+                                type="checkbox"
+                                checked={!!s.enabled}
+                                onChange={(e) => setSeriesEnabled(s.id, e.target.checked)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <span className="slider" />
+                              <span className="toggle-text">{s.enabled ? 'ON' : 'OFF'}</span>
+                            </label>
+                          </div>
+
+                          <div style={{ fontSize: "12px", fontWeight: "400", fontFamily: "inter-Regular,Helvetica", marginTop: 8, alignItems: 'flex-start' }}>
+                            {seriesSummary(s)}
+                          </div>
+                          {seriesList.length > 1 && (
+
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmRemoveSeries({ open: true, seriesId: s.id });
+                                }}
+                                style={{
+                                  marginTop: 8,
+                                  height: 24,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '40%',
+                                  borderRadius: 4,
+                                  border: '1px solid #fecdd3',
+                                  background: '#fff1f2',
+                                  color: '#b91c1c',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 400,
+                                  fontFamily: "Inter-Regular,Helvetica",
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                          )}
+
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
 
 
-      </form>
+            </form>
 
-      {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
-      <div className="project-card">
-       <div className="actions-row">
-  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-    <p className="summarylabel">{statusMessage}</p>
+            {/* ================= RIGHT: PREVIEW (old UI classes) ================= */}
+            <div className="project-card">
+              <div className="actions-row">
+                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p className="summarylabel">{statusMessage}</p>
 
-    <button
-  type="button"
-  className="project-shell__nav-save"
-  onClick={handleSaveVisualization}
-  disabled={!plotHtml || loadingSave}
->
-  {loadingSave ? 'Saving…' : 'Save Visualization'}
-</button>
+                  <button
+                    type="button"
+                    className="project-shell__nav-save"
+                    onClick={handleSaveVisualization}
+                    disabled={!plotHtml || loadingSave}
+                  >
+                    {loadingSave ? 'Saving…' : 'Save Visualization'}
+                  </button>
 
-  </div>
+                </div>
 
-  {/* meta (kept) */}
-  {plotMeta && (
-    <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
-      <div><b>Chart:</b> {plotMeta.chartType}</div>
-      <div><b>Series:</b> {plotMeta.count}</div>
-      <div style={{ marginTop: 6 }}>
-        {plotMeta.items.map((it, i) => (
-          <div key={i}>• {it.label}</div>
-        ))}
-      </div>
-    </div>
-  )}
+                {/* meta (kept) */}
+                {plotMeta && (
+                  <div className="summarylabel2" style={{ alignItems: 'flex-start', marginTop: 10 }}>
+                    <div><b>Chart:</b> {plotMeta.chartType}</div>
+                    <div><b>Series:</b> {plotMeta.count}</div>
+                    <div style={{ marginTop: 6 }}>
+                      {plotMeta.items.map((it, i) => (
+                        <div key={i}>• {it.label}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-  {activeViz?.status && (
-    <span className="badge">{activeViz.status.toLowerCase()}</span>
-  )}
-</div>
-
-
-        <div className="Plot-preview" style={{ position: 'relative' }}>
-          {activeIsMat && <MatZoomLoaderOverlay active={matZoomLoading} />}
-          {plotHtml ? (
-            <iframe
-              title="plot"
-              ref={activeIsMat ? matPlotFrameRef : undefined}
-              srcDoc={plotHtml}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
-
-          ) : (
-            <div className="emptystate">No plot generated</div>
-          )}
-        </div>
-
-        {/* ===== Tiles (KEPT) ===== */}
+                {activeViz?.status && (
+                  <span className="badge">{activeViz.status.toLowerCase()}</span>
+                )}
+              </div>
 
 
-        {/* {activeViz?.tiles?.length > 0 && (
+              <div className="Plot-preview" style={{ position: 'relative' }}>
+                {activeIsMat && <MatZoomLoaderOverlay active={matZoomLoading} />}
+                {plotHtml ? (
+                  <iframe
+                    title="plot"
+                    ref={activeIsMat ? matPlotFrameRef : undefined}
+                    srcDoc={plotHtml}
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                  />
+
+                ) : (
+                  <div className="emptystate">No plot generated</div>
+                )}
+              </div>
+
+              {/* ===== Tiles (KEPT) ===== */}
+
+
+              {/* {activeViz?.tiles?.length > 0 && (
           
             {activeViz.tiles.map((item, idx) => (
               <div key={idx} style={{ marginBottom: 16 }}>
@@ -2712,7 +2712,7 @@ const deleteVisualization = async (vizId) => {
                 </div>
               </div>
             ))} */}
-        {/* <div className="projectcard1">
+              {/* <div className="projectcard1">
           {tilePreview && (
             <div style={{ marginTop: 12 }}>
               <p className="summarylabel1">
@@ -2744,42 +2744,42 @@ const deleteVisualization = async (vizId) => {
         </div> */}
 
 
-        {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
-        <div className="projectcard1">
-          <div className="actionsrow actionsrow--header">
-            <label className="text">Saved visualizations ({visualizations.length})</label>
+              {/* ===== Saved Visualizations (old UI + icons + expand) ===== */}
+              <div className="projectcard1">
+                <div className="actionsrow actionsrow--header">
+                  <label className="text">Saved visualizations ({visualizations.length})</label>
 
-            <div className="actionsrow__right">
-              
-              <button
-  type="button"
-  className="expand-btn"
-  // onClick={() => {
-  //   setIsExpanded((prev) => {
-  //     const next = !prev;
-  //     if (next && visualizations.length === 0) {
-  //       fetchVisualizations(1, true);
-  //     }
-  //     return next;
-  //   });
-  // }}
- onClick={() => {
-  setIsExpanded((prev) => {
-    const next = !prev;
+                  <div className="actionsrow__right">
 
-    if (next && visualizations.length === 0) {
-      fetchVisualizations(1, true);
-    }
+                    <button
+                      type="button"
+                      className="expand-btn"
+                      // onClick={() => {
+                      //   setIsExpanded((prev) => {
+                      //     const next = !prev;
+                      //     if (next && visualizations.length === 0) {
+                      //       fetchVisualizations(1, true);
+                      //     }
+                      //     return next;
+                      //   });
+                      // }}
+                      onClick={() => {
+                        setIsExpanded((prev) => {
+                          const next = !prev;
 
-    return next;
-  });
-}}
->
-                <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
-                {isExpanded ? 'Collapse' : 'Expand'}
-              </button>
+                          if (next && visualizations.length === 0) {
+                            fetchVisualizations(1, true);
+                          }
 
-              {/* {isExpanded && hasMoreViz && (
+                          return next;
+                        });
+                      }}
+                    >
+                      <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
+                      {isExpanded ? 'Collapse' : 'Expand'}
+                    </button>
+
+                    {/* {isExpanded && hasMoreViz && (
   <div style={{ textAlign: 'center', marginTop: 12 }}>
     <button
       type="button"
@@ -2793,123 +2793,123 @@ const deleteVisualization = async (vizId) => {
 )} */}
 
 
-              {/* <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
+                    {/* <button type="button" className="project-shell__nav-link" onClick={fetchVisualizations}>
                 Refresh
               </button> */}
 
-              <button
-  type="button"
-  className="project-shell__nav-link"
-  onClick={() => fetchVisualizations(1, true)}
->
-  Refresh
-</button>
+                    <button
+                      type="button"
+                      className="project-shell__nav-link"
+                      onClick={() => fetchVisualizations(1, true)}
+                    >
+                      Refresh
+                    </button>
 
-            </div>
-          </div>
-
-          <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
-            <div className="expand-inner">
-              {/* {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>} */}
-              {!loadingViz && visualizations.length === 0 && (
-  <div className="emptystate">No visualizations yet</div>
-)}
-
-
-              <div className="viz-list">
-                {visualizations.map((viz) => (
-                  <div key={viz.viz_id} className="viz-item">
-                    <div>
-                      <p className="data-card__name">{viz.filename || 'dataset'}</p>
-                      <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
-                    </div>
-
-                    <div className="viz-actions">
-                      <button type="button" onClick={() => loadVisualization(viz.viz_id)}>
-                        <img className="actionBtn" src={ViewIcon} alt="view" />
-                      </button>
-
-                      {viz.html_url && (
-                        // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
-                        //   <img className="actionBtn" src={blackPloticon} alt="download" />
-                        // </button>
-                        <button
-  type="button"
- onClick={() => handleFullScreen(viz)}
->
-  <img className="actionBtn" src={linechart} alt="fullscreen" />
-</button>
-
-                      )}
-
-                      <button 
-                      type="button" 
-                      className="danger" 
-                      // onClick={() => deleteVisualization(viz.viz_id)}
-                       onClick={() =>
-  setConfirmDelete({
-    open: true,
-    vizId: viz.viz_id
-  })
-}
-disabled={deletingViz === viz.viz_id}
-
-                      >
-                        <img className="actionBtn" src={Delete} alt="delete" />
-                      </button>                                        
-                    </div>
                   </div>
-                ))}
+                </div>
+
+                <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
+                  <div className="expand-inner">
+                    {/* {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>} */}
+                    {!loadingViz && visualizations.length === 0 && (
+                      <div className="emptystate">No visualizations yet</div>
+                    )}
+
+
+                    <div className="viz-list">
+                      {visualizations.map((viz) => (
+                        <div key={viz.viz_id} className="viz-item">
+                          <div>
+                            <p className="data-card__name">{viz.filename || 'dataset'}</p>
+                            <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
+                          </div>
+
+                          <div className="viz-actions">
+                            <button type="button" onClick={() => loadVisualization(viz.viz_id)}>
+                              <img className="actionBtn" src={ViewIcon} alt="view" />
+                            </button>
+
+                            {viz.html_url && (
+                              // <button type="button" onClick={() => window.open(viz.html_url, '_blank')}>
+                              //   <img className="actionBtn" src={blackPloticon} alt="download" />
+                              // </button>
+                              <button
+                                type="button"
+                                onClick={() => handleFullScreen(viz)}
+                              >
+                                <img className="actionBtn" src={linechart} alt="fullscreen" />
+                              </button>
+
+                            )}
+
+                            <button
+                              type="button"
+                              className="danger"
+                              // onClick={() => deleteVisualization(viz.viz_id)}
+                              onClick={() =>
+                                setConfirmDelete({
+                                  open: true,
+                                  vizId: viz.viz_id
+                                })
+                              }
+                              disabled={deletingViz === viz.viz_id}
+
+                            >
+                              <img className="actionBtn" src={Delete} alt="delete" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {isExpanded && hasMoreViz && <div ref={savedVizLoadRef} style={{ height: 1 }} />}
+                    {isExpanded && loadingViz && visualizations.length > 0 && (
+                      <div style={{ textAlign: 'center', marginTop: 12, color: '#64748b' }}>
+                        Loading more...
+                      </div>
+                    )}
+
+                  </div>
+                </div>
               </div>
 
-              {isExpanded && hasMoreViz && <div ref={savedVizLoadRef} style={{ height: 1 }} />}
-              {isExpanded && loadingViz && visualizations.length > 0 && (
-                <div style={{ textAlign: 'center', marginTop: 12, color: '#64748b' }}>
-                  Loading more...
-                </div>
-              )}
-
             </div>
-          </div>
-        </div>
+          </>
+        )}
+        {confirmDelete.open && (
+          <ConfirmationModal
+            title="Delete this visualization?"
+            onCancel={() =>
+              setConfirmDelete({ open: false, vizId: null })
+            }
+            onConfirm={() =>
+              deleteVisualization(confirmDelete.vizId)
+            }
+          />
+        )}
 
+        {confirmRemoveSeries.open && confirmRemoveSeries.seriesId && (
+          <ConfirmationModal
+            title="Remove this series?"
+            onCancel={() =>
+              setConfirmRemoveSeries({ open: false, seriesId: null })
+            }
+            onConfirm={() => {
+              removeSeriesSlot(confirmRemoveSeries.seriesId);
+              setConfirmRemoveSeries({ open: false, seriesId: null });
+            }}
+          />
+        )}
       </div>
-      </>
+      {popupMessage && (
+        <div className={`toast-popup ${popupType}`}>
+          {popupMessage}
+        </div>
       )}
-    {confirmDelete.open && (
-  <ConfirmationModal
-    title="Delete this visualization?"
-    onCancel={() =>
-      setConfirmDelete({ open: false, vizId: null })
-    }
-    onConfirm={() =>
-      deleteVisualization(confirmDelete.vizId)
-    }
-  />
-)}
 
-{confirmRemoveSeries.open && confirmRemoveSeries.seriesId && (
-  <ConfirmationModal
-    title="Remove this series?"
-    onCancel={() =>
-      setConfirmRemoveSeries({ open: false, seriesId: null })
-    }
-    onConfirm={() => {
-      removeSeriesSlot(confirmRemoveSeries.seriesId);
-      setConfirmRemoveSeries({ open: false, seriesId: null });
-    }}
-  />
-)}     
-    </div>
-    {popupMessage && (
-  <div className={`toast-popup ${popupType}`}>
-    {popupMessage}
-  </div>
-)}
 
-    
-     {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
-    {/* {fullScreenViz && (
+      {/* ✅ ADD FULLSCREEN MODAL HERE — LAST */}
+      {/* {fullScreenViz && (
       <div className="fullscreen-overlay">
         <div className="fullscreen-content">
 
@@ -2931,4 +2931,4 @@ disabled={deletingViz === viz.viz_id}
     )} */}
     </div>
   )
-  }
+}
