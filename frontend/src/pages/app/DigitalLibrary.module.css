@@ -134,7 +134,7 @@
   gap: 12px;
   padding: 16px 0 12px;
 }
-.table {
+/* .table {
   width: 1513px;
   max-width: 100%;
   border-collapse: separate;
@@ -146,9 +146,24 @@
   overflow-y: auto;
   z-index: 60;
   margin-top: -15px;
+} */
+
+.table {
+  width: 1513px;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 1px solid #00000026;
+  border-radius: 8px;
+  border-color: #0000001A;
+  overflow-y: auto;
+  /* ✅ REMOVE this */
+  /* z-index: 60; */
+  margin-top: -15px;
 }
 
-.table th {
+/* .table th {
   text-align: left;
   padding: 12px;
   font-size: 14px;
@@ -159,6 +174,19 @@
   flex-shrink: 0;
    font-family: "Inter-SemiBold", Helvetica;
    z-index: 10; 
+} */
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #000000;
+  background: #EFF7FF;
+  border-bottom: 1px solid #e5e7eb;
+  font-family: "Inter-regular", Helvetica;
+  /* ✅ REMOVE this */
+  /* z-index: 10; */
 }
 
 .table td {
@@ -195,11 +223,22 @@
   padding: 16px;
   color: #475569;
   font-size: 14px;
+  font-family: "Inter", sans-serif;
 }
 
 .error {
-  color: #b91c1c;
+  color: #d32f2f;
 }
+
+/* .modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+} */
 
 .modalBackdrop {
   position: fixed;
@@ -208,7 +247,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 9999; /* ✅ was 50 */
 }
 
 .modalCard {
@@ -225,7 +264,8 @@
   margin: 0 0 12px;
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: #0a0a0a;
+  font-family: "Inter-Regular",Helvetica;
 }
 
 .formGroup {
@@ -237,16 +277,17 @@
 
 .label {
   font-size: 13px;
-  color: #475569;
+  color: #0a0a0a;
   font-weight: 600;
+  font-family: "Inter-Regular",Helvetica;
 }
 
 .input {
   height: 40px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: #f3f3f5;
   font-size: 14px;
 }
 
@@ -263,24 +304,26 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 15px;
 }
 
 .secondaryBtn {
+  width: 120px;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-radius: 4px;
+  border: 1px solid #1976D2;
+  background: #fff;
   cursor: pointer;
+  color:#1976D2 ;
 }
 
 .primaryBtn {
+  width: 120px;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: none;
-  background: #2563eb;
+  background: #1976D2;
   color: #ffffff;
-  font-weight: 600;
   cursor: pointer;
 }
 

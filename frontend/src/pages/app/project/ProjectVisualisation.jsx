@@ -1853,7 +1853,7 @@ const deleteVisualization = async (vizId) => {
             </div>
 
             <div className="ps-field">
-              <label>Tag</label>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Tag<span style={{ color: "red",fontSize: "16px" }}>*</span></label>
               <select
                 value={calcTag}
                 onChange={(e) => {

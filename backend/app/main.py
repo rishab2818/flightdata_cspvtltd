@@ -14,12 +14,13 @@ from app.routers import meetings
 from app.routers import budgets
 from app.routers import mat
 from app.routers import calculations
+# from app.routers import files
 app = FastAPI(title="flightdv minimal backend")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -41,3 +42,4 @@ app.include_router(meetings.router)
 app.include_router(budgets.router)
 app.include_router(mat.router)
 app.include_router(calculations.router)
+# app.include_router(files.router)

@@ -26,6 +26,7 @@ import ChangePasswordDialog from "../../components/admin/ChangePasswordDialog";
 import Delete from '../../assets/Delete.svg'
 import password from '../../assets/password.svg'
 import TablePagination from "@mui/material/TablePagination";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 
 export default function UserManagement() {
@@ -213,7 +214,15 @@ export default function UserManagement() {
       />
 
       {/* Delete Confirmation */}
-      <Dialog
+
+      {confirm.open && (
+  <ConfirmationModal
+    title="Delete User"
+    onCancel={() => setConfirm({ open: false, email: null })}
+    onConfirm={() => removeUser(confirm.email)}
+  />
+)}
+      {/* <Dialog
         open={confirm.open}
         onClose={() => setConfirm({ open: false, email: null })}
       >
@@ -229,7 +238,7 @@ export default function UserManagement() {
             Delete
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 }

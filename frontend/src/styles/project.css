@@ -438,3 +438,50 @@
 .data-table--sheet tbody tr:nth-child(even) {
   background: #f8fafc;
 }
+
+.project-shell__title-area {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.project-search {
+  position: relative;
+}
+
+.project-search-input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 220px;
+}
+
+.search-results {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  width: 260px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.search-item {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.search-item:hover {
+  background: #f2f6ff;
+}
+
+.search-loading {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  font-size: 12px;
+  color: gray;
+}

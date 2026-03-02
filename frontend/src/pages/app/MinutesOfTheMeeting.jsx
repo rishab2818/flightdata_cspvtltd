@@ -640,7 +640,8 @@ function NextMeetingBanner({
           onClick={onUploadClick}
           className="UploadButton"
         >
-          <FiFileText size={16} />
+          {/* <FiFileText size={16} /> */}
+          <img src={PresentationChart1} alt="Record"/>
           <span>Upload Minutes</span>
         </button>
         </div>
