@@ -120,6 +120,23 @@ const normalizeMatMode = (chartType, mode) => {
   return mode === 'plot_xy' ? 'plot_xy' : 'plot_y'
 }
 
+const normalizeTabularYAxes = (value) => {
+  const source = Array.isArray(value) ? value : [value]
+  const next = []
+  source.forEach((item) => {
+    const axis = String(item || '').trim()
+    if (!axis || next.includes(axis)) return
+    next.push(axis)
+  })
+  return next
+}
+
+const getTabularYAxes = (series) => {
+  const fromList = normalizeTabularYAxes(series?.yAxes)
+  if (fromList.length) return fromList
+  return normalizeTabularYAxes(series?.yAxis)
+}
+
 const normalizeSliceExpr = (value) => String(value || '').trim()
 
 const formatMatSignaturePart = (varName, sliceExpr) => {
@@ -165,6 +182,7 @@ const newSeries = (n = 1) => ({
   jobId: '',
   xAxis: '',
   yAxis: '',
+  yAxes: [],
   zAxis: '',
   seriesChartType: '',
   label: '',
@@ -265,7 +283,9 @@ export default function ProjectVisualisation() {
   const matPlotFrameRef = useRef(null)
   const skipNextCalcMatAutoPreviewRef = useRef(false)
   const autoLoadedVizRef = useRef('')
+  const yAxisDropdownRef = useRef(null)
   const [isExpanded, setIsExpanded] = useState(true)
+  const [isYAxisDropdownOpen, setIsYAxisDropdownOpen] = useState(false)
 
   /* ================= helpers ================= */
   const activeSeries = useMemo(
@@ -392,8 +412,19 @@ export default function ProjectVisualisation() {
   }, [seriesList])
 
   const updateActiveSeries = useCallback((patch) => {
+    const nextPatch = { ...patch }
+    if (Object.prototype.hasOwnProperty.call(nextPatch, 'yAxes')) {
+      const yAxes = normalizeTabularYAxes(nextPatch.yAxes)
+      nextPatch.yAxes = yAxes
+      nextPatch.yAxis = yAxes[0] || ''
+    } else if (Object.prototype.hasOwnProperty.call(nextPatch, 'yAxis')) {
+      const yAxes = normalizeTabularYAxes(nextPatch.yAxis)
+      nextPatch.yAxis = yAxes[0] || ''
+      nextPatch.yAxes = yAxes
+    }
+
     setSeriesList((prev) =>
-      prev.map((s) => (s.id === activeSeriesId ? { ...s, ...patch } : s))
+      prev.map((s) => (s.id === activeSeriesId ? { ...s, ...nextPatch } : s))
     )
   }, [activeSeriesId])
 
@@ -444,7 +475,8 @@ export default function ProjectVisualisation() {
       return `${ds} • MAT • ${buildMatSignatureText(s, chartType)}`
     }
     const x = s.xAxis || '-'
-    const y = s.yAxis || '-'
+    const yAxes = getTabularYAxes(s)
+    const y = yAxes.length ? yAxes.join(', ') : '-'
     const z = s.zAxis || '-'
     const f = s.jobId ? 'file✅' : 'file❌'
     const seriesType = (s.seriesChartType || chartType || 'scatter').toLowerCase()
@@ -1020,6 +1052,7 @@ export default function ProjectVisualisation() {
     () => isMatFileName(activeJob?.filename || ''),
     [activeJob?.filename]
   )
+  const allowsMultipleTabularY = !activeIsMat && dimension === '2d' && !requiresZ
 
   const activeColumns = useMemo(() => activeJob?.columns || [], [activeJob])
   const activeDerivedColumnNames = useMemo(() => {
@@ -1038,6 +1071,7 @@ export default function ProjectVisualisation() {
     }
     return merged
   }, [activeColumns, activeDerivedColumnNames])
+  const selectedTabularYAxes = useMemo(() => getTabularYAxes(activeSeries), [activeSeries])
   const activeMatMeta = useMemo(
     () => matMetaByJob[activeSeries?.jobId || ''] || null,
     [matMetaByJob, activeSeries?.jobId]
@@ -1146,17 +1180,36 @@ export default function ProjectVisualisation() {
     )
   }, [canMixOverplot])
 
+  useEffect(() => {
+    if (!allowsMultipleTabularY) {
+      setIsYAxisDropdownOpen(false)
+      return
+    }
+
+    const handlePointerDown = (event) => {
+      if (!yAxisDropdownRef.current?.contains(event.target)) {
+        setIsYAxisDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [allowsMultipleTabularY])
+
   /* ================= submit ================= */
   const enabledSeries = useMemo(() => seriesList.filter((s) => s.enabled), [seriesList])
 
-  const buildAutoLabel = (s) => {
+  const buildAutoLabel = useCallback((s, forcedYAxis = '') => {
     const ds = datasetLabel(s.datasetType)
     const job = jobsById[s.jobId]
     if (isMatFileName(job?.filename || '')) {
       return `${ds} | ${buildMatSignatureText(s, chartType)}`
     }
     const x = s.xAxis || ''
-    const y = s.yAxis || ''
+    const yAxes = forcedYAxis ? [forcedYAxis] : getTabularYAxes(s)
+    const y = yAxes.join(', ')
     const z = s.zAxis || ''
     if (chartType === 'contour') {
       if (!x || !y || !z) return ds
@@ -1164,7 +1217,25 @@ export default function ProjectVisualisation() {
     }
     if (!x || !y) return ds
     return `${ds} | ${x} → ${y}`
-  }
+  }, [chartType, jobsById])
+
+  const buildTabularSeriesLabel = useCallback((s, yAxis, totalYAxes = 1) => {
+    const custom = String(s?.label || '').trim()
+    if (!custom) return buildAutoLabel(s, yAxis)
+    return totalYAxes > 1 ? `${custom} (${yAxis})` : custom
+  }, [buildAutoLabel])
+
+  const toggleTabularYAxis = useCallback((column) => {
+    const safeColumn = String(column || '').trim()
+    if (!safeColumn) return
+
+    const current = getTabularYAxes(activeSeries)
+    const next = current.includes(safeColumn)
+      ? current.filter((item) => item !== safeColumn)
+      : [...current, safeColumn]
+
+    updateActiveSeries({ yAxes: next })
+  }, [activeSeries, updateActiveSeries])
 
   const normalizeDerivedColumns = (series) => {
     const cleaned = []
@@ -1206,6 +1277,7 @@ export default function ProjectVisualisation() {
             derivedColumns: [derivedColumn],
             xAxis: '',
             yAxis: '',
+            yAxes: [],
             zAxis: '',
           }
         }
@@ -1599,24 +1671,26 @@ export default function ProjectVisualisation() {
           chart_type: chartType,
         }
       } else {
-        const payloadSeries = tabularSeries
-          .filter((s) => s.xAxis && s.yAxis && (!requiresZ || s.zAxis))
-          .map((s) => {
-            const derivedColumns = normalizeDerivedColumns(s)
-            return {
-              job_id: s.jobId,
-              x_axis: s.xAxis,
-              y_axis: s.yAxis,
-              z_axis: requiresZ ? s.zAxis : undefined,
-              x_scale: xScale,
-              y_scale: yScale,
-              chart_type: canMixOverplot
-                ? ((s.seriesChartType || '').trim() || undefined)
-                : undefined,
-              label: (s.label || '').trim() || buildAutoLabel(s),
-              derived_columns: derivedColumns,
-            }
-          })
+        const payloadSeries = tabularSeries.flatMap((s) => {
+          const yAxes = requiresZ ? normalizeTabularYAxes(s.yAxis) : getTabularYAxes(s)
+          if (!s.xAxis || !yAxes.length || (requiresZ && !s.zAxis)) {
+            return []
+          }
+          const derivedColumns = normalizeDerivedColumns(s)
+          return yAxes.map((yAxis) => ({
+            job_id: s.jobId,
+            x_axis: s.xAxis,
+            y_axis: yAxis,
+            z_axis: requiresZ ? s.zAxis : undefined,
+            x_scale: xScale,
+            y_scale: yScale,
+            chart_type: canMixOverplot
+              ? ((s.seriesChartType || '').trim() || undefined)
+              : undefined,
+            label: buildTabularSeriesLabel(s, yAxis, yAxes.length),
+            derived_columns: derivedColumns,
+          }))
+        })
 
         if (payloadSeries.length === 0) {
           throw new Error(
@@ -1759,29 +1833,32 @@ export default function ProjectVisualisation() {
 
   /* ================= plot meta ================= */
   const plotMeta = useMemo(() => {
-    const on = enabledSeries.filter((s) => {
-      if (!s.jobId) return false
+    const items = enabledSeries.flatMap((s) => {
+      if (!s.jobId) return []
       const job = jobsById[s.jobId]
       if (isMatFileName(job?.filename || '')) {
         const mode = normalizeMatMode(chartType, s.matMode)
         const hasY = !!String(s?.matYVar || s?.matVar || '').trim()
         const hasX = !!String(s?.matXVar || '').trim()
         const hasZ = !!String(s?.matZVar || '').trim()
-        if (mode === 'plot3') return hasX && hasY && hasZ
-        if (mode === 'plot_xy') return hasX && hasY
-        return hasY
+        if (mode === 'plot3' && !(hasX && hasY && hasZ)) return []
+        if (mode === 'plot_xy' && !(hasX && hasY)) return []
+        if (mode === 'plot_y' && !hasY) return []
+        return [{ label: (s.label || '').trim() || buildAutoLabel(s) }]
       }
-      return !!(s.xAxis && s.yAxis)
+      const yAxes = requiresZ ? normalizeTabularYAxes(s.yAxis) : getTabularYAxes(s)
+      if (!s.xAxis || !yAxes.length || (requiresZ && !s.zAxis)) return []
+      return yAxes.map((yAxis) => ({
+        label: buildTabularSeriesLabel(s, yAxis, yAxes.length),
+      }))
     })
-    if (!on.length) return null
+    if (!items.length) return null
     return {
       chartType,
-      count: on.length,
-      items: on.map((s) => ({
-        label: (s.label || '').trim() || buildAutoLabel(s),
-      })),
+      count: items.length,
+      items,
     }
-  }, [enabledSeries, chartType, jobsById, buildAutoLabel])
+  }, [enabledSeries, chartType, jobsById, buildAutoLabel, buildTabularSeriesLabel, requiresZ])
 
   const { isLoading: matZoomLoading } = useMatZoomLoader({
     iframeRef: matPlotFrameRef,
@@ -2466,16 +2543,58 @@ export default function ProjectVisualisation() {
 
                   <div className="ps-field">
                     <label>Y Axis</label>
-                    <select
-                      value={activeSeries?.yAxis || ''}
-                      onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
-                      disabled={!activeSeries?.jobId}
-                    >
-                      <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
-                      {activeAxisColumns.map((col) => (
-                        <option key={col} value={col}>{col}</option>
-                      ))}
-                    </select>
+                    {allowsMultipleTabularY ? (
+                      <div className="ps-multi-select" ref={yAxisDropdownRef}>
+                        <button
+                          type="button"
+                          className="ps-multi-select__trigger"
+                          onClick={() => setIsYAxisDropdownOpen((prev) => !prev)}
+                          disabled={!activeSeries?.jobId}
+                        >
+                          <span className="ps-multi-select__value">
+                            {selectedTabularYAxes.length
+                              ? selectedTabularYAxes.join(', ')
+                              : (activeSeries?.jobId ? 'Select Y column(s)' : 'Select file first')}
+                          </span>
+                          <span className="ps-multi-select__caret">v</span>
+                        </button>
+
+                        {isYAxisDropdownOpen && activeSeries?.jobId && (
+                          <div className="ps-multi-select__menu">
+                            {activeAxisColumns.length ? (
+                              activeAxisColumns.map((col) => (
+                                <label key={col} className="ps-multi-select__option">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedTabularYAxes.includes(col)}
+                                    onChange={() => toggleTabularYAxis(col)}
+                                  />
+                                  <span>{col}</span>
+                                </label>
+                              ))
+                            ) : (
+                              <div className="ps-multi-select__empty">No columns available</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <select
+                        value={activeSeries?.yAxis || selectedTabularYAxes[0] || ''}
+                        onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
+                        disabled={!activeSeries?.jobId}
+                      >
+                        <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                        {activeAxisColumns.map((col) => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    )}
+                    {/* {allowsMultipleTabularY && activeSeries?.jobId && (
+                      <div className="summary-label" style={{ marginTop: 6 }}>
+                        Open the dropdown and choose multiple Y columns.
+                      </div>
+                    )} */}
                   </div>
 
                   <div className="ps-field">
