@@ -64,6 +64,17 @@ export const documentsApi = {
     return data; // string[]
   },
 
+  searchAssignableUsers: async (query, projectId) => {
+    const params = { q: query };
+    if (projectId) {
+      params.project_id = projectId;
+    }
+    const { data } = await axiosClient.get("/api/documents/assignable-users", {
+      params,
+    });
+    return data; // [{ email, name, role }]
+  },
+
   update: async (docId, payload) => {
     const { data } = await axiosClient.put(`/api/documents/${docId}`, payload);
     return data; // updated UserDocumentOut

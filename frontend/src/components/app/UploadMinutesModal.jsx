@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { FiUploadCloud, FiPlus, FiCalendar, FiX } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
+import AssigneeSearchInput from "./AssigneeSearchInput";
 import UploadSimple from "../../assets/UploadSimple.svg";
 import load from "../../assets/load.svg";
 import "./UploadMinutesModal.css";
@@ -71,39 +72,14 @@ export default function UploadMinutesModal({
   const [error, setError] = useState("");
   const [actionPointDescription, setActionPointDescription] = useState("");
   const [actionPointAssignee, setActionPointAssignee] = useState("");
+  const [actionPointAssigneeEmail, setActionPointAssigneeEmail] = useState("");
   const [actionPoints, setActionPoints] = useState([]);
-  const [assigneeQuery, setAssigneeQuery] = useState("");
-  const [assigneeOptions, setAssigneeOptions] = useState([]);
   const [projectId, setProjectId] = useState(selectedProjectId || "");
   const projectLocked = Boolean(fixedProjectId);
 
   // For multi "Action on"
   const [actionOnInput, setActionOnInput] = useState("");
   const [actionOnList, setActionOnList] = useState([]);
-
-  useEffect(() => {
-    if (!assigneeQuery.trim()) {
-      setAssigneeOptions([]);
-      return;
-    }
-
-    const handle = setTimeout(async () => {
-      try {
-        const results = await documentsApi.searchAssignees(assigneeQuery.trim());
-        setAssigneeOptions(results || []);
-      } catch (err) {
-        console.error("Failed to search assignees", err);
-      }
-    }, 300);
-
-    return () => clearTimeout(handle);
-  }, [assigneeQuery]);
-
-  const handleSelectAssignee = (name) => {
-    setActionPointAssignee(name);
-    setAssigneeQuery(name);
-    setAssigneeOptions([]);
-  };
 
   useEffect(() => {
     setProjectId(fixedProjectId || selectedProjectId || "");
@@ -118,9 +94,8 @@ export default function UploadMinutesModal({
     setError("");
     setActionPointDescription("");
     setActionPointAssignee("");
+    setActionPointAssigneeEmail("");
     setActionPoints([]);
-    setAssigneeOptions([]);
-    setAssigneeQuery("");
     setActionOnInput("");
     setActionOnList([]);
     setProjectId(fixedProjectId || selectedProjectId || "");
@@ -139,12 +114,15 @@ export default function UploadMinutesModal({
 
     setActionPoints((prev) => [
       ...prev,
-      { description, assigned_to: assignee || "" },
+      {
+        description,
+        assigned_to: assignee || "",
+        assigned_to_email: actionPointAssigneeEmail || null,
+      },
     ]);
     setActionPointDescription("");
     setActionPointAssignee("");
-    setAssigneeQuery("");
-    setAssigneeOptions([]);
+    setActionPointAssigneeEmail("");
   };
 
   const handleRemoveActionPoint = (index) => {
@@ -190,6 +168,7 @@ export default function UploadMinutesModal({
       .map((ap) => ({
         description: ap.description.trim(),
         assigned_to: ap.assigned_to?.trim() || null,
+        assigned_to_email: ap.assigned_to_email?.trim() || null,
       }))
       .filter((ap) => ap.description);
 
@@ -439,15 +418,19 @@ export default function UploadMinutesModal({
     {/* Assign To */}
     <div className="field">
       <div className="assigneeInputBox">
-        <input
-          type="text"
-          placeholder="Assign to (optional)"
+        <AssigneeSearchInput
           value={actionPointAssignee}
-          onChange={(e) => {
-            setActionPointAssignee(e.target.value);
-            setAssigneeQuery(e.target.value);
-          }}
+          projectId={projectId}
+          placeholder="Assign to (optional)"
           className="Textinput"
+          onValueChange={(nextValue) => {
+            setActionPointAssignee(nextValue);
+            setActionPointAssigneeEmail("");
+          }}
+          onSelect={(user) => {
+            setActionPointAssignee(user?.name?.trim() || user?.email || "");
+            setActionPointAssigneeEmail(user?.email || "");
+          }}
         />
 
         <button
@@ -457,21 +440,6 @@ export default function UploadMinutesModal({
         >
           <FiPlus size={18} />
         </button>
-
-        {assigneeOptions.length > 0 && (
-          <div className="suggestionsBox">
-            {assigneeOptions.map((name) => (
-              <button
-                type="button"
-                key={name}
-                className="suggestionItem"
-                onClick={() => handleSelectAssignee(name)}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   </div>
@@ -659,5 +627,4 @@ export default function UploadMinutesModal({
     </div>
   );
 }
-
 
