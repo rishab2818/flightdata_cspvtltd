@@ -231,7 +231,7 @@
   text-align: left;
   font-size: 14px;
   font-family: "Inter-SemiBold", Helvetica;
-  font-weight: 600;
+  font-weight: 500;
   color:#000000;
   border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
@@ -476,8 +476,9 @@
 }
 
 .errorText {
-  color: #dc2626;
+  color: #d32f2f;
   font-size: 14px;
+  font-family: "Inter", sans-serif;
 }
 
 .modalFooter {

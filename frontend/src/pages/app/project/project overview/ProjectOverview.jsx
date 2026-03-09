@@ -43,12 +43,13 @@ export default function ProjectUpload() {
   const [projectEditOpen, setProjectEditOpen] = useState(false)
   const [savingProjectEdit, setSavingProjectEdit] = useState(false)
 
+  const [showMembersModal, setShowMembersModal] = useState(false);
+const [projectMembers, setProjectMembers] = useState([]);
+
  const role = user?.role?.toUpperCase?.();
  const canEditProject = role === 'GD' || role === 'DH';
 
  const desc = project?.project_description || '';
-
-
 
 const date = project?.created_at
   ? new Date(project.created_at).toLocaleDateString("en-GB", {
@@ -142,56 +143,101 @@ const members = project?.members?.length || 0;
     pollingRef.current.set(jobId, timer)
   }
 
-  const syncTagProgress = useCallback(async (tagRows) => {
-    const rows = Array.isArray(tagRows) ? tagRows : []
-    if (!rows.length) {
-      setTagJobMap({})
-      stopAllPolling()
-      return
-    }
+  const handleViewMembers = () => {
+  setProjectMembers(project?.members || []);
+  setShowMembersModal(true);
+};
+  /* ================= Refresh tags + attach polling ================= */
+  // const refreshTagsAndAttachProgress = async () => {
+  //   const tagRows = await ingestionApi.listTags(projectId, activeDataset)
+  //   setTags(tagRows || [])
 
-    const seq = ++tagProgressSeqRef.current
-    const entries = await Promise.all(
-      rows.map(async (tag) => {
-        try {
-          const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tag.tag_name, {
-            page: 1,
-            limit: 1,
-          })
-          return [tag.tag_name, files?.[0]?.job_id || null]
-        } catch {
-          return [tag.tag_name, null]
-        }
-      })
+  //   const map = {}
+  //   for (const t of tagRows || []) {
+  //     try {
+  //       const files = await ingestionApi.listFilesInTag(projectId, activeDataset, t.tag_name)
+  //       if (files?.length) {
+  //         const latestJobId = files[0]?.job_id
+  //         if (latestJobId) {
+  //           map[t.tag_name] = latestJobId
+  //           pollJob(latestJobId)
+  //         }
+  //       }
+  //     } catch {
+  //       // ignore per-tag failure
+  //     }
+  //   }
+  //   setTagJobMap(map)
+  // }
+
+  const refreshTagsAndAttachProgress = async () => {
+  try {
+    const tagRows = await ingestionApi.listTags(projectId, activeDataset)
+    setTags(tagRows || [])
+
+    if (!tagRows?.length) return
+
+    const fileResults = await Promise.all(
+      tagRows.map((t) =>
+        ingestionApi
+          .listFilesInTag(projectId, activeDataset, t.tag_name)
+          .then((files) => ({ tag: t.tag_name, files }))
+          .catch(() => ({ tag: t.tag_name, files: [] }))
+      )
     )
 
-    if (tagProgressSeqRef.current !== seq) return
+    const map = {}
 
-    const nextTagJobMap = {}
-    for (const [tagName, jobId] of entries) {
-      if (jobId) nextTagJobMap[tagName] = jobId
-    }
+    fileResults.forEach(({ tag, files }) => {
+      if (files?.length) {
+        const latestJobId = files[0]?.job_id
+        if (latestJobId) {
+          map[tag] = latestJobId
+          pollJob(latestJobId)
+        }
+      }
+    })
 
-    const nextJobIds = new Set(Object.values(nextTagJobMap))
-    for (const [jobId] of pollingRef.current.entries()) {
-      if (!nextJobIds.has(jobId)) stopPolling(jobId)
-    }
-    setTagJobMap(nextTagJobMap)
-    for (const jobId of nextJobIds) pollJob(jobId)
-  }, [projectId, activeDataset])
+    setTagJobMap(map)
+  } catch (err) {
+    console.error(err)
+  }
+}
 
   /* ================= Dataset / project change ================= */
-  useEffect(() => {
-    tagProgressSeqRef.current += 1
-    stopAllPolling()
-    setJobProgress({})
-    setTagJobMap({})
+  // useEffect(() => {
+  //   let cancelled = false
 
-    return () => {
-      tagProgressSeqRef.current += 1
-      stopAllPolling()
-    }
-  }, [projectId, activeDataset])
+  //     ; (async () => {
+  //       if (cancelled) return
+  //       stopAllPolling()
+  //       setJobProgress({})
+  //       setTagJobMap({})
+  //       await refreshTagsAndAttachProgress()
+
+  //       // second refresh handles race after upload
+  //       setTimeout(refreshTagsAndAttachProgress, 2000)
+  //     })()
+
+  //   return () => {
+  //     cancelled = true
+  //     stopAllPolling()
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [projectId, activeDataset])
+
+  useEffect(() => {
+  let cancelled = false
+
+  ;(async () => {
+    if (cancelled) return
+    await refreshTagsAndAttachProgress()
+  })()
+
+  return () => {
+    cancelled = true
+  }
+}, [projectId, activeDataset])
 
   useEffect(() => {
     if (!searchTagName) return
@@ -380,7 +426,27 @@ const members = project?.members?.length || 0;
     </div>
 
     {/* Members */}
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    cursor: "pointer",
+  }}
+  onClick={() => handleViewMembers(projectId)}
+>
+  <span style={{ color: "#737373" }}>Members</span>
+  <span
+    style={{
+      fontWeight: 600,
+      color: "#000000",
+      fontFamily: "inter-semi-bold, Helvetica",
+    }}
+  >
+    {String(members).padStart(2, "0")}
+  </span>
+</div>
+    {/* <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span style={{ color: "#737373" }}>Members</span>
       <span
         style={{
@@ -391,12 +457,50 @@ const members = project?.members?.length || 0;
       >
         {String(members).padStart(2, "0")}
       </span>
-    </div>
+    </div> */}
   </div>
 </div>
 
+{showMembersModal && (
+  <div className="members-overlay">
+    <div className="members-modal">
 
+      <div className="members-header">
+        <h3>Project Members</h3>
+      </div>
 
+      <div className="members-list">
+        {projectMembers.length === 0 ? (
+          <p>No members found</p>
+        ) : (
+          projectMembers.map((m, i) => {
+            const username =
+              m.name ||
+              m.username ||
+              (m.email ? m.email.split("@")[0] : "User");
+
+            return (
+              <div key={i} className="member-item">
+                <div className="member-name">{username}</div>
+                <div className="member-email">{m.email}</div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="members-footer">
+        <button
+          className="close-btn"
+          onClick={() => setShowMembersModal(false)}
+        >
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
 
       {/* Dataset tabs */}
       {!selectedTag && (

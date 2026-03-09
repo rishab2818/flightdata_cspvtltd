@@ -6,6 +6,12 @@ import RocketIcon from '../../assets/RocketLaunch.svg';
 import Usersthreeicon from '../../assets/UsersThree.svg';
 import medalicon from '../../assets/MedalMilitary.svg';
 import bookicon from '../../assets/Book.svg';
+import FolderUserImg from '../../assets/FolderUser.svg';
+import UserGearImg from '../../assets/UserGear.svg';
+import UserSquareImg from '../../assets/UserSquare.svg';
+import ScrollIcon from '../../assets/Scroll.svg';
+import WindmillIcon from '../../assets/Windmill.svg';
+import StudentIcon from '../../assets/Student.svg';
 import styles from './UserOverview.module.css';
 
 /**
@@ -22,16 +28,36 @@ const Rocket = () => <img src={RocketIcon} alt="RocketIcon" style={{ width: 20, 
 const User3 = () => <img src={Usersthreeicon} alt="Usersthreeicon" style={{ width: 24, height:24 }}/>;
 const Medal = () => <img src={medalicon} alt="medalicon" style={{ width: 20, height: 20 }} />;
 const Book = () => <img src={bookicon} alt="bookicon" style={{ width: 20, height: 20 }}/>;
+const Folder = () => (
+<img src={FolderUserImg} alt="Folder" style={{ width: 20, height: 20 }} />
+);
+const UserGear = () => (
+  <img src={UserGearImg} alt="UserGear" style={{ width: 20, height: 20 }} />
+);
+const UserSquare = () => (
+  <img src={UserSquareImg} alt="UserSquare" style={{ width: 20, height: 20 }} />
+);
+const Scroll = () => (
+  <img src={ScrollIcon} alt="Scroll" style={{ width: 20, height: 20 }} />
+);
+const Windmill = () => (
+  <img src={WindmillIcon} alt="Windmill" style={{ width: 20, height: 20 }} />
+);
+const Student = () => (
+  <img src={StudentIcon} alt="Student" style={{ width: 20, height: 20 }} />
+);
+
+
 const ROWS = [
   { role: 'GD', label: 'Group Directors', icon: <Medal /> },
   { role: 'DH', label: 'Divisional Head', icon: <Rocket /> },
-  { role: 'TL', label: 'Team Leads', icon: <Rocket /> },
-  { role: 'SM', label: 'System Managers', icon: <Rocket /> },
-  { role: 'OIC', label: 'Office in Charge', icon: <Rocket /> },
+  { role: 'TL', label: 'Team Leads', icon: <Folder /> },
+  { role: 'SM', label: 'System Managers', icon: <UserGear /> },
+  { role: 'OIC', label: 'Office in Charge', icon: <UserSquare /> },
   { role: 'JRF', label: 'Junior Research Fellow', icon: <Book /> },
-  { role: 'SRF', label: 'Senior Research Fellow', icon: <Book /> },
-  { role: 'CE', label: 'Contract Engineers', icon: <Book /> },
-  { role: 'STUDENT', label: 'Student', icon: <Book /> },
+  { role: 'SRF', label: 'Senior Research Fellow', icon: <Scroll /> },
+  { role: 'CE', label: 'Contract Engineers', icon: <Windmill /> },
+  { role: 'STUDENT', label: 'Student', icon: <Student /> },
 ];
 
 

@@ -11,6 +11,44 @@ import ConfirmationModal from '../../../components/common/ConfirmationModal'
 import { useInfiniteScrollTrigger } from '../../../hooks/useInfiniteScrollTrigger'
 import { useLazyCollection } from '../../../hooks/useLazyCollection'
 import './ProjectVisualisation.css'
+import ConfirmationModal from "../../../components/common/ConfirmationModal";
+import { visualizationApi } from '../../../api/visualizationApi'
+
+const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
+const INLINE_EXTENSIONS = new Set([
+  '.pdf',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg',
+  '.txt',
+  '.csv',
+])
+
+const OTHERS_EXTENSIONS = new Set([
+  '.pdf',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg'
+])
+
+const getExtension = (name = '') => {
+  const idx = name.lastIndexOf('.')
+  return idx >= 0 ? name.slice(idx).toLowerCase() : ''
+}
+
+const isTabularFile = (file) => TABULAR_EXTENSIONS.has(getExtension(file?.filename || ''))
+
+const canInlinePreview = (file) => {
+  const type = (file?.content_type || '').toLowerCase()
+  if (type.startsWith('image/') || type.startsWith('text/') || type === 'application/pdf') {
+    return true
+  }
+  return INLINE_EXTENSIONS.has(getExtension(file?.filename || ''))
+}
 
 const triggerDownload = (url, filename) => {
   const link = document.createElement('a')
@@ -59,88 +97,90 @@ const matchesTagAndDataset = (viz, tagName, datasetType) =>
   viz?.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
-  const [tab, setTab] = useState('raw')
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, file: null })
+    const [files, setFiles] = useState([])
+    const [tab, setTab] = useState('raw')
+    const [plots, setPlots] = useState([])
 
-  const fetchFilesPage = useCallback(async ({ page, limit }) => {
-    const rows = await ingestionApi.listFilesInTag(projectId, datasetType, tagName, { page, limit })
-    return rows || []
-  }, [projectId, datasetType, tagName])
+        const [confirmDelete, setConfirmDelete] = useState({
+  open: false,
+  file: null,
+})
+    useEffect(() => {
+        ingestionApi
+            .listFilesInTag(projectId, datasetType, tagName)
+            .then(setFiles)
+    }, [projectId, datasetType, tagName])
 
-  const {
-    items: files,
-    setItems: setFiles,
-    loading: filesLoading,
-    loadingMore: filesLoadingMore,
-    error: filesError,
-    hasMore: filesHasMore,
-    loadMore: loadMoreFiles,
-  } = useLazyCollection({
-    fetchPage: fetchFilesPage,
-    deps: [projectId, datasetType, tagName],
-    pageSize: 30,
-    errorMessage: 'Failed to load files.',
-  })
+    useEffect(() => {
+  if (tab !== 'plot') return
 
-  const fetchPlotsPage = useCallback(async ({ page, limit }) => {
-    const rows = await visualizationApi.listForProject(projectId, { page, limit })
-    return Array.isArray(rows) ? rows : rows?.data || []
-  }, [projectId])
+  visualizationApi
+    .listForProject(projectId)
+    .then((res) => {
+      const list = Array.isArray(res) ? res : res.data || []
 
-  const {
-    items: allProjectPlots,
-    setItems: setAllProjectPlots,
-    loading: plotsLoading,
-    loadingMore: plotsLoadingMore,
-    error: plotsError,
-    hasMore: plotsHasMore,
-    loadMore: loadMorePlots,
-  } = useLazyCollection({
-    fetchPage: fetchPlotsPage,
-    deps: [projectId],
-    pageSize: 30,
-    errorMessage: 'Failed to load plots.',
-    enabled: tab === 'plot',
-  })
+      const filtered = list.filter(
+        (v) =>
+          v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
+          v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
+      )
 
-  const loadMoreFilesRef = useInfiniteScrollTrigger({
-    enabled: tab !== 'plot',
-    hasMore: filesHasMore,
-    isLoading: filesLoading || filesLoadingMore,
-    onLoadMore: loadMoreFiles,
-  })
+      setPlots(filtered)
+    })
+    .catch(() => setPlots([]))
+}, [tab, projectId, datasetType, tagName])
 
-  const loadMorePlotsRef = useInfiniteScrollTrigger({
-    enabled: tab === 'plot',
-    hasMore: plotsHasMore,
-    isLoading: plotsLoading || plotsLoadingMore,
-    onLoadMore: loadMorePlots,
-  })
+      const rows =
+  tab === 'plot'
+    ? plots
+    : tab === 'raw'
+      ? files.filter(f => isTabularFile(f) && !f.processed_key)
+    : tab === 'processed'
+      ? files.filter(f => f.processed_key)
+    : tab === 'others'
+      ? files.filter(f => {
+          const ext = getExtension(f?.filename || '')
+          return (
+            !f.processed_key &&
+            !f.visualize_enabled &&
+            OTHERS_EXTENSIONS.has(ext)
+          )
+        })
+    : []
+//   const handleView = (file, tabName) => {
+//   if (tabName === 'plot') {
+//     // Open full visualization page for plots
+//     window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
+   
 
-  const plots = useMemo(
-    () => allProjectPlots.filter((viz) => matchesTagAndDataset(viz, tagName, datasetType)),
-    [allProjectPlots, datasetType, tagName]
-  )
+//   } else if (tabName === 'processed' && file.processed_key) {
+//     window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
+//   } else if (tabName === 'raw') {
+//     window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
+//   } else {
+//     // fallback for files that cannot be previewed
+//     ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
+//   }
+// }
+const handleView = (file, tabName) => {
+  if (tabName === 'plot') {
+    openPlotFullScreen(file);
+    return;
+  }
 
-  const rows = useMemo(() => {
-    if (tab === 'plot') return plots
-    if (tab === 'processed') return files.filter((f) => f.processed_key)
-    if (tab === 'others') return files.filter((f) => !f.processed_key && !f.visualize_enabled)
-    return files
-  }, [files, plots, tab])
+  if (tabName === 'processed' && file.processed_key) {
+    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer');
+    return;
+  }
 
-  const activeLoading = tab === 'plot' ? plotsLoading : filesLoading
-  const activeLoadingMore = tab === 'plot' ? plotsLoadingMore : filesLoadingMore
-  const activeError = tab === 'plot' ? plotsError : filesError
-  const activeHasMore = tab === 'plot' ? plotsHasMore : filesHasMore
-  const activeSentinelRef = tab === 'plot' ? loadMorePlotsRef : loadMoreFilesRef
-  const showEmptyState = !activeLoading && !activeError && rows.length === 0 && !activeHasMore
+  if (tabName === 'raw') {
+    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
 
-  const handleView = (file, tabName) => {
-    if (tabName === 'plot') {
-      openPlotFullScreen(file)
-      return
-    }
+  ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename));
+};
+
 
     if (tabName === 'processed' && file.processed_key) {
       window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')

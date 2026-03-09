@@ -108,11 +108,21 @@ export default function DocumentActions({
       <button type="button" onClick={() => onView?.(doc)} style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}>
          <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
       </button>
-      {onEdit && (
+      {/* {onEdit && (
         <button type="button" onClick={onEdit}  style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}>
           <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="edit" />
         </button>
-      )}
+      )} */}
+
+      {onEdit && (
+  <button
+    type="button"
+    onClick={() => onEdit?.(doc)}
+    style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+  >
+    <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="edit" />
+  </button>
+)}
 
       <button type="button"  onClick={() => onDownload?.(doc)}  style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}>
         <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />

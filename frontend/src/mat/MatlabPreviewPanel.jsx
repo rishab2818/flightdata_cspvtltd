@@ -16,26 +16,62 @@ const defaultSliceExpr = (ndim) => {
 
 function PreviewTable({ headers = [], rows = [] }) {
   return (
-    <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
-      <thead>
-        <tr>
-          <th style={{ textAlign: 'left', width: 56 }}></th>
-          {headers.map((h) => (
-            <th key={`head-${h}`} style={{ textAlign: 'left' }}>{h}</th>
+    <div
+  style={{
+    width: "100%",
+    maxHeight: "70vh",
+    overflowX: "auto",   // horizontal scroll
+    overflowY: "auto",   // vertical scroll
+    border: "1px solid #e5e7eb",
+    borderRadius: "6px"
+  }}
+>
+  <table
+    className="data-table"
+    style={{
+      borderCollapse: "collapse",
+      width: "max-content",   // 🔥 important
+      minWidth: "100%"        // keeps full width minimum
+    }}
+  >
+    <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
+      <tr>
+        <th style={{ textAlign: "left", width: 56, background: "#EFF7FF" }}></th>
+        {headers.map((h) => (
+          <th
+            key={`head-${h}`}
+            style={{
+              textAlign: "left",
+              background: "#EFF7FF",
+              whiteSpace: "nowrap"   // prevent wrapping
+            }}
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+
+    <tbody>
+      {rows.map((row, rowIdx) => (
+        <tr key={`row-${rowIdx}`}>
+          <th style={{ textAlign: "left", fontWeight: 600 }}>
+            {rowIdx + 1}
+          </th>
+
+          {(row || []).map((cell, colIdx) => (
+            <td
+              key={`cell-${rowIdx}-${colIdx}`}
+              style={{ whiteSpace: "nowrap" }}  // prevent wrapping
+            >
+              {String(cell ?? "")}
+            </td>
           ))}
         </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, rowIdx) => (
-          <tr key={`row-${rowIdx}`}>
-            <th style={{ textAlign: 'left', fontWeight: 600 }}>{rowIdx + 1}</th>
-            {(row || []).map((cell, colIdx) => (
-              <td key={`cell-${rowIdx}-${colIdx}`}>{String(cell ?? '')}</td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+      ))}
+    </tbody>
+  </table>
+</div>
   )
 }
 
@@ -122,8 +158,8 @@ export default function MatlabPreviewPanel({ jobId, variables = [], onRefreshVar
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12 }}>
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, maxHeight: 600, overflow: 'auto', padding: 8 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12, padding:"16px"}}>
+      <div style={{ border: '1px solid #00000026', borderRadius: 4,  overflow: 'auto', padding: 8 }}>
         {numericVars.map((item) => {
           const active = item.name === selectedVar
           return (
@@ -142,9 +178,12 @@ export default function MatlabPreviewPanel({ jobId, variables = [], onRefreshVar
                 width: '100%',
                 textAlign: 'left',
                 padding: '8px 10px',
-                borderRadius: 6,
-                border: active ? '1px solid #1d4ed8' : '1px solid #e5e7eb',
-                background: active ? '#eff6ff' : '#fff',
+                fontSize:'14px',
+                fontWeight:600,
+                fontFamily:"Inter-Regular,Helvetica",
+                borderRadius: 4,
+                border: active ? '1px solid #1d4ed8' : '1px solid #00000026',
+                background: active ? '#eff6ff' : '#f3f3f5',
                 marginBottom: 8,
                 cursor: 'pointer',
               }}
@@ -173,15 +212,15 @@ export default function MatlabPreviewPanel({ jobId, variables = [], onRefreshVar
         })}
       </div>
 
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-        <div style={{ fontFamily: 'monospace', marginBottom: 10 }}>
+      <div style={{ border: '1px solid #00000026', borderRadius: 4, padding: 12, minWidth: 0 }}>
+        <div style={{ fontFamily: "Inter-Regular,Helvetica", marginBottom: 10,fontSize:"14px",color:"#000000",fontWeight:500 }}>
           <div>{preview?.display_shape || toShapeText(selectedMeta?.shape)}</div>
           <div>{preview?.dtype || selectedMeta?.dtype || '-'}</div>
           <div>{preview?.slice_expr || `(${sliceExpr || ''})`}</div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <label className="summary-label" style={{ margin: 0 }}>Slice</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 12 }}>
+          <label  style={{ margin: 0, fontSize:"14px",color:"#000000", fontWeight:600, fontFamily:"Inter-Regular,Helvetica"}}>Slice</label>
           <input
             value={sliceExpr}
             onChange={(e) => setSliceExpr(e.target.value)}
@@ -190,8 +229,8 @@ export default function MatlabPreviewPanel({ jobId, variables = [], onRefreshVar
               width: 260,
               height: 34,
               padding: '6px 10px',
-              border: '1px solid #e5e7eb',
-              borderRadius: 6,
+              border: '1px solid #00000026',
+              borderRadius: 4,
             }}
           />
           <button type="button" className="project-shell__nav-link" onClick={handleApplySlice}>
@@ -224,7 +263,7 @@ export default function MatlabPreviewPanel({ jobId, variables = [], onRefreshVar
                 <div className="summary-label" style={{ marginBottom: 6 }}>
                   (:, :, {page.page})
                 </div>
-                <PreviewTable headers={page.headers} rows={page.rows} />
+                <PreviewTable headers={page.headers} rows={page.rows} style={{background:"#f3f3f5",}}/>
                 {page.truncated && (
                   <div className="summary-label" style={{ marginTop: 6 }}>
                     Page preview truncated.

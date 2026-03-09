@@ -183,3 +183,41 @@ async def delete_project(
     if not ok:
         raise HTTPException(status_code=404, detail="Project not found or no access")
     return {"ok": True}
+
+# # ------- Search project files -------
+# @router.get("/{project_id}/search")
+# async def search_project_files(
+#     project_id: str,
+#     q: str = Query(..., min_length=1),
+#     user: CurrentUser = Depends(get_current_user),
+# ):
+#     """
+#     Search files inside a project (all modules)
+#     """
+
+#     # Ensure user is project member
+#     project = await repo.get_if_member(project_id, user.email)
+#     if not project:
+#         raise HTTPException(status_code=404, detail="Project not found or no access")
+
+#     db = await get_db()
+
+#     results = []
+
+#     # Example: search technical reports collection
+#     cursor = db.technical_reports.find({
+#         "project_id": project_id,
+#         "file_name": {"$regex": q, "$options": "i"}
+#     })
+
+#     docs = await cursor.to_list(length=50)
+
+#     for d in docs:
+#         results.append({
+#             "id": str(d["_id"]),
+#             "file_name": d.get("file_name"),
+#             "download_url": d.get("file_url"),
+#             "module": "Technical Reports"
+#         })
+
+#     return results

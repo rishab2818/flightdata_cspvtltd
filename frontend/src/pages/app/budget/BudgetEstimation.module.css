@@ -264,7 +264,7 @@
 
 .table th {
   background: #EFF7FF;
-  font-weight: 600;
+  font-weight: 500;
   color:#000000;
   position: sticky;
   top: 0;
@@ -347,13 +347,14 @@
 
 .errorBanner {
   background: #fef2f2;
-  color: #b91c1c;
+  color: #d32f2f;
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;
   margin: 12px 16px 0;
   flex-shrink: 0;
   margin-bottom: 8px;
+  font-family: "Inter", sans-serif;
 }
 
 .emptyState {

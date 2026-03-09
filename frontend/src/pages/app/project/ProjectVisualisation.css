@@ -384,8 +384,8 @@ min-width: 0;
   gap: 12px;
   margin-top: 20px;
   min-width: 0;
-  overflow-x: hidden;
-  height: 90%;
+  /* overflow-x: hidden; */
+  /* height: 90%; */
 }
 
 .projectcard1 {
