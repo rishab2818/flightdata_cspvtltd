@@ -27,4 +27,11 @@ export const matApi = {
     )
     return data
   },
+
+  deleteDerived: async (jobId, varName) => {
+    const { data } = await axiosClient.delete(
+      `/api/mat/${jobId}/derived/${encodeURIComponent(varName)}`
+    )
+    return data
+  },
 }

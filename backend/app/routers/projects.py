@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.auth import get_current_user, require_head, CurrentUser
 from app.models.project import ProjectCreate, ProjectOut, ProjectUpdate, MembersPatch
+from app.project_search import search_project_resources
 from app.repositories.projects import ProjectRepository
 from app.db.mongo import get_db
 
@@ -97,6 +98,21 @@ async def search_members(
         }
         for d in docs
     ]
+
+
+@router.get("/{project_id}/search")
+async def search_project(
+    project_id: str,
+    q: str = Query(..., min_length=1, max_length=80, description="Project-scoped search query"),
+    limit: int = Query(25, ge=1, le=50),
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await repo.get_if_member(project_id, user.email)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Project not found or no access")
+
+    items = await search_project_resources(project_id=project_id, query=q, limit=limit)
+    return {"items": items}
 
 
 # ------- Get by id (must be a member) -------

@@ -1,16 +1,18 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 from typing import List, Optional
+import re
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.auth import get_current_user, CurrentUser
+from app.core.auth import get_current_user, require_head, CurrentUser
 from app.core.minio_client import get_minio_client
 from app.core.config import settings
 from app.db.mongo import get_db
 from app.models.documents import (
     ActionPoint,
+    AssignableUserOption,
     DocumentSection,
     DocumentUpdate,
     MoMSubsection,
@@ -19,6 +21,7 @@ from app.models.documents import (
     UserDocumentOut,
 )
 from app.repositories.projects import ProjectRepository
+from app.task_acknowledgements.service import create_assignment_request_sync
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 project_repo = ProjectRepository()
@@ -60,6 +63,146 @@ def _serialize_user_document(row: dict) -> UserDocumentOut:
         action_on=row.get("action_on", []),
         project_id=row.get("project_id"),
     )
+
+
+def _normalize_assignee_display_name(row: dict) -> str:
+    first_name = (row.get("first_name") or "").strip()
+    last_name = (row.get("last_name") or "").strip()
+    full_name = " ".join(part for part in [first_name, last_name] if part).strip()
+    return full_name or row.get("email") or ""
+
+
+def _assignment_signature(action_point: dict) -> tuple[str, str]:
+    description = (action_point.get("description") or "").strip().lower()
+    assignee_email = (action_point.get("assigned_to_email") or "").strip().lower()
+    return description, assignee_email
+
+
+def _collect_new_assignments(
+    previous_points: list[dict] | None,
+    current_points: list[dict] | None,
+) -> list[dict]:
+    previous_signatures = {
+        _assignment_signature(point)
+        for point in (previous_points or [])
+        if (point.get("description") or "").strip()
+        and (point.get("assigned_to_email") or "").strip()
+    }
+
+    new_assignments: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+
+    for point in current_points or []:
+        signature = _assignment_signature(point)
+        if not signature[0] or not signature[1]:
+            continue
+        if signature in previous_signatures or signature in seen:
+            continue
+        seen.add(signature)
+        new_assignments.append(point)
+
+    return new_assignments
+
+
+def _notify_new_action_assignees(
+    *,
+    assigner_email: str,
+    subsection: str | None,
+    tag: str,
+    doc_date: datetime,
+    action_points: list[dict] | None,
+) -> None:
+    section_label = (subsection or "meeting").upper()
+    date_label = doc_date.strftime("%b %d, %Y")
+    source_label = f'{section_label} minutes "{tag}" dated {date_label}'
+
+    for point in action_points or []:
+        assignee_email = (point.get("assigned_to_email") or "").strip().lower()
+        description = (point.get("description") or "").strip()
+        if not assignee_email or not description:
+            continue
+
+        try:
+            create_assignment_request_sync(
+                assigner_email=assigner_email,
+                assignee_email=assignee_email,
+                task_description=description,
+                source_label=source_label,
+                source_type="minutes_of_meeting",
+                assignee_name=point.get("assigned_to"),
+            )
+        except Exception:
+            continue
+
+
+async def _search_users(
+    *,
+    q: str,
+    limit: int,
+    user: CurrentUser,
+    project_id: Optional[str] = None,
+) -> List[AssignableUserOption]:
+    if not q.strip():
+        return []
+
+    db = await get_db()
+    safe_query = re.escape(q.strip())
+    filters = [
+        {"email": {"$regex": safe_query, "$options": "i"}},
+        {"first_name": {"$regex": safe_query, "$options": "i"}},
+        {"last_name": {"$regex": safe_query, "$options": "i"}},
+    ]
+
+    query: dict = {"$or": filters}
+    if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
+
+        member_emails = [
+            member.get("email")
+            for member in project.get("members", [])
+            if isinstance(member, dict) and member.get("email")
+        ]
+        if not member_emails:
+            return []
+
+        query = {
+            "$and": [
+                {"email": {"$in": member_emails}},
+                {"$or": filters},
+            ]
+        }
+    else:
+        require_head(user)
+
+    cursor = (
+        db.users.find(
+            query,
+            {
+                "email": 1,
+                "first_name": 1,
+                "last_name": 1,
+                "role": 1,
+            },
+        )
+        .sort("email", 1)
+        .limit(limit)
+    )
+    docs = await cursor.to_list(length=limit)
+
+    return [
+        AssignableUserOption(
+            email=row["email"],
+            name=_normalize_assignee_display_name(row),
+            role=row.get("role"),
+        )
+        for row in docs
+        if row.get("email")
+    ]
 
 
 # ---------- 1) Init upload: get presigned URL, dedupe check ----------
@@ -208,6 +351,13 @@ async def confirm_document_upload(
 
     res = await db.user_documents.insert_one(doc)
     doc_id = str(res.inserted_id)
+    _notify_new_action_assignees(
+        assigner_email=user.email,
+        subsection=doc["subsection"],
+        tag=doc["tag"],
+        doc_date=doc["doc_date"],
+        action_points=doc["action_points"],
+    )
 
     return UserDocumentOut(
         doc_id=doc_id,
@@ -239,6 +389,8 @@ async def list_user_documents(
         None,
         description="Optional project filter (only returns docs linked to the project)",
     ),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
     """List all documents of the current user for a given section (and optional subsection)."""
@@ -266,8 +418,13 @@ async def list_user_documents(
             )
         query["project_id"] = project_id
 
-    cursor = db.user_documents.find(query).sort("uploaded_at", -1)
-    rows = await cursor.to_list(length=500)
+    cursor = (
+        db.user_documents.find(query)
+        .sort("uploaded_at", -1)
+        .skip((page - 1) * limit)
+        .limit(limit)
+    )
+    rows = await cursor.to_list(length=limit)
 
     results: List[UserDocumentOut] = []
     for row in rows:
@@ -316,6 +473,19 @@ async def search_assignees(
             break
 
     return names[:limit]
+
+
+@router.get("/assignable-users", response_model=List[AssignableUserOption])
+async def search_assignable_users(
+    q: str = Query(..., min_length=1, description="Search by user name or email"),
+    project_id: Optional[str] = Query(
+        None,
+        description="Optional project ID to restrict results to project members",
+    ),
+    limit: int = Query(10, ge=1, le=50),
+    user: CurrentUser = Depends(get_current_user),
+):
+    return await _search_users(q=q, limit=limit, user=user, project_id=project_id)
 
 
 # ---------- 4) Download: get presigned GET URL ----------
@@ -404,6 +574,18 @@ async def update_document(
         await db.user_documents.update_one({"_id": row["_id"]}, {"$set": updates})
 
     updated = await db.user_documents.find_one({"_id": row["_id"]})
+    if payload.action_points is not None and updated:
+        new_assignments = _collect_new_assignments(
+            row.get("action_points", []),
+            updated.get("action_points", []),
+        )
+        _notify_new_action_assignees(
+            assigner_email=user.email,
+            subsection=updated.get("subsection"),
+            tag=updated.get("tag") or row.get("tag") or "",
+            doc_date=updated.get("doc_date") or row.get("doc_date"),
+            action_points=new_assignments,
+        )
     return _serialize_user_document(updated)
 
 

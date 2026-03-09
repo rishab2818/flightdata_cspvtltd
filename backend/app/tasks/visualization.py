@@ -18,6 +18,7 @@ from app.core.redis_client import get_sync_redis
 from app.db.sync_mongo import get_sync_db
 from app.mat.reader import read_mat_slice
 from app.mat.slicing import build_slice_spec
+from app.matlab_plot import build_matlab_like_figure
 from app.repositories.notifications import create_sync_notification
 from app.calculations.derived import (
     apply_derived_columns_to_frame,
@@ -823,6 +824,63 @@ def _build_mat_figure(
             yaxis_title=var_name,
         )
 
+    elif chart in {"scatter3d", "line3d"}:
+        if len(axis_dims) != 3:
+            raise ValueError(f"{chart} requires exactly three mapped dimensions")
+        x_dim, y_dim, z_dim = axis_dims
+        x_vals = np.asarray(coords[x_dim]).reshape(-1)
+        y_vals = np.asarray(coords[y_dim]).reshape(-1)
+        z_vals = np.asarray(coords[z_dim]).reshape(-1)
+        volume = np.asarray(values)
+
+        if volume.ndim != 3:
+            raise ValueError(f"{chart} requires a 3D MAT slice")
+        if volume.shape != (x_vals.shape[0], y_vals.shape[0], z_vals.shape[0]):
+            raise ValueError("MAT slice shape does not match mapped 3D coordinate lengths")
+
+        gx, gy, gz = np.meshgrid(x_vals, y_vals, z_vals, indexing="ij")
+        x_plot = gx.reshape(-1)
+        y_plot = gy.reshape(-1)
+        z_plot = gz.reshape(-1)
+        val_plot = volume.reshape(-1)
+
+        if chart == "scatter3d":
+            fig.add_trace(
+                go.Scatter3d(
+                    name=var_name,
+                    x=x_plot,
+                    y=y_plot,
+                    z=z_plot,
+                    mode="markers",
+                    marker=dict(
+                        size=3,
+                        color=val_plot,
+                        colorscale="Viridis",
+                        opacity=0.8,
+                        colorbar=dict(title=var_name),
+                    ),
+                )
+            )
+        else:
+            fig.add_trace(
+                go.Scatter3d(
+                    name=var_name,
+                    x=x_plot,
+                    y=y_plot,
+                    z=z_plot,
+                    mode="lines",
+                    line=dict(color="royalblue", width=2),
+                )
+            )
+
+        fig.update_layout(
+            scene=dict(
+                xaxis_title=labels.get(x_dim) or f"dim_{x_dim}",
+                yaxis_title=labels.get(y_dim) or f"dim_{y_dim}",
+                zaxis_title=labels.get(z_dim) or f"dim_{z_dim}",
+            ),
+        )
+
     elif chart in {"heatmap", "contour", "surface"}:
         if len(axis_dims) != 2:
             raise ValueError(f"{chart} requires exactly two mapped dimensions")
@@ -1118,69 +1176,82 @@ def generate_visualization(self, viz_id: str):
             chart_type = (doc.get("chart_type") or "line").lower().strip()
             request = doc.get("mat_request") or {}
             job_id = request.get("job_id")
-            var_name = request.get("var")
-            mapping = request.get("mapping")
-            filters = request.get("filters") or {}
+            derived_formulas = request.get("derived_formulas") or []
+            matlab_like_mode = str(request.get("mode") or "").strip().lower() or None
 
-            if not job_id or not var_name or not isinstance(mapping, dict):
+            if not job_id:
                 _update_db_status(
                     db,
                     viz_id,
                     status=states.FAILURE,
                     progress=100,
-                    message="Invalid MAT visualization request",
+                    message="Invalid MAT visualization request: missing job_id",
                 )
                 return
 
-            _set_status(redis, viz_id, states.STARTED, 25, "Reading MAT slice")
-            _update_db_status(db, viz_id, status=states.STARTED, progress=25, message="Reading MAT slice")
-            slice_spec = build_slice_spec(chart_type=chart_type, mapping=mapping, filters=filters)
-            coords, values, labels = read_mat_slice(job_id, var_name, slice_spec)
+            _set_status(redis, viz_id, states.STARTED, 25, "Reading MAT variables")
+            _update_db_status(db, viz_id, status=states.STARTED, progress=25, message="Reading MAT variables")
 
-#             _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
-#             fig = _build_mat_figure(
-#                 chart_type=chart_type,
-#                 var_name=var_name,
-#                 axis_dims=slice_spec.axis_dims,
-#                 coords=coords,
-#                 values=np.asarray(values),
-#                 labels=labels,
-#             )
+            if matlab_like_mode:
+                _set_status(redis, viz_id, states.STARTED, 60, "Building  figure")
+                fig = build_matlab_like_figure(
+                    job_id=job_id,
+                    chart_type=chart_type,
+                    mat_request=request,
+                    temp_derived_formulas=derived_formulas,
+                )
+            else:
+                var_name = request.get("var")
+                mapping = request.get("mapping")
+                filters = request.get("filters") or {}
+                slice_expr = (request.get("slice_expr") or "").strip() or None
 
-#             # html = pio.to_html(fig, include_plotlyjs="cdn", full_html=True)
-#             html = pio.to_html(
-#     fig,
-#     include_plotlyjs="cdn",
-#     full_html=True,
-#     config={"responsive": True},
-# )
-            _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
+                if not var_name or not isinstance(mapping, dict):
+                    _update_db_status(
+                        db,
+                        viz_id,
+                        status=states.FAILURE,
+                        progress=100,
+                        message="Invalid MAT visualization request",
+                    )
+                    return
 
-            fig = _build_mat_figure(
-    chart_type=chart_type,
-    var_name=var_name,
-    axis_dims=slice_spec.axis_dims,
-    coords=coords,
-    values=np.asarray(values),
-    labels=labels,
-)
+                slice_spec = build_slice_spec(chart_type=chart_type, mapping=mapping, filters=filters)
+                coords, values, labels = read_mat_slice(
+                    job_id,
+                    var_name,
+                    slice_spec,
+                    temp_derived_formulas=derived_formulas,
+                    pre_slice_expr=slice_expr,
+                )
 
-# ✅ ADD THIS BLOCK
+                _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
+                fig = _build_mat_figure(
+                    chart_type=chart_type,
+                    var_name=var_name,
+                    axis_dims=slice_spec.axis_dims,
+                    coords=coords,
+                    values=np.asarray(values),
+                    labels=labels,
+                )
+
+            mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
             fig.update_layout(
-    autosize=True,
-    height=None,
-    width=None,
-    margin=dict(l=40, r=40, t=40, b=40),
-)
+                autosize=True,
+                height=None,
+                width=None,
+                # Match tabular 3D sizing so MAT 3D occupies the same plot area.
+                margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+            )
+            if mat_is_3d:
+                fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
 
             html = pio.to_html(
-    fig,
-    full_html=True,
-    include_plotlyjs=True,
-    config={"responsive": True},
-    
-
-)
+                fig,
+                full_html=True,
+                include_plotlyjs=True,
+                config={"responsive": True},
+            )
 
 
             html_bytes = html.encode("utf-8")

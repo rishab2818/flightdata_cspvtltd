@@ -11,6 +11,8 @@ from app.mat.reader import (
     read_mat_variable_preview,
 )
 from app.mat.schemas import (
+    MatFileIndex,
+    MatVariableIndex,
     MatVariableDataPreviewResponse,
     MatVariablePreviewResponse,
     MatVariablesResponse,
@@ -39,12 +41,72 @@ async def _ensure_mat_job(job_id: str, user: CurrentUser) -> dict:
     return job
 
 
+def _merge_saved_derived_variables(job: dict, indexed):
+    metadata = dict(job.get("metadata") or {})
+    derived_items = metadata.get("mat_derived_formulas") or []
+    if not isinstance(derived_items, list) or not derived_items:
+        return indexed
+
+    merged = list(indexed.variables)
+    by_key = {item.name.casefold(): idx for idx, item in enumerate(merged)}
+
+    for raw in derived_items:
+        item = dict(raw or {})
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+
+        shape: list[int] = []
+        for dim in item.get("result_shape") or []:
+            try:
+                shape.append(int(dim))
+            except Exception:
+                pass
+
+        derived_var = MatVariableIndex(
+            name=name,
+            shape=shape,
+            ndim=len(shape),
+            dtype=str(item.get("result_dtype") or "double"),
+            kind="numeric_array",
+            is_derived=True,
+            coords_guess=[None] * len(shape) if shape else None,
+            coord_candidates={},
+        )
+
+        key = name.casefold()
+        if key in by_key:
+            merged[by_key[key]] = derived_var
+        else:
+            by_key[key] = len(merged)
+            merged.append(derived_var)
+
+    merged.sort(key=lambda row: row.name.lower())
+    return indexed.model_copy(update={"variables": merged})
+
+
+def _has_ambiguous_legacy_vectors(indexed: MatFileIndex) -> bool:
+    if getattr(indexed, "version", "") != "legacy":
+        return False
+    if int(getattr(indexed, "parser_revision", 1) or 1) >= 2:
+        return False
+    for item in getattr(indexed, "variables", []) or []:
+        if item.kind != "numeric_array":
+            continue
+        if len(item.shape or []) == 1:
+            return True
+    return False
+
+
 @router.get("/{job_id}/variables", response_model=MatVariablesResponse)
 async def mat_variables(job_id: str, user: CurrentUser = Depends(get_current_user)):
-    await _ensure_mat_job(job_id, user)
+    job = await _ensure_mat_job(job_id, user)
 
     try:
         indexed = get_or_index_mat_metadata(job_id)
+        if _has_ambiguous_legacy_vectors(indexed):
+            indexed = get_or_index_mat_metadata(job_id, force=True)
+        indexed = _merge_saved_derived_variables(job, indexed)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -56,6 +118,50 @@ async def mat_variables(job_id: str, user: CurrentUser = Depends(get_current_use
         variables=indexed.variables,
         coords_guess=indexed.coords_guess,
     )
+
+
+@router.delete("/{job_id}/derived/{var_name:path}")
+async def delete_mat_derived_variable(
+    job_id: str,
+    var_name: str,
+    user: CurrentUser = Depends(get_current_user),
+):
+    job = await _ensure_mat_job(job_id, user)
+
+    target_name = str(unquote(var_name) or "").strip()
+    if not target_name:
+        raise HTTPException(status_code=400, detail="Derived variable name is required")
+
+    metadata = dict(job.get("metadata") or {})
+    existing = metadata.get("mat_derived_formulas") or []
+    if not isinstance(existing, list):
+        existing = []
+
+    target_fold = target_name.casefold()
+    deleted_name = None
+    remaining = []
+    for raw in existing:
+        item = dict(raw or {})
+        item_name = str(item.get("name") or "").strip()
+        if not item_name:
+            continue
+        if deleted_name is None and item_name.casefold() == target_fold:
+            deleted_name = item_name
+            continue
+        remaining.append(item)
+
+    if deleted_name is None:
+        raise HTTPException(status_code=404, detail="Derived MAT variable not found")
+
+    metadata["mat_derived_formulas"] = remaining
+    await ingestions.update_job_fields(job_id, {"metadata": metadata})
+
+    return {
+        "ok": True,
+        "job_id": job_id,
+        "deleted_variable": deleted_name,
+        "remaining_derived_variables": len(remaining),
+    }
 
 
 @router.get("/{job_id}/variable/{var_name:path}/preview", response_model=MatVariablePreviewResponse)

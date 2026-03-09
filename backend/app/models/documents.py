@@ -25,7 +25,17 @@ class MoMSubsection(str, Enum):
 class ActionPoint(BaseModel):
     description: str = Field(..., min_length=1)
     assigned_to: Optional[str] = Field(None, description="Person / role responsible")
+    assigned_to_email: Optional[str] = Field(
+        None,
+        description="Resolved user email for the assignee when selected from search",
+    )
     completed: bool = Field(default=False, description="Whether the action point is done")
+
+
+class AssignableUserOption(BaseModel):
+    email: str
+    name: Optional[str] = None
+    role: Optional[str] = None
 
 
 class DocumentInitUpload(BaseModel):

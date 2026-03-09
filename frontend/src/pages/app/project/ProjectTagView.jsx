@@ -66,6 +66,21 @@ export default function ProjectTagView() {
   const [activeTab, setActiveTab] = useState("raw")
 
   useEffect(() => {
+    let mounted = true
+    ingestionApi
+      .listFilesInTag(projectId, datasetType, tagName)
+      .then((rows) => {
+        if (mounted) setFiles(Array.isArray(rows) ? rows : [])
+      })
+      .catch(() => {
+        if (mounted) setFiles([])
+      })
+    return () => {
+      mounted = false
+    }
+  }, [projectId, datasetType, tagName])
+
+  useEffect(() => {
   if (activeTab !== "plot") return
 
   visualizationApi

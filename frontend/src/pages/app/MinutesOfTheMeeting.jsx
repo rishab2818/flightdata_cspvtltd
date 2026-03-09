@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 
 import UploadMinutesModal from "../../components/app/UploadMinutesModal";
+import AssigneeSearchInput from "../../components/app/AssigneeSearchInput";
 import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 
@@ -19,7 +20,8 @@ import { documentsApi } from "../../api/documentsApi";
 import { meetingsApi } from "../../api/meetingsApi";
 import { projectApi } from "../../api/projectapi";
 import { useDownload } from "../../components/common/useDownload";
-import PresentationChart1 from "../../assets/PresentationChart1.svg";
+import { useLazyCollection } from "../../hooks/useLazyCollection";
+import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
 import "./MinutesOfTheMeeting.css";
 
@@ -70,6 +72,7 @@ function convertDocToRow(doc) {
   const actionPoints = (doc.action_points || []).map((ap) => ({
     description: ap?.description || "",
     assigned_to: ap?.assigned_to || "",
+    assigned_to_email: ap?.assigned_to_email || "",
     completed: Boolean(ap?.completed),
   }));
 
@@ -90,6 +93,7 @@ function convertDocToRow(doc) {
     rawActionOn: doc.action_on || [],
     actionPoints,
     actionOn: combinedActionOn.length ? combinedActionOn.join(", ") : "—",
+    projectId: doc.project_id || "",
   };
 }
 
@@ -129,10 +133,6 @@ export default function MinutesOfTheMeeting() {
   const [activeSubsection, setActiveSubsection] = useState("tcm");
   const requiresProject = PROJECT_REQUIRED_TABS.includes(activeSubsection);
 
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
   const [search, setSearch] = useState("");
 
   const [projects, setProjects] = useState([]);
@@ -153,6 +153,11 @@ export default function MinutesOfTheMeeting() {
 
   const [selectedActions, setSelectedActions] = useState([]);
   const [showActionsModal, setShowActionsModal] = useState(false);
+
+  const effectiveProjectId = isProjectContext
+    ? routeProjectId
+    : (requiresProject ? selectedProjectId : undefined);
+  const missingProjectSelection = !isProjectContext && requiresProject && !effectiveProjectId;
 
  const {
   download,
@@ -177,7 +182,7 @@ export default function MinutesOfTheMeeting() {
     try {
       setProjectLoading(true);
       setProjectError("");
-      const list = await projectApi.list();
+      const list = await projectApi.list({ page: 1, limit: 200 });
       setProjects(list || []);
       if (!selectedProjectId && list?.length) {
         setSelectedProjectId(list[0]?._id || list[0]?.id || "");
@@ -190,18 +195,32 @@ export default function MinutesOfTheMeeting() {
     }
   }, [selectedProjectId]);
 
-  const loadData = useCallback(async (subsection, projectId) => {
-    try {
-      setLoading(true);
-      const data = await documentsApi.listMinutes(subsection, projectId);
-      setRows(data.map(convertDocToRow));
-    } catch {
-      setError("Failed to load minutes.");
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchMinutesPage = useCallback(
+    async ({ page, limit }) => {
+      const data = await documentsApi.listMinutes(activeSubsection, effectiveProjectId, {
+        page,
+        limit,
+      });
+      return (data || []).map(convertDocToRow);
+    },
+    [activeSubsection, effectiveProjectId]
+  );
+
+  const {
+    items: rows,
+    setItems: setRows,
+    loading,
+    loadingMore,
+    error: loadError,
+    hasMore,
+    loadMore,
+    refresh: refreshRows,
+  } = useLazyCollection({
+    fetchPage: fetchMinutesPage,
+    deps: [activeSubsection, effectiveProjectId],
+    enabled: !missingProjectSelection,
+    errorMessage: "Failed to load minutes.",
+  });
 
   const loadMeeting = useCallback(async (subsection, projectId) => {
     try {
@@ -238,28 +257,16 @@ export default function MinutesOfTheMeeting() {
   }, [isProjectContext, routeProjectId, requiresProject, loadProjects]);
 
   useEffect(() => {
-    const projectId = isProjectContext
-      ? routeProjectId
-      : (requiresProject ? selectedProjectId : undefined);
-
-    if (!isProjectContext && requiresProject && !projectId && !projectLoading) {
-      setRows([]);
-      setError("Select a project to view meeting minutes.");
+    if (missingProjectSelection) {
       setNextMeeting(null);
       return;
     }
 
-    setError("");
-    loadData(activeSubsection, projectId);
-    loadMeeting(activeSubsection, projectId);
+    loadMeeting(activeSubsection, effectiveProjectId);
   }, [
     activeSubsection,
-    routeProjectId,
-    isProjectContext,
-    selectedProjectId,
-    requiresProject,
-    projectLoading,
-    loadData,
+    effectiveProjectId,
+    missingProjectSelection,
     loadMeeting,
   ]);
 
@@ -280,18 +287,18 @@ export default function MinutesOfTheMeeting() {
   const activeTab =
     MOM_TABS.find((t) => t.key === activeSubsection) || MOM_TABS[0];
 
-  const effectiveProjectId = isProjectContext
-    ? routeProjectId
-    : (requiresProject ? selectedProjectId : undefined);
-
   const selectedProject = requiresProject
     ? projects.find((p) => (p?._id || p?.id) === selectedProjectId)
     : null;
+  const minutesError =
+    missingProjectSelection && !projectLoading
+      ? "Select a project to view meeting minutes."
+      : loadError;
 
   /* ---------------- handlers ---------------- */
 
   const handleUploadSuccess = () => {
-    loadData(activeSubsection, effectiveProjectId);
+    refreshRows();
   };
 
   const handleMeetingSave = async (values) => {
@@ -407,14 +414,16 @@ const handleDownload = (row) => {
         <MinutesTable
           rows={filteredRows}
           loading={loading}
-          error={error}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          error={minutesError}
           onViewAction={(a) => {
             setSelectedActions(a);
             setShowActionsModal(true);
           }}
           onEdit={setEditingDoc}
           onDelete={handleDeleteDocument} 
-          setRows={setRows}
           download={download}
           view={view}
           loadingFiles={loadingFiles}
@@ -644,7 +653,27 @@ function NextMeetingBanner({
   );
 }
 
-function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, setRows, download, view, loadingFiles, errorFiles, }) {
+function MinutesTable({
+  rows,
+  loading,
+  loadingMore,
+  hasMore,
+  onLoadMore,
+  error,
+  onViewAction,
+  onEdit,
+  onDelete,
+  download,
+  view,
+  loadingFiles,
+  errorFiles,
+}) {
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore,
+  });
+
   return (
     <div className="TableGrid">
       <table className="Table">
@@ -717,6 +746,12 @@ function MinutesTable({ rows, loading, error, onViewAction, onEdit,  onDelete, s
             ))}
         </tbody>
       </table>
+      {hasMore && !error && <div ref={loadMoreRef} style={{ height: 1 }} />}
+      {loadingMore && (
+        <div className="helperText" style={{ textAlign: "center", paddingTop: 8 }}>
+          Loading more...
+        </div>
+      )}
     </div>
   );
 }
@@ -824,6 +859,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
   const [actionOnList, setActionOnList] = useState(doc?.rawActionOn || []);
   const [apDescription, setApDescription] = useState("");
   const [apAssignee, setApAssignee] = useState("");
+  const [apAssigneeEmail, setApAssigneeEmail] = useState("");
   const [actionPoints, setActionPoints] = useState(doc?.actionPoints || []);
   const [localError, setLocalError] = useState("");
 
@@ -836,6 +872,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
       setActionOnInput("");
       setApDescription("");
       setApAssignee("");
+      setApAssigneeEmail("");
       setActionPoints(doc.actionPoints || []);
       setLocalError("");
     }
@@ -857,10 +894,16 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
     if (!apDescription.trim()) return;
     setActionPoints((prev) => [
       ...prev,
-      { description: apDescription.trim(), assigned_to: apAssignee.trim(), completed: false },
+      {
+        description: apDescription.trim(),
+        assigned_to: apAssignee.trim(),
+        assigned_to_email: apAssigneeEmail || "",
+        completed: false,
+      },
     ]);
     setApDescription("");
     setApAssignee("");
+    setApAssigneeEmail("");
   };
 
   const handleRemoveActionPoint = (idx) => {
@@ -1049,13 +1092,27 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                   </div>
                   <div className="flex1">
                     <label className="label">Assign to</label>
-                    <input
-                      type="text"
+                    <AssigneeSearchInput
                       value={pt.assigned_to}
-                      onChange={(e) =>
-                        handleUpdateActionPoint(idx, "assigned_to", e.target.value)
-                      }
+                      projectId={doc?.projectId}
+                      placeholder="Assign to"
                       className="TextInput"
+                      onValueChange={(nextValue) => {
+                        handleUpdateActionPoint(idx, "assigned_to", nextValue);
+                        handleUpdateActionPoint(idx, "assigned_to_email", "");
+                      }}
+                      onSelect={(user) => {
+                        handleUpdateActionPoint(
+                          idx,
+                          "assigned_to",
+                          user?.name?.trim() || user?.email || ""
+                        );
+                        handleUpdateActionPoint(
+                          idx,
+                          "assigned_to_email",
+                          user?.email || ""
+                        );
+                      }}
                     />
                   </div>
                   <label className="toggleWrap">
@@ -1087,12 +1144,19 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                   placeholder="New action point"
                   className="TextInput"
                 />
-                <input
-                  type="text"
+                <AssigneeSearchInput
                   value={apAssignee}
-                  onChange={(e) => setApAssignee(e.target.value)}
+                  projectId={doc?.projectId}
                   placeholder="Assign to"
                   className="TextInput"
+                  onValueChange={(nextValue) => {
+                    setApAssignee(nextValue);
+                    setApAssigneeEmail("");
+                  }}
+                  onSelect={(user) => {
+                    setApAssignee(user?.name?.trim() || user?.email || "");
+                    setApAssigneeEmail(user?.email || "");
+                  }}
                 />
                 <button type="button" className="icon-btn" onClick={handleAddActionPoint}>
                   <FiPlus size={16} />

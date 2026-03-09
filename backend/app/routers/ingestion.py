@@ -5,8 +5,9 @@ import tempfile
 from datetime import timedelta
 from uuid import uuid4
 from typing import Any, Dict
+from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response, Query
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.auth import CurrentUser, get_current_user
@@ -17,6 +18,7 @@ from app.core.system_info import describe_autoscale
 from app.models.ingestion import IngestionBatchCreateResponse, IngestionCreateResponse, IngestionJobOut, IngestionStatus
 from app.repositories.ingestions import IngestionRepository
 from app.repositories.projects import ProjectRepository
+from app.db.mongo import get_db
 from app.calculations.derived import (
     apply_derived_columns_to_frame,
     normalize_derived_columns,
@@ -28,6 +30,7 @@ import pyarrow.parquet as pq
 import io
 import pandas as pd
 from minio.error import S3Error
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
@@ -458,14 +461,12 @@ async def job_status(job_id: str, user: CurrentUser = Depends(get_current_user))
     )
 
 
-# for the fetching the data from the tag list 
-from fastapi import Query
-from app.db.mongo import get_db
-
 @router.get("/project/{project_id}/tags")
 async def list_tags(
     project_id: str,
     dataset_type: str = Query(...),
+    page: int = Query(1, ge=1),
+    limit: int = Query(200, ge=1, le=500),
     user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_project_member(project_id, user)
@@ -481,9 +482,11 @@ async def list_tags(
             "visualize_count": {"$sum": {"$cond": ["$visualize_enabled", 1, 0]}},
         }},
         {"$sort": {"latest_created_at": -1}},
+        {"$skip": (page - 1) * limit},
+        {"$limit": limit},
     ]
 
-    rows = await db["ingestion_jobs"].aggregate(pipeline).to_list(length=500)
+    rows = await db["ingestion_jobs"].aggregate(pipeline).to_list(length=limit)
     # clean mongo types
     for r in rows:
         r.pop("_id", None)
@@ -498,23 +501,26 @@ async def list_files_in_tag(
     project_id: str,
     tag_name: str,
     dataset_type: str = Query(...),
+    page: int = Query(1, ge=1),
+    limit: int = Query(200, ge=1, le=500),
     user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_project_member(project_id, user)
 
-    docs = await repo.list_for_project(project_id)
+    db = await get_db()
+    cursor = (
+        db["ingestion_jobs"]
+        .find({"project_id": project_id, "dataset_type": dataset_type, "tag_name": tag_name})
+        .sort("created_at", -1)
+        .skip((page - 1) * limit)
+        .limit(limit)
+    )
+    docs = await cursor.to_list(length=limit)
+    for d in docs:
+        d["job_id"] = str(d["_id"])
+        d.pop("_id", None)
+    return docs
 
-    rows = [
-        d for d in docs
-        if d.get("dataset_type") == dataset_type
-        and d.get("tag_name") == tag_name
-    ]
-
-    return rows
-
-
-# for the edit 
-from pydantic import BaseModel
 
 class TagRenameIn(BaseModel):
     dataset_type: str
@@ -652,6 +658,7 @@ async def preview_processed(
         "job_id": job_id,
         "filename": doc.get("filename"),
         "original_columns": original_cols,
+        "derived_columns": list(doc.get("derived_columns") or []),
         "rename_map": rename_map,
         "display_columns": display_cols,
         "rows": rows,
@@ -827,6 +834,139 @@ async def materialize_processed_derived_columns(
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Derived formula error: {exc}") from exc
+    finally:
+        try:
+            os.remove(in_tmp_path)
+        except Exception:
+            pass
+        try:
+            os.remove(out_tmp_path)
+        except Exception:
+            pass
+
+
+@router.delete("/jobs/{job_id}/processed/derived/{column_name:path}")
+async def delete_processed_derived_column(
+    job_id: str,
+    column_name: str,
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    processed_key = doc.get("processed_key")
+    if not processed_key:
+        raise HTTPException(status_code=400, detail="No processed parquet available for this file")
+
+    target_name = str(unquote(column_name) or "").strip()
+    if not target_name:
+        raise HTTPException(status_code=400, detail="Derived column name is required")
+
+    try:
+        existing_derived = normalize_derived_columns(list(doc.get("derived_columns") or []))
+    except ValueError:
+        existing_derived = []
+
+    target_fold = target_name.casefold()
+    resolved_name = None
+    for spec in existing_derived:
+        name = str(spec.get("name") or "").strip()
+        if name.casefold() == target_fold:
+            resolved_name = name
+            break
+
+    if not resolved_name:
+        raise HTTPException(status_code=404, detail="Derived column not found")
+
+    minio = get_minio_client()
+    bucket = settings.ingestion_bucket
+
+    in_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".parquet")
+    out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".parquet")
+    in_tmp_path = in_tmp.name
+    out_tmp_path = out_tmp.name
+    in_tmp.close()
+    out_tmp.close()
+
+    writer = None
+    final_cols: list[str] = []
+    total_rows = 0
+    sample_rows: list[dict[str, Any]] = []
+    stats: dict[str, dict[str, float]] = {}
+
+    try:
+        minio.fget_object(bucket, processed_key, in_tmp_path)
+        parquet_file = pq.ParquetFile(in_tmp_path)
+
+        for batch in parquet_file.iter_batches(batch_size=200_000):
+            frame = batch.to_pandas()
+            if resolved_name in frame.columns:
+                frame = frame.drop(columns=[resolved_name], errors="ignore")
+            _update_numeric_stats(stats, frame)
+            total_rows += len(frame)
+            if not sample_rows:
+                sample_rows = _rows_to_json_records(frame, limit=10)
+            table = pa.Table.from_pandas(frame, preserve_index=False)
+            final_cols = list(frame.columns)
+            if writer is None:
+                writer = pq.ParquetWriter(out_tmp_path, table.schema, compression="snappy")
+            writer.write_table(table)
+
+        if writer is None:
+            frame = pq.read_table(in_tmp_path).to_pandas()
+            frame = frame.drop(columns=[resolved_name], errors="ignore")
+            _update_numeric_stats(stats, frame)
+            total_rows = len(frame)
+            sample_rows = _rows_to_json_records(frame, limit=10)
+            final_cols = list(frame.columns)
+            table = pa.Table.from_pandas(frame, preserve_index=False)
+            pq.write_table(table, out_tmp_path, compression="snappy")
+        else:
+            writer.close()
+
+        key_prefix = os.path.dirname(processed_key)
+        stem = os.path.splitext(os.path.basename(doc.get("filename") or "dataset"))[0]
+        new_processed_key = f"{key_prefix}/{uuid4()}_{stem}__derived_drop.parquet"
+
+        minio.fput_object(
+            bucket_name=bucket,
+            object_name=new_processed_key,
+            file_path=out_tmp_path,
+            content_type="application/octet-stream",
+        )
+
+        prev_meta = dict(doc.get("metadata") or {})
+        prev_meta["stats"] = stats
+
+        remaining_derived = [d for d in existing_derived if d.get("name") != resolved_name]
+        existing_rename_map = doc.get("column_rename_map") or {}
+        filtered_rename_map = {k: v for k, v in existing_rename_map.items() if k in final_cols}
+
+        await repo.update_job_fields(
+            job_id,
+            {
+                "processed_key": new_processed_key,
+                "columns": final_cols,
+                "processed_schema": final_cols,
+                "rows_seen": total_rows,
+                "sample_rows": sample_rows,
+                "metadata": prev_meta,
+                "derived_columns": remaining_derived,
+                "column_rename_map": filtered_rename_map,
+                "status": "SUCCESS",
+                "progress": 100,
+            },
+        )
+
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "deleted_column": resolved_name,
+            "columns": final_cols,
+            "rows_seen": total_rows,
+        }
     finally:
         try:
             os.remove(in_tmp_path)

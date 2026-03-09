@@ -38,7 +38,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div class="login-content">
+        <div className="login-content">
 
           {/* LEFT */}
           <div className="login-left">

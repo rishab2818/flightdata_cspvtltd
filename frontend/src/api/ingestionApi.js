@@ -179,24 +179,19 @@ export const ingestionApi = {
     return data
   },
   // for the fetching the data 
-  listTags: async (projectId, datasetType) => {
+  listTags: async (projectId, datasetType, pagination = {}) => {
+    const { page = 1, limit = 200 } = pagination
     const { data } = await axiosClient.get(`/api/ingestion/project/${projectId}/tags`, {
-      params: { dataset_type: datasetType }
+      params: { dataset_type: datasetType, page, limit }
     })
     return data
   },
 
-  listFilesInTag: async (projectId, datasetType, tagName) => {
-    const { data } = await axiosClient.get(`/api/ingestion/project/${projectId}/tag/${encodeURIComponent(tagName)}`, {
-      params: { dataset_type: datasetType }
-    })
-    return data
-  },
-
-  listFilesInTag: async (projectId, datasetType, tagName) => {
+  listFilesInTag: async (projectId, datasetType, tagName, pagination = {}) => {
+    const { page = 1, limit = 200 } = pagination
     const { data } = await axiosClient.get(
       `/api/ingestion/project/${projectId}/tag/${encodeURIComponent(tagName)}`,
-      { params: { dataset_type: datasetType } }
+      { params: { dataset_type: datasetType, page, limit } }
     )
     return data
   },
@@ -237,6 +232,13 @@ export const ingestionApi = {
     const { data } = await axiosClient.post(
       `/api/ingestion/jobs/${jobId}/processed/derived/materialize`,
       { derived_columns: derivedColumns }
+    )
+    return data
+  },
+
+  deleteDerivedColumn: async (jobId, columnName) => {
+    const { data } = await axiosClient.delete(
+      `/api/ingestion/jobs/${jobId}/processed/derived/${encodeURIComponent(columnName)}`
     )
     return data
   },

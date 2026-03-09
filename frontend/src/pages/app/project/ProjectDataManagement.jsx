@@ -99,7 +99,7 @@ export default function ProjectDataManagement() {
   const loadVisualizations = async () => {
     try {
       setLoadingViz(true)
-      const list = await visualizationApi.listForProject(projectId)
+      const list = await visualizationApi.listForProject(projectId, { page: 1, limit: 200 })
       setVisualizations(list)
     } catch (err) {
       setError(err?.response?.data?.detail || err.message)

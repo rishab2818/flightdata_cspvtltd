@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
-import { useOutletContext, useParams } from 'react-router-dom'
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 
 import UploadModal from './../ProjectUploadModal.jsx'
 import { ingestionApi } from '../../../../api/ingestionApi'
@@ -16,6 +16,8 @@ import ArrowRight from '../../../../assets/ArrowRight.svg'
 import ConfirmationModal from "../../../../components/common/ConfirmationModal";
 import SeeMoreText from "../../../../components/common/SeeMoreButton";
 import NewProjectModal from '../../../../components/app/NewProjectModal';
+import { useLazyCollection } from '../../../../hooks/useLazyCollection';
+import { useInfiniteScrollTrigger } from '../../../../hooks/useInfiniteScrollTrigger';
 
 
 const DATASET_TABS = [
@@ -27,12 +29,14 @@ const DATASET_TABS = [
 
 export default function ProjectUpload() {
   const { projectId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useContext(AuthContext)
   const { project, refreshProject } = useOutletContext()
 
   const [activeDataset, setActiveDataset] = useState('cfd')
-  const [tags, setTags] = useState([])
   const [selectedTag, setSelectedTag] = useState(null)
+  const searchDatasetType = String(searchParams.get('datasetType') || '').trim().toLowerCase()
+  const searchTagName = String(searchParams.get('tagName') || '').trim()
 
   const [modal, setModal] = useState({ open: false, mode: 'create', tag: '' })
   const [deletingTag, setDeletingTag] = useState(null)
@@ -62,11 +66,44 @@ const members = project?.members?.length || 0;
 
   /* ================= Polling helpers ================= */
   const pollingRef = useRef(new Map()) // jobId -> intervalId
+  const tagProgressSeqRef = useRef(0)
 
   const [confirmDelete, setConfirmDelete] = useState({
     open: false,
     tagName: null,
   })
+
+  const fetchTagsPage = useCallback(async ({ page, limit }) => {
+    const tagRows = await ingestionApi.listTags(projectId, activeDataset, { page, limit })
+    return tagRows || []
+  }, [projectId, activeDataset])
+
+  const {
+    items: tags,
+    setItems: setTags,
+    loading: tagsLoading,
+    loadingMore: tagsLoadingMore,
+    error: tagsError,
+    hasMore: tagsHasMore,
+    loadMore: loadMoreTags,
+    refresh: refreshTags,
+  } = useLazyCollection({
+    fetchPage: fetchTagsPage,
+    deps: [projectId, activeDataset],
+    errorMessage: 'Failed to load tags.',
+    pageSize: 30,
+    enabled: !selectedTag,
+  })
+
+  const loadMoreTagsRef = useInfiniteScrollTrigger({
+    enabled: !selectedTag,
+    hasMore: tagsHasMore,
+    isLoading: tagsLoading || tagsLoadingMore,
+    onLoadMore: loadMoreTags,
+  })
+
+  // const date = project?.created_at
+  // const members = project?.members?.length || 0
 
   const stopPolling = (jobId) => {
     const t = pollingRef.current.get(jobId)
@@ -202,49 +239,50 @@ const members = project?.members?.length || 0;
   }
 }, [projectId, activeDataset])
 
-  /* ================= Delete tag ================= */
-  // const handleDeleteTag = async (tagName) => {
-  //   if (!window.confirm(`Delete "${tagName}" and all files inside it? This cannot be undone.`)) return
+  useEffect(() => {
+    if (!searchTagName) return
 
-  //   setDeletingTag(tagName)
-  //   try {
-  //     const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tagName)
-  //     await Promise.all(
-  //       (files || []).map((file) =>
-  //         file.job_id ? ingestionApi.remove(file.job_id) : Promise.resolve()
-  //       )
-  //     )
+    const hasValidDataset = DATASET_TABS.some((tab) => tab.key === searchDatasetType)
+    if (hasValidDataset && activeDataset !== searchDatasetType) {
+      setActiveDataset(searchDatasetType)
+    }
+    if (selectedTag !== searchTagName) {
+      setSelectedTag(searchTagName)
+    }
 
-  //     setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
-  //     setTagJobMap((prev) => {
-  //       const copy = { ...prev }
-  //       delete copy[tagName]
-  //       return copy
-  //     })
+    // Consume one-time deep-link params from project search while keeping user state local.
+    const next = new URLSearchParams(searchParams)
+    next.delete('datasetType')
+    next.delete('tagName')
+    setSearchParams(next, { replace: true })
+  }, [activeDataset, searchDatasetType, searchParams, searchTagName, selectedTag, setSearchParams])
 
-  //     if (selectedTag === tagName) setSelectedTag(null)
-  //   } catch (err) {
-  //     window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
-  //   } finally {
-  //     setDeletingTag(null)
-  //   }
-  // }
+  useEffect(() => {
+    if (selectedTag || tagsLoading || tagsError) return
+    void syncTagProgress(tags)
+  }, [selectedTag, tags, tagsLoading, tagsError, syncTagProgress])
 
-  // const onCloseModal = async () => {
-  //   setModal({ open: false, mode: 'create', tag: '' })
-  //   await refreshTagsAndAttachProgress()
-  //   setTimeout(refreshTagsAndAttachProgress, 1500)
-  // }
+  const listAllFilesInTag = useCallback(async (tagName) => {
+    const allFiles = []
+    let page = 1
+    const limit = 200
+
+    while (true) {
+      const files = await ingestionApi.listFilesInTag(projectId, activeDataset, tagName, { page, limit })
+      if (!files?.length) break
+      allFiles.push(...files)
+      if (files.length < limit) break
+      page += 1
+    }
+
+    return allFiles
+  }, [projectId, activeDataset])
 
   const handleDeleteTag = async (tagName) => {
     setDeletingTag(tagName)
 
     try {
-      const files = await ingestionApi.listFilesInTag(
-        projectId,
-        activeDataset,
-        tagName
-      )
+      const files = await listAllFilesInTag(tagName)
 
       await Promise.all(
         (files || []).map((file) =>
@@ -259,6 +297,10 @@ const members = project?.members?.length || 0;
         delete copy[tagName]
         return copy
       })
+      const removedJobId = tagJobMap[tagName]
+      if (removedJobId) {
+        stopPolling(removedJobId)
+      }
 
       if (selectedTag === tagName) setSelectedTag(null)
     } catch (err) {
@@ -273,8 +315,10 @@ const members = project?.members?.length || 0;
 
   const onCloseModal = async () => {
     setModal({ open: false, mode: 'create', tag: '' })
-    await refreshTagsAndAttachProgress()
-    setTimeout(refreshTagsAndAttachProgress, 1500)
+    await refreshTags()
+    setTimeout(() => {
+      void refreshTags()
+    }, 1500)
   }
 
   const normalizeEmail = (email) => (email || '').trim().toLowerCase()
@@ -350,23 +394,6 @@ const members = project?.members?.length || 0;
       </button>
     )}
   </div>
-
-  {/* ===== Description (Next Line) ===== */}
-  {/* <div
-    style={{
-      fontSize: "12px",
-      fontWeight: 400,
-      color: "#514F4F",
-      fontFamily: "SF Pro, Helvetica, Arial, sans-serif",
-      marginTop: 8,
-      marginBottom: 12,
-      maxWidth: "100%",
-    }}
-  >
-    <span style={{ color: "red" }}>{desc}</span>
-
-    {/* <SeeMoreText text={desc} /> */}
-  {/* </div>  */}
 
   {/* ===== Description ===== */}
 {desc && (
@@ -526,6 +553,30 @@ const members = project?.members?.length || 0;
               </tr>
             </thead>
             <tbody>
+              {tagsLoading && tags.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 16, textAlign: 'center' }}>
+                    Loading tags...
+                  </td>
+                </tr>
+              )}
+
+              {!tagsLoading && tagsError && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 16, textAlign: 'center', color: '#b42318' }}>
+                    {tagsError}
+                  </td>
+                </tr>
+              )}
+
+              {!tagsLoading && !tagsError && tags.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 16, textAlign: 'center' }}>
+                    No tags found.
+                  </td>
+                </tr>
+              )}
+
               {tags.map((tag) => {
                 const jobId = tagJobMap[tag.tag_name]
                 const jp = jobId ? jobProgress[jobId] : null
@@ -612,6 +663,13 @@ const members = project?.members?.length || 0;
               })}
             </tbody>
           </table>
+
+          <div ref={loadMoreTagsRef} style={{ height: 1 }} />
+          {tagsLoadingMore && (
+            <div className="summary-label" style={{ padding: '8px 0 0 0' }}>
+              Loading more tags...
+            </div>
+          )}
         </div>
       )}
 
