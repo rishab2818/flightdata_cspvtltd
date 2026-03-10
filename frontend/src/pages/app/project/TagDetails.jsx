@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import ArrowLeft from '../../../assets/ArrowLeft.svg'
@@ -7,12 +7,10 @@ import CalendarBlank from '../../../assets/CalendarBlank.svg'
 import DownloadSimple from '../../../assets/DownloadSimple.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
-import ConfirmationModal from '../../../components/common/ConfirmationModal'
-import { useInfiniteScrollTrigger } from '../../../hooks/useInfiniteScrollTrigger'
-import { useLazyCollection } from '../../../hooks/useLazyCollection'
+
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
-import { visualizationApi } from '../../../api/visualizationApi'
+
 
 const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
 const INLINE_EXTENSIONS = new Set([
@@ -97,90 +95,79 @@ const matchesTagAndDataset = (viz, tagName, datasetType) =>
   viz?.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
-    const [files, setFiles] = useState([])
-    const [tab, setTab] = useState('raw')
-    const [plots, setPlots] = useState([])
+  const [files, setFiles] = useState([])
+  const [tab, setTab] = useState('raw')
+  const [plots, setPlots] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-        const [confirmDelete, setConfirmDelete] = useState({
-  open: false,
-  file: null,
-})
-    useEffect(() => {
-        ingestionApi
-            .listFilesInTag(projectId, datasetType, tagName)
-            .then(setFiles)
-    }, [projectId, datasetType, tagName])
+  const [confirmDelete, setConfirmDelete] = useState({
+    open: false,
+    file: null,
+  })
 
-    useEffect(() => {
-  if (tab !== 'plot') return
+  useEffect(() => {
+    setLoading(true)
+    setError('')
+    ingestionApi
+      .listFilesInTag(projectId, datasetType, tagName)
+      .then((data) => setFiles(data || []))
+      .catch((err) => {
+        console.error(err)
+        setFiles([])
+        setError('Failed to load files.')
+      })
+      .finally(() => setLoading(false))
+  }, [projectId, datasetType, tagName])
 
-  visualizationApi
-    .listForProject(projectId)
-    .then((res) => {
-      const list = Array.isArray(res) ? res : res.data || []
+  useEffect(() => {
+    if (tab !== 'plot') return
 
-      const filtered = list.filter(
-        (v) =>
-          v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
-          v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
-      )
+    setLoading(true)
+    setError('')
+    visualizationApi
+      .listForProject(projectId)
+      .then((res) => {
+        const list = Array.isArray(res) ? res : res.data || []
 
-      setPlots(filtered)
-    })
-    .catch(() => setPlots([]))
-}, [tab, projectId, datasetType, tagName])
+        const filtered = list.filter(
+          (v) =>
+            v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
+            v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
+        )
 
-      const rows =
-  tab === 'plot'
-    ? plots
-    : tab === 'raw'
-      ? files.filter(f => isTabularFile(f) && !f.processed_key)
-    : tab === 'processed'
-      ? files.filter(f => f.processed_key)
-    : tab === 'others'
-      ? files.filter(f => {
-          const ext = getExtension(f?.filename || '')
-          return (
-            !f.processed_key &&
-            !f.visualize_enabled &&
-            OTHERS_EXTENSIONS.has(ext)
-          )
-        })
-    : []
-//   const handleView = (file, tabName) => {
-//   if (tabName === 'plot') {
-//     // Open full visualization page for plots
-//     window.open(`/app/projects/${projectId}/visualisation/full/${file.viz_id}`, '_blank', 'noopener,noreferrer')
-   
+        setPlots(filtered)
+      })
+      .catch((err) => {
+        console.error(err)
+        setPlots([])
+        setError('Failed to load plots.')
+      })
+      .finally(() => setLoading(false))
+  }, [tab, projectId, datasetType, tagName])
 
-//   } else if (tabName === 'processed' && file.processed_key) {
-//     window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
-//   } else if (tabName === 'raw') {
-//     window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer')
-//   } else {
-//     // fallback for files that cannot be previewed
-//     ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename))
-//   }
-// }
-const handleView = (file, tabName) => {
-  if (tabName === 'plot') {
-    openPlotFullScreen(file);
-    return;
-  }
-
-  if (tabName === 'processed' && file.processed_key) {
-    window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer');
-    return;
-  }
-
-  if (tabName === 'raw') {
-    window.open(`/raw-preview/${file.job_id}`, '_blank', 'noopener,noreferrer');
-    return;
-  }
-
-  ingestionApi.download(file.job_id).then(({ url }) => triggerDownload(url, file.filename));
-};
-
+  const rows =
+    tab === 'plot'
+      ? plots
+      : tab === 'raw'
+        ? files.filter(f => isTabularFile(f) && !f.processed_key)
+        : tab === 'processed'
+          ? files.filter(f => f.processed_key)
+          : tab === 'others'
+            ? files.filter(f => {
+              const ext = getExtension(f?.filename || '')
+              return (
+                !f.processed_key &&
+                !f.visualize_enabled &&
+                OTHERS_EXTENSIONS.has(ext)
+              )
+            })
+            : []
+  const handleView = (file, tabName) => {
+    if (tabName === 'plot') {
+      openPlotFullScreen(file)
+      return
+    }
 
     if (tabName === 'processed' && file.processed_key) {
       window.open(`/processed-preview/${file.job_id}?edit=1`, '_blank', 'noopener,noreferrer')
@@ -216,7 +203,7 @@ const handleView = (file, tabName) => {
     try {
       if (tab === 'plot') {
         await visualizationApi.remove(confirmDelete.file.viz_id)
-        setAllProjectPlots((prev) =>
+        setPlots((prev) =>
           prev.filter((p) => p.viz_id !== confirmDelete.file.viz_id)
         )
       } else {
@@ -230,167 +217,162 @@ const handleView = (file, tabName) => {
     }
   }
 
+  const showEmptyState = !loading && !error && rows.length === 0
+
   return (
-    <div style={{ background: '#ffffff', gap: '10px', padding: '20px', width: '100%', height: '100%', border: '1px solid #00000026', borderRadius: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onBack} style={{ background: '#ffffff', border: 'none' }} type="button">
-          <img style={{ width: '24px', height: '24px' }} src={ArrowLeft} alt="arrow" />
-        </button>
-        <label style={{ color: '#000000', fontFamily: '"Inter-Regular",Helvetica', fontSize: '16px', fontWeight: '600' }}>{tagName}</label>
-      </div>
-
-      <div className="tablist">
-        <button className={tab === 'raw' ? 'active' : ''} onClick={() => setTab('raw')}>Raw</button>
-        <button className={tab === 'processed' ? 'active' : ''} onClick={() => setTab('processed')}>Processed</button>
-        <button className={tab === 'plot' ? 'active' : ''} onClick={() => setTab('plot')}>Plot</button>
-        <button className={tab === 'others' ? 'active' : ''} onClick={() => setTab('others')}>Others</button>
-      </div>
-
-      <table className="DataTable">
-        <thead>
-          <tr>
-            <th className="tablehead">
-              <span className="th-content">
-                <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />
-                {tab === 'plot' ? 'Plot Name' : 'File Name'}
-              </span>
-            </th>
-            <th className="tablehead">
-              <span className="th-content">
-                <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
-                Created Date
-              </span>
-            </th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {activeLoading && rows.length === 0 && (
-            <tr>
-              <td colSpan={3} style={{ padding: 16, textAlign: 'center' }}>
-                Loading {tab === 'plot' ? 'plots' : 'files'}...
-              </td>
-            </tr>
-          )}
-
-          {!activeLoading && activeError && (
-            <tr>
-              <td colSpan={3} style={{ padding: 16, textAlign: 'center', color: '#b42318' }}>
-                {activeError}
-              </td>
-            </tr>
-          )}
-
-          {showEmptyState && (
-            <tr>
-              <td colSpan={3} style={{ padding: 16, textAlign: 'center' }}>
-                No {tab === 'plot' ? 'plots' : 'files'} found.
-              </td>
-            </tr>
-          )}
-
-          {rows.map((f) => (
-            <tr key={tab === 'plot' ? f.viz_id : f.job_id}>
-              <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
-                <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
-                  <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />
-
-                  {tab === 'plot' ? (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <p className="data-card__name" style={{ margin: 0 }}>
-                        {f.filename || 'dataset'}
-                      </p>
-                      <p className="summarylabel2" style={{ margin: 0 }}>
-                        {f.chart_type} · {f.status}
-                      </p>
-                    </div>
-                  ) : (
-                    f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename
-                  )}
-                </div>
-              </td>
-              <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
-                <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
-                  <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
-                  {new Date(f.created_at).toLocaleDateString()}
-                </div>
-              </td>
-              <td style={{ verticalAlign: 'middle' }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'left', justifyContent: 'left' }}>
-                  <button
-                    onClick={() => handleView(f, tab)}
-                    title="View"
-                    style={{
-                      background: '#ffffff',
-                      border: '0.67px solid #0000001A',
-                      width: '40px',
-                      height: '35px',
-                      borderRadius: '8px',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                    type="button"
-                  >
-                    <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
-                  </button>
-
-                  {tab !== 'plot' && (
-                    <button
-                      onClick={() => handleDownload(f)}
-                      title="Download"
-                      style={{
-                        background: '#ffffff',
-                        border: '0.67px solid #0000001A',
-                        width: '40px',
-                        height: '35px',
-                        borderRadius: '8px',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      type="button"
-                    >
-                      <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setConfirmDelete({ open: true, file: f })}
-                    title="Delete"
-                    style={{
-                      background: '#ffffff',
-                      border: '0.67px solid #0000001A',
-                      width: '40px',
-                      height: '35px',
-                      borderRadius: '8px',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    type="button"
-                  >
-                    <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div ref={activeSentinelRef} style={{ height: 1 }} />
-      {activeLoadingMore && (
-        <div className="summary-label" style={{ paddingTop: 8 }}>
-          Loading more {tab === 'plot' ? 'plots' : 'files'}...
-        </div>
-      )}
-
-      {confirmDelete.open && (
-        <ConfirmationModal
-          title={`Delete "${tab === 'plot' ? (confirmDelete.file?.filename || 'Visualization') : confirmDelete.file?.filename}"?`}
-          description="This action cannot be undone."
-          onCancel={() => setConfirmDelete({ open: false, file: null })}
-          onConfirm={handleDeleteFile}
-        />
-      )}
+  <div style={{ background: '#ffffff', gap: '10px', padding: '20px', width: '100%', height: '100%', border: '1px solid #00000026', borderRadius: '4px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <button onClick={onBack} style={{ background: '#ffffff', border: 'none' }} type="button">
+        <img style={{ width: '24px', height: '24px' }} src={ArrowLeft} alt="arrow" />
+      </button>
+      <label style={{ color: '#000000', fontFamily: '"Inter-Regular",Helvetica', fontSize: '16px', fontWeight: '600' }}>{tagName}</label>
     </div>
-  )
+
+    <div className="tablist">
+      <button className={tab === 'raw' ? 'active' : ''} onClick={() => setTab('raw')}>Raw</button>
+      <button className={tab === 'processed' ? 'active' : ''} onClick={() => setTab('processed')}>Processed</button>
+      <button className={tab === 'plot' ? 'active' : ''} onClick={() => setTab('plot')}>Plot</button>
+      <button className={tab === 'others' ? 'active' : ''} onClick={() => setTab('others')}>Others</button>
+    </div>
+
+    <table className="DataTable">
+      <thead>
+        <tr>
+          <th className="tablehead">
+            <span className="th-content">
+              <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />
+              {tab === 'plot' ? 'Plot Name' : 'File Name'}
+            </span>
+          </th>
+          <th className="tablehead">
+            <span className="th-content">
+              <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
+              Created Date
+            </span>
+          </th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {loading && rows.length === 0 && (
+          <tr>
+            <td colSpan={3} style={{ padding: 16, textAlign: 'center' }}>
+              Loading {tab === 'plot' ? 'plots' : 'files'}...
+            </td>
+          </tr>
+        )}
+
+        {!loading && error && (
+          <tr>
+            <td colSpan={3} style={{ padding: 16, textAlign: 'center', color: '#b42318' }}>
+              {error}
+            </td>
+          </tr>
+        )}
+
+        {showEmptyState && (
+          <tr>
+            <td colSpan={3} style={{ padding: 16, textAlign: 'center' }}>
+              No {tab === 'plot' ? 'plots' : 'files'} found.
+            </td>
+          </tr>
+        )}
+
+        {rows.map((f) => (
+          <tr key={tab === 'plot' ? f.viz_id : f.job_id}>
+            <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
+              <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+                <img style={{ width: '20px', height: '20px' }} src={Folder1} alt="folder" />
+
+                {tab === 'plot' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <p className="data-card__name" style={{ margin: 0 }}>
+                      {f.filename || 'dataset'}
+                    </p>
+                    <p className="summarylabel2" style={{ margin: 0 }}>
+                      {f.chart_type} · {f.status}
+                    </p>
+                  </div>
+                ) : (
+                  f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename
+                )}
+              </div>
+            </td>
+            <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
+              <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+                <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
+                {new Date(f.created_at).toLocaleDateString()}
+              </div>
+            </td>
+            <td style={{ verticalAlign: 'middle' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'left', justifyContent: 'left' }}>
+                <button
+                  onClick={() => handleView(f, tab)}
+                  title="View"
+                  style={{
+                    background: '#ffffff',
+                    border: '0.67px solid #0000001A',
+                    width: '40px',
+                    height: '35px',
+                    borderRadius: '8px',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  type="button"
+                >
+                  <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
+                </button>
+
+                {tab !== 'plot' && (
+                  <button
+                    onClick={() => handleDownload(f)}
+                    title="Download"
+                    style={{
+                      background: '#ffffff',
+                      border: '0.67px solid #0000001A',
+                      width: '40px',
+                      height: '35px',
+                      borderRadius: '8px',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    type="button"
+                  >
+                    <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setConfirmDelete({ open: true, file: f })}
+                  title="Delete"
+                  style={{
+                    background: '#ffffff',
+                    border: '0.67px solid #0000001A',
+                    width: '40px',
+                    height: '35px',
+                    borderRadius: '8px',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  type="button"
+                >
+                  <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    {confirmDelete.open && (
+      <ConfirmationModal
+        title={`Delete "${tab === 'plot' ? (confirmDelete.file?.filename || 'Visualization') : confirmDelete.file?.filename}"?`}
+        description="This action cannot be undone."
+        onCancel={() => setConfirmDelete({ open: false, file: null })}
+        onConfirm={handleDeleteFile}
+      />
+    )}
+  </div>
+)
 }

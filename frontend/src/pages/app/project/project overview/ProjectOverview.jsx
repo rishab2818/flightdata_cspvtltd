@@ -66,7 +66,6 @@ const members = project?.members?.length || 0;
 
   /* ================= Polling helpers ================= */
   const pollingRef = useRef(new Map()) // jobId -> intervalId
-  const tagProgressSeqRef = useRef(0)
 
   const [confirmDelete, setConfirmDelete] = useState({
     open: false,
@@ -143,101 +142,22 @@ const members = project?.members?.length || 0;
     pollingRef.current.set(jobId, timer)
   }
 
-  const handleViewMembers = () => {
+const handleViewMembers = () => {
   setProjectMembers(project?.members || []);
   setShowMembersModal(true);
 };
-  /* ================= Refresh tags + attach polling ================= */
-  // const refreshTagsAndAttachProgress = async () => {
-  //   const tagRows = await ingestionApi.listTags(projectId, activeDataset)
-  //   setTags(tagRows || [])
-
-  //   const map = {}
-  //   for (const t of tagRows || []) {
-  //     try {
-  //       const files = await ingestionApi.listFilesInTag(projectId, activeDataset, t.tag_name)
-  //       if (files?.length) {
-  //         const latestJobId = files[0]?.job_id
-  //         if (latestJobId) {
-  //           map[t.tag_name] = latestJobId
-  //           pollJob(latestJobId)
-  //         }
-  //       }
-  //     } catch {
-  //       // ignore per-tag failure
-  //     }
-  //   }
-  //   setTagJobMap(map)
-  // }
-
-  const refreshTagsAndAttachProgress = async () => {
-  try {
-    const tagRows = await ingestionApi.listTags(projectId, activeDataset)
-    setTags(tagRows || [])
-
-    if (!tagRows?.length) return
-
-    const fileResults = await Promise.all(
-      tagRows.map((t) =>
-        ingestionApi
-          .listFilesInTag(projectId, activeDataset, t.tag_name)
-          .then((files) => ({ tag: t.tag_name, files }))
-          .catch(() => ({ tag: t.tag_name, files: [] }))
-      )
-    )
-
-    const map = {}
-
-    fileResults.forEach(({ tag, files }) => {
-      if (files?.length) {
-        const latestJobId = files[0]?.job_id
-        if (latestJobId) {
-          map[tag] = latestJobId
-          pollJob(latestJobId)
-        }
-      }
-    })
-
-    setTagJobMap(map)
-  } catch (err) {
-    console.error(err)
-  }
-}
 
   /* ================= Dataset / project change ================= */
-  // useEffect(() => {
-  //   let cancelled = false
-
-  //     ; (async () => {
-  //       if (cancelled) return
-  //       stopAllPolling()
-  //       setJobProgress({})
-  //       setTagJobMap({})
-  //       await refreshTagsAndAttachProgress()
-
-  //       // second refresh handles race after upload
-  //       setTimeout(refreshTagsAndAttachProgress, 2000)
-  //     })()
-
-  //   return () => {
-  //     cancelled = true
-  //     stopAllPolling()
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [projectId, activeDataset])
-
   useEffect(() => {
-  let cancelled = false
+    stopAllPolling()
+    setJobProgress({})
+    setTagJobMap({})
+    void refreshTags()
 
-  ;(async () => {
-    if (cancelled) return
-    await refreshTagsAndAttachProgress()
-  })()
-
-  return () => {
-    cancelled = true
-  }
-}, [projectId, activeDataset])
+    return () => {
+      stopAllPolling()
+    }
+  }, [projectId, activeDataset, refreshTags])
 
   useEffect(() => {
     if (!searchTagName) return
@@ -256,11 +176,6 @@ const members = project?.members?.length || 0;
     next.delete('tagName')
     setSearchParams(next, { replace: true })
   }, [activeDataset, searchDatasetType, searchParams, searchTagName, selectedTag, setSearchParams])
-
-  useEffect(() => {
-    if (selectedTag || tagsLoading || tagsError) return
-    void syncTagProgress(tags)
-  }, [selectedTag, tags, tagsLoading, tagsError, syncTagProgress])
 
   const listAllFilesInTag = useCallback(async (tagName) => {
     const allFiles = []
@@ -314,6 +229,9 @@ const members = project?.members?.length || 0;
   }
 
   const onCloseModal = async () => {
+    stopAllPolling()
+    setJobProgress({})
+    setTagJobMap({})
     setModal({ open: false, mode: 'create', tag: '' })
     await refreshTags()
     setTimeout(() => {

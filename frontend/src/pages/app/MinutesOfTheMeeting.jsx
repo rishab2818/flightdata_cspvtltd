@@ -22,6 +22,7 @@ import { projectApi } from "../../api/projectapi";
 import { useDownload } from "../../components/common/useDownload";
 import { useLazyCollection } from "../../hooks/useLazyCollection";
 import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
+import PresentationChart1 from "../../assets/PresentationChart1.svg"
 
 import "./MinutesOfTheMeeting.css";
 
@@ -44,10 +45,10 @@ function formatDate(value) {
   return Number.isNaN(d.getTime())
     ? value
     : d.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
 }
 
 function formatTimeLabel(timeString) {
@@ -159,22 +160,22 @@ export default function MinutesOfTheMeeting() {
     : (requiresProject ? selectedProjectId : undefined);
   const missingProjectSelection = !isProjectContext && requiresProject && !effectiveProjectId;
 
- const {
-  download,
-  view,
-  loadingFiles,
-  errorFiles,
-} = useDownload(documentsApi.getDownloadUrl);
+  const {
+    download,
+    view,
+    loadingFiles,
+    errorFiles,
+  } = useDownload(documentsApi.getDownloadUrl);
 
 
   const handleDeleteDocument = async (doc) => {
-  try {
-    await documentsApi.remove(doc.id);
-    setRows((prev) => prev.filter((r) => r.id !== doc.id));
-  } catch {
-    alert("Unable to delete document.");
-  }
-};
+    try {
+      await documentsApi.remove(doc.id);
+      setRows((prev) => prev.filter((r) => r.id !== doc.id));
+    } catch {
+      alert("Unable to delete document.");
+    }
+  };
 
   /* ---------------- data loaders ---------------- */
 
@@ -302,77 +303,77 @@ export default function MinutesOfTheMeeting() {
   };
 
   const handleMeetingSave = async (values) => {
-      const payload = {
-        subsection: activeSubsection,
-        title: values.title,
-        meeting_date: values.meeting_date,
-        meeting_time: values.meeting_time,
-        project_id: effectiveProjectId,
-      };
-  
-      try {
-        setMeetingError("");
-        setMeetingLoading(true);
-        const saved = await meetingsApi.saveNextMeeting(payload);
-        setNextMeeting(saved);
-        setShowMeetingModal(false);
-        return { ok: true };
-      } catch (err) {
-        console.error("Failed to save meeting details:", err);
-        const detail = err?.response?.data?.detail;
-        const message = Array.isArray(detail)
-          ? detail.map((d) => d?.msg || d).join(", ")
-          : detail || "Failed to save meeting details.";
-        setMeetingError(message);
-        return { ok: false, error: message };
-      } finally {
-        setMeetingLoading(false);
-      }
+    const payload = {
+      subsection: activeSubsection,
+      title: values.title,
+      meeting_date: values.meeting_date,
+      meeting_time: values.meeting_time,
+      project_id: effectiveProjectId,
     };
-  
-    // const handleViewActions = (actionPoints = []) => {
-    //   setSelectedActions(actionPoints || []);
-    //   setShowActionsModal(true);
-    // };
 
-    const handleView = (row) => {
-  if (!row?.record_id) return;
-  view(row.record_id);
-};
+    try {
+      setMeetingError("");
+      setMeetingLoading(true);
+      const saved = await meetingsApi.saveNextMeeting(payload);
+      setNextMeeting(saved);
+      setShowMeetingModal(false);
+      return { ok: true };
+    } catch (err) {
+      console.error("Failed to save meeting details:", err);
+      const detail = err?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d?.msg || d).join(", ")
+        : detail || "Failed to save meeting details.";
+      setMeetingError(message);
+      return { ok: false, error: message };
+    } finally {
+      setMeetingLoading(false);
+    }
+  };
 
-const handleDownload = (row) => {
-  if (!row?.record_id) return;
-  download(row.record_id);
-};
+  // const handleViewActions = (actionPoints = []) => {
+  //   setSelectedActions(actionPoints || []);
+  //   setShowActionsModal(true);
+  // };
 
-  
-    const handleEditDocument = (row) => {
-      setEditingDoc(row);
+  const handleView = (row) => {
+    if (!row?.record_id) return;
+    view(row.record_id);
+  };
+
+  const handleDownload = (row) => {
+    if (!row?.record_id) return;
+    download(row.record_id);
+  };
+
+
+  const handleEditDocument = (row) => {
+    setEditingDoc(row);
+    setEditError("");
+  };
+
+  const handleSaveEdit = async (payload) => {
+    if (!editingDoc) return;
+    try {
+      setSavingEdit(true);
       setEditError("");
-    };
-  
-    const handleSaveEdit = async (payload) => {
-      if (!editingDoc) return;
-      try {
-        setSavingEdit(true);
-        setEditError("");
-        const updated = await documentsApi.update(editingDoc.id, payload);
-        const mapped = convertDocToRow(updated);
-        setRows((prev) => prev.map((r) => (r.id === mapped.id ? mapped : r)));
-        setEditingDoc(mapped);
-        return { ok: true };
-      } catch (err) {
-        console.error("Failed to update document:", err);
-        const detail = err?.response?.data?.detail;
-        const message = Array.isArray(detail)
-          ? detail.map((d) => d?.msg || d).join(", ")
-          : detail || "Unable to update the document.";
-        setEditError(message);
-        return { ok: false, error: message };
-      } finally {
-        setSavingEdit(false);
-      }
-    };
+      const updated = await documentsApi.update(editingDoc.id, payload);
+      const mapped = convertDocToRow(updated);
+      setRows((prev) => prev.map((r) => (r.id === mapped.id ? mapped : r)));
+      setEditingDoc(mapped);
+      return { ok: true };
+    } catch (err) {
+      console.error("Failed to update document:", err);
+      const detail = err?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d?.msg || d).join(", ")
+        : detail || "Unable to update the document.";
+      setEditError(message);
+      return { ok: false, error: message };
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   /* ---------------- render ---------------- */
 
@@ -423,7 +424,7 @@ const handleDownload = (row) => {
             setShowActionsModal(true);
           }}
           onEdit={setEditingDoc}
-          onDelete={handleDeleteDocument} 
+          onDelete={handleDeleteDocument}
           download={download}
           view={view}
           loadingFiles={loadingFiles}
@@ -449,8 +450,7 @@ const handleDownload = (row) => {
         initialMeeting={{
           title:
             nextMeeting?.title ||
-            `Next ${activeTab.label}${
-              selectedProject?.project_name ? ` - ${selectedProject.project_name}` : ""
+            `Next ${activeTab.label}${selectedProject?.project_name ? ` - ${selectedProject.project_name}` : ""
             }`,
           meeting_date: nextMeeting?.meeting_date || "",
           meeting_time: nextMeeting?.meeting_time || "",
@@ -487,7 +487,7 @@ function TabsRow({ activeKey, onChange }) {
       {MOM_TABS.map((tab) => {
         const active = tab.key === activeKey;
         return (
-          <button 
+          <button
             className={`TabButton ${active ? "activeTab" : ""}`}
             key={tab.key}
             type="button"
@@ -553,10 +553,10 @@ function NextMeetingBanner({
 
   const dateLabel = meetingDate
     ? meetingDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
     : "Meeting date not set";
 
   const dayLabel = meetingDate
@@ -587,55 +587,55 @@ function NextMeetingBanner({
 
   return (
     <div className="Banner">
-  <div className="BannerContent">
-    <div className="BannerInfo">
-      <div className="BannerTitle">Next {sectionLabel}</div>
+      <div className="BannerContent">
+        <div className="BannerInfo">
+          <div className="BannerTitle">Next {sectionLabel}</div>
 
-      <span className="metaItem">{dateLabel}</span>
-      <span className="metaItem">{dayLabel}</span>
+          <span className="metaItem">{dateLabel}</span>
+          <span className="metaItem">{dayLabel}</span>
 
-      <span className="metaItem timeMeta">
-        <FiClock size={14} />
-        {timeLabel}
-      </span>
+          <span className="metaItem timeMeta">
+            <FiClock size={14} />
+            {timeLabel}
+          </span>
+        </div>
+
+        <button className="BannerEdit" onClick={onEdit}>
+          <FiEdit2 size={16} />
+        </button>
+      </div>
     </div>
 
-    <button className="BannerEdit" onClick={onEdit}>
-      <FiEdit2 size={16} />
-    </button>
-  </div>
-</div>
 
-   
   );
 }
 
-    function UploadHeader({ onUploadClick, search, onSearchChange }) {
+function UploadHeader({ onUploadClick, search, onSearchChange }) {
   return (
     <div className="Header">
       <h3>Uploaded Meeting Minutes</h3>
 
-    <div style={{display:"flex", alignItems:"center",gap:"20px"}}>
-    <div style={{flex:1, maxWidth:"550px", height:"42px", display:"flex",gap: 8,background: "#f8fafc",border: "1px solid #e2e8f0",borderradius: "0px",padding: "12px 24px"}}>
-        <FiSearch size={16} color="#64748b" />
-            <input
-             style={{
-                  border: "none",
-                  outline: "none",
-                  minwidth: "350px",
-                  background: "transparent",
-                  flex: 1,
-                  gap:20,
-                  fontsize: "14px",
-                  color: "#0f172a",
-    
-                    }}
-                  type="text"
-                  placeholder="Search reports, tags, projects..."
-                  value={search}
-                  onChange={(e) => onSearchChange(e.target.value)}
-              />
-      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+        <div style={{ flex: 1, maxWidth: "550px", height: "42px", display: "flex", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderradius: "0px", padding: "12px 24px" }}>
+          <FiSearch size={16} color="#64748b" />
+          <input
+            style={{
+              border: "none",
+              outline: "none",
+              minwidth: "350px",
+              background: "transparent",
+              flex: 1,
+              gap: 20,
+              fontsize: "14px",
+              color: "#0f172a",
+
+            }}
+            type="text"
+            placeholder="Search reports, tags, projects..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
 
         {/* ⬆ Upload */}
         <button
@@ -644,11 +644,11 @@ function NextMeetingBanner({
           className="UploadButton"
         >
           {/* <FiFileText size={16} /> */}
-          <img src={PresentationChart1} alt="Record"/>
+          <img src={PresentationChart1} alt="Record" />
           <span>Upload Minutes</span>
         </button>
-        </div>
-      
+      </div>
+
     </div>
   );
 }
@@ -711,12 +711,12 @@ function MinutesTable({
           )}
 
           {!loading && !error && rows.length === 0 && (
-  <tr className="TableEmpty">
-    <td colSpan={6} style={{ padding: 0 }}>
-      <EmptySection />
-    </td>
-  </tr>
-)}
+            <tr className="TableEmpty">
+              <td colSpan={6} style={{ padding: 0 }}>
+                <EmptySection />
+              </td>
+            </tr>
+          )}
 
           {!loading &&
             !error &&
@@ -731,16 +731,16 @@ function MinutesTable({
               //   onDelete={onDelete}
               // />
               <MinutesRow
-  key={row.id}
-  row={row}
-  onViewAction={onViewAction}
-  onEdit={onEdit}
-  onDelete={onDelete}
-  download={download}
-  view={view}
-  loadingFiles={loadingFiles}
-  errorFiles={errorFiles}
-/>
+                key={row.id}
+                row={row}
+                onViewAction={onViewAction}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                download={download}
+                view={view}
+                loadingFiles={loadingFiles}
+                errorFiles={errorFiles}
+              />
 
 
             ))}
@@ -945,7 +945,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
       <div className="ActionModalCard">
         <div className="ModalHeader1">
           <h3>My Action</h3>
-           <button type="button" className="CloseButton" onClick={onClose}>
+          <button type="button" className="CloseButton" onClick={onClose}>
             X
           </button>
 
@@ -1257,12 +1257,12 @@ function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
         <div className="ModalHeader">
           <h3>Edit Next Meeting</h3>
           <button type="button" className="CloseButton" onClick={onClose}>
-           X
+            X
           </button>
         </div>
 
         <form className="ModalForm" onSubmit={handleSubmit}>
-          <label className="Meetinglabel" style={{marginBottom:"-10px", marginTop:"10px"}}>Meeting title</label>
+          <label className="Meetinglabel" style={{ marginBottom: "-10px", marginTop: "10px" }}>Meeting title</label>
           <input
             type="text"
             value={title}
