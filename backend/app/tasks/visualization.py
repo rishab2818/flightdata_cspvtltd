@@ -157,7 +157,7 @@ def _sample_xy(
 
 
         remaining = max_points - kept_n
-        if remaining <= 0:
+        if remaining <= 0: 
             break
 
         if len(chunk) > remaining:
