@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { ingestionApi } from "../../../api/ingestionApi"
 import { visualizationApi } from "../../../api/visualizationApi"
+import { PROJECT_TABULAR_EXTENSIONS } from "../../../uploadPreview/fileTypes"
 
 
-const TABULAR_EXTENSIONS = new Set([".csv", ".xlsx", ".xls", ".txt", ".dat", ".c", ".mat"])
+const TABULAR_EXTENSIONS = PROJECT_TABULAR_EXTENSIONS
 const INLINE_EXTENSIONS = new Set([
   ".pdf",
   ".png",
@@ -160,6 +161,11 @@ export default function ProjectTagView() {
     if (isTabularFile(file) && file.processed_key) {
       const editFlag = canEdit ? "1" : "0"
       window.open(`/processed-preview/${file.job_id}?edit=${editFlag}`, "_blank", "noopener,noreferrer")
+      return
+    }
+
+    if (activeTab === "raw" && isTabularFile(file)) {
+      window.open(`/raw-preview/${file.job_id}`, "_blank", "noopener,noreferrer")
       return
     }
 

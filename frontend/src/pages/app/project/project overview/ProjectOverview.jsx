@@ -27,6 +27,20 @@ const DATASET_TABS = [
   { key: 'others', label: 'Others' },
 ]
 
+const TERMINAL_JOB_STATUSES = new Set(['success', 'failure', 'stored'])
+
+const normalizeJobStatus = (value) => String(value || '').trim().toLowerCase()
+
+const isTerminalJobStatus = (value) => TERMINAL_JOB_STATUSES.has(normalizeJobStatus(value))
+
+const parseStreamPayload = (raw) => {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 export default function ProjectUpload() {
   const { projectId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -49,7 +63,7 @@ const [projectMembers, setProjectMembers] = useState([]);
  const role = user?.role?.toUpperCase?.();
  const canEditProject = role === 'GD' || role === 'DH';
 
- const desc = project?.project_description || '';
+  const desc = project?.project_description || '';
 
 const date = project?.created_at
   ? new Date(project.created_at).toLocaleDateString("en-GB", {
@@ -61,11 +75,9 @@ const date = project?.created_at
 const members = project?.members?.length || 0;
 
   /* ================= Progress tracking ================= */
-  const [jobProgress, setJobProgress] = useState({}) // jobId -> {status, progress, message}
-  const [tagJobMap, setTagJobMap] = useState({})     // tagName -> latest jobId
-
-  /* ================= Polling helpers ================= */
-  const pollingRef = useRef(new Map()) // jobId -> intervalId
+  const [jobProgress, setJobProgress] = useState({}) // tagName -> {job_id, status, progress, message, active_job_count}
+  const streamRef = useRef(new Map()) // jobId -> EventSource
+  const refreshTimerRef = useRef(null)
 
   const [confirmDelete, setConfirmDelete] = useState({
     open: false,
@@ -104,43 +116,75 @@ const members = project?.members?.length || 0;
   // const date = project?.created_at
   // const members = project?.members?.length || 0
 
-  const stopPolling = (jobId) => {
-    const t = pollingRef.current.get(jobId)
-    if (t) clearInterval(t)
-    pollingRef.current.delete(jobId)
-  }
-
-  const stopAllPolling = () => {
-    for (const [, t] of pollingRef.current.entries()) {
-      clearInterval(t)
+  const closeJobStream = useCallback((jobId) => {
+    const source = streamRef.current.get(jobId)
+    if (source) {
+      source.close()
+      streamRef.current.delete(jobId)
     }
-    pollingRef.current.clear()
-  }
+  }, [])
 
-  const pollJob = (jobId) => {
-    if (!jobId) return
-    if (pollingRef.current.has(jobId)) return
+  const closeAllStreams = useCallback(() => {
+    for (const [, source] of streamRef.current.entries()) {
+      source.close()
+    }
+    streamRef.current.clear()
+  }, [])
 
-    const timer = setInterval(async () => {
-      try {
-        const status = await ingestionApi.status(jobId)
+  const scheduleRefreshTags = useCallback(() => {
+    if (refreshTimerRef.current) return
 
-        setJobProgress((prev) => ({
-          ...prev,
-          [jobId]: status,
-        }))
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null
+      void refreshTags()
+    }, 600)
+  }, [refreshTags])
 
-        const s = (status?.status || '').toLowerCase()
-        if (s === 'success' || s === 'failure') {
-          stopPolling(jobId)
-        }
-      } catch {
-        stopPolling(jobId)
+  const applyTagStatus = useCallback((tagName, nextStatus) => {
+    if (!tagName || !nextStatus?.job_id) return
+
+    setJobProgress((prev) => ({
+      ...prev,
+      [tagName]: {
+        ...prev[tagName],
+        ...nextStatus,
+      },
+    }))
+  }, [])
+
+  const subscribeToJob = useCallback((tagName, activeJob, activeJobCount = 1) => {
+    const jobId = activeJob?.job_id
+    if (!tagName || !jobId || streamRef.current.has(jobId)) return
+
+    const source = new EventSource(ingestionApi.streamUrl(jobId))
+    const handleProgress = (event) => {
+      const payload = parseStreamPayload(event.data)
+      if (!payload) return
+
+      const nextStatus = {
+        job_id: jobId,
+        status: payload.status || activeJob?.status || 'queued',
+        progress: Number.isFinite(Number(payload.progress)) ? Number(payload.progress) : 0,
+        message: payload.message || payload.status || activeJob?.message || 'queued',
+        active_job_count: activeJobCount,
       }
-    }, 1500)
 
-    pollingRef.current.set(jobId, timer)
-  }
+      applyTagStatus(tagName, nextStatus)
+
+      if (isTerminalJobStatus(nextStatus.status)) {
+        closeJobStream(jobId)
+        scheduleRefreshTags()
+      }
+    }
+
+    source.addEventListener('progress', handleProgress)
+    source.onerror = () => {
+      closeJobStream(jobId)
+      scheduleRefreshTags()
+    }
+
+    streamRef.current.set(jobId, source)
+  }, [applyTagStatus, closeJobStream, scheduleRefreshTags])
 
 const handleViewMembers = () => {
   setProjectMembers(project?.members || []);
@@ -149,15 +193,65 @@ const handleViewMembers = () => {
 
   /* ================= Dataset / project change ================= */
   useEffect(() => {
-    stopAllPolling()
+    closeAllStreams()
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = null
+    }
     setJobProgress({})
-    setTagJobMap({})
     void refreshTags()
 
     return () => {
-      stopAllPolling()
+      closeAllStreams()
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
     }
-  }, [projectId, activeDataset, refreshTags])
+  }, [projectId, activeDataset, refreshTags, closeAllStreams])
+
+  useEffect(() => {
+    const activeEntries = tags
+      .map((tag) => ({
+        tagName: tag.tag_name,
+        activeJob: tag.active_job,
+        activeJobCount: Number(tag.active_job_count || 0),
+      }))
+      .filter((entry) => entry.tagName)
+
+    const activeJobIds = new Set(
+      activeEntries
+        .map((entry) => entry.activeJob?.job_id)
+        .filter(Boolean)
+    )
+
+    setJobProgress((prev) => {
+      const next = {}
+
+      activeEntries.forEach(({ tagName, activeJob, activeJobCount }) => {
+        if (!activeJob?.job_id) return
+        const prevStatus = prev[tagName]
+        next[tagName] =
+          prevStatus?.job_id === activeJob.job_id
+            ? { ...activeJob, ...prevStatus, active_job_count: activeJobCount }
+            : { ...activeJob, active_job_count: activeJobCount }
+      })
+
+      return next
+    })
+
+    activeEntries.forEach(({ tagName, activeJob, activeJobCount }) => {
+      if (activeJob?.job_id && !isTerminalJobStatus(activeJob.status)) {
+        subscribeToJob(tagName, activeJob, activeJobCount || 1)
+      }
+    })
+
+    for (const jobId of streamRef.current.keys()) {
+      if (!activeJobIds.has(jobId)) {
+        closeJobStream(jobId)
+      }
+    }
+  }, [tags, subscribeToJob, closeJobStream])
 
   useEffect(() => {
     if (!searchTagName) return
@@ -206,16 +300,11 @@ const handleViewMembers = () => {
       )
 
       setTags((prev) => prev.filter((t) => t.tag_name !== tagName))
-
-      setTagJobMap((prev) => {
+      setJobProgress((prev) => {
         const copy = { ...prev }
         delete copy[tagName]
         return copy
       })
-      const removedJobId = tagJobMap[tagName]
-      if (removedJobId) {
-        stopPolling(removedJobId)
-      }
 
       if (selectedTag === tagName) setSelectedTag(null)
     } catch (err) {
@@ -229,14 +318,8 @@ const handleViewMembers = () => {
   }
 
   const onCloseModal = async () => {
-    stopAllPolling()
-    setJobProgress({})
-    setTagJobMap({})
     setModal({ open: false, mode: 'create', tag: '' })
     await refreshTags()
-    setTimeout(() => {
-      void refreshTags()
-    }, 1500)
   }
 
   const normalizeEmail = (email) => (email || '').trim().toLowerCase()
@@ -496,10 +579,10 @@ const handleViewMembers = () => {
               )}
 
               {tags.map((tag) => {
-                const jobId = tagJobMap[tag.tag_name]
-                const jp = jobId ? jobProgress[jobId] : null
-                const status = (jp?.status || '').toLowerCase()
-                const showProgress = jp && !['success', 'failure'].includes(status)
+                const jp = jobProgress[tag.tag_name] || tag.active_job
+                const status = normalizeJobStatus(jp?.status)
+                const showProgress = jp && !isTerminalJobStatus(status)
+                const activeJobCount = Number(jp?.active_job_count || tag.active_job_count || 0)
 
                 return (
                   <tr key={tag.tag_name}>
@@ -512,14 +595,15 @@ const handleViewMembers = () => {
 
                       {showProgress && (
                         <div style={{  maxWidth: 360,fontFamily: 'inter-regular,Helvetica' }}>
-                          {/* <div className="progress-bar">
+                          <div className="progress-bar">
                             <div
                               className="progress-bar__value"
                               style={{ width: `${jp.progress ?? 5}%` }}
                             />
-                          </div> */}
+                          </div>
                           <div className="summary-label" style={{ marginTop:0, display:'flex', alignItems:'center'}}>
                             {jp.message || jp.status} ({jp.progress ?? 0}%)
+                            {activeJobCount > 1 ? ` · ${activeJobCount} files` : ''}
                           </div>
                         </div>
                       )}

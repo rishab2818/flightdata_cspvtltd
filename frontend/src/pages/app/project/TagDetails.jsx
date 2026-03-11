@@ -7,12 +7,13 @@ import CalendarBlank from '../../../assets/CalendarBlank.svg'
 import DownloadSimple from '../../../assets/DownloadSimple.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
+import { PROJECT_TABULAR_EXTENSIONS } from '../../../uploadPreview/fileTypes'
 
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
 
 
-const TABULAR_EXTENSIONS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
+const TABULAR_EXTENSIONS = PROJECT_TABULAR_EXTENSIONS
 const INLINE_EXTENSIONS = new Set([
   '.pdf',
   '.png',
@@ -39,6 +40,15 @@ const getExtension = (name = '') => {
 }
 
 const isTabularFile = (file) => TABULAR_EXTENSIONS.has(getExtension(file?.filename || ''))
+
+const isRawFile = (file) => isTabularFile(file)
+
+const isProcessedFile = (file) => Boolean(file?.processed_key)
+
+const isOtherFile = (file) => {
+  const ext = getExtension(file?.filename || '')
+  return !isTabularFile(file) && !file?.processed_key && !file?.visualize_enabled && OTHERS_EXTENSIONS.has(ext)
+}
 
 const canInlinePreview = (file) => {
   const type = (file?.content_type || '').toLowerCase()
@@ -150,18 +160,11 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     tab === 'plot'
       ? plots
       : tab === 'raw'
-        ? files.filter(f => isTabularFile(f) && !f.processed_key)
+        ? files.filter(isRawFile)
         : tab === 'processed'
-          ? files.filter(f => f.processed_key)
+          ? files.filter(isProcessedFile)
           : tab === 'others'
-            ? files.filter(f => {
-              const ext = getExtension(f?.filename || '')
-              return (
-                !f.processed_key &&
-                !f.visualize_enabled &&
-                OTHERS_EXTENSIONS.has(ext)
-              )
-            })
+            ? files.filter(isOtherFile)
             : []
   const handleView = (file, tabName) => {
     if (tabName === 'plot') {

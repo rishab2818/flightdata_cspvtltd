@@ -24,6 +24,7 @@ from app.calculations.derived import (
     normalize_derived_columns,
 )
 from app.tasks.ingestion import ingest_file
+from app.text_formats import RANGE_TEXT_EXTENSIONS, TABULAR_EXTENSIONS
 # for the processed data view 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -36,7 +37,8 @@ router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 repo = IngestionRepository()
 projects = ProjectRepository()
 
-TABULAR_EXTS = {".csv", ".xlsx", ".xls", ".txt", ".dat", ".c", ".mat"}
+TABULAR_EXTS = TABULAR_EXTENSIONS
+TERMINAL_INGESTION_STATUSES = {"success", "failure", "stored"}
 
 
 def _safe_slug(value: str) -> str:
@@ -57,6 +59,21 @@ def _dataset_folder(dataset_type: str) -> str:
     if key == "flight":
         return "Flight_Data"
     return "Unknown"
+
+
+def _normalize_ingestion_status(value: str | None) -> str:
+    return str(value or "").strip().lower()
+
+
+def _is_terminal_ingestion_status(value: str | None) -> bool:
+    return _normalize_ingestion_status(value) in TERMINAL_INGESTION_STATUSES
+
+
+def _coerce_progress(value: Any, fallback: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(fallback or 0)
 
 
 async def _ensure_project_member(project_id: str, user: CurrentUser):
@@ -171,7 +188,12 @@ async def start_ingestion_batch(
 
         # force OFF for non-tabular
         visualize_enabled = bool(requested_visualize and ext in TABULAR_EXTS)
-        parse_range_for_job = requested_parse_range if ext in {".dat", ".c"} else None
+        parse_range_for_job = requested_parse_range if ext in RANGE_TEXT_EXTENSIONS else None
+        if visualize_enabled and ext in RANGE_TEXT_EXTENSIONS and not parse_range_for_job:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"parse_range is required for {original_name}",
+            )
         header_mode_for_file = header_mode
         custom_headers_for_file = parsed_headers
         if requested_custom_headers:
@@ -422,6 +444,19 @@ async def list_jobs(project_id: str, user: CurrentUser = Depends(get_current_use
 
 async def event_generator(job_id: str):
     redis = get_async_redis()
+    snapshot = await redis.hgetall(f"ingestion:{job_id}:status")
+    if snapshot:
+        yield {
+            "event": "progress",
+            "data": json.dumps(
+                {
+                    "status": snapshot.get("status", "queued"),
+                    "progress": _coerce_progress(snapshot.get("progress"), 0),
+                    "message": snapshot.get("message") or snapshot.get("status") or "queued",
+                }
+            ),
+        }
+
     pubsub = redis.pubsub()
     channel_name = f"ingestion:{job_id}:events"
     await pubsub.subscribe(channel_name)
@@ -487,11 +522,61 @@ async def list_tags(
     ]
 
     rows = await db["ingestion_jobs"].aggregate(pipeline).to_list(length=limit)
+
+    tag_names = [str(r.get("tag_name") or "").strip() for r in rows if r.get("tag_name")]
+    active_by_tag: dict[str, dict[str, Any]] = {}
+    active_counts: dict[str, int] = {}
+
+    if tag_names:
+        active_docs = await (
+            db["ingestion_jobs"]
+            .find(
+                {
+                    "project_id": project_id,
+                    "dataset_type": dataset_type,
+                    "tag_name": {"$in": tag_names},
+                    "visualize_enabled": True,
+                    "status": {"$nin": ["SUCCESS", "success", "FAILURE", "failure", "stored"]},
+                }
+            )
+            .sort("created_at", -1)
+            .to_list(length=max(limit * 20, 200))
+        )
+        redis = get_async_redis()
+        pipe = redis.pipeline()
+        for doc in active_docs:
+            pipe.hgetall(f"ingestion:{str(doc.get('_id'))}:status")
+        snapshots = await pipe.execute() if active_docs else []
+
+        for doc, snapshot in zip(active_docs, snapshots):
+            tag = str(doc.get("tag_name") or "").strip()
+            if not tag:
+                continue
+
+            job_id = str(doc.get("_id"))
+            status_value = snapshot.get("status") or doc.get("status") or "queued"
+            if _is_terminal_ingestion_status(status_value):
+                continue
+
+            active_counts[tag] = active_counts.get(tag, 0) + 1
+            if tag in active_by_tag:
+                continue
+
+            active_by_tag[tag] = {
+                "job_id": job_id,
+                "status": status_value,
+                "progress": _coerce_progress(snapshot.get("progress"), doc.get("progress", 0)),
+                "message": snapshot.get("message") or doc.get("message") or status_value,
+            }
+
     # clean mongo types
     for r in rows:
         r.pop("_id", None)
         if r.get("latest_created_at"):
             r["latest_created_at"] = r["latest_created_at"].isoformat()
+        tag_name_value = str(r.get("tag_name") or "").strip()
+        r["active_job"] = active_by_tag.get(tag_name_value)
+        r["active_job_count"] = active_counts.get(tag_name_value, 0)
     return rows
 
 

@@ -1,8 +1,19 @@
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
 import { ingestionApi } from '../../../api/ingestionApi';
+import {
+    PROJECT_TABULAR_EXTENSIONS,
+    getFileExtension,
+    isRangeTextExtension,
+} from '../../../uploadPreview/fileTypes'
+import {
+    countLocalTextLines,
+    DEFAULT_PREVIEW_LINE_LIMIT,
+    readLocalTextHead,
+    readLocalTextRange,
+} from '../../../uploadPreview/localTextPreview'
 import './ProjectUploadModal.css';
 // import './ProjectUpload.css';
 
@@ -15,22 +26,18 @@ const DATASET_OPTIONS = [
     { key: 'others', label: 'Others' }
 ]
 
-const TABULAR_EXTS = new Set(['.csv', '.xlsx', '.xls', '.txt', '.dat', '.c', '.mat'])
+const TABULAR_EXTS = PROJECT_TABULAR_EXTENSIONS
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'])
-const DAT_EXTS = new Set(['.dat', '.c'])
 const MAT_EXTS = new Set(['.mat'])
-const MAX_TEXT_PREVIEW_LINES = 500
 
-const getExt = (name = '') => {
-    const idx = name.lastIndexOf('.')
-    return idx >= 0 ? name.slice(idx).toLowerCase() : ''
-}
+const getExt = getFileExtension
 const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
 const isExcel = (file) => ['.xlsx', '.xls'].includes(getExt(file?.name))
-const isDatLike = (file) => DAT_EXTS.has(getExt(file?.name))
+const isDatLike = (file) => isRangeTextExtension(getExt(file?.name))
 const isMat = (file) => MAT_EXTS.has(getExt(file?.name))
-const isCustomHeaderCapable = (file) => isTabular(file) && !isMat(file)
+const isHeaderModeCapable = (file) => isTabular(file) && !isMat(file) && !isDatLike(file)
+const isCustomHeaderCapable = (file) => isHeaderModeCapable(file)
 
 const NUM_TOKEN_RE = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/
 
@@ -130,8 +137,8 @@ export default function UploadModal({
 
 
     const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet }]
-    const hasTabularFiles = useMemo(() => {
-    return files.some(item => isTabular(item.file))
+    const hasHeaderModeFiles = useMemo(() => {
+    return files.some(item => isHeaderModeCapable(item.file))
 }, [files])
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
@@ -147,6 +154,9 @@ export default function UploadModal({
     const [excelSheets, setExcelSheets] = useState([])   // ['Sheet1', 'Sheet2']
     const [activeSheet, setActiveSheet] = useState(null)
     const [excelWb, setExcelWb] = useState(null)         // cached workbook
+    const filesRef = useRef(files)
+    const selectedIdxRef = useRef(selectedIdx)
+    const lineCountTaskRef = useRef({ token: 0, fileId: null })
 
     
 
@@ -155,8 +165,22 @@ export default function UploadModal({
     useEffect(() => {
         const prev = document.body.style.overflow
         document.body.style.overflow = 'hidden'
-        return () => { document.body.style.overflow = prev }
+        return () => {
+            document.body.style.overflow = prev
+            lineCountTaskRef.current = {
+                token: lineCountTaskRef.current.token + 1,
+                fileId: null,
+            }
+        }
     }, [])
+
+    useEffect(() => {
+        filesRef.current = files
+    }, [files])
+
+    useEffect(() => {
+        selectedIdxRef.current = selectedIdx
+    }, [selectedIdx])
 
     // ✅ When modal opens / mode changes, reset things.
     // IMPORTANT: we set datasetType ONLY ONCE per open.
@@ -237,39 +261,240 @@ export default function UploadModal({
         [headerMode, headersList]
     )
 
-    const buildTextPreview = React.useCallback(
-        (text, range, fileName) => {
-            const lines = text.split(/\r?\n/)
-            const totalLines = lines.length
-            if (!totalLines) {
-                setPreview({ type: 'message', message: 'Selected file is empty.' })
-                return
-            }
+    const applyTextPreview = useCallback((lineItems, range, fileName, options = {}) => {
+        const safeRange = {
+            start: Math.max(1, Number(range?.start) || 1),
+            end: Math.max(Math.max(1, Number(range?.start) || 1), Number(range?.end) || Number(range?.start) || 1),
+        }
+        const selectedLines = (lineItems || [])
+            .filter((item) => item.number >= safeRange.start && item.number <= safeRange.end)
+            .map((item) => item.text)
+        const table = buildTableFromLines(selectedLines)
 
-            const start = clamp(range?.start ?? 1, 1, totalLines)
-            const end = clamp(range?.end ?? Math.min(10, totalLines), start, totalLines)
-            const selectedLines = lines.slice(start - 1, end)
-            const table = buildTableFromLines(selectedLines)
+        setPreview({
+            type: 'text-lines',
+            fileId: options.fileId || null,
+            name: fileName,
+            lines: lineItems || [],
+            totalLines: options.totalLines ?? null,
+            range: safeRange,
+            table,
+            truncated: Boolean(options.truncated),
+            selectionTruncated: Boolean(options.selectionTruncated),
+            previewMode: options.previewMode || 'head',
+            lineCountStatus: options.lineCountStatus || (options.totalLines != null ? 'ready' : 'idle'),
+        })
+        setRangeInput({ start: String(safeRange.start), end: String(safeRange.end) })
+    }, [])
 
-            setPreview({
-                type: 'text-lines',
-                name: fileName,
-                lines: lines.slice(0, MAX_TEXT_PREVIEW_LINES),
-                totalLines,
-                range: { start, end },
-                table,
-                rawText: text,
-                truncated: totalLines > MAX_TEXT_PREVIEW_LINES,
+    const clearActiveLineCount = useCallback((fileId = null) => {
+        const activeFileId = fileId ?? lineCountTaskRef.current.fileId
+        lineCountTaskRef.current = {
+            token: lineCountTaskRef.current.token + 1,
+            fileId: null,
+        }
+        if (!activeFileId) return
+
+        setFiles((prev) =>
+            prev.map((item) =>
+                fileKey(item.file) === activeFileId && item.lineCountStatus === 'counting'
+                    ? { ...item, lineCountStatus: null }
+                    : item
+            )
+        )
+    }, [])
+
+    const startBackgroundLineCount = useCallback(async (file, idx) => {
+        if (!file || !isDatLike(file)) return
+
+        const item = idx != null ? filesRef.current[idx] : null
+        if (item?.totalLines != null) return
+
+        const nextFileId = fileKey(file)
+        const activeTask = lineCountTaskRef.current
+        if (activeTask.fileId === nextFileId) return
+        if (activeTask.fileId && activeTask.fileId !== nextFileId) {
+            clearActiveLineCount(activeTask.fileId)
+        }
+
+        const token = lineCountTaskRef.current.token + 1
+        lineCountTaskRef.current = { token, fileId: nextFileId }
+
+        setFiles((prev) =>
+            prev.map((entry) =>
+                fileKey(entry.file) === nextFileId && entry.totalLines == null
+                    ? { ...entry, lineCountStatus: 'counting' }
+                    : entry
+            )
+        )
+
+        setPreview((prev) =>
+            prev?.type === 'text-lines' && prev.fileId === nextFileId
+                ? { ...prev, lineCountStatus: 'counting' }
+                : prev
+        )
+
+        const result = await countLocalTextLines(file, {
+            shouldCancel: () => lineCountTaskRef.current.token !== token,
+        })
+
+        if (result.aborted || lineCountTaskRef.current.token !== token) return
+
+        lineCountTaskRef.current = { token, fileId: null }
+
+        let resolvedRange = null
+        let shouldReloadPreview = false
+
+        setFiles((prev) =>
+            prev.map((entry) => {
+                if (fileKey(entry.file) !== nextFileId) return entry
+
+                const currentRange = entry.parseRange || { start: 1, end: 1 }
+                const nextRange = {
+                    start: result.lineCount > 0 ? clamp(currentRange.start || 1, 1, result.lineCount) : 1,
+                    end: result.lineCount > 0
+                        ? clamp(currentRange.end || currentRange.start || 1, currentRange.start || 1, result.lineCount)
+                        : 1,
+                }
+
+                if (nextRange.end < nextRange.start) nextRange.end = nextRange.start
+                resolvedRange = nextRange
+
+                return {
+                    ...entry,
+                    totalLines: result.lineCount,
+                    parseRange: entry.parseRange ? nextRange : entry.parseRange,
+                    lineCountStatus: 'ready',
+                }
             })
-            setRangeInput({ start: String(start), end: String(end) })
-        },
-        []
-    )
+        )
+
+        setPreview((prev) => {
+            if (prev?.type !== 'text-lines' || prev.fileId !== nextFileId) return prev
+            const currentRange = prev.range || { start: 1, end: 1 }
+            const clampedRange = {
+                start: result.lineCount > 0 ? clamp(currentRange.start || 1, 1, result.lineCount) : 1,
+                end: result.lineCount > 0
+                    ? clamp(currentRange.end || currentRange.start || 1, currentRange.start || 1, result.lineCount)
+                    : 1,
+            }
+            if (clampedRange.end < clampedRange.start) clampedRange.end = clampedRange.start
+            shouldReloadPreview =
+                clampedRange.start !== currentRange.start || clampedRange.end !== currentRange.end
+
+            return {
+                ...prev,
+                totalLines: result.lineCount,
+                range: clampedRange,
+                lineCountStatus: 'ready',
+            }
+        })
+
+        if (resolvedRange) {
+            setRangeInput({
+                start: String(resolvedRange.start),
+                end: String(resolvedRange.end),
+            })
+        }
+
+        if (
+            shouldReloadPreview &&
+            selectedIdxRef.current === idx &&
+            filesRef.current[idx]?.file &&
+            fileKey(filesRef.current[idx].file) === nextFileId
+        ) {
+            await loadSelectedTextRangePreview(file, resolvedRange, {
+                knownTotalLines: result.lineCount,
+            })
+        }
+    }, [clearActiveLineCount])
+
+    const loadInitialTextPreview = useCallback(async (file, idx) => {
+        const existingItem = idx != null ? files[idx] : null
+        const head = await readLocalTextHead(file, { maxLines: DEFAULT_PREVIEW_LINE_LIMIT })
+
+        if (!head.lineItems.length) {
+            setPreview({ type: 'message', message: 'Selected file is empty.' })
+            return
+        }
+
+        const totalLines = existingItem?.totalLines ?? head.totalLines
+        const existingRange = existingItem?.parseRange
+        const nextRange = {
+            start: Math.max(1, Number(existingRange?.start) || 1),
+            end: Number(existingRange?.end) || Math.min(10, totalLines || 10),
+        }
+
+        if (totalLines != null) {
+            nextRange.start = clamp(nextRange.start, 1, totalLines)
+            nextRange.end = clamp(nextRange.end, nextRange.start, totalLines)
+        } else if (nextRange.end < nextRange.start) {
+            nextRange.end = nextRange.start
+        }
+
+        const lastHeadLineNumber = head.lineItems[head.lineItems.length - 1]?.number || 0
+        if (nextRange.start > lastHeadLineNumber) {
+            await loadSelectedTextRangePreview(file, nextRange)
+        } else {
+            applyTextPreview(head.lineItems, nextRange, file.name, {
+                fileId: fileKey(file),
+                totalLines,
+                truncated: head.truncated,
+                previewMode: 'head',
+                lineCountStatus: totalLines != null ? 'ready' : existingItem?.lineCountStatus || 'idle',
+            })
+        }
+
+        if (idx != null) {
+            setFiles((prev) => {
+                const clone = [...prev]
+                const item = clone[idx]
+                if (!item) return prev
+                clone[idx] = { ...item, parseRange: nextRange }
+                return clone
+            })
+        }
+        if (totalLines == null && idx != null) {
+            void startBackgroundLineCount(file, idx)
+        }
+    }, [applyTextPreview, files, startBackgroundLineCount])
+
+    const loadSelectedTextRangePreview = useCallback(async (file, range, options = {}) => {
+        const payload = await readLocalTextRange(file, range, {
+            displayLimit: DEFAULT_PREVIEW_LINE_LIMIT,
+        })
+        const totalLines = payload.totalLines ?? options.knownTotalLines ?? null
+        const lineCountStatus = totalLines != null ? 'ready' : options.lineCountStatus || 'counting'
+
+        if (!payload.lineItems.length) {
+            if (payload.totalLines === 0) {
+                setPreview({ type: 'message', message: 'Selected file is empty.' })
+            } else if (totalLines != null && range.start > totalLines) {
+                setPreview({ type: 'message', message: `Selected range exceeds file length (${totalLines} lines).` })
+            } else {
+                setPreview({ type: 'message', message: 'No lines found in selected range.' })
+            }
+            return
+        }
+
+        applyTextPreview(payload.lineItems, payload.range, file.name, {
+            fileId: fileKey(file),
+            totalLines,
+            truncated: payload.selectionTruncated,
+            selectionTruncated: payload.selectionTruncated,
+            previewMode: 'selection',
+            lineCountStatus,
+        })
+    }, [applyTextPreview])
 
     const loadPreview = async (file, idx) => {
         if (!file) return
         const ext = getExt(file.name)
         const targetIdx = idx ?? selectedIdx
+
+        if (!isDatLike(file)) {
+            clearActiveLineCount()
+        }
 
         if (isImage(file)) {
             const url = URL.createObjectURL(file)
@@ -277,9 +502,11 @@ export default function UploadModal({
             return
         }
 
+        setPreview({ type: 'message', message: 'Loading preview...' })
+
         if (ext === '.csv') {
-            const text = await file.text()
-            const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 15)
+            const head = await readLocalTextHead(file, { maxLines: 15 })
+            const lines = head.lineItems.map((item) => item.text).filter(Boolean).slice(0, 15)
             if (!lines.length) return setPreview({ type: 'message', message: 'CSV appears empty.' })
 
             const delimiter = lines[0].includes('\t') ? '\t' : ','
@@ -309,27 +536,8 @@ export default function UploadModal({
             return
         }
 
-       if (ext === '.dat' || ext === '.c' ) {
-            const text = await file.text()
-            const existingItem = targetIdx != null ? files[targetIdx] : null
-            const lines = text.split(/\r?\n/)
-            const totalLines = lines.length || 1
-            const existingRange = existingItem?.parseRange
-            const nextRange = {
-                start: clamp(existingRange?.start ?? 1, 1, totalLines),
-                end: clamp(existingRange?.end ?? Math.min(10, totalLines), 1, totalLines),
-            }
-            if (nextRange.end < nextRange.start) nextRange.end = nextRange.start
-            buildTextPreview(text, nextRange, file.name)
-            if (targetIdx != null) {
-                setFiles((prev) => {
-                    const clone = [...prev]
-                    const item = clone[targetIdx]
-                    if (!item) return prev
-                    clone[targetIdx] = { ...item, parseRange: nextRange }
-                    return clone
-                })
-            }
+       if (isDatLike(file)) {
+            await loadInitialTextPreview(file, targetIdx)
             return
         }
 
@@ -527,6 +735,8 @@ const onSelectSheet = (sheetName) => {
                     file: f,
                     visualize: isTabular(f),
                     parseRange: isDatLike(f) ? (applyRangeToAll ? rangeForNew : { start: 1, end: 10 }) : null,
+                    totalLines: null,
+                    lineCountStatus: null,
                     customHeaders:
                         headerMode === 'custom' && applyCustomHeadersToAll && isCustomHeaderCapable(f)
                             ? nextHeaders
@@ -574,6 +784,7 @@ const onSelectSheet = (sheetName) => {
             const nextValue = Array.isArray(item?.customHeaders) ? item.customHeaders.join(', ') : ''
             setCustomHeadersText(nextValue)
         }
+        setPreview({ type: 'message', message: 'Loading preview...' })
         await loadPreview(files[idx]?.file, idx)
     }
 
@@ -591,20 +802,23 @@ const onSelectSheet = (sheetName) => {
             clone[selectedIdx] = { ...item, parseRange: nextRange }
             return clone
         })
-        if (preview?.type === 'text-lines' && preview.rawText && selectedFile) {
-            buildTextPreview(preview.rawText, nextRange, selectedFile.name)
+        if (preview?.type === 'text-lines' && selectedFile) {
+            void loadSelectedTextRangePreview(selectedFile, nextRange)
         }
     }
 
     const commitRangeInput = (nextStartRaw, nextEndRaw) => {
         if (preview?.type !== 'text-lines') return
-        const total = preview.totalLines || 1
         const startVal = Number(nextStartRaw)
         const endVal = Number(nextEndRaw)
         if (!Number.isFinite(startVal) || !Number.isFinite(endVal)) return
         const next = {
-            start: clamp(startVal, 1, total),
-            end: clamp(endVal, 1, total),
+            start: Math.max(1, Math.trunc(startVal)),
+            end: Math.max(1, Math.trunc(endVal)),
+        }
+        if (preview.totalLines != null) {
+            next.start = clamp(next.start, 1, preview.totalLines)
+            next.end = clamp(next.end, next.start, preview.totalLines)
         }
         if (next.end < next.start) next.end = next.start
         updateParseRange(next)
@@ -681,13 +895,15 @@ const onSelectSheet = (sheetName) => {
             return
         }
 
-        if (headerMode === 'custom') {
+        const hasCustomHeaderFiles = files.some((it) => isCustomHeaderCapable(it.file))
+
+        if (headerMode === 'custom' && hasCustomHeaderFiles) {
             if (applyCustomHeadersToAll) {
                 if (!headersList || !headersList.length) {
                     return setError("Provide custom headers when header_mode is 'custom'.")
                 }
             } else {
-                const anyCustom = files.some((it) => Array.isArray(it.customHeaders) && it.customHeaders.length)
+                const anyCustom = files.some((it) => isCustomHeaderCapable(it.file) && Array.isArray(it.customHeaders) && it.customHeaders.length)
                 if (!anyCustom) {
                     return setError("Provide custom headers for at least one file or enable 'Apply custom headers to all files'.")
                 }
@@ -734,7 +950,7 @@ const onSelectSheet = (sheetName) => {
                         end_line: Number(it.parseRange.end),
                     }
                 }
-                if (headerMode === 'custom' && Array.isArray(it.customHeaders) && it.customHeaders.length) {
+                if (headerMode === 'custom' && isCustomHeaderCapable(it.file) && Array.isArray(it.customHeaders) && it.customHeaders.length) {
                     entry.custom_headers = it.customHeaders
                 }
                 return entry
@@ -747,7 +963,7 @@ const onSelectSheet = (sheetName) => {
                     datasetType,
                     tagName: tag,
                     headerMode,
-                    customHeaders: headerMode === 'custom' && applyCustomHeadersToAll ? headersList : null,
+                    customHeaders: headerMode === 'custom' && hasCustomHeaderFiles && applyCustomHeadersToAll ? headersList : null,
                     manifest,
                     onUploadProgress: (evt) => {
                         if (!evt.total) return setUploadProgress(null)
@@ -801,7 +1017,7 @@ const onSelectSheet = (sheetName) => {
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
                                     <p className='uploadtext'>
-                                        Supported: CSV/Excel for visualization. Images/others stored as raw only.
+                                        Supported: CSV/Excel and line-based text files like TXT, DAT, C, FUL, KUL, PDT, FIN. Images/others stored as raw only.
                                     </p>
                                 </label>
                                 <input
@@ -890,7 +1106,7 @@ const onSelectSheet = (sheetName) => {
                                     </label>
                                 </div> */}
 
-                                {hasTabularFiles && (
+                                {hasHeaderModeFiles && (
     <div className="form-field">
         <label style={{ marginTop: 10 }} className="summaryLabel">
             Plot File Header
@@ -935,7 +1151,7 @@ const onSelectSheet = (sheetName) => {
                         if (applyCustomHeadersToAll) {
                             setFiles(prev =>
                                 prev.map(item =>
-                                    isTabular(item.file)
+                                    isCustomHeaderCapable(item.file)
                                         ? { ...item, customHeaders: nextHeaders }
                                         : item
                                 )
@@ -943,10 +1159,9 @@ const onSelectSheet = (sheetName) => {
                         } else if (selectedIdx != null) {
                             setFiles(prev => {
                                 const clone = [...prev]
-                                clone[selectedIdx] = {
-                                    ...clone[selectedIdx],
-                                    customHeaders: nextHeaders
-                                }
+                                const item = clone[selectedIdx]
+                                if (!item || !isCustomHeaderCapable(item.file)) return prev
+                                clone[selectedIdx] = { ...item, customHeaders: nextHeaders }
                                 return clone
                             })
                         }
@@ -969,7 +1184,7 @@ const onSelectSheet = (sheetName) => {
 
                             setFiles(prev =>
                                 prev.map(item =>
-                                    isTabular(item.file)
+                                    isCustomHeaderCapable(item.file)
                                         ? { ...item, customHeaders: nextHeaders }
                                         : item
                                 )
@@ -1168,7 +1383,12 @@ const onSelectSheet = (sheetName) => {
                                             Header is auto-detected from the first selected line.
                                         </div>
                                         <div style={{fontSize:'11px',fontFamily:'"Inter-Regular", Helvetica',fontWeight:400}}>
-                                            Total Line Count :{preview.totalLines}</div>
+                                            {preview.totalLines != null
+                                                ? `Total Line Count: ${preview.totalLines}`
+                                                : preview.lineCountStatus === 'counting'
+                                                    ? 'Counting total lines in the background. Preview is available now.'
+                                                    : 'Preparing line count...'}
+                                        </div>
 
                                     <div style={{ marginTop:"10px",display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                                         
@@ -1176,7 +1396,7 @@ const onSelectSheet = (sheetName) => {
                                         <input
                                                 type="number"
                                                 min={1}
-                                                max={preview.totalLines || 1}
+                                                max={preview.totalLines || undefined}
                                                 value={rangeInput.start}
                                                 onChange={(e) => {
                                                     setRangeInput((prev) => ({ ...prev, start: e.target.value }))
@@ -1190,7 +1410,7 @@ const onSelectSheet = (sheetName) => {
                                         <input
                                                 type="number"
                                                 min={1}
-                                                max={preview.totalLines || 1}
+                                                max={preview.totalLines || undefined}
                                                 value={rangeInput.end}
                                                 onChange={(e) => {
                                                     setRangeInput((prev) => ({ ...prev, end: e.target.value }))
@@ -1215,7 +1435,7 @@ const onSelectSheet = (sheetName) => {
                                                     )
                                                 }}
                                             />
-                                            <span  style={{ margin: 0, fontSize:'11px', fontFamily:'"Inter-Regular", Helvetica', fontWeight:400 }}>Apply range to all .dat/.c files</span>
+                                            <span  style={{ margin: 0, fontSize:'11px', fontFamily:'"Inter-Regular", Helvetica', fontWeight:400 }}>Apply range to all line-based text files</span>
                                         </label>
                                     </div>
                                        
@@ -1263,8 +1483,8 @@ const onSelectSheet = (sheetName) => {
                                     {preview.type === 'text-lines' && (
                                         <div style={{ marginTop:"10px",display: 'flex', flexDirection: 'column', gap: 12 }}>
                                             <div style={{ padding:"12px",maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
-                                                {preview.lines.map((ln, i) => {
-                                                    const lineNo = i + 1
+                                                {preview.lines.map((line) => {
+                                                    const lineNo = line.number
                                                     const inRange = lineNo >= (preview.range?.start || 1) && lineNo <= (preview.range?.end || 1)
                                                     return (
                                                         <div
@@ -1277,21 +1497,30 @@ const onSelectSheet = (sheetName) => {
                                                                 fontFamily: 'monospace',
                                                                 fontSize: 12,
                                                                 border: '1px solid #e5e7eb',
-                                                                height:"40px",
-                                                                alignItems:"center",
+                                                                alignItems: 'flex-start',
+                                                                minWidth: 0,
                                                             }}
                                                         >
-                                                            <span style={{ width: 20, color: '#6b7280', textAlign: 'right' }}>{lineNo}</span>
+                                                            <span style={{ minWidth: 32, color: '#6b7280', textAlign: 'right', paddingTop: 2 }}>{lineNo}</span>
                                                             
-                                                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                                {ln === '' ? ' ' : ln}
+                                                            <span style={{ flex: 1, minWidth: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                                                {line.text === '' ? ' ' : line.text}
                                                             </span>
                                                         </div>
                                                     )
                                                 })}
                                             </div>
                                             {preview.truncated && (
-                                                <div className="summaryLabel">Showing first {MAX_TEXT_PREVIEW_LINES} lines.</div>
+                                                <div className="summaryLabel">
+                                                    {preview.previewMode === 'selection'
+                                                        ? `Showing the first ${DEFAULT_PREVIEW_LINE_LIMIT} lines from the selected range window.`
+                                                        : `Showing the first ${DEFAULT_PREVIEW_LINE_LIMIT} lines for preview.`}
+                                                </div>
+                                            )}
+                                            {preview.selectionTruncated && (
+                                                <div className="summaryLabel">
+                                                    Selected range is larger than the preview window. Upload will still use the full start/end range.
+                                                </div>
                                             )}
 
                                             {preview.table?.headers?.length ? (
