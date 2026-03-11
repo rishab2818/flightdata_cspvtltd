@@ -54,6 +54,7 @@ export default function MatPlotBuilder({
   onSeriesChange,
   loading,
   showViewAction = true,
+  showHeaderFields = true,
 }) {
   const { variables, numericVariables, loading: varsLoading, error: varsError } = useMatVariables(jobId)
   const [focusedVar, setFocusedVar] = useState('')
@@ -222,7 +223,34 @@ export default function MatPlotBuilder({
   return (
     <div className="mat-plot-builder">
       <div className="mat-plot-builder__header">
-        <div className="mat-plot-builder__field">
+
+  {showHeaderFields && (
+    <>
+      <div className="mat-plot-builder__field">
+        <label>MAT Chart Type</label>
+        <select
+          value={chartType}
+          onChange={(event) => onChartTypeChange?.(event.target.value)}
+        >
+          {CHART_OPTIONS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="ps-field">
+        <label>Plot Name (Optional)</label>
+        <input
+          placeholder="Defaults to MATLAB signature"
+          value={series?.label || ''}
+          onChange={(event) => onSeriesChange({ label: event.target.value })}
+        />
+      </div>
+    </>
+  )}
+        {/* <div className="mat-plot-builder__field">
           <label>MAT Chart Type</label>
           <select
             value={chartType}
@@ -235,6 +263,14 @@ export default function MatPlotBuilder({
             ))}
           </select>
         </div>
+         <div className="ps-field">
+          <label>Plot Name (Optional)</label>
+          <input
+            placeholder="Defaults to MATLAB signature"
+            value={series?.label || ''}
+            onChange={(event) => onSeriesChange({ label: event.target.value })}
+          />
+        </div> */}
 
         {!isThreeD && (
           <div className="mat-plot-builder__field">
@@ -279,7 +315,7 @@ export default function MatPlotBuilder({
         )}
       </div>
 
-      <div className="mat-plot-builder__panel">
+      {/* <div className="mat-plot-builder__panel">
         <div className="mat-plot-builder__panel-title"> Plot Builder</div>
 
         {(mode === 'plot_xy' || mode === 'plot3') && (
@@ -322,31 +358,72 @@ export default function MatPlotBuilder({
           />
         )}
 
-        <div className="mat-plot-builder__preview-text">
+        {/* <div className="mat-plot-builder__preview-text">
           Slice Preview: {signatureText || 'Select variable(s)'} | Empty slice means full variable (`:`).
-        </div>
-      </div>
+        </div> */}
+      
 
-      <div className="mat-plot-builder__footer">
-        <div className="ps-field">
-          <label>Plot Name (Optional)</label>
-          <input
-            placeholder="Defaults to MATLAB signature"
-            value={series?.label || ''}
-            onChange={(event) => onSeriesChange({ label: event.target.value })}
-          />
-        </div>
-        <div className="ps-field">
-          <button type="submit" className="plot-btn" disabled={!canPlot}>
-            <img src={ChartLine1} alt="chart" />
-            {loading ? 'Generating…' : 'Generate Plot'}
-          </button>
-        </div>
-      </div>
+      <div className="mat-plot-builder__panel">
+  <div className="mat-plot-builder__panel-title">Plot Builder</div>
 
-      <div className="summary-label mat-plot-builder__hint">
+  <div className="mat-plot-builder__xy-grid">
+
+    {(mode === 'plot_xy' || mode === 'plot3') && (
+      <MatVariablePicker
+        label="X Variable"
+        variables={numericVariables}
+        valueVar={xVar}
+        valueSlice={xSlice}
+        onVarChange={(value) => onSeriesChange({ matXVar: value })}
+        onSliceChange={(value) => onSeriesChange({ matXSlice: value })}
+        preview={previewByAxis.x}
+        required
+        disabled={!jobId}
+      />
+    )}
+
+    <MatVariablePicker
+      label="Y Variable"
+      variables={numericVariables}
+      valueVar={yVar}
+      valueSlice={ySlice}
+      onVarChange={(value) => onSeriesChange({ matYVar: value, matVar: value })}
+      onSliceChange={(value) => onSeriesChange({ matYSlice: value, matSliceExpr: value })}
+      preview={previewByAxis.y}
+      required
+      disabled={!jobId}
+    />
+
+  </div>
+
+  {mode === 'plot3' && (
+    <MatVariablePicker
+      label="Z Variable"
+      variables={numericVariables}
+      valueVar={zVar}
+      valueSlice={zSlice}
+      onVarChange={(value) => onSeriesChange({ matZVar: value })}
+      onSliceChange={(value) => onSeriesChange({ matZSlice: value })}
+      preview={previewByAxis.z}
+      required
+      disabled={!jobId}
+    />
+  )}
+</div>
+
+    <div
+  className="mat-plot-builder__footer"
+  style={{ display: 'flex', justifyContent: 'flex-end' }}
+>
+  <button type="submit" className="plot-btn" disabled={!canPlot}>
+    <img src={ChartLine1} alt="chart" />
+    {loading ? 'Generating…' : 'Generate Plot'}
+  </button>
+</div>
+
+      {/* <div className="summary-label mat-plot-builder__hint">
         MATLAB slices are 1-based and sent as-is: Y({displaySliceExpr(ySlice)})
-      </div>
+      </div> */}
       {!!compatibilityError && (
         <div className="project-shell__error">{compatibilityError}</div>
       )}

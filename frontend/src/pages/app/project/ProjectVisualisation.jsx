@@ -1897,9 +1897,9 @@ export default function ProjectVisualisation() {
           <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
-              <p className="summary-label" style={{ margin: 0 }}>
+              {/* <p className="summary-label" style={{ margin: 0 }}>
                 Enter a formula, map detected variables to sources, preview, then save.
-              </p>
+              </p> */}
             </div>
 
             {calcError && <div className="project-shell__error">{calcError}</div>}
@@ -1992,7 +1992,91 @@ export default function ProjectVisualisation() {
 
             <div className="ps-field calc-formula-editor">
               <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Formula <span style={{ color: "red", fontSize: "16px" }}>*</span></label>
-              <textarea
+              <div className="calc-editor-row">
+  <textarea
+    ref={calcFormulaInputRef}
+    className="calc-formula-input"
+    value={calcFormulaExpression}
+    onChange={(e) => handleCalcFormulaChange(e.target.value)}
+    onClick={handleCalcFormulaCursorChange}
+    onKeyUp={handleCalcFormulaCursorChange}
+    onKeyDown={handleCalcFormulaKeyDown}
+    onSelect={handleCalcFormulaCursorChange}
+    spellCheck={false}
+    placeholder="Example: sqrt(a+b) * (cos(a) + sin(b))"
+  />
+
+  {calcFormulaSuggestions.length > 0 && (
+                <div className="calc-suggestion-list">
+                  {calcFormulaSuggestions.map((fn) => (
+                    <button
+                      key={fn.name}
+                      type="button"
+                      className="calc-suggestion-item"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleInsertFormulaFunction(fn.name)}
+                    >
+                      <span className="calc-suggestion-name">{fn.name}</span>
+                      <span className="calc-suggestion-meta">{fn.example || ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* <div className="summary-label" style={{ marginTop: 6 }}>
+                Function autocomplete: type a function name, then press <code>Tab</code>/<code>Enter</code> or click suggestion.
+              </div> */}
+              {/* {!!calcFormulaError && (
+                <div className="project-shell__error" style={{ marginTop: 8 }}>
+                  {calcFormulaError}
+                </div>
+              )} */}
+              {/* {!calcFormulaError && !!calcNormalizedExpression && calcNormalizedExpression !== calcFormulaExpression.trim() && (
+                <div className="summary-label" style={{ marginTop: 8 }}>
+                  Normalized: <code>{calcNormalizedExpression}</code>
+                </div>
+              )} */}
+              <div className="calc-preview-section">
+  <label className="calc-preview-label">
+    Formula Preview
+  </label>
+
+  <div className="calc-syntax-preview">
+    {calcFormulaExpression ? (
+      calcFormulaTokens.map((part, idx) => (
+        <span
+          key={`calc-token-${idx}`}
+          className={`calc-token calc-token--${part.kind}`}
+        >
+          {part.token}
+        </span>
+      ))
+    ) : (
+      <span className="calc-token calc-token--plain">
+        Formula syntax preview appears here.
+      </span>
+    )}
+  </div>
+</div>
+
+  {/* <div className="calc-syntax-preview">
+    {calcFormulaExpression ? (
+      calcFormulaTokens.map((part, idx) => (
+        <span
+          key={`calc-token-${idx}`}
+          className={`calc-token calc-token--${part.kind}`}
+        >
+          {part.token}
+        </span>
+      ))
+    ) : (
+      <span className="calc-token calc-token--plain">
+        Formula syntax preview appears here.
+      </span>
+    )}
+  </div> */}
+</div>
+              
+              {/* <textarea
                 ref={calcFormulaInputRef}
                 className="calc-formula-input"
                 value={calcFormulaExpression}
@@ -2045,6 +2129,7 @@ export default function ProjectVisualisation() {
               ) : (
                 <span className="calc-token calc-token--plain">Formula syntax preview appears here.</span>
               )}
+            </div> */}
             </div>
 
             <div className="Row calculation-row">
@@ -2208,14 +2293,14 @@ export default function ProjectVisualisation() {
                   </div>
                 ) : calcMatPreview ? (
                   <div>
-                    <div className="summary-label" style={{ marginBottom: 8 }}>
+                    {/* <div className="summary-label" style={{ marginBottom: 8 }}>
                       {calcIsSourceMatPreview
                         ? `Showing MAT source preview for ${calcMatPreviewContext?.variable || 'selected variable'}.`
                         : 'Showing calculated MAT output preview.'}
-                    </div>
-                    <div className="summary-label" style={{ marginBottom: 8 }}>
+                    </div> */}
+                    {/* <div className="summary-label" style={{ marginBottom: 8 }}>
                       {calcMatPreview?.display_shape || toMatShapeText(calcMatPreview?.shape)}{calcMatPreview?.dtype ? ` | ${calcMatPreview.dtype}` : ''}{calcMatPreview?.slice_expr ? ` | ${calcMatPreview.slice_expr}` : ''}
-                    </div>
+                    </div> */}
                     {calcMatPreview?.format === 'scalar' && (
                       <div style={{ fontFamily: 'monospace' }}>
                         {String(calcMatPreview?.scalar ?? '')}
@@ -2357,162 +2442,242 @@ export default function ProjectVisualisation() {
 
 
               {/* ===== Editor (aligned with old UI grid) ===== */}
-              <div className="ps-row">
-                <div className="ps-field">
-                  <label>Dataset</label>
-                  <select
-                    value={activeSeries?.datasetType || 'wind'}
-                    onChange={(e) =>
-                      updateActiveSeries({
-                        datasetType: e.target.value,
-                        tag: '',
-                        jobId: '',
-                        xAxis: '',
-                        yAxis: '',
-                        zAxis: '',
-                        ...MAT_SERIES_DEFAULTS,
-                        derivedColumns: [],
-                      })
-                    }
-                  >
-                    {DATASET_TYPES.map((d) => (
-                      <option key={d.key} value={d.key}>
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div
+  className="ps-row"
+  style={{
+    gridTemplateColumns: activeIsMat
+      ? 'repeat(5, minmax(0, 1fr))'
+      : 'repeat(7, minmax(0, 1fr))',
+  }}
+>
+  <div className="ps-field">
+    <label>Dataset</label>
+    <select
+      value={activeSeries?.datasetType || 'wind'}
+      onChange={(e) =>
+        updateActiveSeries({
+          datasetType: e.target.value,
+          tag: '',
+          jobId: '',
+          xAxis: '',
+          yAxis: '',
+          zAxis: '',
+          ...MAT_SERIES_DEFAULTS,
+          derivedColumns: [],
+          label: '',
+        })
+      }
+    >
+      {DATASET_TYPES.map((d) => (
+        <option key={d.key} value={d.key}>
+          {d.label}
+        </option>
+      ))}
+    </select>
+  </div>
 
-                <div className="ps-field">
-                  <label>Tag</label>
-                  <select
-                    value={activeSeries?.tag || ''}
-                    onChange={(e) =>
-                      updateActiveSeries({
-                        tag: e.target.value,
-                        jobId: '',
-                        xAxis: '',
-                        yAxis: '',
-                        zAxis: '',
-                        ...MAT_SERIES_DEFAULTS,
-                        derivedColumns: [],
-                      })
-                    }
-                  >
-                    <option value="">Select</option>
-                    {getTags(activeSeries?.datasetType).map((t) => (
-                      <option key={t.tag_name} value={t.tag_name}>
-                        {t.tag_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+  <div className="ps-field">
+    <label>Tag</label>
+    <select
+      value={activeSeries?.tag || ''}
+      onChange={(e) =>
+        updateActiveSeries({
+          tag: e.target.value,
+          jobId: '',
+          xAxis: '',
+          yAxis: '',
+          zAxis: '',
+          ...MAT_SERIES_DEFAULTS,
+          derivedColumns: [],
+          label: '',
+        })
+      }
+    >
+      <option value="">Select</option>
+      {getTags(activeSeries?.datasetType).map((t) => (
+        <option key={t.tag_name} value={t.tag_name}>
+          {t.tag_name}
+        </option>
+      ))}
+    </select>
+  </div>
 
-                <div className="ps-field">
-                  <label>File</label>
-                  <select
-                    value={activeSeries?.jobId || ''}
-                    onChange={(e) =>
-                      updateActiveSeries({
-                        jobId: e.target.value,
-                        xAxis: '',
-                        yAxis: '',
-                        zAxis: '',
-                        ...MAT_SERIES_DEFAULTS,
-                        derivedColumns: [],
-                      })
-                    }
-                    disabled={!activeSeries?.tag}
-                  >
-                    <option className="FileSelect" value="">{activeSeries?.tag ? 'Select' : 'Select tag first'}</option>
-                    {activeFiles.map((f) => (
-                      <option className="FileSelect" key={f.job_id} value={f.job_id}>
-                        {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
-                      </option>
-                    ))}
-                  </select>
-                  {activeIsMat && (
-                    <button
-                      type="button"
-                      className="project-shell__nav-link"
-                      style={{ marginTop: 8, width: 100 }}
-                      disabled={!activeSeries?.jobId}
-                      onClick={() =>
-                        openMatPreviewInNewTab({
-                          projectId,
-                          datasetType: activeSeries?.datasetType,
-                          tagName: activeSeries?.tag,
-                          jobId: activeSeries?.jobId,
-                        })
-                      }
-                    >
-                      <img src={ViewIcon} alt="view" style={{ width: 14, height: 14 }} />
-                      View
-                    </button>
-                  )}
-                </div>
+  {/* <div className="ps-field">
+    <label>File</label>
+    <select
+      value={activeSeries?.jobId || ''}
+      onChange={(e) =>
+        updateActiveSeries({
+          jobId: e.target.value,
+          xAxis: '',
+          yAxis: '',
+          zAxis: '',
+          ...MAT_SERIES_DEFAULTS,
+          derivedColumns: [],
+          label: '',
+        })
+      }
+      disabled={!activeSeries?.tag}
+    >
+      <option className="FileSelect" value="">
+        {activeSeries?.tag ? 'Select' : 'Select tag first'}
+      </option>
+      {activeFiles.map((f) => (
+        <option className="FileSelect" key={f.job_id} value={f.job_id}>
+          {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
+        </option>
+      ))}
+    </select>
 
+    {activeIsMat && (
+      <button
+        type="button"
+        className="project-shell__nav-link"
+        style={{ marginTop: 8, width: 100 }}
+        disabled={!activeSeries?.jobId}
+        onClick={() =>
+          openMatPreviewInNewTab({
+            projectId,
+            datasetType: activeSeries?.datasetType,
+            tagName: activeSeries?.tag,
+            jobId: activeSeries?.jobId,
+          })
+        }
+      >
+        <img src={ViewIcon} alt="view" style={{ width: 14, height: 14 }} />
+        View
+      </button>
+    )}
+  </div> */}
 
-                {!activeIsMat && (
-                  <>
-                    <div className="ps-field">
-                      <label>Plot Type</label>
-                      <select
-                        value={dimension}
-                        onChange={(e) => {
-                          setDimension(e.target.value)
-                        }}
-                      >
-                        <option value="2d">2D</option>
-                        <option value="3d">3D</option>
-                      </select>
-                    </div>
+  <div className="ps-field">
+  <label>File</label>
 
-                    <div className="ps-field">
-                      <label>Chart Type</label>
-                      <select
-                        value={chartType}
-                        onChange={(e) => setChartType(e.target.value)}
-                      >
-                        <option value="">Select Chart Type</option>
-                        {activeChartOptions.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    
+    <select
+      value={activeSeries?.jobId || ''}
+      onChange={(e) =>
+        updateActiveSeries({
+          jobId: e.target.value,
+          xAxis: '',
+          yAxis: '',
+          zAxis: '',
+          ...MAT_SERIES_DEFAULTS,
+          derivedColumns: [],
+          label: '',
+        })
+      }
+      disabled={!activeSeries?.tag}
+      style={{ flex: 1 }}
+    >
+      <option value="">
+        {activeSeries?.tag ? 'Select' : 'Select tag first'}
+      </option>
 
-                    <div className="ps-field">
-                      <label>X Scale</label>
-                      <select value={xScale} onChange={(e) => setXScale(e.target.value)}>
-                        <option value="linear">Linear</option>
-                        <option value="log">Log</option>
-                      </select>
-                    </div>
+      {activeFiles.map((f) => (
+        <option key={f.job_id} value={f.job_id}>
+          {f.sheet_name ? `${f.filename} — ${f.sheet_name}` : f.filename}
+        </option>
+      ))}
+    </select>
 
-                    <div className="ps-field">
-                      <label>Y Scale</label>
-                      <select value={yScale} onChange={(e) => setYScale(e.target.value)}>
-                        <option value="linear">Linear</option>
-                        <option value="log">Log</option>
-                      </select>
-                    </div>
-                  </>
-                )}
+    {activeIsMat && (
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={() =>
+          openMatPreviewInNewTab({
+            projectId,
+            datasetType: activeSeries?.datasetType,
+            tagName: activeSeries?.tag,
+            jobId: activeSeries?.jobId,
+          })
+        }
+        title="View MAT File"
+      >
+        <img src={ViewIcon} alt="view" style={{ width: 18, height: 18 }} />
+      </button>
+    )}
 
-                {/* <div className="ps-field">
-            <label>Chart Type</label>
-            <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
-              {CHART_TYPES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </div>  */}
+  </div>
+</div>
 
-              </div>
+  {activeIsMat ? (
+    <>
+      <div className="ps-field">
+        <label>MAT Chart Type</label>
+        <select
+          value={chartType}
+          onChange={(e) => setChartType(e.target.value)}
+          disabled={!activeSeries?.jobId}
+        >
+          {activeChartOptions.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="ps-field">
+        <label>Plot Name (Optional)</label>
+        <input
+          value={activeSeries?.label || ''}
+          onChange={(e) => updateActiveSeries({ label: e.target.value })}
+          placeholder="Defaults to MATLAB signature"
+          disabled={!activeSeries?.jobId}
+        />
+      </div>
+    </>
+  ) : (
+    <>
+      <div className="ps-field">
+        <label>Plot Type</label>
+        <select
+          value={dimension}
+          onChange={(e) => {
+            setDimension(e.target.value)
+          }}
+        >
+          <option value="2d">2D</option>
+          <option value="3d">3D</option>
+        </select>
+      </div>
+
+      <div className="ps-field">
+        <label>Chart Type</label>
+        <select
+          value={chartType}
+          onChange={(e) => setChartType(e.target.value)}
+        >
+          <option value="">Select Chart Type</option>
+          {activeChartOptions.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="ps-field">
+        <label>X Scale</label>
+        <select value={xScale} onChange={(e) => setXScale(e.target.value)}>
+          <option value="linear">Linear</option>
+          <option value="log">Log</option>
+        </select>
+      </div>
+
+      <div className="ps-field">
+        <label>Y Scale</label>
+        <select value={yScale} onChange={(e) => setYScale(e.target.value)}>
+          <option value="linear">Linear</option>
+          <option value="log">Log</option>
+        </select>
+      </div>
+    </>
+  )}
+</div>
 
               {!activeIsMat && (
                 <div
@@ -2661,10 +2826,12 @@ export default function ProjectVisualisation() {
                   onSeriesChange={updateActiveSeries}
                   loading={loading}
                   showViewAction={false}
+                  showHeaderFields={false}
                 />
               )}
 
               {/* ===== Series Manager (KEPT) ===== */}
+              {!activeIsMat && (
               <div className="ps-row" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
                 <div className="ps-field" style={{ gridColumn: 'span 4' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -2754,6 +2921,7 @@ export default function ProjectVisualisation() {
                   </div>
                 </div>
               </div>
+              )}
 
 
             </form>

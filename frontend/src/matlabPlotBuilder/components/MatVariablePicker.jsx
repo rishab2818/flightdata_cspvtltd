@@ -20,13 +20,14 @@ export default function MatVariablePicker({
       <div className="mat-plot-builder__picker-head">
         <label>
           {label}
-          {required ? ' *' : ''}
+          {/* {required ? ' *' : ''} */}
         </label>
         <span className="summary-label">
           {valueVar ? formatVariableSliceText(valueVar, valueSlice) : 'No variable selected'}
         </span>
       </div>
-      <div className="mat-plot-builder__picker-row">
+
+      <div className="mat-plot-builder__picker-stack">
         <select
           value={valueVar || ''}
           onChange={(event) => onVarChange?.(event.target.value)}
@@ -39,13 +40,15 @@ export default function MatVariablePicker({
             </option>
           ))}
         </select>
+
         <MatSliceInput
           value={valueSlice}
           onChange={onSliceChange}
           disabled={disabled || !valueVar}
-          placeholder="(:), (:,1), (:,:,1)"
+          placeholder="Slice (optional): :, or :, :, 1"
         />
       </div>
+
       <div className="summary-label">
         {preview?.loading ? 'Checking slice...' : ''}
         {!preview?.loading && preview?.error ? preview.error : ''}
