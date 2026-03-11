@@ -43,14 +43,6 @@ const NUM_TOKEN_RE = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
-const inferDelimiter = (lines) => {
-    const candidates = [',', '\t', ';', '|']
-    for (const d of candidates) {
-        if (lines.some((ln) => ln.includes(d))) return d
-    }
-    return null
-}
-
 // For the ignoring the special charcter for the header 
 const stripLeadingJunk = (line) => {
     return line.replace(/^[\s#\$%&@!;:,._-]+/, '')
@@ -62,12 +54,95 @@ const splitLine = (line, delim) => {
     if (delim) return cleaned.trim().split(delim).map((t) => t.trim())
     return cleaned.trim().split(/\s+/).filter((t) => t !== '')
 }
+const tokenCount = (tokens) => tokens.filter((tok) => tok !== '').length
 
+const trimTrailingEmpty = (tokens) => {
+    const out = [...tokens]
+    while (out.length && out[out.length - 1] === '') out.pop()
+    return out
+}
 
-const lineHasStringTokens = (line, delim) => {
-    const tokens = splitLine(line, delim)
-    if (!tokens.length) return false
-    return tokens.some((tok) => tok && !NUM_TOKEN_RE.test(tok))
+const splitForMode = (line, delim) => trimTrailingEmpty(splitLine(line, delim))
+
+const inferDelimiter = (lines) => {
+    const candidates = [null, ',', '\t', ';', '|']
+    let bestDelim = null
+    let bestScore = [-1, -1, -1]
+
+    for (const delim of candidates) {
+        const counts = lines
+            .filter((ln) => ln.trim() !== '')
+            .map((ln) => tokenCount(splitForMode(ln, delim)))
+        const multi = counts.filter((count) => count >= 2)
+
+        let score = [0, 0, 0]
+        if (multi.length) {
+            const freq = {}
+            for (const count of multi) {
+                freq[count] = (freq[count] || 0) + 1
+            }
+            let dominantCols = null
+            let dominantFreq = -1
+            Object.keys(freq).forEach((k) => {
+                const cols = Number(k)
+                const f = freq[k]
+                if (f > dominantFreq || (f === dominantFreq && cols > dominantCols)) {
+                    dominantFreq = f
+                    dominantCols = cols
+                }
+            })
+            score = [dominantFreq, multi.length, dominantCols || 0]
+        }
+
+        const isBetter =
+            score[0] > bestScore[0]
+            || (score[0] === bestScore[0] && score[1] > bestScore[1])
+            || (score[0] === bestScore[0] && score[1] === bestScore[1] && score[2] > bestScore[2])
+        if (isBetter) {
+            bestScore = score
+            bestDelim = delim
+        }
+    }
+
+    return bestDelim
+}
+
+const findTabularStartIndex = (parsedRows) => {
+    const counts = parsedRows.map((row) => tokenCount(row))
+    const firstMulti = counts.findIndex((count) => count >= 2)
+    const fallback = firstMulti >= 0 ? firstMulti : 0
+
+    for (let i = 0; i < counts.length; i += 1) {
+        const count = counts[i]
+        if (count < 2) continue
+        const tolerance = Math.max(1, Math.floor(count * 0.35))
+        let similar = 0
+        for (let j = i + 1; j < Math.min(counts.length, i + 6); j += 1) {
+            const nextCount = counts[j]
+            if (nextCount >= 2 && Math.abs(nextCount - count) <= tolerance) {
+                similar += 1
+            }
+        }
+        if (similar >= 1) return i
+    }
+    return fallback
+}
+
+const mostlyNumeric = (tokens) => {
+    const values = tokens.filter((tok) => tok !== '')
+    if (!values.length) return false
+    const numeric = values.filter((tok) => NUM_TOKEN_RE.test(tok)).length
+    return numeric / values.length >= 0.6
+}
+
+const makeUniqueHeaders = (headers) => {
+    const seen = new Map()
+    return headers.map((raw, idx) => {
+        const base = stripLeadingJunk(String(raw || '').trim()) || `column_${idx + 1}`
+        const count = (seen.get(base) || 0) + 1
+        seen.set(base, count)
+        return count === 1 ? base : `${base}_${count}`
+    })
 }
 
 const buildTableFromLines = (lines) => {
@@ -75,15 +150,26 @@ const buildTableFromLines = (lines) => {
     if (!cleanLines.length) return { headers: [], rows: [] }
 
     const delim = inferDelimiter(cleanLines)
-    const headerIsPresent = lineHasStringTokens(cleanLines[0], delim)
+    const parsedRows = cleanLines.map((ln) => splitForMode(ln, delim))
+    const startIdx = findTabularStartIndex(parsedRows)
+    const candidateRows = parsedRows.slice(startIdx).filter((row) => tokenCount(row) > 0)
+    if (!candidateRows.length) return { headers: [], rows: [] }
 
-    const dataLines = headerIsPresent ? cleanLines.slice(1) : cleanLines
-    const rowsRaw = dataLines.map((ln) => splitLine(ln, delim))
+    const firstRow = candidateRows[0]
+    const secondRow = candidateRows.length > 1 ? candidateRows[1] : null
+    const headerIsPresent =
+        tokenCount(firstRow) >= 2
+        && firstRow.some((tok) => tok && !NUM_TOKEN_RE.test(tok))
+        && (!secondRow || mostlyNumeric(secondRow))
+
+    const rowsRaw = (headerIsPresent ? candidateRows.slice(1) : candidateRows)
+        .filter((row) => tokenCount(row) > 0)
     const maxCols = rowsRaw.reduce((m, r) => Math.max(m, r.length), 0)
+    if (maxCols === 0) return { headers: [], rows: [] }
 
     let headers = []
     if (headerIsPresent) {
-        headers = splitLine(cleanLines[0], delim).map((h, i) => (h || `column_${i + 1}`))
+        headers = firstRow.map((h, i) => (h || `column_${i + 1}`))
     } else {
         headers = Array.from({ length: maxCols }, (_, i) => `column_${i + 1}`)
     }
@@ -94,6 +180,7 @@ const buildTableFromLines = (lines) => {
     } else {
         headers = headers.slice(0, maxCols)
     }
+    headers = makeUniqueHeaders(headers)
 
     const rows = rowsRaw.slice(0, 10).map((r) => {
         const obj = {}
