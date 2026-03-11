@@ -115,6 +115,24 @@
 
 // }
 import { axiosClient } from '../lib/axiosClient'
+import { storage } from '../lib/storage'
+
+const resolveApiBaseUrl = () => {
+  const configuredBase =
+    window.__FD_API_BASE__ ||
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_BASE
+
+  if (!configuredBase) return window.location.origin
+
+  try {
+    return new URL(configuredBase, window.location.origin).toString()
+  } catch {
+    return window.location.origin
+  }
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 export const ingestionApi = {
   start: async (projectId, file, options = {}) => {
@@ -165,6 +183,12 @@ export const ingestionApi = {
   status: async (jobId) => {
     const { data } = await axiosClient.get(`/api/ingestion/jobs/${jobId}/status`)
     return data
+  },
+  streamUrl: (jobId) => {
+    const token = storage.getToken()
+    const url = new URL(`/api/ingestion/jobs/${encodeURIComponent(jobId)}/stream`, API_BASE_URL)
+    if (token) url.searchParams.set('token', token)
+    return url.toString()
   },
   detail: async (jobId) => {
     const { data } = await axiosClient.get(`/api/ingestion/jobs/${jobId}`)

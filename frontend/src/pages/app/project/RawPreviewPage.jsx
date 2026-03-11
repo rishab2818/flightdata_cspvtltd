@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ingestionApi } from '../../../api/ingestionApi'
+import { rawPreviewApi } from '../../../api/rawPreviewApi'
 import { matApi } from '../../../mat/matApi'
 import MatlabPreviewPanel from '../../../mat/MatlabPreviewPanel'
-import * as XLSX from 'xlsx'
 import '../../../styles/project.css'
+
+const TEXT_CHUNK_SIZE = 256 * 1024
 
 export default function RawPreviewPage() {
   const { jobId } = useParams()
@@ -13,14 +14,74 @@ export default function RawPreviewPage() {
   const [previewData, setPreviewData] = useState(null)
   const [activeSheet, setActiveSheet] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState(null)
   const [rowLimit, setRowLimit] = useState(20)
-  const workbookRef = useRef(null)
+  const previewKindRef = useRef('')
 
   const refreshMatVariables = useCallback(async () => {
     if (!jobId) return
     const matInfo = await matApi.variables(jobId)
     setPreviewData({ type: 'mat', variables: matInfo?.variables || [] })
+  }, [jobId])
+
+  const loadTextChunk = useCallback(async (offset = 0, { replace = false } = {}) => {
+    if (!jobId) return
+
+    if (replace) setLoading(true)
+    else setLoadingMore(true)
+
+    try {
+      setError(null)
+      const payload = await rawPreviewApi.textChunk(jobId, {
+        offset,
+        chunkSize: TEXT_CHUNK_SIZE,
+      })
+
+      setPreviewData((prev) => {
+        const nextLines = replace
+          ? payload.lines || []
+          : [...(prev?.lines || []), ...(payload.lines || [])]
+
+        return {
+          type: 'text',
+          lines: nextLines,
+          nextOffset: payload.next_offset ?? 0,
+          hasMore: Boolean(payload.has_more),
+          chunkSize: payload.chunk_size,
+        }
+      })
+    } catch (err) {
+      console.error(err)
+      setError(err?.response?.data?.detail || err.message || 'Failed to load raw text preview')
+    } finally {
+      if (replace) setLoading(false)
+      else setLoadingMore(false)
+    }
+  }, [jobId])
+
+  const loadExcelPreview = useCallback(async (sheetName, nextRowLimit) => {
+    if (!jobId) return
+
+    setLoading(true)
+    try {
+      setError(null)
+      const payload = await rawPreviewApi.excelPreview(jobId, {
+        sheetName,
+        rowLimit: nextRowLimit || 20,
+      })
+      setActiveSheet(payload.active_sheet || '')
+      setPreviewData({
+        type: 'excel',
+        sheetNames: payload.sheet_names || [],
+        data: payload.rows || [],
+      })
+    } catch (err) {
+      console.error(err)
+      setError(err?.response?.data?.detail || err.message || 'Failed to load Excel preview')
+    } finally {
+      setLoading(false)
+    }
   }, [jobId])
 
   useEffect(() => {
@@ -30,94 +91,65 @@ export default function RawPreviewPage() {
       return
     }
 
-    let objectUrl = null
+    let cancelled = false
 
     async function fetchFile() {
       try {
         setLoading(true)
         setError(null)
+        setPreviewData(null)
+        setActiveSheet('')
+        previewKindRef.current = ''
 
-        const res = await ingestionApi.download(jobId)
-        const data = res?.data ?? res
+        const detail = await rawPreviewApi.detail(jobId)
+        if (cancelled) return
 
-        const url = data?.url
-        const filename =
-          data?.filename || data?.file_name || data?.name || 'download'
+        previewKindRef.current = detail.kind || ''
+        setFile({
+          filename: detail.filename,
+          contentType: detail.content_type,
+          sizeBytes: detail.size_bytes,
+        })
 
-        if (!url) throw new Error('Download URL not returned by API')
-
-        setFile({ filename })
-
-        // Determine file extension
-        let ext = ''
-        if (filename.includes('.')) {
-          ext = filename.split('.').pop().toLowerCase()
-        } else if (url.includes('.')) {
-          ext = url.split('?')[0].split('.').pop().toLowerCase()
+        if (detail.kind === 'text') {
+          await loadTextChunk(0, { replace: true })
+          return
         }
 
-        // TEXT
-        if (['csv', 'txt', 'dat', 'c'].includes(ext)) {
-          const fileRes = await fetch(url)
-          const blob = await fileRes.blob()
-          const text = await blob.text()
-          setPreviewData({ type: 'text', data: text })
+        if (detail.kind === 'excel') {
+          await loadExcelPreview(undefined, rowLimit)
+          return
         }
 
-        // EXCEL
-        else if (['xls', 'xlsx'].includes(ext)) {
-          const fileRes = await fetch(url)
-          const blob = await fileRes.blob()
-          const buffer = await blob.arrayBuffer()
-          const workbook = XLSX.read(buffer)
-          const sheetNames = workbook.SheetNames || []
-          workbookRef.current = workbook
-          const initialSheet = sheetNames[0] || ''
-          const sheet = initialSheet ? workbook.Sheets[initialSheet] : null
-          const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { header: 1 }) : []
-          setActiveSheet(initialSheet)
-          setPreviewData({ type: 'excel', sheetNames, data: rows })
-        }
-
-        // MAT
-        else if (ext === 'mat') {
+        if (detail.kind === 'mat') {
           await refreshMatVariables()
+          setLoading(false)
+          return
         }
 
-        // PDF
-        else if (ext === 'pdf') {
-          const fileRes = await fetch(url)
-          const blob = await fileRes.blob()
-          objectUrl = URL.createObjectURL(blob)
-          setPreviewData({ type: 'pdf', data: objectUrl })
-        }
-
-        // IMAGE
-        else if (ext.match(/(png|jpg|jpeg|gif|svg)$/)) {
-          const fileRes = await fetch(url)
-          const blob = await fileRes.blob()
-          objectUrl = URL.createObjectURL(blob)
-          setPreviewData({ type: 'image', data: objectUrl })
-        }
-
-        // FALLBACK
-        else {
-          const fileRes = await fetch(url)
-          const blob = await fileRes.blob()
-          objectUrl = URL.createObjectURL(blob)
-          setPreviewData({ type: 'download', data: objectUrl })
+        if (detail.kind === 'pdf') {
+          setPreviewData({ type: 'pdf', data: detail.download_url })
+        } else if (detail.kind === 'image') {
+          setPreviewData({ type: 'image', data: detail.download_url })
+        } else {
+          setPreviewData({ type: 'download', data: detail.download_url })
         }
       } catch (err) {
         console.error(err)
         setError(err.message || 'Failed to load raw preview')
+        if (!cancelled) setLoading(false)
       } finally {
-        setLoading(false)
+        if (!cancelled && previewKindRef.current !== 'text' && previewKindRef.current !== 'excel' && previewKindRef.current !== 'mat') {
+          setLoading(false)
+        }
       }
     }
 
-    fetchFile()
-    return () => objectUrl && URL.revokeObjectURL(objectUrl)
-  }, [jobId, refreshMatVariables])
+    void fetchFile()
+    return () => {
+      cancelled = true
+    }
+  }, [jobId, loadExcelPreview, loadTextChunk, refreshMatVariables])
 
   return (
     <div className="project-page"> 
@@ -154,7 +186,11 @@ export default function RawPreviewPage() {
                 cursor: 'pointer',
               }}
               value={rowLimit}
-              onChange={(e) => setRowLimit(Number(e.target.value))}
+              onChange={(e) => {
+                const nextLimit = Number(e.target.value)
+                setRowLimit(nextLimit)
+                void loadExcelPreview(activeSheet || undefined, nextLimit)
+              }}
             >
               {[10, 20, 50, 100, 200].map(n => (
                 <option key={n} value={n}>{n}</option>
@@ -173,19 +209,38 @@ export default function RawPreviewPage() {
         <div className="excel-preview" style={{ marginTop: 12, overflow: 'auto' }}>
           {/* TEXT */}
           {previewData?.type === 'text' && (
-            <pre
-              style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                maxHeight: 600,
-                overflow: 'auto',
-                background: '#f7f7f7',
-                padding: 12,
-                borderRadius: 4,
-              }}
-            >
-              {previewData.data}
-            </pre>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <pre
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: 600,
+                  overflow: 'auto',
+                  background: '#f7f7f7',
+                  padding: 12,
+                  borderRadius: 4,
+                  margin: 0,
+                }}
+              >
+                {(previewData.lines || []).join('\n')}
+              </pre>
+
+              {previewData.hasMore && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <span className="summary-label">
+                    Showing file content incrementally for large raw preview.
+                  </span>
+                  <button
+                    type="button"
+                    className="project-shell__nav-link"
+                    onClick={() => void loadTextChunk(previewData.nextOffset || 0)}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? 'Loading…' : 'Load more'}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* TABLE */}
@@ -214,10 +269,7 @@ export default function RawPreviewPage() {
                     onChange={(e) => {
                       const nextSheet = e.target.value
                       setActiveSheet(nextSheet)
-                      const workbook = workbookRef.current
-                      const next = workbook?.Sheets?.[nextSheet]
-                      const rows = next ? XLSX.utils.sheet_to_json(next, { header: 1 }) : []
-                      setPreviewData((prev) => (prev ? { ...prev, data: rows } : prev))
+                      void loadExcelPreview(nextSheet, rowLimit)
                     }}
                   >
                     {previewData.sheetNames.map((name) => (
