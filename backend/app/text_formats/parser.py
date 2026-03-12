@@ -1,4 +1,6 @@
+import codecs
 import re
+from collections.abc import Iterable
 
 import pandas as pd
 
@@ -109,8 +111,30 @@ def _update_numeric_stats(stats: dict, frame: pd.DataFrame):
                 stats[column]["max"] = max(stats[column]["max"], max_value)
 
 
-def text_range_to_parquet(
-    txt_path: str,
+def _iter_text_lines_from_chunks(chunks: Iterable[bytes], on_chunk=None) -> Iterable[str]:
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="ignore")
+    carry = ""
+    for chunk in chunks:
+        if not chunk:
+            continue
+        if on_chunk:
+            on_chunk(len(chunk))
+        text = decoder.decode(chunk)
+        if not text:
+            continue
+        combined = carry + text
+        segments = combined.split("\n")
+        carry = segments.pop() if segments else ""
+        for segment in segments:
+            yield segment.rstrip("\r")
+
+    tail = carry + decoder.decode(b"", final=True)
+    if tail:
+        yield tail.rstrip("\r")
+
+
+def _parse_lines_to_parquet(
+    lines: Iterable[str],
     parquet_path: str,
     parse_range: dict | None,
 ):
@@ -127,18 +151,17 @@ def text_range_to_parquet(
     selected_lines: list[str] = []
     last_line = ""
 
-    with open(txt_path, "r", errors="ignore") as handle:
-        for raw_line in handle:
-            total_lines += 1
-            line = raw_line.rstrip("\r\n")
-            last_line = line
+    for raw_line in lines:
+        total_lines += 1
+        line = raw_line.rstrip("\r\n")
+        last_line = line
 
-            if total_lines < start_requested:
-                continue
-            if end_requested is not None and total_lines > end_requested:
-                break
-            if line.strip():
-                selected_lines.append(line)
+        if total_lines < start_requested:
+            continue
+        if end_requested is not None and total_lines > end_requested:
+            break
+        if line.strip():
+            selected_lines.append(line)
 
     if total_lines == 0:
         raise ValueError("Selected file is empty")
@@ -209,3 +232,25 @@ def text_range_to_parquet(
 
     frame.to_parquet(parquet_path, index=False)
     return list(frame.columns), row_count, sample_rows, stats
+
+
+def text_range_to_parquet(
+    txt_path: str,
+    parquet_path: str,
+    parse_range: dict | None,
+):
+    with open(txt_path, "r", errors="ignore") as handle:
+        return _parse_lines_to_parquet(handle, parquet_path, parse_range)
+
+
+def text_range_stream_to_parquet(
+    chunks: Iterable[bytes],
+    parquet_path: str,
+    parse_range: dict | None,
+    on_chunk=None,
+):
+    return _parse_lines_to_parquet(
+        _iter_text_lines_from_chunks(chunks, on_chunk=on_chunk),
+        parquet_path,
+        parse_range,
+    )

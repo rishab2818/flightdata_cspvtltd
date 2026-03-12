@@ -1,5 +1,5 @@
 
-
+import io
 import json
 import logging
 import os
@@ -23,11 +23,83 @@ from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_sync_redis
 from app.db.sync_mongo import get_sync_db
 from app.repositories.notifications import create_sync_notification
-from app.text_formats import RANGE_TEXT_EXTENSIONS, TABULAR_EXTENSIONS, text_range_to_parquet
+from app.text_formats import (
+    RANGE_TEXT_EXTENSIONS,
+    TABULAR_EXTENSIONS,
+    text_range_stream_to_parquet,
+)
 
 TABULAR_EXTS = TABULAR_EXTENSIONS
 
 logger = logging.getLogger(__name__)
+MINIO_STREAM_CHUNK_SIZE = 1024 * 1024
+
+
+class _ByteProgressPublisher:
+    def __init__(self, job_id: str, total_bytes: int | None, start: int, end: int, message: str):
+        self.job_id = job_id
+        self.total_bytes = int(total_bytes) if total_bytes else None
+        self.start = start
+        self.end = end
+        self.message = message
+        self.bytes_seen = 0
+        self.last_progress = start
+
+    def on_chunk(self, size: int):
+        if not size:
+            return
+        self.bytes_seen += int(size)
+        if not self.total_bytes or self.total_bytes <= 0:
+            return
+        ratio = min(1.0, self.bytes_seen / self.total_bytes)
+        progress = int(self.start + (self.end - self.start) * ratio)
+        if progress > self.last_progress:
+            self.last_progress = progress
+            _publish(self.job_id, states.STARTED, progress, self.message)
+
+    def finish(self):
+        if self.end > self.last_progress:
+            self.last_progress = self.end
+            _publish(self.job_id, states.STARTED, self.end, self.message)
+
+
+class _MinioChunkReader(io.RawIOBase):
+    """Expose MinIO chunk iterator as a readable binary stream."""
+
+    def __init__(self, chunks, on_chunk=None):
+        self._chunks = iter(chunks)
+        self._buffer = b""
+        self._eof = False
+        self._on_chunk = on_chunk
+
+    def readable(self):
+        return True
+
+    def readinto(self, b):
+        if self._eof:
+            return 0
+
+        view = memoryview(b)
+        total = 0
+
+        while total < len(view):
+            if not self._buffer:
+                try:
+                    self._buffer = next(self._chunks)
+                except StopIteration:
+                    self._eof = True
+                    break
+                if not self._buffer:
+                    continue
+                if self._on_chunk:
+                    self._on_chunk(len(self._buffer))
+
+            take = min(len(self._buffer), len(view) - total)
+            view[total:total + take] = self._buffer[:take]
+            self._buffer = self._buffer[take:]
+            total += take
+
+        return total
 
 
 def _set_status(redis, job_id: str, status: str, progress: int, message: str):
@@ -89,7 +161,7 @@ def _update_numeric_stats(stats: dict, df: pd.DataFrame):
                 stats[col]["max"] = max(stats[col]["max"], mx)
 
 
-def _csv_to_parquet(csv_path: str, parquet_path: str, header_mode: str, custom_headers: list[str] | None):
+def _csv_to_parquet(csv_source, parquet_path: str, header_mode: str, custom_headers: list[str] | None):
     # Use chunking to avoid loading the whole file
     read_kwargs = {}
     if header_mode in ("none", "custom"):
@@ -97,13 +169,14 @@ def _csv_to_parquet(csv_path: str, parquet_path: str, header_mode: str, custom_h
     else:
         read_kwargs["header"] = 0
 
-    chunks = pd.read_csv(csv_path, chunksize=200_000, **read_kwargs)
+    chunks = pd.read_csv(csv_source, chunksize=200_000, **read_kwargs)
 
     writer = None
     stats = {}
     columns = None
     rows = 0
     sample_rows = None
+    source_is_path = isinstance(csv_source, (str, os.PathLike))
 
     for i, chunk in enumerate(chunks):
         chunk = _apply_header_mode(chunk, header_mode, custom_headers)
@@ -127,15 +200,63 @@ def _csv_to_parquet(csv_path: str, parquet_path: str, header_mode: str, custom_h
     if writer:
         writer.close()
     else:
-        # fallback path: re-read fully (only OK for small files)
-        df = pd.read_csv(csv_path, **read_kwargs)
-        df = _apply_header_mode(df, header_mode, custom_headers)
-        _update_numeric_stats(stats, df)
-        rows = len(df)
-        sample_rows = df.head(10).to_dict(orient="records")
-        df.to_parquet(parquet_path, index=False)
+        if source_is_path:
+            # fallback path: re-read fully (only OK for small files)
+            df = pd.read_csv(csv_source, **read_kwargs)
+            df = _apply_header_mode(df, header_mode, custom_headers)
+            _update_numeric_stats(stats, df)
+            rows = len(df)
+            sample_rows = df.head(10).to_dict(orient="records")
+            df.to_parquet(parquet_path, index=False)
+        elif rows == 0:
+            raise ValueError("Selected file is empty")
+        else:
+            raise ValueError("pyarrow is required for streaming CSV ingestion")
 
     return columns or [], rows, sample_rows or [], stats
+
+
+def _csv_stream_to_parquet(
+    csv_chunks,
+    parquet_path: str,
+    header_mode: str,
+    custom_headers: list[str] | None,
+    on_chunk=None,
+):
+    stream = _MinioChunkReader(csv_chunks, on_chunk=on_chunk)
+    buffered = io.BufferedReader(stream, buffer_size=MINIO_STREAM_CHUNK_SIZE)
+    text_stream = io.TextIOWrapper(buffered, encoding="utf-8", errors="ignore", newline="")
+    try:
+        return _csv_to_parquet(text_stream, parquet_path, header_mode, custom_headers)
+    finally:
+        try:
+            text_stream.close()
+        except Exception:
+            pass
+
+
+def _download_response_to_path(response, target_path: str, on_chunk=None):
+    with open(target_path, "wb") as handle:
+        for data in response.stream(MINIO_STREAM_CHUNK_SIZE):
+            if data:
+                if on_chunk:
+                    on_chunk(len(data))
+                handle.write(data)
+
+
+def _resolve_object_size(minio, bucket: str, object_name: str, fallback):
+    if fallback:
+        try:
+            return int(fallback)
+        except Exception:
+            pass
+    try:
+        stat = minio.stat_object(bucket, object_name)
+        if stat and getattr(stat, "size", None) is not None:
+            return int(stat.size)
+    except Exception:
+        logger.debug("Could not resolve object size for %s", object_name, exc_info=True)
+    return None
 
 
 def _excel_to_parquet(
@@ -189,6 +310,7 @@ def ingest_file(
     owner_email = job_doc.get("owner_email")
     project_id = job_doc.get("project_id")
     filename = job_doc.get("filename", filename)
+    size_bytes = _resolve_object_size(minio, bucket, storage_key, job_doc.get("size_bytes"))
 
     ext = os.path.splitext(filename.lower())[-1]
     logger.info(
@@ -209,19 +331,101 @@ def ingest_file(
         _publish(job_id, states.SUCCESS, 100, "Stored (non-tabular)")
         return
 
-    raw_fd, raw_path = tempfile.mkstemp()
-    os.close(raw_fd)
+    raw_path = None
+    if ext in {".xlsx", ".xls", ".mat"}:
+        raw_fd, raw_path = tempfile.mkstemp()
+        os.close(raw_fd)
 
-    parquet_fd, parquet_path = tempfile.mkstemp(suffix=".parquet")
-    os.close(parquet_fd)
+    parquet_path = None
+    if ext != ".mat":
+        parquet_fd, parquet_path = tempfile.mkstemp(suffix=".parquet")
+        os.close(parquet_fd)
 
     try:
-        _publish(job_id, states.STARTED, 5, "Downloading raw file from MinIO")
+        _publish(job_id, states.STARTED, 5, "Opening MinIO stream")
+        db.ingestion_jobs.update_one(
+            {"_id": ObjectId(job_id)},
+            {"$set": {"status": states.STARTED, "progress": 10, "updated_at": datetime.utcnow()}},
+        )
+
         response = minio.get_object(bucket, storage_key)
         try:
-            with open(raw_path, "wb") as f:
-                for data in response.stream(1024 * 1024):
-                    f.write(data)
+            columns: list[str] = []
+            row_count = 0
+            sample_rows: list[dict] = []
+            stats: dict = {}
+            mat_meta: dict | None = None
+            processed_key_to_store = processed_key
+
+            if ext in RANGE_TEXT_EXTENSIONS:
+                if not parquet_path:
+                    raise ValueError("parquet_path is required for text ingestion")
+                _publish(job_id, states.STARTED, 35, "Streaming + parsing line-based text data")
+                parse_progress = _ByteProgressPublisher(
+                    job_id,
+                    total_bytes=size_bytes,
+                    start=35,
+                    end=75,
+                    message="Streaming + parsing line-based text data",
+                )
+                columns, row_count, sample_rows, stats = text_range_stream_to_parquet(
+                    response.stream(MINIO_STREAM_CHUNK_SIZE),
+                    parquet_path,
+                    parse_range,
+                    on_chunk=parse_progress.on_chunk,
+                )
+                parse_progress.finish()
+            elif ext == ".csv":
+                if not parquet_path:
+                    raise ValueError("parquet_path is required for CSV ingestion")
+                _publish(job_id, states.STARTED, 35, "Streaming + parsing CSV data")
+                parse_progress = _ByteProgressPublisher(
+                    job_id,
+                    total_bytes=size_bytes,
+                    start=35,
+                    end=75,
+                    message="Streaming + parsing CSV data",
+                )
+                columns, row_count, sample_rows, stats = _csv_stream_to_parquet(
+                    response.stream(MINIO_STREAM_CHUNK_SIZE),
+                    parquet_path,
+                    header_mode,
+                    custom_headers,
+                    on_chunk=parse_progress.on_chunk,
+                )
+                parse_progress.finish()
+            else:
+                if not raw_path:
+                    raise ValueError("raw_path is required for this file type")
+                _publish(job_id, states.STARTED, 20, "Downloading raw file in chunks from MinIO")
+                download_progress = _ByteProgressPublisher(
+                    job_id,
+                    total_bytes=size_bytes,
+                    start=20,
+                    end=45,
+                    message="Downloading raw file in chunks from MinIO",
+                )
+                _download_response_to_path(response, raw_path, on_chunk=download_progress.on_chunk)
+                download_progress.finish()
+
+                # MAT indexing and Excel parsing need random access; parse after chunked download to local disk.
+                if ext == ".mat":
+                    from app.mat.indexing import index_mat
+
+                    _publish(job_id, states.STARTED, 60, "Indexing MAT variables")
+                    mat_meta = index_mat(raw_path).model_dump()
+                    processed_key_to_store = None
+                else:
+                    if not parquet_path:
+                        raise ValueError("parquet_path is required for Excel ingestion")
+                    _publish(job_id, states.STARTED, 60, "Preparing Excel data")
+                    columns, row_count, sample_rows, stats = _excel_to_parquet(
+                        raw_path,
+                        parquet_path,
+                        header_mode,
+                        custom_headers,
+                        sheet_name=sheet_name,
+                    )
         finally:
             try:
                 response.close()
@@ -232,54 +436,10 @@ def ingest_file(
             except Exception:
                 pass
 
-        _publish(job_id, states.STARTED, 35, "Preparing data")
-        db.ingestion_jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": states.STARTED, "progress": 35, "updated_at": datetime.utcnow()}},
-        )
-
-        # if ext == ".csv":
-        #     columns, row_count, sample_rows, stats = _csv_to_parquet(
-        #         raw_path, parquet_path, header_mode, custom_headers
-        #     )
-        # else:
-        #     columns, row_count, sample_rows, stats = _excel_to_parquet(
-        #         raw_path, parquet_path, header_mode, custom_headers
-        #     )
-        
-        columns: list[str] = []
-        row_count = 0
-        sample_rows: list[dict] = []
-        stats: dict = {}
-        mat_meta: dict | None = None
-        processed_key_to_store = processed_key
-
-        # MAT ingestion is lightweight indexing only (no parquet materialization at ingest time).
-        if ext == ".mat":
-            from app.mat.indexing import index_mat
-
-            _publish(job_id, states.STARTED, 60, "Indexing MAT variables")
-            mat_meta = index_mat(raw_path).model_dump()
-            processed_key_to_store = None
-        else:
-            if ext in RANGE_TEXT_EXTENSIONS:
-                columns, row_count, sample_rows, stats = text_range_to_parquet(
-                    raw_path, parquet_path, parse_range
-                )
-            elif ext == ".csv":
-                columns, row_count, sample_rows, stats = _csv_to_parquet(
-                    raw_path, parquet_path, header_mode, custom_headers
-                )
-            else:
-                columns, row_count, sample_rows, stats = _excel_to_parquet(
-                    raw_path,
-                    parquet_path,
-                    header_mode,
-                    custom_headers,
-                    sheet_name=sheet_name,
-                )
-
+        if ext != ".mat":
             _publish(job_id, states.STARTED, 80, "Uploading processed Parquet")
+            if not parquet_path:
+                raise ValueError("parquet_path is required for upload")
             if not processed_key:
                 raise ValueError("processed_key is required for non-MAT ingestion")
             minio.fput_object(bucket, processed_key, parquet_path, content_type="application/octet-stream")
