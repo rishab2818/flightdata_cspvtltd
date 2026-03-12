@@ -28,6 +28,7 @@ from app.calculations.derived import (
 
 CHUNK_SIZE = 250_000
 LOD_LEVELS = (256, 1024, 4096)
+ZOOM_RAW_POINT_BUDGET = 400_000
 
 
 
@@ -926,24 +927,234 @@ def _build_mat_figure(
     return fig
 
 
+# def _build_zoom_loader_script(
+#     viz_id: str,
+#     chart_type: str,
+#     series_meta: list[dict],
+#     series_stats: list[dict],
+# ):
+#     """
+#     Injected into HTML. On x-zoom, swaps trace data:
+#     - zoomed out: /tiles with LOD 256/1024/4096
+#     - deep zoom: /raw (true points in view)
+
+#     IMPORTANT:
+#     - Uses absolute API base to avoid Vite (5173) returning index.html (<!doctype ...>) for /api calls.
+#     - Reads API base from:
+#         1) window.__FD_API_BASE__ inside iframe (if you set it), else
+#         2) window.parent.__FD_API_BASE__ (from React), else
+#         3) http://localhost:8000 (fallback)
+#     """
+#     if chart_type not in {"scatter", "scatterline", "line", "bar"}:
+#         return ""
+
+#     payload = {
+#         "vizId": viz_id,
+#         "levels": list(LOD_LEVELS),
+#         "seriesMeta": series_meta,
+#         "seriesStats": series_stats,
+#     }
+
+#     return f"""
+# (function() {{
+#   const cfg = {json.dumps(payload)};
+#   const gd = document.querySelector('.plotly-graph-div');
+#   if (!gd || !window.Plotly) return;
+
+#   // ✅ Resolve API base (avoid hitting Vite index.html)
+#   const API_BASE =
+#     (window.__FD_API_BASE__ && String(window.__FD_API_BASE__)) ||
+#     (window.parent && window.parent.__FD_API_BASE__ && String(window.parent.__FD_API_BASE__)) ||
+#     "http://localhost:8000";
+
+#   function joinUrl(base, path) {{
+#     const b = base.endsWith("/") ? base.slice(0, -1) : base;
+#     const p = path.startsWith("/") ? path : ("/" + path);
+#     return b + p;
+#   }}
+
+#   // debounce relayout storms
+#   let timer = null;
+#   function debounce(fn) {{
+#     if (timer) clearTimeout(timer);
+#     timer = setTimeout(fn, 250);
+#   }}
+
+#   function chooseMode(stat, xmin, xmax) {{
+#     const total = Math.abs(
+#       (stat && stat.x_max !== undefined ? stat.x_max : NaN) -
+#       (stat && stat.x_min !== undefined ? stat.x_min : NaN)
+#     );
+#     const span = Math.abs(xmax - xmin);
+
+#     if (!isFinite(total) || total <= 0 || !isFinite(span) || span <= 0) {{
+#       return {{ mode: "tile", level: cfg.levels[1] }};
+#     }}
+
+#     const ratio = span / total;
+#     const totalRows = Number(stat && stat.rows ? stat.rows : 0);
+#     const expected = totalRows ? (totalRows * ratio) : Infinity;
+
+#     const RAW_BUDGET = {ZOOM_RAW_POINT_BUDGET};
+
+#     // ✅ Switch to raw when expected points are manageable
+#     if (expected <= RAW_BUDGET) {{
+#       return {{ mode: "raw" }};
+#     }}
+
+#     // otherwise tiles by zoom
+#     if (ratio > 0.40) return {{ mode: "tile", level: cfg.levels[0] }};
+#     if (ratio > 0.12) return {{ mode: "tile", level: cfg.levels[1] }};
+#     return {{ mode: "tile", level: cfg.levels[2] }};
+#   }}
+
+#   function getToken() {{
+#     try {{
+#       if (window.localStorage) {{
+#         const t = window.localStorage.getItem("token");
+#         if (t) return t;
+#       }}
+#     }} catch (e) {{}}
+#     try {{
+#       if (window.parent && window.parent.localStorage) {{
+#         const t = window.parent.localStorage.getItem("token");
+#         if (t) return t;
+#       }}
+#     }} catch (e) {{}}
+#     return null;
+#   }}
+
+#   // ✅ Robust JSON fetch (handles Vite index.html / non-json responses)
+#   async function fetchJson(url) {{
+#     let res;
+#     try {{
+#       const token = getToken();
+#       const headers = token ? {{ Authorization: `Bearer ${{token}}` }} : {{}};
+#       res = await fetch(url, { credentials: "omit", headers });
+#     }} catch (e) {{
+#       console.warn("zoom-fetch failed", e);
+#       return null;
+#     }}
+
+#     const contentType = (res.headers.get("content-type") || "").toLowerCase();
+
+#     if (!res.ok) {{
+#       const txt = await res.text();
+#       console.warn("zoom-api error", res.status, txt.slice(0, 200));
+#       return null;
+#     }}
+
+#     if (!contentType.includes("application/json")) {{
+#       const txt = await res.text();
+#       console.warn("zoom-api non-json", contentType, txt.slice(0, 200));
+#       return null;
+#     }}
+
+#     try {{
+#       return await res.json();
+#     }} catch (e) {{
+#       console.warn("zoom-api json parse failed", e);
+#       return null;
+#     }}
+#   }}
+
+#   // ✅ Restore full-range overview (tiles at default LOD)
+#   async function restoreOverview() {{
+#     const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+#     if (!n) return;
+
+#     // choose a good default LOD (256 = cfg.levels[0])
+#     const level = cfg.levels[0];
+
+#     for (let i = 0; i < n; i++) {{
+#       const meta = cfg.seriesMeta[i] || {{}};
+#       const xAxis = meta.x_axis;
+#       const yAxis = meta.y_axis;
+#       if (!xAxis || !yAxis) continue;
+
+#       const path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{level}}`;
+#       const url = joinUrl(API_BASE, path);
+
+#       const js = await fetchJson(url);
+#       if (!js) continue;
+
+#       const rows = js.data || [];
+#       if (!rows.length) continue;
+
+#       const xs = rows.map(r => r[xAxis]);
+#       const ys = rows.map(r => r[yAxis]);
+
+#       Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
+#     }}
+#   }}
+
+#   async function updateTrace(i, xmin, xmax) {{
+#     const meta = cfg.seriesMeta[i] || {{}};
+#     const stat = cfg.seriesStats[i] || {{}};
+#     const mode = chooseMode(stat, xmin, xmax);
+
+#     const xAxis = meta.x_axis;
+#     const yAxis = meta.y_axis;
+#     if (!xAxis || !yAxis) return;
+
+#     let path = "";
+#     if (mode.mode === "raw") {{
+#       path = `/api/visualizations/${{cfg.vizId}}/raw?series=${{i}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}&max_points={ZOOM_RAW_POINT_BUDGET}`;
+#     }} else {{
+#       path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{mode.level}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}`;
+#     }}
+
+#     const url = joinUrl(API_BASE, path);
+#     const js = await fetchJson(url);
+#     if (!js) return;
+
+#     const rows = js.data || [];
+#     if (!rows.length) return;
+
+#     const xs = rows.map(r => r[xAxis]);
+#     const ys = rows.map(r => r[yAxis]);
+
+#     Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
+#   }}
+
+#   // ✅ When autoscale/reset happens, Plotly sends xaxis.autorange=true
+#   // Also handle double-click reset gesture.
+#   gd.on('plotly_doubleclick', () => {{
+#     debounce(() => restoreOverview());
+#   }});
+
+#   gd.on('plotly_relayout', (ev) => {{
+#     // ✅ Autoscale button / reset autorange
+#     if (ev && ev["xaxis.autorange"] === true) {{
+#       debounce(() => restoreOverview());
+#       return;
+#     }}
+
+#     // Normal zoom: needs explicit range values
+#     const r0 = ev ? ev["xaxis.range[0]"] : undefined;
+#     const r1 = ev ? ev["xaxis.range[1]"] : undefined;
+#     if (r0 === undefined || r1 === undefined) return;
+
+#     const xmin = Number(r0);
+#     const xmax = Number(r1);
+#     if (!isFinite(xmin) || !isFinite(xmax)) return;
+
+#     debounce(() => {{
+#       const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+#       for (let i = 0; i < n; i++) {{
+#         updateTrace(i, xmin, xmax);
+#       }}
+#     }});
+#   }});
+# }})();
+# """
+
 def _build_zoom_loader_script(
     viz_id: str,
     chart_type: str,
     series_meta: list[dict],
     series_stats: list[dict],
 ):
-    """
-    Injected into HTML. On x-zoom, swaps trace data:
-    - zoomed out: /tiles with LOD 256/1024/4096
-    - deep zoom: /raw (true points in view)
-
-    IMPORTANT:
-    - Uses absolute API base to avoid Vite (5173) returning index.html (<!doctype ...>) for /api calls.
-    - Reads API base from:
-        1) window.__FD_API_BASE__ inside iframe (if you set it), else
-        2) window.parent.__FD_API_BASE__ (from React), else
-        3) http://localhost:8000 (fallback)
-    """
     if chart_type not in {"scatter", "scatterline", "line", "bar"}:
         return ""
 
@@ -957,10 +1168,48 @@ def _build_zoom_loader_script(
     return f"""
 (function() {{
   const cfg = {json.dumps(payload)};
-  const gd = document.querySelector('.plotly-graph-div');
-  if (!gd || !window.Plotly) return;
 
-  // ✅ Resolve API base (avoid hitting Vite index.html)
+  // ✅ FIX 1: Token — read from parent window directly at call time,
+  // not inside the iframe's own localStorage (which is always empty for srcDoc iframes).
+  // We pass it as a closure variable resolved when the script runs, not when fetch fires.
+  function getToken() {{
+    // Try every possible location the parent app might store the token
+    const sources = [
+      () => window.__FD_TOKEN__,
+      () => window.parent && window.parent.__FD_TOKEN__,
+      () => window.localStorage && window.localStorage.getItem("token"),
+      () => window.localStorage && window.localStorage.getItem("access_token"),
+      () => window.parent && window.parent.localStorage && window.parent.localStorage.getItem("token"),
+      () => window.parent && window.parent.localStorage && window.parent.localStorage.getItem("access_token"),
+    ];
+    for (const fn of sources) {{
+      try {{
+        const t = fn();
+        if (t && typeof t === "string" && t.length > 10) return t;
+      }} catch (e) {{}}
+    }}
+    return null;
+  }}
+
+  // ✅ FIX 2: Wait for Plotly to finish rendering before attaching listeners.
+  // post_script runs synchronously at body-end before Plotly async-renders the div.
+  function waitForPlotly(maxWaitMs, cb) {{
+    const start = Date.now();
+    function attempt() {{
+      const gd = document.querySelector('.plotly-graph-div');
+      if (gd && gd._fullLayout) {{   // _fullLayout exists only after Plotly.newPlot completes
+        cb(gd);
+        return;
+      }}
+      if (Date.now() - start > maxWaitMs) {{
+        console.warn("zoom-loader: timed out waiting for Plotly graph");
+        return;
+      }}
+      setTimeout(attempt, 80);
+    }}
+    attempt();
+  }}
+
   const API_BASE =
     (window.__FD_API_BASE__ && String(window.__FD_API_BASE__)) ||
     (window.parent && window.parent.__FD_API_BASE__ && String(window.parent.__FD_API_BASE__)) ||
@@ -972,7 +1221,6 @@ def _build_zoom_loader_script(
     return b + p;
   }}
 
-  // debounce relayout storms
   let timer = null;
   function debounce(fn) {{
     if (timer) clearTimeout(timer);
@@ -985,70 +1233,42 @@ def _build_zoom_loader_script(
       (stat && stat.x_min !== undefined ? stat.x_min : NaN)
     );
     const span = Math.abs(xmax - xmin);
-
     if (!isFinite(total) || total <= 0 || !isFinite(span) || span <= 0) {{
       return {{ mode: "tile", level: cfg.levels[1] }};
     }}
-
     const ratio = span / total;
     const totalRows = Number(stat && stat.rows ? stat.rows : 0);
     const expected = totalRows ? (totalRows * ratio) : Infinity;
-
-    const RAW_BUDGET = 2000000;
-
-    // ✅ Switch to raw when expected points are manageable
-    if (expected <= RAW_BUDGET) {{
-      return {{ mode: "raw" }};
-    }}
-
-    // otherwise tiles by zoom
+    const RAW_BUDGET = {ZOOM_RAW_POINT_BUDGET};
+    if (expected <= RAW_BUDGET) return {{ mode: "raw" }};
     if (ratio > 0.40) return {{ mode: "tile", level: cfg.levels[0] }};
     if (ratio > 0.12) return {{ mode: "tile", level: cfg.levels[1] }};
     return {{ mode: "tile", level: cfg.levels[2] }};
   }}
 
-  function getToken() {{
-    try {{
-      if (window.localStorage) {{
-        const t = window.localStorage.getItem("token");
-        if (t) return t;
-      }}
-    }} catch (e) {{}}
-    try {{
-      if (window.parent && window.parent.localStorage) {{
-        const t = window.parent.localStorage.getItem("token");
-        if (t) return t;
-      }}
-    }} catch (e) {{}}
-    return null;
-  }}
-
-  // ✅ Robust JSON fetch (handles Vite index.html / non-json responses)
   async function fetchJson(url) {{
     let res;
     try {{
       const token = getToken();
-      const headers = token ? {{ Authorization: `Bearer ${{token}}` }} : {{}};
-      res = await fetch(url, {{ credentials: "include", headers }});
+      const headers = {{}};
+      if (token) headers["Authorization"] = `Bearer ${{token}}`;
+      res = await fetch(url, {{ headers }});
+      console.log("Yes! the zoom is working")
     }} catch (e) {{
-      console.warn("zoom-fetch failed", e);
+      console.warn("zoom-fetch network error", e);
       return null;
     }}
-
     const contentType = (res.headers.get("content-type") || "").toLowerCase();
-
     if (!res.ok) {{
       const txt = await res.text();
       console.warn("zoom-api error", res.status, txt.slice(0, 200));
       return null;
     }}
-
     if (!contentType.includes("application/json")) {{
       const txt = await res.text();
       console.warn("zoom-api non-json", contentType, txt.slice(0, 200));
       return null;
     }}
-
     try {{
       return await res.json();
     }} catch (e) {{
@@ -1057,94 +1277,70 @@ def _build_zoom_loader_script(
     }}
   }}
 
-  // ✅ Restore full-range overview (tiles at default LOD)
-  async function restoreOverview() {{
+  async function restoreOverview(gd) {{
     const n = (gd.data && gd.data.length) ? gd.data.length : 0;
     if (!n) return;
-
-    // choose a good default LOD (256 = cfg.levels[0])
     const level = cfg.levels[0];
-
     for (let i = 0; i < n; i++) {{
       const meta = cfg.seriesMeta[i] || {{}};
       const xAxis = meta.x_axis;
       const yAxis = meta.y_axis;
       if (!xAxis || !yAxis) continue;
-
       const path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{level}}`;
-      const url = joinUrl(API_BASE, path);
-
-      const js = await fetchJson(url);
+      const js = await fetchJson(joinUrl(API_BASE, path));
       if (!js) continue;
-
       const rows = js.data || [];
       if (!rows.length) continue;
-
-      const xs = rows.map(r => r[xAxis]);
-      const ys = rows.map(r => r[yAxis]);
-
-      Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
+      Plotly.restyle(gd, {{ x: [rows.map(r => r[xAxis])], y: [rows.map(r => r[yAxis])] }}, [i]);
     }}
   }}
 
-  async function updateTrace(i, xmin, xmax) {{
+  async function updateTrace(gd, i, xmin, xmax) {{
     const meta = cfg.seriesMeta[i] || {{}};
     const stat = cfg.seriesStats[i] || {{}};
     const mode = chooseMode(stat, xmin, xmax);
-
     const xAxis = meta.x_axis;
     const yAxis = meta.y_axis;
     if (!xAxis || !yAxis) return;
-
     let path = "";
     if (mode.mode === "raw") {{
-      path = `/api/visualizations/${{cfg.vizId}}/raw?series=${{i}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}&max_points=2000000`;
+      path = `/api/visualizations/${{cfg.vizId}}/raw?series=${{i}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}&max_points={ZOOM_RAW_POINT_BUDGET}`;
     }} else {{
       path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{mode.level}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}`;
     }}
-
-    const url = joinUrl(API_BASE, path);
-    const js = await fetchJson(url);
+    const js = await fetchJson(joinUrl(API_BASE, path));
     if (!js) return;
-
     const rows = js.data || [];
     if (!rows.length) return;
-
-    const xs = rows.map(r => r[xAxis]);
-    const ys = rows.map(r => r[yAxis]);
-
-    Plotly.restyle(gd, {{ x: [xs], y: [ys] }}, [i]);
+    Plotly.restyle(gd, {{ x: [rows.map(r => r[xAxis])], y: [rows.map(r => r[yAxis])] }}, [i]);
   }}
 
-  // ✅ When autoscale/reset happens, Plotly sends xaxis.autorange=true
-  // Also handle double-click reset gesture.
-  gd.on('plotly_doubleclick', () => {{
-    debounce(() => restoreOverview());
-  }});
+  // ✅ FIX 2 applied here — wait for Plotly before attaching any listeners
+  waitForPlotly(8000, function(gd) {{
+    gd.on('plotly_doubleclick', () => {{
+      debounce(() => restoreOverview(gd));
+    }});
 
-  gd.on('plotly_relayout', (ev) => {{
-    // ✅ Autoscale button / reset autorange
-    if (ev && ev["xaxis.autorange"] === true) {{
-      debounce(() => restoreOverview());
-      return;
-    }}
-
-    // Normal zoom: needs explicit range values
-    const r0 = ev ? ev["xaxis.range[0]"] : undefined;
-    const r1 = ev ? ev["xaxis.range[1]"] : undefined;
-    if (r0 === undefined || r1 === undefined) return;
-
-    const xmin = Number(r0);
-    const xmax = Number(r1);
-    if (!isFinite(xmin) || !isFinite(xmax)) return;
-
-    debounce(() => {{
-      const n = (gd.data && gd.data.length) ? gd.data.length : 0;
-      for (let i = 0; i < n; i++) {{
-        updateTrace(i, xmin, xmax);
+    gd.on('plotly_relayout', (ev) => {{
+      if (ev && ev["xaxis.autorange"] === true) {{
+        debounce(() => restoreOverview(gd));
+        return;
       }}
+      const r0 = ev ? ev["xaxis.range[0]"] : undefined;
+      const r1 = ev ? ev["xaxis.range[1]"] : undefined;
+      if (r0 === undefined || r1 === undefined) return;
+      const xmin = Number(r0);
+      const xmax = Number(r1);
+      if (!isFinite(xmin) || !isFinite(xmax)) return;
+      debounce(() => {{
+        const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+        for (let i = 0; i < n; i++) {{
+          updateTrace(gd, i, xmin, xmax);
+        }}
+      }});
     }});
   }});
+
 }})();
 """
 
@@ -1482,23 +1678,25 @@ def generate_visualization(self, viz_id: str):
     margin=dict(l=0, r=0, t=40, b=0)
 )
 
-        post_script = _build_zoom_loader_script(
-    viz_id=viz_id,
-    chart_type=chart_type,
-    series_meta=series_meta_for_js,
-    series_stats=stats_for_js,
-)
+#         post_script = _build_zoom_loader_script(
+#     viz_id=viz_id,
+#     chart_type=chart_type,
+#     series_meta=series_meta_for_js,
+#     series_stats=stats_for_js,
+# )
+        _set_status(redis, viz_id, states.STARTED, 60, "Building Plotly figure")
 
-        html = pio.to_html(
-    fig,
-    full_html=True,
-    include_plotlyjs=True,
-    config={"responsive": True},
-    post_script=post_script
-)
+        fig = _build_figure(series_frames, chart_type)
+        fig.update_layout(
+            autosize=True,
+            height=None,
+            width=None,
+            margin=dict(l=0, r=0, t=40, b=0),
+        )
 
-
-        # Ensure numeric-style x-axis zoom (prevents category zoom weirdness)
+        # ✅ MUST happen before pio.to_html — forces numeric axis so plotly_relayout
+        # fires with float range values, not category labels. Without this the zoom
+        # script receives NaN from Number("category-string") and bails out silently.
         if chart_type in {"scatter", "scatterline", "line", "bar"}:
             x_scale = (series_frames[0]["series"].get("x_scale") or "linear").lower().strip()
             if x_scale == "linear":
@@ -1508,9 +1706,38 @@ def generate_visualization(self, viz_id: str):
             viz_id=viz_id,
             chart_type=chart_type,
             series_meta=series_meta_for_js,
-
             series_stats=stats_for_js,
         )
+
+        html = pio.to_html(
+            fig,
+            full_html=True,
+            include_plotlyjs=True,
+            config={"responsive": True},
+            post_script=post_script,
+        )
+#         html = pio.to_html(
+#     fig,
+#     full_html=True,
+#     include_plotlyjs=True,
+#     config={"responsive": True},
+#     post_script=post_script
+# )
+
+
+        # # Ensure numeric-style x-axis zoom (prevents category zoom weirdness)
+        # if chart_type in {"scatter", "scatterline", "line", "bar"}:
+        #     x_scale = (series_frames[0]["series"].get("x_scale") or "linear").lower().strip()
+        #     if x_scale == "linear":
+        #         fig.update_xaxes(type="linear")
+
+        # post_script = _build_zoom_loader_script(
+        #     viz_id=viz_id,
+        #     chart_type=chart_type,
+        #     series_meta=series_meta_for_js,
+
+        #     series_stats=stats_for_js,
+        # )
 
         _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")
         html_bytes = html.encode("utf-8")
