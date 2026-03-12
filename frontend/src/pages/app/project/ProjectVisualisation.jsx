@@ -270,11 +270,51 @@ export default function ProjectVisualisation() {
   const [isExpanded, setIsExpanded] = useState(true)
 
   /* ================= helpers ================= */
+
   const activeSeries = useMemo(
-    () => seriesList.find((s) => s.id === activeSeriesId) || seriesList[0],
-    [seriesList, activeSeriesId]
+  () => seriesList.find((s) => s.id === activeSeriesId) || seriesList[0],
+  [seriesList, activeSeriesId]
+)
+
+const activeSeriesIndex = useMemo(
+  () => seriesList.findIndex((s) => s.id === activeSeriesId),
+  [seriesList, activeSeriesId]
+)
+
+  // const activeFiles = useMemo(() => {
+  //   if (!activeSeries?.datasetType || !activeSeries?.tag) return []
+  //   return getFiles(activeSeries.datasetType, activeSeries.tag)
+  // }, [activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
+
+  const activeFiles = useMemo(() => {
+  if (!activeSeries?.datasetType || !activeSeries?.tag) return []
+  return filesByDatasetTag[`${activeSeries.datasetType}::${activeSeries.tag}`] || []
+}, [activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
+
+  const activeJob = useMemo(
+    () => activeFiles.find((f) => f.job_id === activeSeries?.jobId),
+    [activeFiles, activeSeries?.jobId]
+  )
+  const activeIsMat = useMemo(
+    () => isMatFileName(activeJob?.filename || ''),
+    [activeJob?.filename]
   )
 
+  const canMixOverplot = useMemo(
+    () => !activeIsMat && OVERPLOT_CARTESIAN_TYPES.some((item) => item.value === chartType),
+    [activeIsMat, chartType]
+  )
+
+  const showSeriesChartTypeField = useMemo(
+  () =>
+    !activeIsMat &&
+    activeSeriesIndex > 0 &&
+    !requiresZ &&
+    canMixOverplot,
+  [activeIsMat, activeSeriesIndex, requiresZ, canMixOverplot]
+)
+
+  
   const showPopup = (message, type = "success") => {
     setPopupMessage(message)
     setPopupType(type)
@@ -659,6 +699,18 @@ export default function ProjectVisualisation() {
   }, [projectId, activeSeries?.datasetType, activeSeries?.tag])
 
   useEffect(() => {
+  setSeriesList((prev) =>
+    prev.map((s, idx) => {
+      const shouldClear = idx === 0 || requiresZ
+      if (shouldClear && s.seriesChartType) {
+        return { ...s, seriesChartType: '' }
+      }
+      return s
+    })
+  )
+}, [requiresZ])
+
+  useEffect(() => {
     calculationsApi
       .functions()
       .then((data) => {
@@ -1009,20 +1061,7 @@ export default function ProjectVisualisation() {
   })
 
   /* ================= columns for active series ================= */
-  const activeFiles = useMemo(() => {
-    if (!activeSeries?.datasetType || !activeSeries?.tag) return []
-    return getFiles(activeSeries.datasetType, activeSeries.tag)
-  }, [activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
-
-  const activeJob = useMemo(
-    () => activeFiles.find((f) => f.job_id === activeSeries?.jobId),
-    [activeFiles, activeSeries?.jobId]
-  )
-  const activeIsMat = useMemo(
-    () => isMatFileName(activeJob?.filename || ''),
-    [activeJob?.filename]
-  )
-
+  
   const activeColumns = useMemo(() => activeJob?.columns || [], [activeJob])
   const activeDerivedColumnNames = useMemo(() => {
     const names = []
@@ -1064,10 +1103,7 @@ export default function ProjectVisualisation() {
         : plotOptions,
     [activeIsMat, matAllowedChartTypes, plotOptions]
   )
-  const canMixOverplot = useMemo(
-    () => !activeIsMat && OVERPLOT_CARTESIAN_TYPES.some((item) => item.value === chartType),
-    [activeIsMat, chartType]
-  )
+  
 
   useEffect(() => {
     const jobId = activeSeries?.jobId
@@ -2649,7 +2685,7 @@ export default function ProjectVisualisation() {
                     </select>
                   </div>
 
-                  <div className="ps-field">
+                  {/* <div className="ps-field">
                     <label>Series Chart Type</label>
                     <select
                       value={activeSeries?.seriesChartType || ''}
@@ -2665,7 +2701,24 @@ export default function ProjectVisualisation() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div> */}
+
+                  {showSeriesChartTypeField && (
+  <div className="ps-field">
+    <label>Series Chart Type</label>
+    <select
+      value={activeSeries?.seriesChartType || ''}
+      onChange={(e) => updateActiveSeries({ seriesChartType: e.target.value })}
+    >
+      <option value="">Default ({chartType})</option>
+      {OVERPLOT_CARTESIAN_TYPES.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
                   {requiresZ && (
                     <div className="ps-field">
