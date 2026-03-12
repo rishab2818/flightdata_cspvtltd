@@ -521,7 +521,10 @@ export default function UploadModal({
 
         const lastHeadLineNumber = head.lineItems[head.lineItems.length - 1]?.number || 0
         if (nextRange.start > lastHeadLineNumber) {
-            await loadSelectedTextRangePreview(file, nextRange)
+            await loadSelectedTextRangePreview(file, nextRange, {
+                knownTotalLines: totalLines,
+                lineCountStatus: totalLines != null ? 'ready' : existingItem?.lineCountStatus || 'counting',
+            })
         } else {
             applyTextPreview(head.lineItems, nextRange, file.name, {
                 fileId: fileKey(file),
@@ -550,8 +553,10 @@ export default function UploadModal({
         const payload = await readLocalTextRange(file, range, {
             displayLimit: DEFAULT_PREVIEW_LINE_LIMIT,
         })
-        const totalLines = payload.totalLines ?? options.knownTotalLines ?? null
-        const lineCountStatus = totalLines != null ? 'ready' : options.lineCountStatus || 'counting'
+        const fileId = fileKey(file)
+        const cachedItem = filesRef.current.find((entry) => fileKey(entry.file) === fileId)
+        const totalLines = payload.totalLines ?? options.knownTotalLines ?? cachedItem?.totalLines ?? null
+        const lineCountStatus = totalLines != null ? 'ready' : options.lineCountStatus || cachedItem?.lineCountStatus || 'counting'
 
         if (!payload.lineItems.length) {
             if (payload.totalLines === 0) {
@@ -565,7 +570,7 @@ export default function UploadModal({
         }
 
         applyTextPreview(payload.lineItems, payload.range, file.name, {
-            fileId: fileKey(file),
+            fileId,
             totalLines,
             truncated: payload.selectionTruncated,
             selectionTruncated: payload.selectionTruncated,
@@ -890,7 +895,11 @@ const onSelectSheet = (sheetName) => {
             return clone
         })
         if (preview?.type === 'text-lines' && selectedFile) {
-            void loadSelectedTextRangePreview(selectedFile, nextRange)
+            const knownTotalLines = preview.totalLines ?? selectedFileEntry?.totalLines ?? null
+            void loadSelectedTextRangePreview(selectedFile, nextRange, {
+                knownTotalLines,
+                lineCountStatus: knownTotalLines != null ? 'ready' : selectedFileEntry?.lineCountStatus || 'counting',
+            })
         }
     }
 
