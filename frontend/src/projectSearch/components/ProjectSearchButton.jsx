@@ -50,8 +50,8 @@ export default function ProjectSearchButton({ projectId }) {
         className="project-search__trigger"
         onClick={() => setOpen(true)}
       >
-        <FiSearch size={14} />
-        Search
+        <FiSearch size={26} />
+        
       </button>
 
       <ProjectSearchPanel

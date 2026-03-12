@@ -16,9 +16,11 @@ import { useInfiniteScrollTrigger } from "../../../hooks/useInfiniteScrollTrigge
 import './ProjectVisualisation.css'
 
 import ChartLine1 from '../../../assets/ChartLine1.svg'
+import InfoButton from "../../../components/common/InfoButton";
 
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
+
 import linechart from "../../../assets/LineChart.svg";
 import EmptySection from "../../../components/common/EmptyProject";
 import MatPlotBuilder from '../../../matlabPlotBuilder/components/MatPlotBuilder'
@@ -1896,7 +1898,7 @@ export default function ProjectVisualisation() {
         {visualSectionTab === 'calculation' && (
           <div className="project-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <h3 style={{ margin: '0 0 6px 0' }}>Calculation</h3>
+              <h3 style={{ margin: '0 0 6px 0' }}>Calculation <InfoButton message="Enter a formula, map detected variables to sources, preview, then save." /></h3>
               {/* <p className="summary-label" style={{ margin: 0 }}>
                 Enter a formula, map detected variables to sources, preview, then save.
               </p> */}
@@ -1991,7 +1993,9 @@ export default function ProjectVisualisation() {
             </div>
 
             <div className="ps-field calc-formula-editor">
-              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Formula <span style={{ color: "red", fontSize: "16px" }}>*</span></label>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>Formula <span style={{ color: "red", fontSize: "16px" }}>*</span>
+              <InfoButton message="Enter the mathematical formula to calculate the result." />
+              </label>
               <div className="calc-editor-row">
   <textarea
     ref={calcFormulaInputRef}
@@ -2432,7 +2436,9 @@ export default function ProjectVisualisation() {
           <>
             {/* ================= TOP: SETTINGS (old UI classes) ================= */}
             <form onSubmit={handleSubmit} className="plot-settings">
-              <div className="tableHeader">Plot Setting</div>
+              <div className="tableHeader">Plot Setting
+                <InfoButton message="Configure plot parameters such as plot type (2D or 3D), axis selection, and chart type before generating the graph." />
+              </div>
 
               {error && (
                 <div className="project-shell__error" style={{ marginBottom: 10 }}>

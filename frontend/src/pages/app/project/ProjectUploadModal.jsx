@@ -18,6 +18,7 @@ import './ProjectUploadModal.css';
 // import './ProjectUpload.css';
 
 import Plus from "../../../assets/Plus.svg";
+import InfoButton from "../../../components/common/InfoButton";
 
 const DATASET_OPTIONS = [
     { key: 'cfd', label: 'CFD' },
@@ -1093,8 +1094,8 @@ const onSelectSheet = (sheetName) => {
             <div className="fd-modal__panel" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="fd-modal__header">
                     <div className="div_wapper">
-                        <h3 className="text_wapper">{title}</h3>
-                        <p className="subtitle" style={{ margin: '4px 0 0 0' }}>{subtitle}</p>
+                        <h3 className="text_wapper">{title}<InfoButton message="Choose category, tag, header handling, and which files should be processed." /></h3>
+                        {/* <p className="subtitle" style={{ margin: '4px 0 0 0' }}>{subtitle}</p> */} 
                     </div>
                     <button className="close_icon" onClick={onClose} type="button">✕</button>
                 </div>
@@ -1206,6 +1207,7 @@ const onSelectSheet = (sheetName) => {
     <div className="form-field">
         <label style={{ marginTop: 10 }} className="summaryLabel">
             Plot File Header
+            <InfoButton message="Specify whether the uploaded file contains column headers. If not selected, columns will be automatically named (Column1, Column2, etc.)." />
         </label>
 
         <select
