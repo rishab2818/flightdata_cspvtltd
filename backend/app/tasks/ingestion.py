@@ -32,7 +32,7 @@ from app.text_formats import (
 TABULAR_EXTS = TABULAR_EXTENSIONS
 
 logger = logging.getLogger(__name__)
-MINIO_STREAM_CHUNK_SIZE = 1024 * 1024
+MINIO_STREAM_CHUNK_SIZE =  8 * 1024 * 1024  # approx 8mb chunks 
 
 
 class _ByteProgressPublisher:
