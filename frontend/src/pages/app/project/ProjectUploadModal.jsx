@@ -139,7 +139,7 @@ const mostlyNumeric = (tokens) => {
 const makeUniqueHeaders = (headers) => {
     const seen = new Map()
     return headers.map((raw, idx) => {
-        const base = stripLeadingJunk(String(raw || '').trim()) || `column_${idx + 1}`
+        const base = stripLeadingJunk(String(raw || '').trim()) || `column${idx + 1}`
         const count = (seen.get(base) || 0) + 1
         seen.set(base, count)
         return count === 1 ? base : `${base}_${count}`
@@ -170,13 +170,13 @@ const buildTableFromLines = (lines) => {
 
     let headers = []
     if (headerIsPresent) {
-        headers = firstRow.map((h, i) => (h || `column_${i + 1}`))
+        headers = firstRow.map((h, i) => (h || `column${i + 1}`))
     } else {
-        headers = Array.from({ length: maxCols }, (_, i) => `column_${i + 1}`)
+        headers = Array.from({ length: maxCols }, (_, i) => `column${i + 1}`)
     }
     if (headers.length < maxCols) {
         headers = headers.concat(
-            Array.from({ length: maxCols - headers.length }, (_, i) => `column_${headers.length + i + 1}`)
+            Array.from({ length: maxCols - headers.length }, (_, i) => `column${headers.length + i + 1}`)
         )
     } else {
         headers = headers.slice(0, maxCols)
@@ -324,12 +324,12 @@ export default function UploadModal({
                 headers = rowsRaw[0].map((h) => String(h || '').trim())
                 dataRows = rowsRaw.slice(1)
             } else if (headerMode === 'none') {
-                headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
+                headers = rowsRaw[0].map((_, i) => `column${i + 1}`)
                 dataRows = rowsRaw
             } else {
                 headers = headersList?.length
                     ? headersList
-                    : rowsRaw[0].map((_, i) => `column_${i + 1}`)
+                    : rowsRaw[0].map((_, i) => `column${i + 1}`)
                 dataRows = rowsRaw
             }
 
@@ -612,10 +612,10 @@ export default function UploadModal({
                 headers = rawRows[0].map((h) => (h || '').trim())
                 dataRows = rawRows.slice(1)
             } else if (headerMode === 'none') {
-                headers = rawRows[0].map((_, i) => `column_${i + 1}`)
+                headers = rawRows[0].map((_, i) => `column${i + 1}`)
                 dataRows = rawRows
             } else {
-                headers = headersList?.length ? headersList : rawRows[0].map((_, i) => `column_${i + 1}`)
+                headers = headersList?.length ? headersList : rawRows[0].map((_, i) => `column${i + 1}`)
                 dataRows = rawRows
             }
 
@@ -710,12 +710,12 @@ export default function UploadModal({
         headers = rowsRaw[0].map((h) => String(h || '').trim())
         dataRows = rowsRaw.slice(1)
     } else if (headerMode === 'none') {
-        headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
+        headers = rowsRaw[0].map((_, i) => `column${i + 1}`)
         dataRows = rowsRaw
     } else {
         headers = headersList?.length
             ? headersList
-            : rowsRaw[0].map((_, i) => `column_${i + 1}`)
+            : rowsRaw[0].map((_, i) => `column${i + 1}`)
         dataRows = rowsRaw
     }
 
@@ -771,10 +771,10 @@ const onSelectSheet = (sheetName) => {
                 headers = rowsRaw[0].map((h) => String(h || '').trim())
                 dataRows = rowsRaw.slice(1)
             } else if (headerMode === 'none') {
-                headers = rowsRaw[0].map((_, i) => `column_${i + 1}`)
+                headers = rowsRaw[0].map((_, i) => `column${i + 1}`)
                 dataRows = rowsRaw
             } else {
-                headers = headersList?.length ? headersList : rowsRaw[0].map((_, i) => `column_${i + 1}`)
+                headers = headersList?.length ? headersList : rowsRaw[0].map((_, i) => `column${i + 1}`)
                 dataRows = rowsRaw
             }
 
