@@ -131,7 +131,7 @@ export default function ProjectTagView() {
 //     }
 //   }, [activeTab, projectId, tagName, datasetType])
 
-  const rawFiles = files
+  const rawFiles = files.filter((f) => !f.sheet_name)
   const processedFiles = files.filter(f => f.processed_key)
   const othersFiles = files.filter(
     f => !f.processed_key && !f.visualize_enabled

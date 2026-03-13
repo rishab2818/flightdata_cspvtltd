@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import tempfile
+import re
 from datetime import datetime
 
 import pandas as pd
@@ -32,6 +33,7 @@ TABULAR_EXTS = TABULAR_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 MINIO_STREAM_CHUNK_SIZE =  8 * 1024 * 1024  # approx 8mb chunks 
+NUM_TOKEN_RE = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$")
 
 
 class _ByteProgressPublisher:
@@ -134,9 +136,135 @@ def _clean_excel_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _is_empty_row(row: pd.Series) -> bool:
+    for value in row.tolist():
+        if pd.isna(value):
+            continue
+        if isinstance(value, str) and value.strip() == "":
+            continue
+        return False
+    return True
+
+
+def _drop_fully_empty_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Drop columns that are empty in all rows (NaN or blank strings).
+    """
+    if df.empty:
+        return df
+    keep_cols = []
+    for col in df.columns:
+        series = df[col]
+        has_value = False
+        for value in series.tolist():
+            if pd.isna(value):
+                continue
+            if isinstance(value, str) and value.strip() == "":
+                continue
+            has_value = True
+            break
+        if has_value:
+            keep_cols.append(col)
+    return df[keep_cols].copy()
+
+
+def _trim_to_primary_data_block(df: pd.DataFrame, blank_run_stop: int = 2) -> pd.DataFrame:
+    """
+    Keep only the first contiguous tabular block.
+    This removes lower chart/annotation areas that are separated by blank gaps.
+    """
+    if df.empty:
+        return df
+
+    start_idx = None
+    for idx in range(len(df)):
+        if not _is_empty_row(df.iloc[idx]):
+            start_idx = idx
+            break
+    if start_idx is None:
+        return df.iloc[0:0].copy()
+
+    end_idx = len(df)
+    blank_run = 0
+    for idx in range(start_idx, len(df)):
+        if _is_empty_row(df.iloc[idx]):
+            blank_run += 1
+            if blank_run >= blank_run_stop:
+                end_idx = idx - blank_run + 1
+                break
+        else:
+            blank_run = 0
+
+    return df.iloc[start_idx:end_idx].reset_index(drop=True)
+
+
+def _dummy_columns(count: int) -> list[str]:
+    return [f"column{i + 1}" for i in range(int(count or 0))]
+
+
+def _is_numeric_token(value: str) -> bool:
+    return bool(NUM_TOKEN_RE.match(str(value or "").strip()))
+
+
+def _mostly_numeric(values: list[str]) -> bool:
+    tokens = [str(v or "").strip() for v in values if str(v or "").strip()]
+    if not tokens:
+        return False
+    numeric = sum(1 for token in tokens if _is_numeric_token(token))
+    return (numeric / len(tokens)) >= 0.6
+
+
+def _sanitize_header_value(value, idx: int) -> str:
+    text = str(value or "").strip()
+    if not text or text.lower() == "nan":
+        return f"column{idx + 1}"
+    return text
+
+
+def _make_unique_columns(columns: list[str]) -> list[str]:
+    seen: dict[str, int] = {}
+    out: list[str] = []
+    for idx, raw in enumerate(columns):
+        base = str(raw or "").strip() or f"column{idx + 1}"
+        count = seen.get(base, 0) + 1
+        seen[base] = count
+        out.append(base if count == 1 else f"{base}_{count}")
+    return out
+
+
+def _should_treat_first_row_as_header(df: pd.DataFrame) -> bool:
+    if df.empty:
+        return False
+
+    first_row = [str(v or "").strip() for v in df.iloc[0].tolist()]
+    first_tokens = [token for token in first_row if token and token.lower() != "nan"]
+    if len(first_tokens) < 2:
+        return False
+    if not any(not _is_numeric_token(token) for token in first_tokens):
+        return False
+
+    if len(df) <= 1:
+        return True
+
+    second_row = [str(v or "").strip() for v in df.iloc[1].tolist()]
+    if _mostly_numeric(second_row):
+        return True
+
+    # Ambiguous mixed/text datasets are safer to treat as header-present to
+    # preserve existing "file headers" behavior.
+    return True
+
+
 def _apply_header_mode(df: pd.DataFrame, header_mode: str, custom_headers: list[str] | None):
-    if header_mode == "none" and not custom_headers:
-        df.columns = [f"column_{i+1}" for i in range(len(df.columns))]
+    if header_mode == "file":
+        if _should_treat_first_row_as_header(df):
+            raw_headers = [_sanitize_header_value(v, idx) for idx, v in enumerate(df.iloc[0].tolist())]
+            df = df.iloc[1:].reset_index(drop=True)
+            df.columns = _make_unique_columns(raw_headers)
+        else:
+            df.columns = _dummy_columns(len(df.columns))
+    elif header_mode == "none" and not custom_headers:
+        df.columns = _dummy_columns(len(df.columns))
     elif header_mode == "custom":
         if not custom_headers:
             raise ValueError("custom_headers required when header_mode=custom")
@@ -160,10 +288,45 @@ def _update_numeric_stats(stats: dict, df: pd.DataFrame):
                 stats[col]["max"] = max(stats[col]["max"], mx)
 
 
+def _coerce_object_columns_for_parquet(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Arrow cannot always infer mixed object columns (e.g., mostly numeric values
+    with occasional text labels). Normalize object columns before parquet write:
+    - if fully numeric-like -> numeric dtype
+    - if mostly numeric-like -> numeric dtype with non-numeric values as NaN
+    - otherwise -> pandas string dtype
+    """
+    out = df.copy()
+    for col in out.columns:
+        series = out[col]
+        if not pd.api.types.is_object_dtype(series.dtype):
+            continue
+
+        non_null = series.dropna()
+        if non_null.empty:
+            continue
+
+        numeric_series = pd.to_numeric(series, errors="coerce")
+        numeric_count = int(numeric_series.notna().sum())
+        total_count = int(non_null.shape[0])
+
+        if numeric_count == total_count:
+            out[col] = numeric_series
+            continue
+
+        ratio = numeric_count / max(total_count, 1)
+        if ratio >= 0.70:
+            out[col] = numeric_series
+        else:
+            out[col] = series.astype("string")
+
+    return out
+
+
 def _csv_to_parquet(csv_source, parquet_path: str, header_mode: str, custom_headers: list[str] | None):
     # Use chunking to avoid loading the whole file
     read_kwargs = {}
-    if header_mode in ("none", "custom"):
+    if header_mode in ("file", "none", "custom"):
         read_kwargs["header"] = None
     else:
         read_kwargs["header"] = 0
@@ -178,9 +341,20 @@ def _csv_to_parquet(csv_source, parquet_path: str, header_mode: str, custom_head
     source_is_path = isinstance(csv_source, (str, os.PathLike))
 
     for i, chunk in enumerate(chunks):
-        chunk = _apply_header_mode(chunk, header_mode, custom_headers)
-        if columns is None:
-            columns = list(chunk.columns)
+        if header_mode == "file":
+            if columns is None:
+                chunk = _apply_header_mode(chunk, header_mode, custom_headers)
+                columns = list(chunk.columns)
+            else:
+                if len(columns) != len(chunk.columns):
+                    raise ValueError("Detected column count changed while reading CSV")
+                chunk.columns = columns
+        else:
+            chunk = _apply_header_mode(chunk, header_mode, custom_headers)
+            if columns is None:
+                columns = list(chunk.columns)
+
+        if sample_rows is None:
             sample_rows = chunk.head(10).to_dict(orient="records")
 
         _update_numeric_stats(stats, chunk)
@@ -298,7 +472,7 @@ def _spreadsheet_to_parquet(
 
     # Default to first sheet when not specified.
     read_kwargs = {"sheet_name": 0 if sheet_name is None else sheet_name}
-    if header_mode in ("none", "custom"):
+    if header_mode in ("file", "none", "custom"):
         read_kwargs["header"] = None
     else:
         read_kwargs["header"] = 0
@@ -309,7 +483,10 @@ def _spreadsheet_to_parquet(
         df = pd.read_excel(xls_path, **read_kwargs)
 
     df = _clean_excel_df(df)
+    df = _trim_to_primary_data_block(df, blank_run_stop=2)
     df = _apply_header_mode(df, header_mode, custom_headers)
+    df = _drop_fully_empty_columns(df)
+    df = _coerce_object_columns_for_parquet(df)
 
     stats = {}
     _update_numeric_stats(stats, df)

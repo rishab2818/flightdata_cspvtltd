@@ -91,7 +91,7 @@ def _make_unique_headers(headers: list[str]) -> list[str]:
     seen: dict[str, int] = {}
     output: list[str] = []
     for idx, header in enumerate(headers):
-        base = _strip_leading_junk(str(header or "")).strip() or f"column_{idx + 1}"
+        base = _strip_leading_junk(str(header or "")).strip() or f"column{idx + 1}"
         count = seen.get(base, 0) + 1
         seen[base] = count
         output.append(base if count == 1 else f"{base}_{count}")
@@ -210,10 +210,10 @@ def _parse_lines_to_parquet(
             if cleaned:
                 headers.append(cleaned)
         if len(headers) < max_cols:
-            headers += [f"column_{idx + 1}" for idx in range(len(headers), max_cols)]
+            headers += [f"column{idx + 1}" for idx in range(len(headers), max_cols)]
         headers = headers[:max_cols]
     else:
-        headers = [f"column_{idx + 1}" for idx in range(max_cols)]
+        headers = [f"column{idx + 1}" for idx in range(max_cols)]
     headers = _make_unique_headers(headers)
 
     normalized_rows = []

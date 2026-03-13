@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import tempfile
@@ -74,6 +75,21 @@ def _coerce_progress(value: Any, fallback: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return int(fallback or 0)
+
+
+def _sanitize_json_value(value: Any):
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _sanitize_json_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_json_value(v) for v in value]
+    if hasattr(value, "item"):
+        try:
+            return _sanitize_json_value(value.item())
+        except Exception:
+            return value
+    return value
 
 
 async def _ensure_project_member(project_id: str, user: CurrentUser):
@@ -232,17 +248,15 @@ async def start_ingestion_batch(
                 all_sheets = []
         await file.close()
 
-        # Decide which sheets to process for spreadsheet files
-        sheet_queue: list[str | None]
-        # if visualize_enabled and ext in excel_exts:
-        if visualize_enabled and ext in spreadsheet_exts:
-            sheet_queue = requested_sheets or [None]
-        else:
-            sheet_queue = [None]
-
-        # if not visualize_enabled and ext in excel_exts and len(all_sheets) > 1:
-        if not visualize_enabled and ext in spreadsheet_exts and len(all_sheets) > 1:
-            sheet_queue = []
+        # Decide which sheets to process for spreadsheet files.
+        # Raw should keep only one workbook entry; processed keeps selected sheet jobs.
+        sheet_queue: list[str | None] = [None]
+        if ext in spreadsheet_exts and len(all_sheets) > 1:
+            if visualize_enabled:
+                sheet_queue = requested_sheets or [None]
+            else:
+                # For raw-only multi-sheet workbooks, create just one raw workbook job.
+                sheet_queue = []
 
         # Store the full workbook as a raw-only entry for multi-sheet spreadsheet files
         # if ext in excel_exts and len(all_sheets) > 1:
@@ -346,45 +360,6 @@ async def start_ingestion_batch(
                     parse_range=None,
                 )
             )
-
-        # Store raw-only entries for any sheets not selected for visualization
-        # if ext in excel_exts and all_sheets:
-        if ext in spreadsheet_exts and all_sheets:
-            selected_set = {s for s in sheet_queue if isinstance(s, str)}
-            for sheet_name in all_sheets:
-                if sheet_name in selected_set:
-                    continue
-                raw_sheet_job_id = await repo.create_job(
-                    project_id=project_id,
-                    filename=original_name,
-                    storage_key=raw_key,
-                    owner_email=user.email,
-                    dataset_type=dataset_type,
-                    header_mode=header_mode_for_file,
-                    custom_headers=custom_headers_for_file,
-                    tag_name=tag_folder,
-                    visualize_enabled=False,
-                    processed_key=None,
-                    content_type=file.content_type,
-                    size_bytes=size_bytes,
-                    sheet_name=sheet_name,
-                )
-                await repo.update_job(raw_sheet_job_id, status="stored", progress=100)
-                responses.append(
-                    IngestionCreateResponse(
-                        job_id=raw_sheet_job_id,
-                        project_id=project_id,
-                        filename=original_name,
-                        storage_key=raw_key,
-                        dataset_type=dataset_type,
-                        tag_name=tag_folder,
-                        visualize_enabled=False,
-                        header_mode=header_mode,
-                        status="stored",
-                        autoscale=describe_autoscale(),
-                        sheet_name=sheet_name,
-                    )
-                )
 
     return IngestionBatchCreateResponse(
         batch_id=batch_id,
@@ -586,7 +561,7 @@ async def list_tags(
         tag_name_value = str(r.get("tag_name") or "").strip()
         r["active_job"] = active_by_tag.get(tag_name_value)
         r["active_job_count"] = active_counts.get(tag_name_value, 0)
-    return rows
+    return [_sanitize_json_value(row) for row in rows]
 
 
 
@@ -613,7 +588,7 @@ async def list_files_in_tag(
     for d in docs:
         d["job_id"] = str(d["_id"])
         d.pop("_id", None)
-    return docs
+    return [_sanitize_json_value(doc) for doc in docs]
 
 
 class TagRenameIn(BaseModel):
