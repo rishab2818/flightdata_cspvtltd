@@ -1645,6 +1645,7 @@ const activeSeriesIndex = useMemo(
           },
           mat_derived_formulas: tempMatDerivedByJob[s.jobId] || [],
           chart_type: chartType,
+          name: (s.label || '').trim() || buildMatSignatureText(s, chartType),
         }
       } else {
         const payloadSeries = tabularSeries
@@ -1677,7 +1678,11 @@ const activeSeriesIndex = useMemo(
         const firstSeries = payloadSeries.length
           ? configured.find(s => s.jobId === payloadSeries[0].job_id)
           : null
-
+        
+         const plotName =
+    (activeSeries?.label || '').trim() ||
+    (payloadSeries[0]?.label || '').trim() ||
+    'Plot'
 
         requestPayload = {
           project_id: projectId,
@@ -1685,6 +1690,8 @@ const activeSeriesIndex = useMemo(
           dataset_type: firstSeries?.datasetType || null,
           tag_name: firstSeries?.tag || null,
           chart_type: chartType,
+          name: plotName,
+          // name: (activeSeries?.label || '').trim() || buildAutoLabel(activeSeries),
           series: payloadSeries,
         }
 
@@ -3057,7 +3064,7 @@ pollVisualization(res.viz_id)
                       {visualizations.map((viz) => (
                         <div key={viz.viz_id} className="viz-item">
                           <div>
-                            <p className="data-card__name">{viz.filename || 'dataset'}</p>
+                            <p className="data-card__name">{viz.name || viz.filename || 'dataset'}</p>
                             <p className="summarylabel2">{viz.chart_type} · {viz.status}</p>
                           </div>
 

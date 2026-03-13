@@ -61,6 +61,7 @@ class VisualizationCreateRequest(BaseModel):
     source_type: SourceType = Field(default="tabular")
     dataset_type: Optional[str] = None
     tag_name: Optional[str] = None
+    name: Optional[str] = None
     series: list[VisualizationSeriesInput] = Field(default_factory=list)
     job_id: Optional[str] = None
     var: Optional[str] = None
@@ -97,6 +98,7 @@ class VisualizationOut(BaseModel):
     updated_at: datetime
 
     filename: Optional[str] = None
+    name: Optional[str] = None
 
     class Config:
         from_attributes = True

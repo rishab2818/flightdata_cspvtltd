@@ -275,6 +275,7 @@ async def create_visualization(
             user.email,
             series=[],
             filename=job.get("filename", "dataset"),
+            name=payload.name,
             source_type="mat",
             mat_request=mat_request_payload,
             dataset_type=payload.dataset_type,
@@ -389,10 +390,12 @@ async def create_visualization(
         user.email,
         series_docs,
         filename=primary_filename,
+        name=payload.name,
         source_type="tabular",
         mat_request=None,
         dataset_type=payload.dataset_type,
         tag_name=payload.tag_name,
+        is_saved=False,
     )
 
     generate_visualization.delay(viz_id)
