@@ -279,6 +279,7 @@ async def create_visualization(
             mat_request=mat_request_payload,
             dataset_type=payload.dataset_type,
             tag_name=payload.tag_name,
+            is_saved=False,
         )
         generate_visualization.delay(viz_id)
         doc = _with_series(await repo.get(viz_id))
@@ -674,7 +675,7 @@ async def list_project_visualizations(
     user: CurrentUser = Depends(get_current_user),
 ):
     await _ensure_member(project_id, user)
-    docs = await repo.list_for_project(project_id, page=page, limit=limit)
+    docs = await repo.list_for_project(project_id, page=page, limit=limit, saved_only=True)
 
     output = []
     for doc in docs:
@@ -696,3 +697,17 @@ async def list_project_visualizations(
                 exc,
             )
     return output
+
+@router.post("/{viz_id}/save", response_model=VisualizationOut)
+async def save_visualization(viz_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Visualization not found")
+
+    await _ensure_member(doc["project_id"], user)
+
+    updated = await repo.mark_saved(viz_id)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to save visualization")
+
+    return VisualizationOut(**_inject_url(_with_series(updated)))

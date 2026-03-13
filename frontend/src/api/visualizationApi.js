@@ -42,6 +42,11 @@ export const visualizationApi = {
     return data
   },
 
+  save: async (vizId) => {
+    const { data } = await axiosClient.post(`/api/visualizations/${vizId}/save`)
+    return data
+  },
+
   listForProject: async (projectId, params = {}) => {
     const { data } = await axiosClient.get(`/api/visualizations/project/${projectId}`, { params })
     return data

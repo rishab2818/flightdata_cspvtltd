@@ -975,19 +975,26 @@ const activeSeriesIndex = useMemo(
   // };
 
   const handleSaveVisualization = async () => {
-    try {
-      setLoadingSave(true)
-
-      await fetchVisualizations(1, true)
-
-      setStatusMessage("Visualization saved successfully ✅")
-
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoadingSave(false)
-    }
+  if (!tempVizId) {
+    setStatusMessage("No preview available to save.")
+    return
   }
+
+  try {
+    setLoadingSave(true)
+
+    await visualizationApi.save(tempVizId)
+    await fetchVisualizations(1, true)
+
+    setStatusMessage("Visualization saved successfully ✅")
+    setTempVizId(null)
+  } catch (err) {
+    console.error(err)
+    setStatusMessage("Failed to save visualization.")
+  } finally {
+    setLoadingSave(false)
+  }
+}
 
   const handleFullScreen = (viz) => {
     if (!viz?.html_url) return;
@@ -999,24 +1006,26 @@ const activeSeriesIndex = useMemo(
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const handleGeneratePlot = async () => {
-    try {
-      setLoading(true)
+//   const handleGeneratePlot = async () => {
+//     try {
+//       setLoading(true)
 
-      const res = await visualizationApi.create(requestPayload)
+//       const res = await visualizationApi.create({
+//   ...requestPayload,
+//   is_saved: false,
+// })
+//       setTempVizId(res.viz_id)   // store temporary id
+//       pollVisualization(res.viz_id)
 
-      setTempVizId(res.viz_id)   // store temporary id
-      pollVisualization(res.viz_id)
+//       setStatusMessage("Preview ready. Click Save Visualization.")
 
-      setStatusMessage("Preview ready. Click Save Visualization.")
-
-    } catch (err) {
-      console.error(err)
-      setStatusMessage("Failed to generate plot")
-    } finally {
-      setLoading(false)
-    }
-  }
+//     } catch (err) {
+//       console.error(err)
+//       setStatusMessage("Failed to generate plot")
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
 
   const fetchVisualizations = async (page = 1, reset = false) => {
     if (loadingViz) return
@@ -1563,6 +1572,7 @@ const activeSeriesIndex = useMemo(
     setPlotHtml('')
     setTilePreview(null)
     setStatusMessage('Starting visualization…')
+    setTempVizId(null)
     if (pollTimer.current) clearTimeout(pollTimer.current)
 
     try {
@@ -1690,7 +1700,8 @@ const activeSeriesIndex = useMemo(
       }
 
       const res = await visualizationApi.create(requestPayload)
-      pollVisualization(res.viz_id)
+setTempVizId(res.viz_id)
+pollVisualization(res.viz_id)
 
     } catch (err) {
       setError(err?.response?.data?.detail || err.message || 'Failed to create visualization')
@@ -2875,7 +2886,7 @@ const activeSeriesIndex = useMemo(
                     type="button"
                     className="project-shell__nav-save"
                     onClick={handleSaveVisualization}
-                    disabled={!plotHtml || loadingSave}
+                    disabled={!plotHtml || !tempVizId || loadingSave}
                   >
                     {loadingSave ? 'Saving…' : 'Save Visualization'}
                   </button>

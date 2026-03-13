@@ -34,7 +34,7 @@ const MAT_EXTS = new Set(['.mat'])
 const getExt = getFileExtension
 const isTabular = (file) => TABULAR_EXTS.has(getExt(file?.name))
 const isImage = (file) => IMAGE_EXTS.has(getExt(file?.name))
-const isExcel = (file) => ['.xlsx', '.xls'].includes(getExt(file?.name))
+const isExcel = (file) => ['.xlsx', '.xls', '.ods'].includes(getExt(file?.name))
 const isDatLike = (file) => isRangeTextExtension(getExt(file?.name))
 const isMat = (file) => MAT_EXTS.has(getExt(file?.name))
 const isHeaderModeCapable = (file) => isTabular(file) && !isMat(file) && !isDatLike(file)
@@ -634,12 +634,12 @@ export default function UploadModal({
             return
         }
 
-        if (ext === '.xlsx' || ext === '.xls') {
+        if (ext === '.xlsx' || ext === '.xls' || ext === '.ods') {
             const buf = await file.arrayBuffer()
             const wb = XLSX.read(buf, { type: 'array' })
 
             if (!wb.SheetNames?.length) {
-                setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
+                setPreview({ type: 'message', message: 'No sheets found in spreadsheet file.' })
                 return
             }
 
@@ -1114,7 +1114,7 @@ const onSelectSheet = (sheetName) => {
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
                                     <p className='uploadtext'>
-                                        Supported: CSV/Excel and line-based text files like TXT, DAT, C, FUL, KUL, PDT, FIN. Images/others stored as raw only.
+                                        Supported: CSV, Excel (.xlsx, .xls), ODS (.ods) and line-based text files like TXT, DAT, C, FUL, KUL, PDT, FIN.
                                     </p>
                                 </label>
                                 <input

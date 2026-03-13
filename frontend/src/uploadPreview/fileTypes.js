@@ -13,6 +13,7 @@ export const PROJECT_TABULAR_EXTENSIONS = new Set([
   '.xlsx',
   '.xls',
   '.mat',
+  '.ods',
   ...RANGE_TEXT_EXTENSIONS,
 ])
 
