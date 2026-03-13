@@ -216,29 +216,37 @@ async def start_ingestion_batch(
         )
         size_bytes = getattr(file, "size", None)
 
-        excel_exts = {".xlsx", ".xls"}
+        # excel_exts = {".xlsx", ".xls"}
+        spreadsheet_exts = {".xlsx", ".xls", ".ods"}
         all_sheets: list[str] = []
-        if ext in excel_exts:
+        # if ext in excel_exts:
+        if ext in spreadsheet_exts:
             try:
                 await file.seek(0)
-                workbook = pd.ExcelFile(file.file)
+                if ext == ".ods":
+                   workbook = pd.ExcelFile(file.file, engine="odf")
+                else:
+                   workbook = pd.ExcelFile(file.file)
                 all_sheets = [s for s in workbook.sheet_names if isinstance(s, str) and s.strip()]
             except Exception:
                 all_sheets = []
         await file.close()
 
-        # Decide which sheets to process for Excel
+        # Decide which sheets to process for spreadsheet files
         sheet_queue: list[str | None]
-        if visualize_enabled and ext in excel_exts:
+        # if visualize_enabled and ext in excel_exts:
+        if visualize_enabled and ext in spreadsheet_exts:
             sheet_queue = requested_sheets or [None]
         else:
             sheet_queue = [None]
 
-        if not visualize_enabled and ext in excel_exts and len(all_sheets) > 1:
+        # if not visualize_enabled and ext in excel_exts and len(all_sheets) > 1:
+        if not visualize_enabled and ext in spreadsheet_exts and len(all_sheets) > 1:
             sheet_queue = []
 
-        # Store the full workbook as a raw-only entry for multi-sheet Excel
-        if ext in excel_exts and len(all_sheets) > 1:
+        # Store the full workbook as a raw-only entry for multi-sheet spreadsheet files
+        # if ext in excel_exts and len(all_sheets) > 1:
+        if ext in spreadsheet_exts and len(all_sheets) > 1:
             full_job_id = await repo.create_job(
                 project_id=project_id,
                 filename=original_name,
@@ -340,7 +348,8 @@ async def start_ingestion_batch(
             )
 
         # Store raw-only entries for any sheets not selected for visualization
-        if ext in excel_exts and all_sheets:
+        # if ext in excel_exts and all_sheets:
+        if ext in spreadsheet_exts and all_sheets:
             selected_set = {s for s in sheet_queue if isinstance(s, str)}
             for sheet_name in all_sheets:
                 if sheet_name in selected_set:

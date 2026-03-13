@@ -1,4 +1,3 @@
-
 import io
 import json
 import logging
@@ -259,13 +258,44 @@ def _resolve_object_size(minio, bucket: str, object_name: str, fallback):
     return None
 
 
-def _excel_to_parquet(
+# def _excel_to_parquet(
+#     xls_path: str,
+#     parquet_path: str,
+#     header_mode: str,
+#     custom_headers: list[str] | None,
+#     sheet_name: str | int | None = None,
+# ):
+#     # Default to first sheet when not specified.
+#     read_kwargs = {"sheet_name": 0 if sheet_name is None else sheet_name}
+#     if header_mode in ("none", "custom"):
+#         read_kwargs["header"] = None
+#     else:
+#         read_kwargs["header"] = 0
+
+#     df = pd.read_excel(xls_path, **read_kwargs)
+#     df = _clean_excel_df(df)
+#     df = _apply_header_mode(df, header_mode, custom_headers)
+
+#     stats = {}
+#     _update_numeric_stats(stats, df)
+#     columns = list(df.columns)
+#     rows = len(df)
+#     sample_rows = df.head(10).to_dict(orient="records")
+
+#     df.to_parquet(parquet_path, index=False)
+#     return columns, rows, sample_rows, stats
+
+def _spreadsheet_to_parquet(
     xls_path: str,
     parquet_path: str,
     header_mode: str,
     custom_headers: list[str] | None,
+    file_ext: str,
     sheet_name: str | int | None = None,
 ):
+    # ext = os.path.splitext(str(xls_path).lower())[-1]
+    ext = str(file_ext or "").lower()
+
     # Default to first sheet when not specified.
     read_kwargs = {"sheet_name": 0 if sheet_name is None else sheet_name}
     if header_mode in ("none", "custom"):
@@ -273,7 +303,11 @@ def _excel_to_parquet(
     else:
         read_kwargs["header"] = 0
 
-    df = pd.read_excel(xls_path, **read_kwargs)
+    if ext == ".ods":
+        df = pd.read_excel(xls_path, engine="odf", **read_kwargs)
+    else:
+        df = pd.read_excel(xls_path, **read_kwargs)
+
     df = _clean_excel_df(df)
     df = _apply_header_mode(df, header_mode, custom_headers)
 
@@ -332,7 +366,7 @@ def ingest_file(
         return
 
     raw_path = None
-    if ext in {".xlsx", ".xls", ".mat"}:
+    if ext in {".xlsx", ".xls", ".ods",".mat"}:
         raw_fd, raw_path = tempfile.mkstemp()
         os.close(raw_fd)
 
@@ -417,15 +451,24 @@ def ingest_file(
                     processed_key_to_store = None
                 else:
                     if not parquet_path:
-                        raise ValueError("parquet_path is required for Excel ingestion")
-                    _publish(job_id, states.STARTED, 60, "Preparing Excel data")
-                    columns, row_count, sample_rows, stats = _excel_to_parquet(
-                        raw_path,
-                        parquet_path,
-                        header_mode,
-                        custom_headers,
-                        sheet_name=sheet_name,
-                    )
+                        raise ValueError("parquet_path is required for spreadsheet ingestion")
+                    _publish(job_id, states.STARTED, 60, "Preparing spreadsheet data")
+                    columns, row_count, sample_rows, stats = _spreadsheet_to_parquet(
+    raw_path,
+    parquet_path,
+    header_mode,
+    custom_headers,
+    ext,
+    sheet_name=sheet_name,
+)
+                    # _publish(job_id, states.STARTED, 60, "Preparing Excel data")
+                    # columns, row_count, sample_rows, stats = _excel_to_parquet(
+                    #     raw_path,
+                    #     parquet_path,
+                    #     header_mode,
+                    #     custom_headers,
+                    #     sheet_name=sheet_name,
+                    # )
         finally:
             try:
                 response.close()

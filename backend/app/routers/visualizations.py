@@ -507,7 +507,6 @@ async def get_visualization_tile(
         "data": df.to_dict(orient="records"),
     }
 
-
 @router.get("/{viz_id}/raw")
 async def get_visualization_raw(
     viz_id: str,
@@ -545,11 +544,10 @@ async def get_visualization_raw(
     if not job:
         raise HTTPException(status_code=404, detail="Dataset not found for series")
 
-    # ✅ Prefer processed parquet
+    # Prefer processed parquet
     object_name = job.get("processed_key") or job.get("storage_key")
     filename = (job.get("filename") or "").lower()
 
-    # If processed_key exists -> parquet
     if job.get("processed_key"):
         ext = ".parquet"
     else:
@@ -558,7 +556,7 @@ async def get_visualization_raw(
     if ext not in {".parquet", ".pq", ".feather", ".arrow"}:
         raise HTTPException(
             status_code=400,
-            detail="RAW endpoint supports parquet/arrow only. Ensure processed_key is generated (parquet).",
+            detail="RAW endpoint supports parquet/arrow only. Ensure processed_key is generated.",
         )
 
     minio = get_minio_client()
@@ -577,34 +575,31 @@ async def get_visualization_raw(
             target_columns=[x_axis, y_axis],
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid derived columns in visualization: {exc}") from exc
+        raise HTTPException(status_code=400, detail=f"Invalid derived columns: {exc}") from exc
 
     cols = formula_plan.read_columns or [x_axis, y_axis]
-    can_pushdown_filter = x_axis in cols and not formula_plan.derived_columns
 
-    # Best-effort pushdown filtering with pyarrow.dataset
+    # ── FIX 1: Never use ds.dataset() with HTTP/presigned URLs.
+    # PyArrow dataset API only understands local paths and s3:// URIs —
+    # passing an http:// presigned MinIO URL raises ArrowInvalid.
+    # Use pq.ParquetFile directly which handles HTTP URLs fine.
     try:
-        import pyarrow.dataset as ds  # type: ignore
-
-        dataset = ds.dataset(data_url, format="parquet")
-        filt = None
-        if can_pushdown_filter and x_min is not None and x_max is not None:
-            filt = (ds.field(x_axis) >= x_min) & (ds.field(x_axis) <= x_max)
-        elif can_pushdown_filter and x_min is not None:
-            filt = ds.field(x_axis) >= x_min
-        elif can_pushdown_filter and x_max is not None:
-            filt = ds.field(x_axis) <= x_max
-
-        table = dataset.to_table(columns=cols, filter=filt)
-        df = table.to_pandas()
+        import pyarrow.parquet as pq
+        pf = pq.ParquetFile(data_url, pre_buffer=True)
+        df = pf.read(columns=cols, use_threads=True).to_pandas()
     except Exception:
-        # Fallback: read then filter (may be heavier)
+        # Fallback: let pandas handle it
         df = pd.read_parquet(data_url, columns=cols)
-        if can_pushdown_filter and x_min is not None:
-            df = df[df[x_axis] >= x_min]
-        if can_pushdown_filter and x_max is not None:
-            df = df[df[x_axis] <= x_max]
 
+    # ── FIX 2: Coerce to numeric BEFORE any filtering.
+    # The column may be stored as object/string dtype in parquet
+    # (common with .txt/.dat files that were converted).
+    # Comparing a string Series to a float causes the TypeError you saw.
+    df[x_axis] = pd.to_numeric(df[x_axis], errors="coerce")
+    df[y_axis] = pd.to_numeric(df[y_axis], errors="coerce")
+    df = df.dropna(subset=[x_axis, y_axis])
+
+    # Apply derived columns after numeric coerce
     if formula_plan.derived_columns:
         try:
             df = apply_derived_columns_to_frame(df, formula_plan.derived_columns)
@@ -614,20 +609,16 @@ async def get_visualization_raw(
     if x_axis not in df.columns or y_axis not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail="Series axis columns are not available after derived column evaluation",
+            detail="Series axis columns not available after derived column evaluation",
         )
 
+    # Safe to filter now — column is guaranteed numeric
     if x_min is not None:
         df = df[df[x_axis] >= x_min]
     if x_max is not None:
         df = df[df[x_axis] <= x_max]
 
-    # numeric cleanup (prevents category-axis weird zoom)
-    df[x_axis] = pd.to_numeric(df[x_axis], errors="coerce")
-    df[y_axis] = pd.to_numeric(df[y_axis], errors="coerce")
-    df = df.dropna(subset=[x_axis, y_axis])
-
-    # cap response size if needed
+    # Cap response size
     if len(df) > max_points:
         df = df.sample(n=max_points, random_state=42)
 
@@ -640,7 +631,6 @@ async def get_visualization_raw(
         "y_axis": y_axis,
         "data": df.to_dict(orient="records"),
     }
-
 
 @router.get("/{viz_id}/status", response_model=VisualizationStatus)
 async def visualization_status(viz_id: str, user: CurrentUser = Depends(get_current_user)):

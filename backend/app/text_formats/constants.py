@@ -14,6 +14,7 @@ TABULAR_EXTENSIONS = {
     ".csv",
     ".xlsx",
     ".xls",
+    ".ods",
     ".mat",
     *RANGE_TEXT_EXTENSIONS,
 }
