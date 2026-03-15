@@ -28,6 +28,7 @@ import MatPlotBuilder from '../../../matlabPlotBuilder/components/MatPlotBuilder
 import MatZoomLoaderOverlay from '../../../matlabPlotBuilder/components/MatZoomLoaderOverlay'
 import { useMatZoomLoader } from '../../../matlabPlotBuilder/hooks/useMatZoomLoader'
 import { openMatPreviewInNewTab } from '../../../matlabPlotBuilder/utils/previewUrl'
+import DataBrowserModal from './DataBrowserModal'
 // import linechart25 from "../../assets/linechart25.svg";
 
 
@@ -172,7 +173,10 @@ const newSeries = (n = 1) => ({
   jobId: '',
   xAxis: '',
   yAxis: '',
+  yAxisList: [],
   zAxis: '',
+  rowXData: null,
+  rowYData: null,
   seriesChartType: '',
   label: '',
   ...MAT_SERIES_DEFAULTS,
@@ -270,6 +274,8 @@ export default function ProjectVisualisation() {
   const [statusMessage, setStatusMessage] = useState('Select data to begin')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [dataBrowserOpen, setDataBrowserOpen] = useState(false)
+  const [dataBrowserTarget, setDataBrowserTarget] = useState(null) // 'x' | 'y' | 'z'
 
   const pollTimer = useRef(null)
   const matPlotFrameRef = useRef(null)
@@ -492,6 +498,70 @@ const activeSeriesIndex = useMemo(
     )
   }, [activeSeriesId])
 
+  const handleBrowserSelectY = useCallback((colOrCols) => {
+    if (Array.isArray(colOrCols) && colOrCols.length > 1) {
+      const cleaned = colOrCols.map((item) => String(item || '').trim()).filter(Boolean)
+      if (!cleaned.length) {
+        setDataBrowserOpen(false)
+        setDataBrowserTarget(null)
+        return
+      }
+      const patch = {
+        yAxis: cleaned[0],
+        yAxisList: cleaned,
+        rowYData: null,
+        label: cleaned.join(', '),
+      }
+      updateActiveSeries(patch)
+    } else {
+      const col = Array.isArray(colOrCols) ? colOrCols[0] : colOrCols
+      const safe = String(col || '').trim()
+      if (safe) {
+        const patch = {
+          yAxis: safe,
+          yAxisList: [],
+          rowYData: null,
+          label: '',
+        }
+        updateActiveSeries(patch)
+      }
+    }
+    setDataBrowserOpen(false)
+    setDataBrowserTarget(null)
+  }, [activeSeries, updateActiveSeries])
+
+  const handleBrowserSelectRowX = useCallback((rowIndex, rowData, columns) => {
+    const values = (columns || []).map((col) => {
+      const value = rowData?.[col]
+      return value === null || value === undefined ? NaN : Number(value)
+    })
+    updateActiveSeries({
+      xAxis: `Row ${rowIndex}`,
+      rowXData: { rowIndex, values, label: `Row ${rowIndex}` },
+    })
+    setDataBrowserOpen(false)
+    setDataBrowserTarget(null)
+  }, [updateActiveSeries])
+
+  const handleBrowserSelectRowY = useCallback((rowIndex, rowData, columns) => {
+    const values = (columns || []).map((col) => {
+      const value = rowData?.[col]
+      return value === null || value === undefined ? NaN : Number(value)
+    })
+    const indexValues = values.map((_, idx) => idx + 1)
+    const hasRowX = String(activeSeries?.xAxis || '').startsWith('Row ')
+    updateActiveSeries({
+      yAxis: `Row ${rowIndex}`,
+      yAxisList: [],
+      rowYData: { rowIndex, values, label: `Row ${rowIndex}` },
+      xAxis: hasRowX ? activeSeries?.xAxis : 'Row Index',
+      rowXData: hasRowX ? activeSeries?.rowXData : { rowIndex: 0, values: indexValues, label: 'Row Index' },
+      label: '',
+    })
+    setDataBrowserOpen(false)
+    setDataBrowserTarget(null)
+  }, [activeSeries, updateActiveSeries])
+
   const setSeriesEnabled = (id, enabled) => {
     setSeriesList((prev) => prev.map((s) => (s.id === id ? { ...s, enabled } : s)))
   }
@@ -538,11 +608,18 @@ const activeSeriesIndex = useMemo(
     if (mat) {
       return `${ds} • MAT • ${buildMatSignatureText(s, chartType)}`
     }
-    const x = s.xAxis || '-'
-    const y = s.yAxis || '-'
+    const x = String(s.xAxis || '').startsWith('Row ')
+      ? (s.rowXData?.label || s.xAxis || '-')
+      : (s.xAxis || '-')
+    const y = String(s.yAxis || '').startsWith('Row ')
+      ? (s.rowYData?.label || s.yAxis || '-')
+      : (s.yAxis || '-')
     const z = s.zAxis || '-'
     const f = s.jobId ? 'file✅' : 'file❌'
     const seriesType = (s.seriesChartType || chartType || 'scatter').toLowerCase()
+    if (Array.isArray(s.yAxisList) && s.yAxisList.length > 1) {
+      return `${ds} • ${f} • ${x} → [${s.yAxisList.join(', ')}] • ${seriesType}`
+    }
     if (chartType === 'contour') return `${ds} • ${f} • ${x} → ${y} → ${z}`
     return `${ds} • ${f} • ${x} → ${y} • ${seriesType}`
   }
@@ -1750,23 +1827,80 @@ const activeSeriesIndex = useMemo(
         }
       } else {
         const payloadSeries = tabularSeries
-          .filter((s) => s.xAxis && s.yAxis && (!requiresZ || s.zAxis))
-          .map((s) => {
-          const derivedColumns = normalizeDerivedColumns(s)
-          return {
-            job_id: s.jobId,
-            x_axis: s.xAxis,
-            y_axis: s.yAxis,
-            z_axis: requiresZ ? s.zAxis : undefined,
-            x_scale: xScale,
-            y_scale: yScale,
-            chart_type: canMixOverplot
-              ? ((s.seriesChartType || '').trim() || undefined)
-              : undefined,
-            label: (s.label || '').trim() || buildAutoLabel(s),
-            derived_columns: derivedColumns,
-          }
-        })
+          .filter((s) => s.jobId)
+          .flatMap((s) => {
+            const derivedColumns = normalizeDerivedColumns(s)
+            const baseEntry = {
+              job_id: s.jobId,
+              x_axis: s.xAxis,
+              x_scale: xScale,
+              y_scale: yScale,
+              chart_type: canMixOverplot
+                ? ((s.seriesChartType || '').trim() || undefined)
+                : undefined,
+              derived_columns: derivedColumns,
+            }
+            const yColumns =
+              Array.isArray(s.yAxisList) && s.yAxisList.length > 1
+                ? s.yAxisList
+                : [s.yAxis]
+
+            return yColumns
+              .filter((col) => col && (!requiresZ || s.zAxis))
+              .map((col) => {
+                const xAxisName = String(s.xAxis || '').trim()
+                const isRowX =
+                  (xAxisName.startsWith('Row ') || xAxisName === 'Row Index') &&
+                  Array.isArray(s.rowXData?.values)
+                const isRowY = String(col || '').startsWith('Row ') && Array.isArray(s.rowYData?.values)
+                const candidateX = isRowX ? s.rowXData.values : null
+                const candidateY = isRowY ? s.rowYData.values : null
+                let xValues = undefined
+                let yValues = undefined
+                if (Array.isArray(candidateX) && Array.isArray(candidateY)) {
+                  const paired = candidateY
+                    .map((yv, i) => [Number(candidateX[i]), Number(yv)])
+                    .filter(([xv, yv]) => Number.isFinite(xv) && Number.isFinite(yv))
+                  if (paired.length) {
+                    xValues = paired.map(([xv]) => xv)
+                    yValues = paired.map(([, yv]) => yv)
+                  }
+                }
+                if (isRowX && !isRowY && Array.isArray(candidateX)) {
+                  const xv = candidateX
+                    .map((value) => Number(value))
+                    .filter((value) => Number.isFinite(value))
+                  if (xv.length < 2) {
+                    const rowName = s?.rowXData?.label || s.xAxis || 'Selected row'
+                    throw new Error(`${rowName} does not contain enough numeric values to plot.`)
+                  }
+                  xValues = xv
+                }
+                if (isRowY && !isRowX && Array.isArray(candidateY)) {
+                  const yv = candidateY
+                    .map((value) => Number(value))
+                    .filter((value) => Number.isFinite(value))
+                  if (yv.length < 2) {
+                    const rowName = s?.rowYData?.label || col || 'Selected row'
+                    throw new Error(`${rowName} does not contain enough numeric values to plot.`)
+                  }
+                  yValues = yv
+                }
+                if (isRowY && isRowX && (!xValues || !yValues || xValues.length < 2 || yValues.length < 2)) {
+                  const rowName = s?.rowYData?.label || col || 'Selected row'
+                  throw new Error(`${rowName} does not contain enough numeric values to plot.`)
+                }
+                return {
+                  ...baseEntry,
+                  y_axis: col,
+                  z_axis: requiresZ ? s.zAxis : undefined,
+                  x_values: xValues,
+                  y_values: yValues,
+                  label: (s.label || col || '').trim() || buildAutoLabel({ ...s, yAxis: col }),
+                }
+              })
+          })
+          .filter((entry) => entry.x_axis && entry.y_axis)
 
         if (payloadSeries.length === 0) {
           throw new Error(
@@ -2832,13 +2966,28 @@ pollVisualization(res.viz_id)
                   }}
                 >
                   <div className="ps-field">
-                    <label>X Axis</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      X Axis
+                      {activeSeries?.jobId && !activeIsMat && (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title="Browse file data"
+                          onClick={() => { setDataBrowserTarget('x'); setDataBrowserOpen(true) }}
+                        >
+                          <img src={ViewIcon} alt="browse" style={{ width: 14, height: 14 }} />
+                        </button>
+                      )}
+                    </label>
                     <select
                       value={activeSeries?.xAxis || ''}
                       onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
                       disabled={!activeSeries?.jobId}
                     >
                       <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeSeries?.xAxis && !activeAxisColumns.includes(activeSeries.xAxis) && (
+                        <option value={activeSeries.xAxis}>{activeSeries.xAxis}</option>
+                      )}
                       {activeAxisColumns.map((col) => (
                         <option key={col} value={col}>{col}</option>
                       ))}
@@ -2846,13 +2995,28 @@ pollVisualization(res.viz_id)
                   </div>
 
                   <div className="ps-field">
-                    <label>Y Axis</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Y Axis
+                      {activeSeries?.jobId && !activeIsMat && (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title="Browse file data"
+                          onClick={() => { setDataBrowserTarget('y'); setDataBrowserOpen(true) }}
+                        >
+                          <img src={ViewIcon} alt="browse" style={{ width: 14, height: 14 }} />
+                        </button>
+                      )}
+                    </label>
                     <select
                       value={activeSeries?.yAxis || ''}
                       onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
                       disabled={!activeSeries?.jobId}
                     >
                       <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeSeries?.yAxis && !activeAxisColumns.includes(activeSeries.yAxis) && (
+                        <option value={activeSeries.yAxis}>{activeSeries.yAxis}</option>
+                      )}
                       {activeAxisColumns.map((col) => (
                         <option key={col} value={col}>{col}</option>
                       ))}
@@ -2896,13 +3060,28 @@ pollVisualization(res.viz_id)
 
                   {requiresZ && (
                     <div className="ps-field">
-                      <label>Z Axis</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Z Axis
+                        {activeSeries?.jobId && !activeIsMat && (
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            title="Browse file data"
+                            onClick={() => { setDataBrowserTarget('z'); setDataBrowserOpen(true) }}
+                          >
+                            <img src={ViewIcon} alt="browse" style={{ width: 14, height: 14 }} />
+                          </button>
+                        )}
+                      </label>
                       <select
                         value={activeSeries?.zAxis || ''}
                         onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
                         disabled={!activeSeries?.jobId}
                       >
                         <option value="">Select</option>
+                        {activeSeries?.zAxis && !activeAxisColumns.includes(activeSeries.zAxis) && (
+                          <option value={activeSeries.zAxis}>{activeSeries.zAxis}</option>
+                        )}
                         {activeAxisColumns.map((col) => (
                           <option key={col} value={col}>{col}</option>
                         ))}
@@ -2996,6 +3175,25 @@ pollVisualization(res.viz_id)
                           <div style={{ fontSize: "12px", fontWeight: "400", fontFamily: "inter-Regular,Helvetica", marginTop: 8, alignItems: 'flex-start' }}>
                             {seriesSummary(s)}
                           </div>
+                          {Array.isArray(s.yAxisList) && s.yAxisList.length > 1 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                              {s.yAxisList.map((col) => (
+                                <span
+                                  key={col}
+                                  style={{
+                                    fontSize: 11,
+                                    padding: '2px 6px',
+                                    borderRadius: 4,
+                                    background: 'var(--color-background-secondary)',
+                                    border: '1px solid var(--color-border-tertiary)',
+                                    color: 'var(--color-text-secondary)',
+                                  }}
+                                >
+                                  {col}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {seriesList.length > 1 && (
 
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -3298,6 +3496,43 @@ pollVisualization(res.viz_id)
               removeSeriesSlot(confirmRemoveSeries.seriesId);
               setConfirmRemoveSeries({ open: false, seriesId: null });
             }}
+          />
+        )}
+
+        {dataBrowserOpen && activeSeries?.jobId && !activeIsMat && (
+          <DataBrowserModal
+            isOpen={dataBrowserOpen}
+            onClose={() => {
+              setDataBrowserOpen(false)
+              setDataBrowserTarget(null)
+            }}
+            jobId={activeSeries.jobId}
+            columns={activeAxisColumns}
+            initialRows={activeJob?.sample_rows || []}
+            totalRows={activeJob?.rows_seen || 0}
+            onSelectX={(col) => {
+              updateActiveSeries({ xAxis: col, rowXData: null })
+              setDataBrowserOpen(false)
+              setDataBrowserTarget(null)
+            }}
+            onSelectY={handleBrowserSelectY}
+            onSelectZ={(col) => {
+              updateActiveSeries({ zAxis: col })
+              setDataBrowserOpen(false)
+              setDataBrowserTarget(null)
+            }}
+            showZ={requiresZ}
+            currentX={activeSeries.xAxis || ''}
+            currentY={activeSeries.yAxis || ''}
+            currentZ={activeSeries.zAxis || ''}
+            targetAxis={dataBrowserTarget}
+            onSelectRowX={(rowIndex, rowData) =>
+              handleBrowserSelectRowX(rowIndex, rowData, activeAxisColumns)
+            }
+            onSelectRowY={(rowIndex, rowData) =>
+              handleBrowserSelectRowY(rowIndex, rowData, activeAxisColumns)
+            }
+            showRowSelect={!requiresZ}
           />
         )}
       </div>

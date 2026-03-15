@@ -487,6 +487,47 @@ def _materialize_mat_tiles(
     return overview_frame, tiles, {"x_min": x_min, "x_max": x_max, "rows": int(xv.shape[0])}
 
 
+def _load_axis_values_from_source(
+    url: str,
+    ext: str,
+    axis_name: str,
+    axis_scale: str = "linear",
+    limit: int | None = None,
+) -> np.ndarray:
+    collected: list[np.ndarray] = []
+    total = 0
+    for chunk in _iter_chunks(
+        url=url,
+        ext=ext,
+        x_axis=axis_name,
+        y_axis=None,
+        z_axis=None,
+        read_columns=[axis_name],
+        derived_columns=None,
+    ):
+        values = pd.to_numeric(chunk[axis_name], errors="coerce").to_numpy(dtype=float)
+        values = values[np.isfinite(values)]
+        if axis_scale == "log":
+            values = values[values > 0]
+        if values.size == 0:
+            continue
+
+        if limit is not None:
+            remaining = limit - total
+            if remaining <= 0:
+                break
+            values = values[:remaining]
+
+        collected.append(values)
+        total += int(values.size)
+        if limit is not None and total >= limit:
+            break
+
+    if not collected:
+        return np.array([], dtype=float)
+    return np.concatenate(collected)
+
+
 # ─── Contour grid builder ─────────────────────────────────────────────────────
 
 def _build_contour_grid(
@@ -1374,6 +1415,127 @@ def generate_visualization(self, viz_id: str):
             z_axis = series.get("z_axis")
             x_scale = (series.get("x_scale") or "linear").lower().strip()
             y_scale = (series.get("y_scale") or "linear").lower().strip()
+            x_values = series.get("x_values")
+            y_values = series.get("y_values")
+            is_literal_series = x_values is not None or y_values is not None
+
+            if is_literal_series:
+                _set_status(redis, viz_id, states.STARTED, 30, f"Materializing row-literal series {idx}")
+                has_x_literal = x_values is not None
+                has_y_literal = y_values is not None
+                xv = np.asarray(x_values or [], dtype=float).reshape(-1) if has_x_literal else np.array([], dtype=float)
+                yv = np.asarray(y_values or [], dtype=float).reshape(-1) if has_y_literal else np.array([], dtype=float)
+
+                data_url = None
+                ext = None
+                if not has_x_literal or not has_y_literal:
+                    if job.get("processed_key"):
+                        data_url = minio.presigned_get_object(
+                            bucket_name=settings.ingestion_bucket,
+                            object_name=job["processed_key"],
+                            expires=timedelta(hours=6),
+                        )
+                        ext = ".parquet"
+                    else:
+                        data_url = minio.presigned_get_object(
+                            bucket_name=settings.ingestion_bucket,
+                            object_name=job["storage_key"],
+                            expires=timedelta(hours=6),
+                        )
+                        ext = os.path.splitext(job.get("filename", "").lower())[-1]
+
+                if not has_x_literal:
+                    xv = _load_axis_values_from_source(
+                        data_url,
+                        ext,
+                        axis_name=x_axis,
+                        axis_scale=x_scale,
+                        limit=int(yv.size) if yv.size else None,
+                    )
+                if not has_y_literal:
+                    yv = _load_axis_values_from_source(
+                        data_url,
+                        ext,
+                        axis_name=y_axis,
+                        axis_scale=y_scale,
+                        limit=int(xv.size) if xv.size else None,
+                    )
+
+                if xv.size != yv.size:
+                    n = int(min(xv.size, yv.size))
+                    xv = xv[:n]
+                    yv = yv[:n]
+                if xv.size < 2 or yv.size < 2:
+                    _update_db_status(
+                        db, viz_id,
+                        status=states.FAILURE, progress=100,
+                        message=f"Not enough overlapping numeric points for row/column series {idx}",
+                    )
+                    return
+
+                finite_mask = np.isfinite(xv) & np.isfinite(yv)
+                xv = xv[finite_mask]
+                yv = yv[finite_mask]
+                if xv.size == 0:
+                    _update_db_status(
+                        db, viz_id,
+                        status=states.FAILURE, progress=100,
+                        message=f"No usable numeric data for row-based series {idx}",
+                    )
+                    return
+
+                if x_scale == "log":
+                    mask = xv > 0
+                    xv = xv[mask]
+                    yv = yv[mask]
+                if y_scale == "log":
+                    mask = yv > 0
+                    xv = xv[mask]
+                    yv = yv[mask]
+                if xv.size == 0:
+                    _update_db_status(
+                        db, viz_id,
+                        status=states.FAILURE, progress=100,
+                        message=f"No data left after scale filtering for row-based series {idx}",
+                    )
+                    return
+
+                series_meta_for_js.append(
+                    {
+                        "x_axis": x_axis,
+                        "y_axis": y_axis,
+                        "z_axis": z_axis,
+                        "derived_columns": [],
+                    }
+                )
+
+                literal_df = pd.DataFrame({x_axis: xv, y_axis: yv})
+                if chart_type in TILED_TYPES:
+                    base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
+                    overview, tiles, stats = _materialize_mat_tiles(
+                        minio=minio,
+                        bucket=bucket,
+                        base_key=base_key,
+                        x_arr=literal_df[x_axis].to_numpy(),
+                        y_arr=literal_df[y_axis].to_numpy(),
+                        x_col=x_axis,
+                        y_col=y_axis,
+                    )
+                    series_frames.append({"series": series, "frame": overview[[x_axis, y_axis]].copy()})
+                    tile_metadata.append({"series": series, "tiles": tiles})
+                    stats_metadata.append({"series": series, "stats": stats})
+                    stats_for_js.append(stats)
+                else:
+                    raw_df = literal_df[[x_axis, y_axis]].copy()
+                    if len(raw_df) > 120_000:
+                        raw_df = raw_df.sample(n=120_000, random_state=42)
+                    raw_df = raw_df.sort_values(x_axis)
+                    series_frames.append({"series": series, "frame": raw_df})
+                    tile_metadata.append({"series": series, "tiles": []})
+                    stats_metadata.append({"series": series, "stats": {"note": "row_literal_no_tiles"}})
+                    stats_for_js.append({})
+                continue
+
             derived_specs = normalize_derived_columns(series.get("derived_columns") or [])
             formula_plan = build_formula_plan(
                 base_columns=list(job.get("columns") or []),

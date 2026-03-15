@@ -381,6 +381,84 @@ async def get_job(job_id: str, user: CurrentUser = Depends(get_current_user)):
     return IngestionJobOut(**doc)
 
 
+@router.get("/jobs/{job_id}/preview")
+async def job_data_preview(
+    job_id: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Returns paginated rows from the processed parquet for a tabular job.
+    For jobs without processed parquet, falls back to metadata sample_rows.
+    """
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    filename = (doc.get("filename") or "").lower()
+    if filename.endswith(".mat"):
+        raise HTTPException(status_code=400, detail="Use MAT preview endpoint for .mat files")
+
+    sample_rows = list(doc.get("sample_rows") or [])
+    columns = list(doc.get("columns") or [])
+    processed_key = doc.get("processed_key")
+
+    if not processed_key:
+        return {
+            "rows": sample_rows[offset: offset + limit],
+            "total": int(doc.get("rows_seen") or len(sample_rows)),
+            "columns": columns,
+        }
+
+    minio = get_minio_client()
+    data_url = minio.presigned_get_object(
+        bucket_name=settings.ingestion_bucket,
+        object_name=processed_key,
+        expires=timedelta(minutes=10),
+    )
+
+    try:
+        pf = pq.ParquetFile(data_url, pre_buffer=True)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Unable to read processed parquet: {exc}") from exc
+
+    total_rows = int(pf.metadata.num_rows)
+    if not columns:
+        columns = [pf.schema_arrow.field(i).name for i in range(pf.schema_arrow.num_fields)]
+
+    rows_collected: list[pd.DataFrame] = []
+    rows_skipped = 0
+    rows_needed = limit
+
+    for batch in pf.iter_batches(batch_size=1000, columns=columns, use_threads=True):
+        batch_len = len(batch)
+        if rows_skipped + batch_len <= offset:
+            rows_skipped += batch_len
+            continue
+
+        start = max(0, offset - rows_skipped)
+        take = min(rows_needed, batch_len - start)
+        if take <= 0:
+            rows_skipped += batch_len
+            continue
+
+        chunk_df = batch.slice(start, take).to_pandas()
+        rows_collected.append(chunk_df)
+
+        rows_needed -= take
+        rows_skipped += batch_len
+        if rows_needed <= 0:
+            break
+
+    result = pd.concat(rows_collected, ignore_index=True) if rows_collected else pd.DataFrame(columns=columns)
+    result = result.where(result.notna(), other=None)
+    rows = [{k: _sanitize_json_value(v) for k, v in row.items()} for row in result.to_dict(orient="records")]
+
+    return {"rows": rows, "total": total_rows, "columns": columns}
+
+
 @router.get("/jobs/{job_id}/download")
 async def get_download_url(job_id: str, user: CurrentUser = Depends(get_current_user)):
     doc = await repo.get_job(job_id)
