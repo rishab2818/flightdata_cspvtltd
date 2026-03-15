@@ -1821,9 +1821,19 @@ pollVisualization(res.viz_id)
   const pollVisualization = async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
+      const isMatViz =
+        String(detail?.source_type || '').toLowerCase() === 'mat' || !!detail?.mat_request
+      let nextHtml = detail.html || ''
+
+      if (isMatViz) {
+        nextHtml = ''
+        if (detail.status === 'SUCCESS') {
+          nextHtml = await visualizationApi.html(detail.viz_id || vizId)
+        }
+      }
 
       setActiveViz(detail)
-      setPlotHtml(detail.html || '')
+      setPlotHtml(nextHtml || '')
 
       if (detail.status === 'SUCCESS') {
         setStatusMessage("Preview ready. Click Save Visualization.")  // ✅ HERE
@@ -1845,8 +1855,19 @@ pollVisualization(res.viz_id)
   const loadVisualization = useCallback(async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
+      const isMatViz =
+        String(detail?.source_type || '').toLowerCase() === 'mat' || !!detail?.mat_request
+      let nextHtml = detail.html || ''
+
+      if (isMatViz) {
+        nextHtml = ''
+        if (detail.status === 'SUCCESS') {
+          nextHtml = await visualizationApi.html(detail.viz_id || vizId)
+        }
+      }
+
       setActiveViz(detail)
-      setPlotHtml(detail.html || '')
+      setPlotHtml(nextHtml || '')
       setStatusMessage(detail.message || detail.status)
       setTilePreview(null)
     } catch (e) {
@@ -1950,6 +1971,8 @@ pollVisualization(res.viz_id)
   })
 
   /* ================= UI ================= */
+  const hasPlotContent = !!plotHtml
+
   return (
     <div className="CardWapper">
       <div className="project-cardpage">
@@ -3026,7 +3049,7 @@ pollVisualization(res.viz_id)
                     type="button"
                     className="project-shell__nav-save"
                     onClick={handleSaveVisualization}
-                    disabled={!plotHtml || !tempVizId || loadingSave}
+                    disabled={!hasPlotContent || !tempVizId || loadingSave}
                   >
                     {loadingSave ? 'Saving…' : 'Save Visualization'}
                   </button>
@@ -3054,7 +3077,7 @@ pollVisualization(res.viz_id)
 
               <div className="Plot-preview" style={{ position: 'relative' }}>
                 {activeIsMat && <MatZoomLoaderOverlay active={matZoomLoading} />}
-                {plotHtml ? (
+                {hasPlotContent ? (
                   <iframe
                     title="plot"
                     ref={activeIsMat ? matPlotFrameRef : undefined}

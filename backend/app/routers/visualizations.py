@@ -6,6 +6,7 @@ from datetime import timedelta
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from minio.error import S3Error
 from pydantic import ValidationError
 
 from app.core.auth import CurrentUser, get_current_user
@@ -464,18 +465,23 @@ async def get_visualization_tile(
 
     if not hydrated.get("tiles"):
         raise HTTPException(status_code=404, detail="No tiles materialized for this visualization")
-    if not hydrated.get("series"):
-        raise HTTPException(status_code=404, detail="Visualization series missing")
-    if series >= len(hydrated["tiles"]) or series >= len(hydrated["series"]):
+    if series >= len(hydrated["tiles"]):
         raise HTTPException(status_code=400, detail="Series index out of range")
 
-    # ✅ IMPORTANT: per-series axes (your create_visualization stores axes per series)
-    x_axis = hydrated["series"][series].get("x_axis")
-    y_axis = hydrated["series"][series].get("y_axis")
+    series_tile_entry = hydrated["tiles"][series] or {}
+    series_meta = series_tile_entry.get("series") or {}
+    if (not series_meta.get("x_axis") or not series_meta.get("y_axis")) and hydrated.get("series"):
+        if series < len(hydrated["series"]):
+            series_meta = hydrated["series"][series]
+
+    x_axis = series_meta.get("x_axis")
+    y_axis = series_meta.get("y_axis")
     if not x_axis or not y_axis:
         raise HTTPException(status_code=400, detail="Series missing x_axis/y_axis")
 
-    series_tiles = hydrated["tiles"][series]["tiles"]
+    series_tiles = series_tile_entry.get("tiles") or []
+    if not series_tiles:
+        raise HTTPException(status_code=404, detail="No tile levels available for this series")
     chosen_level = level or min(tile["level"] for tile in series_tiles)
     chosen = next((tile for tile in series_tiles if tile["level"] == chosen_level), None)
     if not chosen:
@@ -504,7 +510,7 @@ async def get_visualization_tile(
         df = df[df[x_axis] <= x_max]
 
     return {
-        "series": hydrated["series"][series],
+        "series": series_meta,
         "level": chosen_level,
         "rows": len(df),
         "tile": chosen,
@@ -530,6 +536,53 @@ async def get_visualization_raw(
     await _ensure_member(doc["project_id"], user)
 
     hydrated = _with_series(doc)
+    source_type = (hydrated.get("source_type") or "tabular").lower().strip()
+
+    if source_type == "mat":
+        tiles_list = hydrated.get("tiles") or []
+        if series >= len(tiles_list):
+            return {"data": []}
+
+        tile_entry = tiles_list[series] or {}
+        series_tiles = tile_entry.get("tiles") or []
+        finest = max(series_tiles, key=lambda t: t.get("level", 0), default=None)
+        if not finest:
+            return {"data": []}
+
+        series_info = tile_entry.get("series") or {}
+        x_axis = series_info.get("x_axis")
+        y_axis = series_info.get("y_axis")
+        if not x_axis or not y_axis:
+            raise HTTPException(status_code=400, detail="MAT tile metadata missing x_axis/y_axis")
+
+        minio = get_minio_client()
+        buffer = io.BytesIO()
+        response = minio.get_object(settings.visualization_bucket, finest["object_name"])
+        try:
+            for chunk in response.stream(1024 * 1024):
+                buffer.write(chunk)
+        finally:
+            response.close()
+            response.release_conn()
+        buffer.seek(0)
+
+        frame = pd.read_parquet(buffer, columns=[x_axis, y_axis])
+        if x_min is not None:
+            frame = frame[frame[x_axis] >= x_min]
+        if x_max is not None:
+            frame = frame[frame[x_axis] <= x_max]
+        if len(frame) > max_points:
+            frame = frame.sample(n=max_points, random_state=42)
+        frame = frame.sort_values(x_axis)
+
+        return {
+            "series": series_info,
+            "rows": len(frame),
+            "x_axis": x_axis,
+            "y_axis": y_axis,
+            "data": frame.to_dict(orient="records"),
+        }
+
     if not hydrated.get("series"):
         raise HTTPException(status_code=400, detail="No series configured")
     if series >= len(hydrated["series"]):
@@ -648,6 +701,36 @@ async def visualization_status(viz_id: str, user: CurrentUser = Depends(get_curr
         progress=prepared.get("progress", 0),
         message=prepared.get("message"),
     )
+
+
+@router.get("/{viz_id}/html")
+async def visualization_html(viz_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Visualization not found")
+    await _ensure_member(doc["project_id"], user)
+
+    html_key = doc.get("html_key")
+    if not html_key:
+        raise HTTPException(status_code=404, detail="Visualization output missing")
+
+    minio = get_minio_client()
+    bucket = settings.visualization_bucket
+    if not minio.bucket_exists(bucket):
+        raise HTTPException(status_code=404, detail="Visualization store missing")
+
+    obj = None
+    try:
+        obj = minio.get_object(bucket_name=bucket, object_name=html_key)
+        html_bytes = obj.read()
+    except S3Error as exc:
+        raise HTTPException(status_code=404, detail="Visualization HTML not found in object store") from exc
+    finally:
+        if obj is not None:
+            obj.close()
+            obj.release_conn()
+
+    return Response(content=html_bytes, media_type="text/html; charset=utf-8")
 
 
 @router.get("/{viz_id}/download")

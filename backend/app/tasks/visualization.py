@@ -397,6 +397,96 @@ def _materialize_tiles(
     return overview_frame, tiles, stats
 
 
+def _materialize_mat_tiles(
+    minio,
+    bucket: str,
+    base_key: str,
+    x_arr: np.ndarray,
+    y_arr: np.ndarray,
+    x_col: str,
+    y_col: str,
+    levels: tuple[int, ...] = LOD_LEVELS,
+) -> tuple[pd.DataFrame, list[dict], dict]:
+    xv = np.asarray(x_arr, dtype=np.float64).reshape(-1)
+    yv = np.asarray(y_arr, dtype=np.float64).reshape(-1)
+    if xv.shape[0] != yv.shape[0]:
+        raise ValueError(
+            f"MAT trace has incompatible x/y lengths for LOD materialization: "
+            f"len(x)={xv.shape[0]}, len(y)={yv.shape[0]}"
+        )
+
+    finite_mask = np.isfinite(xv) & np.isfinite(yv)
+    xv = xv[finite_mask]
+    yv = yv[finite_mask]
+    if xv.size == 0:
+        raise ValueError("No valid numeric data in MAT trace for LOD materialization")
+
+    x_min = float(xv.min())
+    x_max = float(xv.max())
+    if x_min == x_max:
+        x_max = x_min + 1e-9
+
+    tiles: list[dict] = []
+    overview_level = min(levels)
+    overview_frame = None
+
+    for bins in levels:
+        edges = np.linspace(x_min, x_max, bins + 1, dtype=np.float64)
+        bin_idx = np.clip(np.digitize(xv, edges) - 1, 0, bins - 1)
+
+        counts = np.zeros(bins, dtype=np.int64)
+        sums = np.zeros(bins, dtype=np.float64)
+        mins = np.full(bins, np.inf, dtype=np.float64)
+        maxs = np.full(bins, -np.inf, dtype=np.float64)
+
+        np.add.at(counts, bin_idx, 1)
+        np.add.at(sums, bin_idx, yv)
+        np.minimum.at(mins, bin_idx, yv)
+        np.maximum.at(maxs, bin_idx, yv)
+
+        mask = counts > 0
+        centers = (edges[:-1] + edges[1:]) / 2.0
+        means = np.divide(sums, counts, out=np.zeros_like(sums), where=mask)
+        frame = pd.DataFrame(
+            {
+                x_col: centers[mask],
+                y_col: means[mask],
+                "count": counts[mask],
+            }
+        )
+
+        buffer = io.BytesIO()
+        frame.to_parquet(buffer, index=False)
+        buffer.seek(0)
+
+        obj_name = f"{base_key}/level_{bins}.parquet"
+        minio.put_object(
+            bucket_name=bucket,
+            object_name=obj_name,
+            data=buffer,
+            length=buffer.getbuffer().nbytes,
+            content_type="application/octet-stream",
+        )
+
+        tiles.append(
+            {
+                "level": bins,
+                "object_name": obj_name,
+                "rows": len(frame),
+                "x_min": x_min,
+                "x_max": x_max,
+            }
+        )
+
+        if bins == overview_level:
+            overview_frame = frame
+
+    if overview_frame is None:
+        raise ValueError("Unable to build MAT overview tile for visualization")
+
+    return overview_frame, tiles, {"x_min": x_min, "x_max": x_max, "rows": int(xv.shape[0])}
+
+
 # ─── Contour grid builder ─────────────────────────────────────────────────────
 
 def _build_contour_grid(
@@ -1050,14 +1140,93 @@ def generate_visualization(self, viz_id: str):
             _set_status(redis, viz_id, states.STARTED, 25, "Reading MAT variables")
             _update_db_status(db, viz_id, status=states.STARTED, progress=25, message="Reading MAT variables")
 
-            if matlab_like_mode:
-                _set_status(redis, viz_id, states.STARTED, 60, "Building figure")
+            if matlab_like_mode in {"plot_y", "plot_xy"}:
+                _set_status(redis, viz_id, states.STARTED, 40, "Building MAT figure")
                 fig = build_matlab_like_figure(
                     job_id=job_id,
                     chart_type=chart_type,
                     mat_request=request,
                     temp_derived_formulas=derived_formulas,
                 )
+
+                _set_status(redis, viz_id, states.STARTED, 60, "Materializing MAT tiles")
+                mat_series_meta = []
+                mat_stats = []
+                mat_tiles_meta = []
+
+                for trace_idx, trace in enumerate(fig.data):
+                    x_arr = np.asarray(trace.x if trace.x is not None else [], dtype=float)
+                    y_arr = np.asarray(trace.y if trace.y is not None else [], dtype=float)
+                    x_col = f"__mat_x_{trace_idx}"
+                    y_col = f"__mat_y_{trace_idx}"
+                    base_key = (
+                        f"projects/{doc['project_id']}/visualizations/{viz_id}"
+                        f"/mat_series_{trace_idx}"
+                    )
+
+                    overview, tiles, stats = _materialize_mat_tiles(
+                        minio=minio,
+                        bucket=viz_bucket,
+                        base_key=base_key,
+                        x_arr=x_arr,
+                        y_arr=y_arr,
+                        x_col=x_col,
+                        y_col=y_col,
+                    )
+
+                    fig.data[trace_idx].x = overview[x_col].to_numpy()
+                    fig.data[trace_idx].y = overview[y_col].to_numpy()
+
+                    mat_series_meta.append({"x_axis": x_col, "y_axis": y_col})
+                    mat_stats.append(stats)
+                    mat_tiles_meta.append(
+                        {
+                            "series": {"x_axis": x_col, "y_axis": y_col},
+                            "tiles": tiles,
+                        }
+                    )
+
+                _set_status(redis, viz_id, states.STARTED, 75, "Building MAT HTML")
+                mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
+                fig.update_layout(
+                    autosize=True,
+                    height=None,
+                    width=None,
+                    margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+                )
+                fig.update_xaxes(type="linear")
+
+                post_script = _build_zoom_loader_script(
+                    viz_id=viz_id,
+                    chart_type="scatter",
+                    series_meta=mat_series_meta,
+                    series_stats=mat_stats,
+                )
+                html = pio.to_html(
+                    fig,
+                    full_html=True,
+                    include_plotlyjs=True,
+                    config={"responsive": True},
+                    post_script=post_script,
+                )
+            elif matlab_like_mode:
+                _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
+                fig = build_matlab_like_figure(
+                    job_id=job_id,
+                    chart_type=chart_type,
+                    mat_request=request,
+                    temp_derived_formulas=derived_formulas,
+                )
+                mat_tiles_meta = []
+                mat_stats = []
+                mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
+                fig.update_layout(
+                    autosize=True, height=None, width=None,
+                    margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+                )
+                if mat_is_3d:
+                    fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
+                html = pio.to_html(fig, full_html=True, include_plotlyjs=True, config={"responsive": True})
             else:
                 var_name = request.get("var")
                 mapping = request.get("mapping")
@@ -1088,26 +1257,26 @@ def generate_visualization(self, viz_id: str):
                     values=np.asarray(values),
                     labels=labels,
                 )
-
-            mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
-            fig.update_layout(
-                autosize=True, height=None, width=None,
-                margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
-            )
-            if mat_is_3d:
-                fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
-
-            html = pio.to_html(
-                fig,
-                full_html=True,
-                include_plotlyjs=True,
-                config={"responsive": True},
-            )
+                mat_tiles_meta = []
+                mat_stats = []
+                mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
+                fig.update_layout(
+                    autosize=True, height=None, width=None,
+                    margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+                )
+                if mat_is_3d:
+                    fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
+                html = pio.to_html(
+                    fig,
+                    full_html=True,
+                    include_plotlyjs=True,
+                    config={"responsive": True},
+                )
 
             html_bytes = html.encode("utf-8")
             html_key = f"projects/{doc['project_id']}/visualizations/{viz_id}.html"
 
-            _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")
+            _set_status(redis, viz_id, states.STARTED, 85, "Saving MAT visualization")
             minio.put_object(
                 bucket_name=viz_bucket,
                 object_name=html_key,
@@ -1120,7 +1289,9 @@ def generate_visualization(self, viz_id: str):
             _update_db_status(
                 db, viz_id,
                 status=states.SUCCESS, progress=100, message="Visualization ready",
-                html=html, html_key=html_key, tiles=[], series_stats=[],
+                html_key=html_key,
+                tiles=mat_tiles_meta,
+                series_stats=mat_stats,
             )
 
             if owner_email:

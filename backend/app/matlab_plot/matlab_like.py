@@ -19,6 +19,69 @@ MATLAB_COLOR_ORDER = [
     "#A2142F",  # [0.6350, 0.0780, 0.1840]
 ]
 
+# ── Downsampling constants ────────────────────────────────────────────────────
+_TOTAL_POINTS_BUDGET = 2_000_000   # max total points across all traces in one HTML
+_MAX_PTS_PER_TRACE = 50_000        # cap per trace when there is only 1 column
+
+def _lttb(y: np.ndarray, n_out: int) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Largest Triangle Three Buckets (LTTB) downsampling.
+    Returns (x_out, y_out) preserving visual shape far better than uniform stride.
+    x_out is 1-based index (matches MATLAB convention).
+    """
+    yv = np.asarray(y, dtype=float).reshape(-1)
+    n = yv.shape[0]
+    if n <= 0:
+        return np.array([], dtype=float), np.array([], dtype=float)
+
+    if n_out <= 2:
+        x_full = np.arange(1, n + 1, dtype=float)
+        if n_out <= 0:
+            return np.array([], dtype=float), np.array([], dtype=float)
+        if n_out == 1:
+            return x_full[:1], yv[:1].copy()
+        return x_full[[0, -1]], yv[[0, -1]].copy()
+
+    if n <= n_out:
+        return np.arange(1, n + 1, dtype=float), yv.copy()
+
+    x = np.arange(1, n + 1, dtype=float)
+    every = (n - 2) / (n_out - 2)
+
+    out_idx = np.empty(n_out, dtype=np.int64)
+    out_idx[0] = 0
+    out_idx[-1] = n - 1
+
+    a = 0
+    for i in range(1, n_out - 1):
+        start = int(np.floor((i - 1) * every)) + 1
+        end = int(np.floor(i * every)) + 1
+        end = min(max(end, start + 1), n - 1)
+
+        next_start = int(np.floor(i * every)) + 1
+        next_end = int(np.floor((i + 1) * every)) + 1
+        next_start = min(max(next_start, 1), n)
+        next_end = min(max(next_end, next_start + 1), n)
+
+        if next_start < next_end:
+            avg_x = float(np.mean(x[next_start:next_end]))
+            avg_y = float(np.mean(yv[next_start:next_end]))
+        else:
+            avg_x = x[-1]
+            avg_y = yv[-1]
+
+        idx = np.arange(start, end, dtype=np.int64)
+        if idx.size == 0:
+            idx = np.array([min(start, n - 2)], dtype=np.int64)
+
+        ax = x[a]
+        ay = yv[a]
+        area = np.abs((ax - avg_x) * (yv[idx] - ay) - (ax - x[idx]) * (avg_y - ay))
+        a = int(idx[int(np.argmax(area))])
+        out_idx[i] = a
+
+    return x[out_idx], yv[out_idx]
+
 
 def _mode_from_request(mat_request: dict[str, Any]) -> str:
     mode = str(mat_request.get("mode") or "").strip().lower()
@@ -110,36 +173,145 @@ def _build_plot_y_figure(chart_type: str, y_spec: dict[str, Any]) -> go.Figure:
         y_matrix = as_matrix(y_raw)
 
     n_rows, n_cols = y_matrix.shape
-    x_vals = np.arange(1, n_rows + 1)
-    mode = _trace_mode(chart_type)
 
+    pts_per_trace = max(1000, _TOTAL_POINTS_BUDGET // max(n_cols, 1))
+
+    mode = _trace_mode(chart_type)
     fig = go.Figure()
     for col_idx in range(n_cols):
+        col = y_matrix[:, col_idx].astype(float)
+        x_vals, y_col = _lttb(col, pts_per_trace)
         col_name = (
             f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]"
             if n_cols > 1
             else _axis_label(y_spec, "Y")
         )
-        fig.add_trace(
-            go.Scatter(
-                name=col_name,
-                x=x_vals,
-                y=y_matrix[:, col_idx],
-                mode=mode,
-                line={"color": _series_color(col_idx), "width": 1},
-                marker={"color": _series_color(col_idx), "size": 5},
-            )
-        )
+        fig.add_trace(go.Scatter(
+            name=col_name, x=x_vals, y=y_col, mode=mode,
+            line={"color": _series_color(col_idx), "width": 1},
+            marker={"color": _series_color(col_idx), "size": 5},
+        ))
 
-    fig.update_layout(
-        title="Plot(Y)",
-        xaxis_title="Index",
-        yaxis_title=_axis_label(y_spec, "Y"),
-    )
+    fig.update_layout(title="Plot(Y)", xaxis_title="Index", yaxis_title=_axis_label(y_spec, "Y"))
     _apply_matlab_like_style(fig)
     return fig
 
+def _downsample_paired(x: np.ndarray, y: np.ndarray, n_out: int = _MAX_PTS_PER_TRACE):
+    """Downsample X and Y together keeping alignment."""
+    n = len(y)
+    if n <= n_out:
+        return x.copy(), y.copy()
+    step = max(1, n // n_out)
+    idx = np.arange(0, n, step)[:n_out]
+    return x[idx], y[idx]
 
+
+# def _build_plot_xy_figure(chart_type: str, x_spec: dict[str, Any], y_spec: dict[str, Any]) -> go.Figure:
+#     x_raw = np.asarray(x_spec["values"])
+#     y_raw = np.asarray(y_spec["values"])
+#     mode = _trace_mode(chart_type)
+
+#     fig = go.Figure()
+#     x_is_vector = is_vector_shape(x_raw.shape)
+#     y_is_vector = is_vector_shape(y_raw.shape)
+
+#     if x_is_vector:
+#         x_vec = as_vector(x_raw)
+#         if y_is_vector:
+#             y_vec = as_vector(y_raw)
+#             if x_vec.shape[0] != y_vec.shape[0]:
+#                 raise ValueError(
+#                     f"Incompatible MATLAB Plot(X,Y): length(X)={x_vec.shape[0]} and length(Y)={y_vec.shape[0]}"
+#                 )
+#             # ── downsample the single vector pair ────────────────────────
+#             x_plot, y_plot = _downsample_paired(x_vec, y_vec)
+#             fig.add_trace(
+#                 go.Scatter(
+#                     name=_axis_label(y_spec, "Y"),
+#                     x=x_plot,
+#                     y=y_plot,
+#                     mode=mode,
+#                     line={"color": _series_color(0), "width": 1},
+#                     marker={"color": _series_color(0), "size": 5},
+#                 )
+#             )
+#         else:
+#             if y_raw.ndim != 2:
+#                 raise ValueError("MATLAB Plot(X,Y) expects Y to be a vector or a 2-D matrix after slicing")
+#             y_mat = as_matrix(y_raw)
+
+#             # ── guard: too many columns ───────────────────────────────────
+#             if y_mat.shape[1] > _MAX_COLS_HARD:
+#                 raise ValueError(
+#                     f"Y variable has {y_mat.shape[1]} columns. Use a column slice "
+#                     f"(e.g. :,1:10) to select specific columns before plotting."
+#                 )
+
+#             if y_mat.shape[0] == x_vec.shape[0]:
+#                 for col_idx in range(y_mat.shape[1]):
+#                     # ── downsample each column paired with x_vec ──────────
+#                     x_plot, y_plot = _downsample_paired(x_vec, y_mat[:, col_idx])
+#                     fig.add_trace(
+#                         go.Scatter(
+#                             name=f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]",
+#                             x=x_plot,
+#                             y=y_plot,
+#                             mode=mode,
+#                             line={"color": _series_color(col_idx), "width": 1},
+#                             marker={"color": _series_color(col_idx), "size": 5},
+#                         )
+#                     )
+#             elif y_mat.shape[1] == x_vec.shape[0]:
+#                 raise ValueError(
+#                     "Incompatible MATLAB Plot(X,Y): length(X) matches size(Y,2). "
+#                     "MATLAB expects length(X)=size(Y,1). Transpose Y or adjust the slice."
+#                 )
+#             else:
+#                 raise ValueError(
+#                     "Incompatible MATLAB Plot(X,Y): length(X) must equal length(Y) or size(Y,1)."
+#                 )
+#     else:
+#         if x_raw.ndim != 2:
+#             raise ValueError("MATLAB Plot(X,Y) expects X to be a vector or a 2-D matrix after slicing")
+#         if y_raw.ndim != 2:
+#             raise ValueError(
+#                 "MATLAB Plot(X,Y): when X is a matrix, Y must also be a 2-D matrix of the same size"
+#             )
+#         x_mat = as_matrix(x_raw)
+#         y_mat = as_matrix(y_raw)
+#         if x_mat.shape != y_mat.shape:
+#             raise ValueError(
+#                 f"Incompatible MATLAB Plot(X,Y): matrix sizes must match (X={x_mat.shape}, Y={y_mat.shape})"
+#             )
+
+#         # ── guard: too many columns ───────────────────────────────────────
+#         if y_mat.shape[1] > _MAX_COLS_HARD:
+#             raise ValueError(
+#                 f"Y matrix has {y_mat.shape[1]} columns. Use a column slice "
+#                 f"(e.g. :,1:10) to select specific columns before plotting."
+#             )
+
+#         for col_idx in range(y_mat.shape[1]):
+#             # ── downsample each matrix column pair ────────────────────────
+#             x_plot, y_plot = _downsample_paired(x_mat[:, col_idx], y_mat[:, col_idx])
+#             fig.add_trace(
+#                 go.Scatter(
+#                     name=f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]",
+#                     x=x_plot,
+#                     y=y_plot,
+#                     mode=mode,
+#                     line={"color": _series_color(col_idx), "width": 1},
+#                     marker={"color": _series_color(col_idx), "size": 5},
+#                 )
+#             )
+
+#     fig.update_layout(
+#         title="Plot(X,Y)",
+#         xaxis_title=_axis_label(x_spec, "X"),
+#         yaxis_title=_axis_label(y_spec, "Y"),
+#     )
+#     _apply_matlab_like_style(fig)
+#     return fig
 def _build_plot_xy_figure(chart_type: str, x_spec: dict[str, Any], y_spec: dict[str, Any]) -> go.Figure:
     x_raw = np.asarray(x_spec["values"])
     y_raw = np.asarray(y_spec["values"])
@@ -157,32 +329,31 @@ def _build_plot_xy_figure(chart_type: str, x_spec: dict[str, Any], y_spec: dict[
                 raise ValueError(
                     f"Incompatible MATLAB Plot(X,Y): length(X)={x_vec.shape[0]} and length(Y)={y_vec.shape[0]}"
                 )
-            fig.add_trace(
-                go.Scatter(
-                    name=_axis_label(y_spec, "Y"),
-                    x=x_vec,
-                    y=y_vec,
-                    mode=mode,
-                    line={"color": _series_color(0), "width": 1},
-                    marker={"color": _series_color(0), "size": 5},
-                )
-            )
+            n_cols = 1
+            pts_per_trace = max(1000, _TOTAL_POINTS_BUDGET // max(n_cols, 1))
+            x_plot, y_plot = _downsample_paired(x_vec, y_vec, pts_per_trace)
+            fig.add_trace(go.Scatter(
+                name=_axis_label(y_spec, "Y"), x=x_plot, y=y_plot, mode=mode,
+                line={"color": _series_color(0), "width": 1},
+                marker={"color": _series_color(0), "size": 5},
+            ))
         else:
             if y_raw.ndim != 2:
                 raise ValueError("MATLAB Plot(X,Y) expects Y to be a vector or a 2-D matrix after slicing")
             y_mat = as_matrix(y_raw)
+            n_cols = y_mat.shape[1]
+
+            pts_per_trace = max(1000, _TOTAL_POINTS_BUDGET // max(n_cols, 1))
+
             if y_mat.shape[0] == x_vec.shape[0]:
-                for col_idx in range(y_mat.shape[1]):
-                    fig.add_trace(
-                        go.Scatter(
-                            name=f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]",
-                            x=x_vec,
-                            y=y_mat[:, col_idx],
-                            mode=mode,
-                            line={"color": _series_color(col_idx), "width": 1},
-                            marker={"color": _series_color(col_idx), "size": 5},
-                        )
-                    )
+                for col_idx in range(n_cols):
+                    x_plot, y_plot = _downsample_paired(x_vec, y_mat[:, col_idx], pts_per_trace)
+                    fig.add_trace(go.Scatter(
+                        name=f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]",
+                        x=x_plot, y=y_plot, mode=mode,
+                        line={"color": _series_color(col_idx), "width": 1},
+                        marker={"color": _series_color(col_idx), "size": 5},
+                    ))
             elif y_mat.shape[1] == x_vec.shape[0]:
                 raise ValueError(
                     "Incompatible MATLAB Plot(X,Y): length(X) matches size(Y,2). "
@@ -196,26 +367,25 @@ def _build_plot_xy_figure(chart_type: str, x_spec: dict[str, Any], y_spec: dict[
         if x_raw.ndim != 2:
             raise ValueError("MATLAB Plot(X,Y) expects X to be a vector or a 2-D matrix after slicing")
         if y_raw.ndim != 2:
-            raise ValueError(
-                "MATLAB Plot(X,Y): when X is a matrix, Y must also be a 2-D matrix of the same size"
-            )
+            raise ValueError("MATLAB Plot(X,Y): when X is a matrix, Y must also be a 2-D matrix of the same size")
         x_mat = as_matrix(x_raw)
         y_mat = as_matrix(y_raw)
         if x_mat.shape != y_mat.shape:
             raise ValueError(
                 f"Incompatible MATLAB Plot(X,Y): matrix sizes must match (X={x_mat.shape}, Y={y_mat.shape})"
             )
-        for col_idx in range(y_mat.shape[1]):
-            fig.add_trace(
-                go.Scatter(
-                    name=f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]",
-                    x=x_mat[:, col_idx],
-                    y=y_mat[:, col_idx],
-                    mode=mode,
-                    line={"color": _series_color(col_idx), "width": 1},
-                    marker={"color": _series_color(col_idx), "size": 5},
-                )
-            )
+        n_cols = y_mat.shape[1]
+
+        pts_per_trace = max(1000, _TOTAL_POINTS_BUDGET // max(n_cols, 1))
+
+        for col_idx in range(n_cols):
+            x_plot, y_plot = _downsample_paired(x_mat[:, col_idx], y_mat[:, col_idx], pts_per_trace)
+            fig.add_trace(go.Scatter(
+                name=f"{_axis_label(y_spec, 'Y')}[:, {col_idx + 1}]",
+                x=x_plot, y=y_plot, mode=mode,
+                line={"color": _series_color(col_idx), "width": 1},
+                marker={"color": _series_color(col_idx), "size": 5},
+            ))
 
     fig.update_layout(
         title="Plot(X,Y)",
@@ -266,6 +436,13 @@ def _build_plot3_figure(
         )
 
     mode = _trace_mode(chart_type)
+    base_idx = np.arange(x_vals.shape[0], dtype=np.int64)
+    idx_plot, _ = _downsample_paired(base_idx, y_vals, _MAX_PTS_PER_TRACE)
+    idx_plot = np.asarray(idx_plot, dtype=np.int64)
+    x_vals = x_vals[idx_plot]
+    y_vals = y_vals[idx_plot]
+    z_vals = z_vals[idx_plot]
+
     fig = go.Figure()
     fig.add_trace(
         go.Scatter3d(
