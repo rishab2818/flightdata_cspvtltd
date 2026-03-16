@@ -87,7 +87,10 @@ export default function ProjectTagView() {
   visualizationApi
     .listForProject(projectId)
     .then((res) => {
+      console.log("PLOT TAB API RESPONSE:", res)
+
       const list = Array.isArray(res) ? res : res.data || []
+      console.log("PLOT TAB LIST:", list)
 
       const filtered = list.filter(
         (v) =>
@@ -95,10 +98,34 @@ export default function ProjectTagView() {
           v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
       )
 
+      console.log("PLOT TAB FILTERED:", filtered)
+
       setPlots(filtered)
     })
-    .catch(() => setPlots([]))
+    .catch((err) => {
+      console.error("PLOT TAB ERROR:", err)
+      setPlots([])
+    })
 }, [activeTab, projectId, tagName, datasetType])
+
+//   useEffect(() => {
+//   if (activeTab !== "plot") return
+
+//   visualizationApi
+//     .listForProject(projectId)
+//     .then((res) => {
+//       const list = Array.isArray(res) ? res : res.data || []
+
+//       const filtered = list.filter(
+//         (v) =>
+//           v.tag_name?.trim().toLowerCase() === tagName?.trim().toLowerCase() &&
+//           v.dataset_type?.trim().toLowerCase() === datasetType?.trim().toLowerCase()
+//       )
+
+//       setPlots(filtered)
+//     })
+//     .catch(() => setPlots([]))
+// }, [activeTab, projectId, tagName, datasetType])
 
   
 //   useEffect(() => {
@@ -302,7 +329,8 @@ export default function ProjectTagView() {
       <tr key={activeTab === "plot" ? item.viz_id : item._id}>
         <td>
           {activeTab === "plot"
-            ? (item.filename || item.chart_type || "Plot")
+            ? (item.name || item.series?.[0]?.label || item.filename || item.chart_type || "Plot")
+
             : (item.sheet_name
                 ? `${item.filename} — ${item.sheet_name}`
                 : item.filename)}

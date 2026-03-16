@@ -290,7 +290,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                 {tab === 'plot' ? (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <p className="data-card__name" style={{ margin: 0 }}>
-                      {f.filename || 'dataset'}
+                      {f.name || f.filename || 'Plot'}
                     </p>
                     <p className="summarylabel2" style={{ margin: 0 }}>
                       {f.chart_type} · {f.status}
@@ -370,7 +370,9 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
 
     {confirmDelete.open && (
       <ConfirmationModal
-        title={`Delete "${tab === 'plot' ? (confirmDelete.file?.filename || 'Visualization') : confirmDelete.file?.filename}"?`}
+        title={`Delete "${tab === 'plot'
+  ? (confirmDelete.file?.name || confirmDelete.file?.filename || 'Visualization')
+  : confirmDelete.file?.filename}"?`}
         description="This action cannot be undone."
         onCancel={() => setConfirmDelete({ open: false, file: null })}
         onConfirm={handleDeleteFile}

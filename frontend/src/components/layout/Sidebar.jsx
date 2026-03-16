@@ -10,7 +10,14 @@ export default function Sidebar() {
   const { pathname } = useLocation();
   const role = user?.role?.toUpperCase?.();
 
-  const items = useMemo(() => ROLE_MENUS[role] ?? [], [role]);
+  const allowedRoles = ["GD", "DH"];
+
+  const items = useMemo(() => {
+    if (!allowedRoles.includes(role)) return [];
+    return ROLE_MENUS[role] ?? [];
+  }, [role]);
+
+  if (!allowedRoles.includes(role)) return null;
 
   return (
     <aside className="app-shell__sidebar">
@@ -19,7 +26,7 @@ export default function Sidebar() {
         <span>Data Visualisation</span>
       </div>
 
-       <div className="sidebar-divider"></div>
+      <div className="sidebar-divider"></div>
 
       {items.length === 0 ? (
         <div className="sidebar__empty">No navigation available</div>

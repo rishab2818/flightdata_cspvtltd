@@ -1038,7 +1038,7 @@ const activeSeriesIndex = useMemo(
         limit: PAGE_SIZE,
       })
 
-      console.log("LIST API RESPONSE:", res)
+      
 
       const list = Array.isArray(res)
         ? res
@@ -1690,7 +1690,7 @@ const activeSeriesIndex = useMemo(
           dataset_type: firstSeries?.datasetType || null,
           tag_name: firstSeries?.tag || null,
           chart_type: chartType,
-          name: plotName,
+           name: (firstSeries?.label || '').trim() || buildAutoLabel(firstSeries),
           // name: (activeSeries?.label || '').trim() || buildAutoLabel(activeSeries),
           series: payloadSeries,
         }
