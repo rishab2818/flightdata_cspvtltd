@@ -237,6 +237,15 @@ export const ingestionApi = {
     return data
   },
 
+  previewRows: async (jobId, { limit = 20, offset = 0, signal } = {}) => {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    const { data } = await axiosClient.get(
+      `/api/ingestion/jobs/${jobId}/preview?${params.toString()}`,
+      { signal }
+    )
+    return data
+  },
+
   saveProcessedColumns: async (jobId, renameMap) => {
     const { data } = await axiosClient.put(`/api/ingestion/jobs/${jobId}/processed/columns`, {
       rename_map: renameMap

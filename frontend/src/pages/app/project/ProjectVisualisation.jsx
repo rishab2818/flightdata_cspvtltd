@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 
 import { ingestionApi } from '../../../api/ingestionApi'
+import { projectApi } from '../../../api/projectapi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import { matApi } from '../../../mat/matApi'
 import { calculationsApi } from '../../../calculations/calculationsApi'
@@ -27,6 +28,7 @@ import MatPlotBuilder from '../../../matlabPlotBuilder/components/MatPlotBuilder
 import MatZoomLoaderOverlay from '../../../matlabPlotBuilder/components/MatZoomLoaderOverlay'
 import { useMatZoomLoader } from '../../../matlabPlotBuilder/hooks/useMatZoomLoader'
 import { openMatPreviewInNewTab } from '../../../matlabPlotBuilder/utils/previewUrl'
+import DataBrowserModal from './DataBrowserModal'
 // import linechart25 from "../../assets/linechart25.svg";
 
 
@@ -83,6 +85,10 @@ const OVERPLOT_CARTESIAN_TYPES = [
 
 const datasetLabel = (key) => DATASET_TYPES.find((d) => d.key === key)?.label || key
 window.__FD_API_BASE__ = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+const tagCacheKey = (projectId, datasetType) => `${projectId || ''}::${datasetType || ''}`
+const fileCacheKey = (projectId, datasetType, tagName) =>
+  `${projectId || ''}::${datasetType || ''}::${tagName || ''}`
 
 const getExt = (name = '') => {
   const idx = name.lastIndexOf('.')
@@ -167,7 +173,10 @@ const newSeries = (n = 1) => ({
   jobId: '',
   xAxis: '',
   yAxis: '',
+  yAxisList: [],
   zAxis: '',
+  rowXData: null,
+  rowYData: null,
   seriesChartType: '',
   label: '',
   ...MAT_SERIES_DEFAULTS,
@@ -183,6 +192,9 @@ export default function ProjectVisualisation() {
   const [searchParams] = useSearchParams()
   const requestedVizId = String(searchParams.get('vizId') || '').trim()
   const { project } = useOutletContext()
+  const [dataProjectId, setDataProjectId] = useState(projectId || '')
+  const [memberProjects, setMemberProjects] = useState([])
+  const [loadingMemberProjects, setLoadingMemberProjects] = useState(false)
 
   const [confirmDelete, setConfirmDelete] = useState({
     open: false,
@@ -262,6 +274,8 @@ export default function ProjectVisualisation() {
   const [statusMessage, setStatusMessage] = useState('Select data to begin')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [dataBrowserOpen, setDataBrowserOpen] = useState(false)
+  const [dataBrowserTarget, setDataBrowserTarget] = useState(null) // 'x' | 'y' | 'z'
 
   const pollTimer = useRef(null)
   const matPlotFrameRef = useRef(null)
@@ -270,6 +284,50 @@ export default function ProjectVisualisation() {
   const [isExpanded, setIsExpanded] = useState(true)
 
   /* ================= helpers ================= */
+  useEffect(() => {
+    setDataProjectId(projectId || '')
+  }, [projectId])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingMemberProjects(true)
+    projectApi
+      .list({ page: 1, limit: 200 })
+      .then((rows) => {
+        if (cancelled) return
+        setMemberProjects(Array.isArray(rows) ? rows : [])
+      })
+      .catch((e) => {
+        if (cancelled) return
+        console.error('Failed to load member projects', e)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMemberProjects(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const dataProjectOptions = useMemo(() => {
+    const map = new Map()
+    for (const item of memberProjects) {
+      const id = String(item?._id || item?.id || item?.project_id || '').trim()
+      if (!id) continue
+      map.set(id, {
+        id,
+        name: item?.project_name || `Project ${id}`,
+      })
+    }
+    const currentId = String(projectId || '').trim()
+    if (currentId && !map.has(currentId)) {
+      map.set(currentId, {
+        id: currentId,
+        name: project?.project_name || 'Current Project',
+      })
+    }
+    return Array.from(map.values())
+  }, [memberProjects, projectId, project?.project_name])
 
   const activeSeries = useMemo(
   () => seriesList.find((s) => s.id === activeSeriesId) || seriesList[0],
@@ -287,9 +345,10 @@ const activeSeriesIndex = useMemo(
   // }, [activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
 
   const activeFiles = useMemo(() => {
-  if (!activeSeries?.datasetType || !activeSeries?.tag) return []
-  return filesByDatasetTag[`${activeSeries.datasetType}::${activeSeries.tag}`] || []
-}, [activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
+    if (!activeSeries?.datasetType || !activeSeries?.tag || !dataProjectId) return []
+    const key = fileCacheKey(dataProjectId, activeSeries.datasetType, activeSeries.tag)
+    return filesByDatasetTag[key] || []
+  }, [dataProjectId, activeSeries?.datasetType, activeSeries?.tag, filesByDatasetTag])
 
   const activeJob = useMemo(
     () => activeFiles.find((f) => f.job_id === activeSeries?.jobId),
@@ -439,6 +498,70 @@ const activeSeriesIndex = useMemo(
     )
   }, [activeSeriesId])
 
+  const handleBrowserSelectY = useCallback((colOrCols) => {
+    if (Array.isArray(colOrCols) && colOrCols.length > 1) {
+      const cleaned = colOrCols.map((item) => String(item || '').trim()).filter(Boolean)
+      if (!cleaned.length) {
+        setDataBrowserOpen(false)
+        setDataBrowserTarget(null)
+        return
+      }
+      const patch = {
+        yAxis: cleaned[0],
+        yAxisList: cleaned,
+        rowYData: null,
+        label: cleaned.join(', '),
+      }
+      updateActiveSeries(patch)
+    } else {
+      const col = Array.isArray(colOrCols) ? colOrCols[0] : colOrCols
+      const safe = String(col || '').trim()
+      if (safe) {
+        const patch = {
+          yAxis: safe,
+          yAxisList: [],
+          rowYData: null,
+          label: '',
+        }
+        updateActiveSeries(patch)
+      }
+    }
+    setDataBrowserOpen(false)
+    setDataBrowserTarget(null)
+  }, [activeSeries, updateActiveSeries])
+
+  const handleBrowserSelectRowX = useCallback((rowIndex, rowData, columns) => {
+    const values = (columns || []).map((col) => {
+      const value = rowData?.[col]
+      return value === null || value === undefined ? NaN : Number(value)
+    })
+    updateActiveSeries({
+      xAxis: `Row ${rowIndex}`,
+      rowXData: { rowIndex, values, label: `Row ${rowIndex}` },
+    })
+    setDataBrowserOpen(false)
+    setDataBrowserTarget(null)
+  }, [updateActiveSeries])
+
+  const handleBrowserSelectRowY = useCallback((rowIndex, rowData, columns) => {
+    const values = (columns || []).map((col) => {
+      const value = rowData?.[col]
+      return value === null || value === undefined ? NaN : Number(value)
+    })
+    const indexValues = values.map((_, idx) => idx + 1)
+    const hasRowX = String(activeSeries?.xAxis || '').startsWith('Row ')
+    updateActiveSeries({
+      yAxis: `Row ${rowIndex}`,
+      yAxisList: [],
+      rowYData: { rowIndex, values, label: `Row ${rowIndex}` },
+      xAxis: hasRowX ? activeSeries?.xAxis : 'Row Index',
+      rowXData: hasRowX ? activeSeries?.rowXData : { rowIndex: 0, values: indexValues, label: 'Row Index' },
+      label: '',
+    })
+    setDataBrowserOpen(false)
+    setDataBrowserTarget(null)
+  }, [activeSeries, updateActiveSeries])
+
   const setSeriesEnabled = (id, enabled) => {
     setSeriesList((prev) => prev.map((s) => (s.id === id ? { ...s, enabled } : s)))
   }
@@ -485,17 +608,26 @@ const activeSeriesIndex = useMemo(
     if (mat) {
       return `${ds} • MAT • ${buildMatSignatureText(s, chartType)}`
     }
-    const x = s.xAxis || '-'
-    const y = s.yAxis || '-'
+    const x = String(s.xAxis || '').startsWith('Row ')
+      ? (s.rowXData?.label || s.xAxis || '-')
+      : (s.xAxis || '-')
+    const y = String(s.yAxis || '').startsWith('Row ')
+      ? (s.rowYData?.label || s.yAxis || '-')
+      : (s.yAxis || '-')
     const z = s.zAxis || '-'
     const f = s.jobId ? 'file✅' : 'file❌'
     const seriesType = (s.seriesChartType || chartType || 'scatter').toLowerCase()
+    if (Array.isArray(s.yAxisList) && s.yAxisList.length > 1) {
+      return `${ds} • ${f} • ${x} → [${s.yAxisList.join(', ')}] • ${seriesType}`
+    }
     if (chartType === 'contour') return `${ds} • ${f} • ${x} → ${y} → ${z}`
     return `${ds} • ${f} • ${x} → ${y} • ${seriesType}`
   }
 
-  const getTags = (datasetType) => tagsByDataset[datasetType] || []
-  const getFiles = (datasetType, tag) => filesByDatasetTag[`${datasetType}::${tag}`] || []
+  const getTags = (datasetType, scopedProjectId = dataProjectId) =>
+    tagsByDataset[tagCacheKey(scopedProjectId, datasetType)] || []
+  const getFiles = (datasetType, tag, scopedProjectId = dataProjectId) =>
+    filesByDatasetTag[fileCacheKey(scopedProjectId, datasetType, tag)] || []
   const jobsById = useMemo(() => {
     const map = {}
     Object.values(filesByDatasetTag).forEach((list) => {
@@ -533,8 +665,8 @@ const activeSeriesIndex = useMemo(
 
   const calcFiles = useMemo(() => {
     if (!calcDatasetType || !calcTag) return []
-    return getFiles(calcDatasetType, calcTag)
-  }, [calcDatasetType, calcTag, filesByDatasetTag])
+    return getFiles(calcDatasetType, calcTag, dataProjectId)
+  }, [calcDatasetType, calcTag, dataProjectId, filesByDatasetTag])
   const calcJob = useMemo(
     () => calcFiles.find((f) => f.job_id === calcJobId) || null,
     [calcFiles, calcJobId]
@@ -659,31 +791,32 @@ const activeSeriesIndex = useMemo(
   /* ================= load tags for datasetType (per active series) ================= */
   useEffect(() => {
     const ds = activeSeries?.datasetType
-    if (!ds) return
-    if (tagsByDataset[ds]) return
+    if (!ds || !dataProjectId) return
+    const key = tagCacheKey(dataProjectId, ds)
+    if (tagsByDataset[key]) return
 
     ingestionApi
-      .listTags(projectId, ds)
+      .listTags(dataProjectId, ds)
       .then((rows) => {
-        setTagsByDataset((prev) => ({ ...prev, [ds]: rows || [] }))
+        setTagsByDataset((prev) => ({ ...prev, [key]: rows || [] }))
       })
       .catch((e) => {
         console.error(e)
         setError(e?.response?.data?.detail || e.message || 'Failed to load tags')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, activeSeries?.datasetType])
+  }, [dataProjectId, activeSeries?.datasetType])
 
   /* ================= load files for (datasetType, tag) (per active series) ================= */
   useEffect(() => {
     const ds = activeSeries?.datasetType
     const tag = activeSeries?.tag
-    if (!ds || !tag) return
-    const key = `${ds}::${tag}`
+    if (!ds || !tag || !dataProjectId) return
+    const key = fileCacheKey(dataProjectId, ds, tag)
     if (filesByDatasetTag[key]) return
 
     ingestionApi
-      .listFilesInTag(projectId, ds, tag)
+      .listFilesInTag(dataProjectId, ds, tag)
       .then((list) => {
         const processed = (list || []).filter((f) => {
           if (isMatFileName(f?.filename || '')) return true
@@ -696,7 +829,7 @@ const activeSeriesIndex = useMemo(
         setError(e?.response?.data?.detail || e.message || 'Failed to load files')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, activeSeries?.datasetType, activeSeries?.tag])
+  }, [dataProjectId, activeSeries?.datasetType, activeSeries?.tag])
 
   useEffect(() => {
   setSeriesList((prev) =>
@@ -711,6 +844,43 @@ const activeSeriesIndex = useMemo(
 }, [requiresZ])
 
   useEffect(() => {
+    if (!dataProjectId) return
+
+    setSeriesList((prev) =>
+      prev.map((s) => ({
+        ...s,
+        tag: '',
+        jobId: '',
+        xAxis: '',
+        yAxis: '',
+        zAxis: '',
+        ...MAT_SERIES_DEFAULTS,
+        derivedColumns: [],
+        label: '',
+      }))
+    )
+
+    setCalcTag('')
+    setCalcJobId('')
+    setCalcPreviewRows([])
+    setCalcMatPreview(null)
+    setCalcMatPreviewContext(null)
+    setCalcMatVariableMap({})
+    setCalcPreviewMatVariable('')
+    setCalcPreviewMatSliceExpr('')
+    setCalcFilePreviewRows([])
+    setCalcFilePreviewError('')
+
+    setVisualizations([])
+    setVizPage(1)
+    setHasMoreViz(true)
+    setActiveViz(null)
+    setPlotHtml('')
+    setTilePreview(null)
+    setStatusMessage('Select data to begin')
+  }, [dataProjectId])
+
+  useEffect(() => {
     calculationsApi
       .functions()
       .then((data) => {
@@ -723,23 +893,25 @@ const activeSeriesIndex = useMemo(
 
   useEffect(() => {
     if (!calcDatasetType) return
-    if (tagsByDataset[calcDatasetType]) return
+    if (!dataProjectId) return
+    const key = tagCacheKey(dataProjectId, calcDatasetType)
+    if (tagsByDataset[key]) return
     ingestionApi
-      .listTags(projectId, calcDatasetType)
+      .listTags(dataProjectId, calcDatasetType)
       .then((rows) => {
-        setTagsByDataset((prev) => ({ ...prev, [calcDatasetType]: rows || [] }))
+        setTagsByDataset((prev) => ({ ...prev, [key]: rows || [] }))
       })
       .catch((e) => {
         setCalcError(e?.response?.data?.detail || e.message || 'Failed to load tags')
       })
-  }, [projectId, calcDatasetType, tagsByDataset])
+  }, [dataProjectId, calcDatasetType, tagsByDataset])
 
   useEffect(() => {
-    if (!calcDatasetType || !calcTag) return
-    const key = `${calcDatasetType}::${calcTag}`
+    if (!calcDatasetType || !calcTag || !dataProjectId) return
+    const key = fileCacheKey(dataProjectId, calcDatasetType, calcTag)
     if (filesByDatasetTag[key]) return
     ingestionApi
-      .listFilesInTag(projectId, calcDatasetType, calcTag)
+      .listFilesInTag(dataProjectId, calcDatasetType, calcTag)
       .then((list) => {
         const processed = (list || []).filter((f) => {
           if (isMatFileName(f?.filename || '')) return true
@@ -750,7 +922,7 @@ const activeSeriesIndex = useMemo(
       .catch((e) => {
         setCalcError(e?.response?.data?.detail || e.message || 'Failed to load files')
       })
-  }, [projectId, calcDatasetType, calcTag, filesByDatasetTag])
+  }, [dataProjectId, calcDatasetType, calcTag, filesByDatasetTag])
 
   useEffect(() => {
     if (!calcJobId || !calcIsMat) return
@@ -1029,11 +1201,12 @@ const activeSeriesIndex = useMemo(
 
   const fetchVisualizations = async (page = 1, reset = false) => {
     if (loadingViz) return
+    if (!dataProjectId) return
 
     setLoadingViz(true)
 
     try {
-      const res = await visualizationApi.listForProject(projectId, {
+      const res = await visualizationApi.listForProject(dataProjectId, {
         page,
         limit: PAGE_SIZE,
       })
@@ -1516,9 +1689,9 @@ const activeSeriesIndex = useMemo(
           limit: 20,
         });
 
-        const key = `${calcDatasetType}::${calcTag}`;
+        const key = fileCacheKey(dataProjectId, calcDatasetType, calcTag);
         const list = await ingestionApi.listFilesInTag(
-          projectId,
+          dataProjectId,
           calcDatasetType,
           calcTag
         );
@@ -1557,6 +1730,11 @@ const activeSeriesIndex = useMemo(
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const targetProjectId = String(dataProjectId || '').trim()
+    if (!targetProjectId) {
+      setError('Please select a data project.')
+      return
+    }
 
     const configured = enabledSeries.filter((s) => s.jobId)
     const matSeries = configured.filter((s) => isMatFileName(jobsById[s.jobId]?.filename || ''))
@@ -1632,7 +1810,7 @@ const activeSeriesIndex = useMemo(
         }
 
         requestPayload = {
-          project_id: projectId,
+          project_id: targetProjectId,
           source_type: 'mat',
           dataset_type: s.datasetType || null,
           tag_name: s.tag || null,
@@ -1649,23 +1827,80 @@ const activeSeriesIndex = useMemo(
         }
       } else {
         const payloadSeries = tabularSeries
-          .filter((s) => s.xAxis && s.yAxis && (!requiresZ || s.zAxis))
-          .map((s) => {
-          const derivedColumns = normalizeDerivedColumns(s)
-          return {
-            job_id: s.jobId,
-            x_axis: s.xAxis,
-            y_axis: s.yAxis,
-            z_axis: requiresZ ? s.zAxis : undefined,
-            x_scale: xScale,
-            y_scale: yScale,
-            chart_type: canMixOverplot
-              ? ((s.seriesChartType || '').trim() || undefined)
-              : undefined,
-            label: (s.label || '').trim() || buildAutoLabel(s),
-            derived_columns: derivedColumns,
-          }
-        })
+          .filter((s) => s.jobId)
+          .flatMap((s) => {
+            const derivedColumns = normalizeDerivedColumns(s)
+            const baseEntry = {
+              job_id: s.jobId,
+              x_axis: s.xAxis,
+              x_scale: xScale,
+              y_scale: yScale,
+              chart_type: canMixOverplot
+                ? ((s.seriesChartType || '').trim() || undefined)
+                : undefined,
+              derived_columns: derivedColumns,
+            }
+            const yColumns =
+              Array.isArray(s.yAxisList) && s.yAxisList.length > 1
+                ? s.yAxisList
+                : [s.yAxis]
+
+            return yColumns
+              .filter((col) => col && (!requiresZ || s.zAxis))
+              .map((col) => {
+                const xAxisName = String(s.xAxis || '').trim()
+                const isRowX =
+                  (xAxisName.startsWith('Row ') || xAxisName === 'Row Index') &&
+                  Array.isArray(s.rowXData?.values)
+                const isRowY = String(col || '').startsWith('Row ') && Array.isArray(s.rowYData?.values)
+                const candidateX = isRowX ? s.rowXData.values : null
+                const candidateY = isRowY ? s.rowYData.values : null
+                let xValues = undefined
+                let yValues = undefined
+                if (Array.isArray(candidateX) && Array.isArray(candidateY)) {
+                  const paired = candidateY
+                    .map((yv, i) => [Number(candidateX[i]), Number(yv)])
+                    .filter(([xv, yv]) => Number.isFinite(xv) && Number.isFinite(yv))
+                  if (paired.length) {
+                    xValues = paired.map(([xv]) => xv)
+                    yValues = paired.map(([, yv]) => yv)
+                  }
+                }
+                if (isRowX && !isRowY && Array.isArray(candidateX)) {
+                  const xv = candidateX
+                    .map((value) => Number(value))
+                    .filter((value) => Number.isFinite(value))
+                  if (xv.length < 2) {
+                    const rowName = s?.rowXData?.label || s.xAxis || 'Selected row'
+                    throw new Error(`${rowName} does not contain enough numeric values to plot.`)
+                  }
+                  xValues = xv
+                }
+                if (isRowY && !isRowX && Array.isArray(candidateY)) {
+                  const yv = candidateY
+                    .map((value) => Number(value))
+                    .filter((value) => Number.isFinite(value))
+                  if (yv.length < 2) {
+                    const rowName = s?.rowYData?.label || col || 'Selected row'
+                    throw new Error(`${rowName} does not contain enough numeric values to plot.`)
+                  }
+                  yValues = yv
+                }
+                if (isRowY && isRowX && (!xValues || !yValues || xValues.length < 2 || yValues.length < 2)) {
+                  const rowName = s?.rowYData?.label || col || 'Selected row'
+                  throw new Error(`${rowName} does not contain enough numeric values to plot.`)
+                }
+                return {
+                  ...baseEntry,
+                  y_axis: col,
+                  z_axis: requiresZ ? s.zAxis : undefined,
+                  x_values: xValues,
+                  y_values: yValues,
+                  label: (s.label || col || '').trim() || buildAutoLabel({ ...s, yAxis: col }),
+                }
+              })
+          })
+          .filter((entry) => entry.x_axis && entry.y_axis)
 
         if (payloadSeries.length === 0) {
           throw new Error(
@@ -1685,7 +1920,7 @@ const activeSeriesIndex = useMemo(
     'Plot'
 
         requestPayload = {
-          project_id: projectId,
+          project_id: targetProjectId,
           source_type: 'tabular',
           dataset_type: firstSeries?.datasetType || null,
           tag_name: firstSeries?.tag || null,
@@ -1720,9 +1955,19 @@ pollVisualization(res.viz_id)
   const pollVisualization = async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
+      const isMatViz =
+        String(detail?.source_type || '').toLowerCase() === 'mat' || !!detail?.mat_request
+      let nextHtml = detail.html || ''
+
+      if (isMatViz) {
+        nextHtml = ''
+        if (detail.status === 'SUCCESS') {
+          nextHtml = await visualizationApi.html(detail.viz_id || vizId)
+        }
+      }
 
       setActiveViz(detail)
-      setPlotHtml(detail.html || '')
+      setPlotHtml(nextHtml || '')
 
       if (detail.status === 'SUCCESS') {
         setStatusMessage("Preview ready. Click Save Visualization.")  // ✅ HERE
@@ -1744,8 +1989,19 @@ pollVisualization(res.viz_id)
   const loadVisualization = useCallback(async (vizId) => {
     try {
       const detail = await visualizationApi.detail(vizId)
+      const isMatViz =
+        String(detail?.source_type || '').toLowerCase() === 'mat' || !!detail?.mat_request
+      let nextHtml = detail.html || ''
+
+      if (isMatViz) {
+        nextHtml = ''
+        if (detail.status === 'SUCCESS') {
+          nextHtml = await visualizationApi.html(detail.viz_id || vizId)
+        }
+      }
+
       setActiveViz(detail)
-      setPlotHtml(detail.html || '')
+      setPlotHtml(nextHtml || '')
       setStatusMessage(detail.message || detail.status)
       setTilePreview(null)
     } catch (e) {
@@ -1849,6 +2105,8 @@ pollVisualization(res.viz_id)
   })
 
   /* ================= UI ================= */
+  const hasPlotContent = !!plotHtml
+
   return (
     <div className="CardWapper">
       <div className="project-cardpage">
@@ -1884,6 +2142,22 @@ pollVisualization(res.viz_id)
             {calcError && <div className="project-shell__error">{calcError}</div>}
 
             <div className="Row calculation-row">
+              <div className="ps-field">
+                <label>Data Project</label>
+                <select
+                  value={dataProjectId}
+                  onChange={(e) => setDataProjectId(e.target.value)}
+                  disabled={loadingMemberProjects}
+                >
+                  {!dataProjectId && <option value="">Select project</option>}
+                  {dataProjectOptions.map((p) => (
+                    <option key={`calc-project-${p.id}`} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="ps-field">
                 <label>Dataset</label>
                 <select
@@ -2429,10 +2703,26 @@ pollVisualization(res.viz_id)
   className="ps-row"
   style={{
     gridTemplateColumns: activeIsMat
-      ? 'repeat(5, minmax(0, 1fr))'
-      : 'repeat(7, minmax(0, 1fr))',
+      ? 'repeat(6, minmax(0, 1fr))'
+      : 'repeat(8, minmax(0, 1fr))',
   }}
 >
+  <div className="ps-field">
+    <label>Data Project</label>
+    <select
+      value={dataProjectId}
+      onChange={(e) => setDataProjectId(e.target.value)}
+      disabled={loadingMemberProjects}
+    >
+      {!dataProjectId && <option value="">Select project</option>}
+      {dataProjectOptions.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name}
+        </option>
+      ))}
+    </select>
+  </div>
+
   <div className="ps-field">
     <label>Dataset</label>
     <select
@@ -2571,7 +2861,7 @@ pollVisualization(res.viz_id)
         className="icon-btn"
         onClick={() =>
           openMatPreviewInNewTab({
-            projectId,
+            projectId: dataProjectId,
             datasetType: activeSeries?.datasetType,
             tagName: activeSeries?.tag,
             jobId: activeSeries?.jobId,
@@ -2676,13 +2966,28 @@ pollVisualization(res.viz_id)
                   }}
                 >
                   <div className="ps-field">
-                    <label>X Axis</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      X Axis
+                      {activeSeries?.jobId && !activeIsMat && (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title="Browse file data"
+                          onClick={() => { setDataBrowserTarget('x'); setDataBrowserOpen(true) }}
+                        >
+                          <img src={ViewIcon} alt="browse" style={{ width: 14, height: 14 }} />
+                        </button>
+                      )}
+                    </label>
                     <select
                       value={activeSeries?.xAxis || ''}
                       onChange={(e) => updateActiveSeries({ xAxis: e.target.value })}
                       disabled={!activeSeries?.jobId}
                     >
                       <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeSeries?.xAxis && !activeAxisColumns.includes(activeSeries.xAxis) && (
+                        <option value={activeSeries.xAxis}>{activeSeries.xAxis}</option>
+                      )}
                       {activeAxisColumns.map((col) => (
                         <option key={col} value={col}>{col}</option>
                       ))}
@@ -2690,13 +2995,28 @@ pollVisualization(res.viz_id)
                   </div>
 
                   <div className="ps-field">
-                    <label>Y Axis</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Y Axis
+                      {activeSeries?.jobId && !activeIsMat && (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title="Browse file data"
+                          onClick={() => { setDataBrowserTarget('y'); setDataBrowserOpen(true) }}
+                        >
+                          <img src={ViewIcon} alt="browse" style={{ width: 14, height: 14 }} />
+                        </button>
+                      )}
+                    </label>
                     <select
                       value={activeSeries?.yAxis || ''}
                       onChange={(e) => updateActiveSeries({ yAxis: e.target.value })}
                       disabled={!activeSeries?.jobId}
                     >
                       <option value="">{activeSeries?.jobId ? 'Select' : 'Select file first'}</option>
+                      {activeSeries?.yAxis && !activeAxisColumns.includes(activeSeries.yAxis) && (
+                        <option value={activeSeries.yAxis}>{activeSeries.yAxis}</option>
+                      )}
                       {activeAxisColumns.map((col) => (
                         <option key={col} value={col}>{col}</option>
                       ))}
@@ -2740,13 +3060,28 @@ pollVisualization(res.viz_id)
 
                   {requiresZ && (
                     <div className="ps-field">
-                      <label>Z Axis</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Z Axis
+                        {activeSeries?.jobId && !activeIsMat && (
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            title="Browse file data"
+                            onClick={() => { setDataBrowserTarget('z'); setDataBrowserOpen(true) }}
+                          >
+                            <img src={ViewIcon} alt="browse" style={{ width: 14, height: 14 }} />
+                          </button>
+                        )}
+                      </label>
                       <select
                         value={activeSeries?.zAxis || ''}
                         onChange={(e) => updateActiveSeries({ zAxis: e.target.value })}
                         disabled={!activeSeries?.jobId}
                       >
                         <option value="">Select</option>
+                        {activeSeries?.zAxis && !activeAxisColumns.includes(activeSeries.zAxis) && (
+                          <option value={activeSeries.zAxis}>{activeSeries.zAxis}</option>
+                        )}
                         {activeAxisColumns.map((col) => (
                           <option key={col} value={col}>{col}</option>
                         ))}
@@ -2774,7 +3109,7 @@ pollVisualization(res.viz_id)
 
               {activeIsMat && (
                 <MatPlotBuilder
-                  projectId={projectId}
+                  projectId={dataProjectId}
                   datasetType={activeSeries?.datasetType}
                   tagName={activeSeries?.tag}
                   jobId={activeSeries?.jobId}
@@ -2840,6 +3175,25 @@ pollVisualization(res.viz_id)
                           <div style={{ fontSize: "12px", fontWeight: "400", fontFamily: "inter-Regular,Helvetica", marginTop: 8, alignItems: 'flex-start' }}>
                             {seriesSummary(s)}
                           </div>
+                          {Array.isArray(s.yAxisList) && s.yAxisList.length > 1 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                              {s.yAxisList.map((col) => (
+                                <span
+                                  key={col}
+                                  style={{
+                                    fontSize: 11,
+                                    padding: '2px 6px',
+                                    borderRadius: 4,
+                                    background: 'var(--color-background-secondary)',
+                                    border: '1px solid var(--color-border-tertiary)',
+                                    color: 'var(--color-text-secondary)',
+                                  }}
+                                >
+                                  {col}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {seriesList.length > 1 && (
 
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -2893,7 +3247,7 @@ pollVisualization(res.viz_id)
                     type="button"
                     className="project-shell__nav-save"
                     onClick={handleSaveVisualization}
-                    disabled={!plotHtml || !tempVizId || loadingSave}
+                    disabled={!hasPlotContent || !tempVizId || loadingSave}
                   >
                     {loadingSave ? 'Saving…' : 'Save Visualization'}
                   </button>
@@ -2921,7 +3275,7 @@ pollVisualization(res.viz_id)
 
               <div className="Plot-preview" style={{ position: 'relative' }}>
                 {activeIsMat && <MatZoomLoaderOverlay active={matZoomLoading} />}
-                {plotHtml ? (
+                {hasPlotContent ? (
                   <iframe
                     title="plot"
                     ref={activeIsMat ? matPlotFrameRef : undefined}
@@ -3142,6 +3496,43 @@ pollVisualization(res.viz_id)
               removeSeriesSlot(confirmRemoveSeries.seriesId);
               setConfirmRemoveSeries({ open: false, seriesId: null });
             }}
+          />
+        )}
+
+        {dataBrowserOpen && activeSeries?.jobId && !activeIsMat && (
+          <DataBrowserModal
+            isOpen={dataBrowserOpen}
+            onClose={() => {
+              setDataBrowserOpen(false)
+              setDataBrowserTarget(null)
+            }}
+            jobId={activeSeries.jobId}
+            columns={activeAxisColumns}
+            initialRows={activeJob?.sample_rows || []}
+            totalRows={activeJob?.rows_seen || 0}
+            onSelectX={(col) => {
+              updateActiveSeries({ xAxis: col, rowXData: null })
+              setDataBrowserOpen(false)
+              setDataBrowserTarget(null)
+            }}
+            onSelectY={handleBrowserSelectY}
+            onSelectZ={(col) => {
+              updateActiveSeries({ zAxis: col })
+              setDataBrowserOpen(false)
+              setDataBrowserTarget(null)
+            }}
+            showZ={requiresZ}
+            currentX={activeSeries.xAxis || ''}
+            currentY={activeSeries.yAxis || ''}
+            currentZ={activeSeries.zAxis || ''}
+            targetAxis={dataBrowserTarget}
+            onSelectRowX={(rowIndex, rowData) =>
+              handleBrowserSelectRowX(rowIndex, rowData, activeAxisColumns)
+            }
+            onSelectRowY={(rowIndex, rowData) =>
+              handleBrowserSelectRowY(rowIndex, rowData, activeAxisColumns)
+            }
+            showRowSelect={!requiresZ}
           />
         )}
       </div>

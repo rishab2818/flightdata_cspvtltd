@@ -397,6 +397,137 @@ def _materialize_tiles(
     return overview_frame, tiles, stats
 
 
+def _materialize_mat_tiles(
+    minio,
+    bucket: str,
+    base_key: str,
+    x_arr: np.ndarray,
+    y_arr: np.ndarray,
+    x_col: str,
+    y_col: str,
+    levels: tuple[int, ...] = LOD_LEVELS,
+) -> tuple[pd.DataFrame, list[dict], dict]:
+    xv = np.asarray(x_arr, dtype=np.float64).reshape(-1)
+    yv = np.asarray(y_arr, dtype=np.float64).reshape(-1)
+    if xv.shape[0] != yv.shape[0]:
+        raise ValueError(
+            f"MAT trace has incompatible x/y lengths for LOD materialization: "
+            f"len(x)={xv.shape[0]}, len(y)={yv.shape[0]}"
+        )
+
+    finite_mask = np.isfinite(xv) & np.isfinite(yv)
+    xv = xv[finite_mask]
+    yv = yv[finite_mask]
+    if xv.size == 0:
+        raise ValueError("No valid numeric data in MAT trace for LOD materialization")
+
+    x_min = float(xv.min())
+    x_max = float(xv.max())
+    if x_min == x_max:
+        x_max = x_min + 1e-9
+
+    tiles: list[dict] = []
+    overview_level = min(levels)
+    overview_frame = None
+
+    for bins in levels:
+        edges = np.linspace(x_min, x_max, bins + 1, dtype=np.float64)
+        bin_idx = np.clip(np.digitize(xv, edges) - 1, 0, bins - 1)
+
+        counts = np.zeros(bins, dtype=np.int64)
+        sums = np.zeros(bins, dtype=np.float64)
+        mins = np.full(bins, np.inf, dtype=np.float64)
+        maxs = np.full(bins, -np.inf, dtype=np.float64)
+
+        np.add.at(counts, bin_idx, 1)
+        np.add.at(sums, bin_idx, yv)
+        np.minimum.at(mins, bin_idx, yv)
+        np.maximum.at(maxs, bin_idx, yv)
+
+        mask = counts > 0
+        centers = (edges[:-1] + edges[1:]) / 2.0
+        means = np.divide(sums, counts, out=np.zeros_like(sums), where=mask)
+        frame = pd.DataFrame(
+            {
+                x_col: centers[mask],
+                y_col: means[mask],
+                "count": counts[mask],
+            }
+        )
+
+        buffer = io.BytesIO()
+        frame.to_parquet(buffer, index=False)
+        buffer.seek(0)
+
+        obj_name = f"{base_key}/level_{bins}.parquet"
+        minio.put_object(
+            bucket_name=bucket,
+            object_name=obj_name,
+            data=buffer,
+            length=buffer.getbuffer().nbytes,
+            content_type="application/octet-stream",
+        )
+
+        tiles.append(
+            {
+                "level": bins,
+                "object_name": obj_name,
+                "rows": len(frame),
+                "x_min": x_min,
+                "x_max": x_max,
+            }
+        )
+
+        if bins == overview_level:
+            overview_frame = frame
+
+    if overview_frame is None:
+        raise ValueError("Unable to build MAT overview tile for visualization")
+
+    return overview_frame, tiles, {"x_min": x_min, "x_max": x_max, "rows": int(xv.shape[0])}
+
+
+def _load_axis_values_from_source(
+    url: str,
+    ext: str,
+    axis_name: str,
+    axis_scale: str = "linear",
+    limit: int | None = None,
+) -> np.ndarray:
+    collected: list[np.ndarray] = []
+    total = 0
+    for chunk in _iter_chunks(
+        url=url,
+        ext=ext,
+        x_axis=axis_name,
+        y_axis=None,
+        z_axis=None,
+        read_columns=[axis_name],
+        derived_columns=None,
+    ):
+        values = pd.to_numeric(chunk[axis_name], errors="coerce").to_numpy(dtype=float)
+        values = values[np.isfinite(values)]
+        if axis_scale == "log":
+            values = values[values > 0]
+        if values.size == 0:
+            continue
+
+        if limit is not None:
+            remaining = limit - total
+            if remaining <= 0:
+                break
+            values = values[:remaining]
+
+        collected.append(values)
+        total += int(values.size)
+        if limit is not None and total >= limit:
+            break
+
+    if not collected:
+        return np.array([], dtype=float)
+    return np.concatenate(collected)
+
+
 # ─── Contour grid builder ─────────────────────────────────────────────────────
 
 def _build_contour_grid(
@@ -1050,14 +1181,93 @@ def generate_visualization(self, viz_id: str):
             _set_status(redis, viz_id, states.STARTED, 25, "Reading MAT variables")
             _update_db_status(db, viz_id, status=states.STARTED, progress=25, message="Reading MAT variables")
 
-            if matlab_like_mode:
-                _set_status(redis, viz_id, states.STARTED, 60, "Building figure")
+            if matlab_like_mode in {"plot_y", "plot_xy"}:
+                _set_status(redis, viz_id, states.STARTED, 40, "Building MAT figure")
                 fig = build_matlab_like_figure(
                     job_id=job_id,
                     chart_type=chart_type,
                     mat_request=request,
                     temp_derived_formulas=derived_formulas,
                 )
+
+                _set_status(redis, viz_id, states.STARTED, 60, "Materializing MAT tiles")
+                mat_series_meta = []
+                mat_stats = []
+                mat_tiles_meta = []
+
+                for trace_idx, trace in enumerate(fig.data):
+                    x_arr = np.asarray(trace.x if trace.x is not None else [], dtype=float)
+                    y_arr = np.asarray(trace.y if trace.y is not None else [], dtype=float)
+                    x_col = f"__mat_x_{trace_idx}"
+                    y_col = f"__mat_y_{trace_idx}"
+                    base_key = (
+                        f"projects/{doc['project_id']}/visualizations/{viz_id}"
+                        f"/mat_series_{trace_idx}"
+                    )
+
+                    overview, tiles, stats = _materialize_mat_tiles(
+                        minio=minio,
+                        bucket=viz_bucket,
+                        base_key=base_key,
+                        x_arr=x_arr,
+                        y_arr=y_arr,
+                        x_col=x_col,
+                        y_col=y_col,
+                    )
+
+                    fig.data[trace_idx].x = overview[x_col].to_numpy()
+                    fig.data[trace_idx].y = overview[y_col].to_numpy()
+
+                    mat_series_meta.append({"x_axis": x_col, "y_axis": y_col})
+                    mat_stats.append(stats)
+                    mat_tiles_meta.append(
+                        {
+                            "series": {"x_axis": x_col, "y_axis": y_col},
+                            "tiles": tiles,
+                        }
+                    )
+
+                _set_status(redis, viz_id, states.STARTED, 75, "Building MAT HTML")
+                mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
+                fig.update_layout(
+                    autosize=True,
+                    height=None,
+                    width=None,
+                    margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+                )
+                fig.update_xaxes(type="linear")
+
+                post_script = _build_zoom_loader_script(
+                    viz_id=viz_id,
+                    chart_type="scatter",
+                    series_meta=mat_series_meta,
+                    series_stats=mat_stats,
+                )
+                html = pio.to_html(
+                    fig,
+                    full_html=True,
+                    include_plotlyjs=True,
+                    config={"responsive": True},
+                    post_script=post_script,
+                )
+            elif matlab_like_mode:
+                _set_status(redis, viz_id, states.STARTED, 60, "Building MAT figure")
+                fig = build_matlab_like_figure(
+                    job_id=job_id,
+                    chart_type=chart_type,
+                    mat_request=request,
+                    temp_derived_formulas=derived_formulas,
+                )
+                mat_tiles_meta = []
+                mat_stats = []
+                mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
+                fig.update_layout(
+                    autosize=True, height=None, width=None,
+                    margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+                )
+                if mat_is_3d:
+                    fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
+                html = pio.to_html(fig, full_html=True, include_plotlyjs=True, config={"responsive": True})
             else:
                 var_name = request.get("var")
                 mapping = request.get("mapping")
@@ -1088,26 +1298,26 @@ def generate_visualization(self, viz_id: str):
                     values=np.asarray(values),
                     labels=labels,
                 )
-
-            mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
-            fig.update_layout(
-                autosize=True, height=None, width=None,
-                margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
-            )
-            if mat_is_3d:
-                fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
-
-            html = pio.to_html(
-                fig,
-                full_html=True,
-                include_plotlyjs=True,
-                config={"responsive": True},
-            )
+                mat_tiles_meta = []
+                mat_stats = []
+                mat_is_3d = chart_type in {"scatter3d", "line3d", "surface"}
+                fig.update_layout(
+                    autosize=True, height=None, width=None,
+                    margin=(dict(l=0, r=0, t=40, b=0) if mat_is_3d else dict(l=40, r=40, t=40, b=40)),
+                )
+                if mat_is_3d:
+                    fig.update_scenes(domain=dict(x=[0, 1], y=[0, 1]))
+                html = pio.to_html(
+                    fig,
+                    full_html=True,
+                    include_plotlyjs=True,
+                    config={"responsive": True},
+                )
 
             html_bytes = html.encode("utf-8")
             html_key = f"projects/{doc['project_id']}/visualizations/{viz_id}.html"
 
-            _set_status(redis, viz_id, states.STARTED, 85, "Saving visualization")
+            _set_status(redis, viz_id, states.STARTED, 85, "Saving MAT visualization")
             minio.put_object(
                 bucket_name=viz_bucket,
                 object_name=html_key,
@@ -1120,7 +1330,9 @@ def generate_visualization(self, viz_id: str):
             _update_db_status(
                 db, viz_id,
                 status=states.SUCCESS, progress=100, message="Visualization ready",
-                html=html, html_key=html_key, tiles=[], series_stats=[],
+                html_key=html_key,
+                tiles=mat_tiles_meta,
+                series_stats=mat_stats,
             )
 
             if owner_email:
@@ -1203,6 +1415,127 @@ def generate_visualization(self, viz_id: str):
             z_axis = series.get("z_axis")
             x_scale = (series.get("x_scale") or "linear").lower().strip()
             y_scale = (series.get("y_scale") or "linear").lower().strip()
+            x_values = series.get("x_values")
+            y_values = series.get("y_values")
+            is_literal_series = x_values is not None or y_values is not None
+
+            if is_literal_series:
+                _set_status(redis, viz_id, states.STARTED, 30, f"Materializing row-literal series {idx}")
+                has_x_literal = x_values is not None
+                has_y_literal = y_values is not None
+                xv = np.asarray(x_values or [], dtype=float).reshape(-1) if has_x_literal else np.array([], dtype=float)
+                yv = np.asarray(y_values or [], dtype=float).reshape(-1) if has_y_literal else np.array([], dtype=float)
+
+                data_url = None
+                ext = None
+                if not has_x_literal or not has_y_literal:
+                    if job.get("processed_key"):
+                        data_url = minio.presigned_get_object(
+                            bucket_name=settings.ingestion_bucket,
+                            object_name=job["processed_key"],
+                            expires=timedelta(hours=6),
+                        )
+                        ext = ".parquet"
+                    else:
+                        data_url = minio.presigned_get_object(
+                            bucket_name=settings.ingestion_bucket,
+                            object_name=job["storage_key"],
+                            expires=timedelta(hours=6),
+                        )
+                        ext = os.path.splitext(job.get("filename", "").lower())[-1]
+
+                if not has_x_literal:
+                    xv = _load_axis_values_from_source(
+                        data_url,
+                        ext,
+                        axis_name=x_axis,
+                        axis_scale=x_scale,
+                        limit=int(yv.size) if yv.size else None,
+                    )
+                if not has_y_literal:
+                    yv = _load_axis_values_from_source(
+                        data_url,
+                        ext,
+                        axis_name=y_axis,
+                        axis_scale=y_scale,
+                        limit=int(xv.size) if xv.size else None,
+                    )
+
+                if xv.size != yv.size:
+                    n = int(min(xv.size, yv.size))
+                    xv = xv[:n]
+                    yv = yv[:n]
+                if xv.size < 2 or yv.size < 2:
+                    _update_db_status(
+                        db, viz_id,
+                        status=states.FAILURE, progress=100,
+                        message=f"Not enough overlapping numeric points for row/column series {idx}",
+                    )
+                    return
+
+                finite_mask = np.isfinite(xv) & np.isfinite(yv)
+                xv = xv[finite_mask]
+                yv = yv[finite_mask]
+                if xv.size == 0:
+                    _update_db_status(
+                        db, viz_id,
+                        status=states.FAILURE, progress=100,
+                        message=f"No usable numeric data for row-based series {idx}",
+                    )
+                    return
+
+                if x_scale == "log":
+                    mask = xv > 0
+                    xv = xv[mask]
+                    yv = yv[mask]
+                if y_scale == "log":
+                    mask = yv > 0
+                    xv = xv[mask]
+                    yv = yv[mask]
+                if xv.size == 0:
+                    _update_db_status(
+                        db, viz_id,
+                        status=states.FAILURE, progress=100,
+                        message=f"No data left after scale filtering for row-based series {idx}",
+                    )
+                    return
+
+                series_meta_for_js.append(
+                    {
+                        "x_axis": x_axis,
+                        "y_axis": y_axis,
+                        "z_axis": z_axis,
+                        "derived_columns": [],
+                    }
+                )
+
+                literal_df = pd.DataFrame({x_axis: xv, y_axis: yv})
+                if chart_type in TILED_TYPES:
+                    base_key = f"projects/{doc['project_id']}/visualizations/{viz_id}/series_{idx}"
+                    overview, tiles, stats = _materialize_mat_tiles(
+                        minio=minio,
+                        bucket=bucket,
+                        base_key=base_key,
+                        x_arr=literal_df[x_axis].to_numpy(),
+                        y_arr=literal_df[y_axis].to_numpy(),
+                        x_col=x_axis,
+                        y_col=y_axis,
+                    )
+                    series_frames.append({"series": series, "frame": overview[[x_axis, y_axis]].copy()})
+                    tile_metadata.append({"series": series, "tiles": tiles})
+                    stats_metadata.append({"series": series, "stats": stats})
+                    stats_for_js.append(stats)
+                else:
+                    raw_df = literal_df[[x_axis, y_axis]].copy()
+                    if len(raw_df) > 120_000:
+                        raw_df = raw_df.sample(n=120_000, random_state=42)
+                    raw_df = raw_df.sort_values(x_axis)
+                    series_frames.append({"series": series, "frame": raw_df})
+                    tile_metadata.append({"series": series, "tiles": []})
+                    stats_metadata.append({"series": series, "stats": {"note": "row_literal_no_tiles"}})
+                    stats_for_js.append({})
+                continue
+
             derived_specs = normalize_derived_columns(series.get("derived_columns") or [])
             formula_plan = build_formula_plan(
                 base_columns=list(job.get("columns") or []),

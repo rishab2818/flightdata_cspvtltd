@@ -4,8 +4,10 @@ import logging
 import os
 from datetime import timedelta
 
+import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from minio.error import S3Error
 from pydantic import ValidationError
 
 from app.core.auth import CurrentUser, get_current_user
@@ -100,6 +102,52 @@ def _validate_log_scale_against_ingestion_stats(job: dict, x_axis: str, y_axis: 
             )
 
 
+def _coerce_literal_axis_values(values, axis_name: str, series_idx: int) -> list[float] | None:
+    if values is None:
+        return None
+    if not isinstance(values, list):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Series {series_idx}: {axis_name} must be a list of numbers",
+        )
+    if len(values) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Series {series_idx}: {axis_name} cannot be empty",
+        )
+    out = []
+    for item in values:
+        try:
+            value = float(item)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Series {series_idx}: {axis_name} contains non-numeric values",
+            ) from exc
+        if not np.isfinite(value):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Series {series_idx}: {axis_name} must contain only finite numbers",
+            )
+        out.append(value)
+    return out
+
+
+def _validate_log_scale_against_literal_values(
+    x_values: list[float], y_values: list[float], x_scale: str, y_scale: str, series_idx: int
+):
+    if x_scale == "log" and min(x_values) <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Series {series_idx}: X literal values contain <= 0; log scale requires all X > 0.",
+        )
+    if y_scale == "log" and min(y_values) <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Series {series_idx}: Y literal values contain <= 0; log scale requires all Y > 0.",
+        )
+
+
 def _with_series(doc: dict | None):
     if not doc:
         return doc
@@ -127,6 +175,24 @@ async def build_preview_figure(payload: VisualizationCreateRequest) -> "go.Figur
 
     # Very light preview: read a limited sample from parquet for each series
     for item in payload.series:
+        if item.x_values is not None or item.y_values is not None:
+            xv = np.asarray(item.x_values or [], dtype=float).reshape(-1)
+            yv = np.asarray(item.y_values or [], dtype=float).reshape(-1)
+            if xv.size == 0 and yv.size:
+                xv = np.arange(1, yv.size + 1, dtype=float)
+            if yv.size == 0 and xv.size:
+                yv = np.arange(1, xv.size + 1, dtype=float)
+            if xv.size and yv.size and xv.size == yv.size:
+                finite = np.isfinite(xv) & np.isfinite(yv)
+                xv = xv[finite]
+                yv = yv[finite]
+                label = item.label or item.y_axis or "Series"
+                if chart_type == "bar":
+                    fig.add_bar(name=label, x=xv, y=yv)
+                else:
+                    fig.add_scatter(name=label, x=xv, y=yv, mode="lines+markers")
+            continue
+
         job = await ingestions.get_job(item.job_id)
         if not job:
             continue
@@ -155,6 +221,52 @@ async def build_preview_figure(payload: VisualizationCreateRequest) -> "go.Figur
             fig.add_scatter(name=label, x=df[item.x_axis], y=df[item.y_axis], mode="lines+markers")
 
     return fig
+
+
+def _read_axis_values_from_job(job: dict, axis_name: str, limit: int | None = None) -> np.ndarray:
+    object_name = job.get("processed_key") or job.get("storage_key")
+    if not object_name:
+        return np.array([], dtype=float)
+
+    minio = get_minio_client()
+    data_url = minio.presigned_get_object(
+        bucket_name=settings.ingestion_bucket,
+        object_name=object_name,
+        expires=timedelta(hours=2),
+    )
+
+    collected: list[np.ndarray] = []
+    total = 0
+    try:
+        import pyarrow.parquet as pq
+
+        pf = pq.ParquetFile(data_url, pre_buffer=True)
+        for batch in pf.iter_batches(columns=[axis_name], batch_size=100_000, use_threads=True):
+            arr = pd.to_numeric(batch.to_pandas()[axis_name], errors="coerce").to_numpy(dtype=float)
+            arr = arr[np.isfinite(arr)]
+            if arr.size == 0:
+                continue
+            if limit is not None:
+                remaining = limit - total
+                if remaining <= 0:
+                    break
+                arr = arr[:remaining]
+            collected.append(arr)
+            total += int(arr.size)
+            if limit is not None and total >= limit:
+                break
+    except Exception:
+        frame = pd.read_parquet(data_url, columns=[axis_name])
+        arr = pd.to_numeric(frame[axis_name], errors="coerce").to_numpy(dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if limit is not None:
+            arr = arr[:limit]
+        if arr.size:
+            collected.append(arr)
+
+    if not collected:
+        return np.array([], dtype=float)
+    return np.concatenate(collected)
 
 
 
@@ -332,39 +444,112 @@ async def create_visualization(
             )
         z_axis_for_series = item.z_axis if series_requires_z else None
 
-        derived_specs: list[dict] = []
-        try:
-            derived_specs = normalize_derived_columns(
-                [d.model_dump() for d in (item.derived_columns or [])]
-            )
-            base_columns = list(job.get("columns") or [])
-            plan = build_formula_plan(
-                base_columns=base_columns,
-                derived_columns=derived_specs,
-                target_columns=[
-                    item.x_axis,
-                    item.y_axis,
-                    z_axis_for_series,
-                ],
-            )
-            available_cols = set(base_columns) | set(plan.derived_names)
-            missing = [
-                col
-                for col in [item.x_axis, item.y_axis, z_axis_for_series]
-                if col and col not in available_cols
-            ]
-            if missing:
+        x_values = _coerce_literal_axis_values(item.x_values, "x_values", idx)
+        y_values = _coerce_literal_axis_values(item.y_values, "y_values", idx)
+        has_x_literal = x_values is not None
+        has_y_literal = y_values is not None
+        is_literal_series = has_x_literal or has_y_literal
+
+        if is_literal_series:
+            if series_requires_z:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Columns not found in dataset for series {idx}: {', '.join(missing)}",
+                    detail=f"Series {idx}: row-literal axis values are supported only for 2D charts",
                 )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid derived column definition for series {idx}: {exc}",
-            ) from exc
-            
-        _validate_log_scale_against_ingestion_stats(job, item.x_axis, item.y_axis, item.x_scale, item.y_scale)
+            if item.derived_columns:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Series {idx}: derived columns are not supported with row-literal axes",
+                )
+
+            base_columns = list(job.get("columns") or [])
+            if has_x_literal and has_y_literal:
+                if len(x_values or []) != len(y_values or []):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Series {idx}: x_values and y_values must have the same length",
+                    )
+                if len(x_values or []) < 2:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Series {idx}: at least 2 points are required for row-based plotting",
+                    )
+                _validate_log_scale_against_literal_values(
+                    x_values or [],
+                    y_values or [],
+                    item.x_scale,
+                    item.y_scale,
+                    idx,
+                )
+            elif has_x_literal:
+                if len(x_values or []) < 2:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Series {idx}: x_values must contain at least 2 numeric points",
+                    )
+                if item.y_axis not in base_columns:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Columns not found in dataset for series {idx}: {item.y_axis}",
+                    )
+                if item.x_scale == "log" and min(x_values or [0]) <= 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Series {idx}: X literal values contain <= 0; log scale requires all X > 0.",
+                    )
+                _validate_log_scale_against_ingestion_stats(job, item.y_axis, item.y_axis, "linear", item.y_scale)
+            elif has_y_literal:
+                if len(y_values or []) < 2:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Series {idx}: y_values must contain at least 2 numeric points",
+                    )
+                if item.x_axis not in base_columns:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Columns not found in dataset for series {idx}: {item.x_axis}",
+                    )
+                if item.y_scale == "log" and min(y_values or [0]) <= 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Series {idx}: Y literal values contain <= 0; log scale requires all Y > 0.",
+                    )
+                _validate_log_scale_against_ingestion_stats(job, item.x_axis, item.x_axis, item.x_scale, "linear")
+            derived_specs = []
+        else:
+            derived_specs = []
+            try:
+                derived_specs = normalize_derived_columns(
+                    [d.model_dump() for d in (item.derived_columns or [])]
+                )
+                base_columns = list(job.get("columns") or [])
+                plan = build_formula_plan(
+                    base_columns=base_columns,
+                    derived_columns=derived_specs,
+                    target_columns=[
+                        item.x_axis,
+                        item.y_axis,
+                        z_axis_for_series,
+                    ],
+                )
+                available_cols = set(base_columns) | set(plan.derived_names)
+                missing = [
+                    col
+                    for col in [item.x_axis, item.y_axis, z_axis_for_series]
+                    if col and col not in available_cols
+                ]
+                if missing:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Columns not found in dataset for series {idx}: {', '.join(missing)}",
+                    )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid derived column definition for series {idx}: {exc}",
+                ) from exc
+
+            _validate_log_scale_against_ingestion_stats(job, item.x_axis, item.y_axis, item.x_scale, item.y_scale)
 
 
         series_docs.append(
@@ -378,6 +563,8 @@ async def create_visualization(
                 "label": item.label or item.y_axis,
                 "chart_type": series_chart_type,
                 "derived_columns": derived_specs,
+                "x_values": x_values,
+                "y_values": y_values,
                 "filename": job.get("filename", "dataset"),
             }
         )
@@ -464,18 +651,23 @@ async def get_visualization_tile(
 
     if not hydrated.get("tiles"):
         raise HTTPException(status_code=404, detail="No tiles materialized for this visualization")
-    if not hydrated.get("series"):
-        raise HTTPException(status_code=404, detail="Visualization series missing")
-    if series >= len(hydrated["tiles"]) or series >= len(hydrated["series"]):
+    if series >= len(hydrated["tiles"]):
         raise HTTPException(status_code=400, detail="Series index out of range")
 
-    # ✅ IMPORTANT: per-series axes (your create_visualization stores axes per series)
-    x_axis = hydrated["series"][series].get("x_axis")
-    y_axis = hydrated["series"][series].get("y_axis")
+    series_tile_entry = hydrated["tiles"][series] or {}
+    series_meta = series_tile_entry.get("series") or {}
+    if (not series_meta.get("x_axis") or not series_meta.get("y_axis")) and hydrated.get("series"):
+        if series < len(hydrated["series"]):
+            series_meta = hydrated["series"][series]
+
+    x_axis = series_meta.get("x_axis")
+    y_axis = series_meta.get("y_axis")
     if not x_axis or not y_axis:
         raise HTTPException(status_code=400, detail="Series missing x_axis/y_axis")
 
-    series_tiles = hydrated["tiles"][series]["tiles"]
+    series_tiles = series_tile_entry.get("tiles") or []
+    if not series_tiles:
+        raise HTTPException(status_code=404, detail="No tile levels available for this series")
     chosen_level = level or min(tile["level"] for tile in series_tiles)
     chosen = next((tile for tile in series_tiles if tile["level"] == chosen_level), None)
     if not chosen:
@@ -504,7 +696,7 @@ async def get_visualization_tile(
         df = df[df[x_axis] <= x_max]
 
     return {
-        "series": hydrated["series"][series],
+        "series": series_meta,
         "level": chosen_level,
         "rows": len(df),
         "tile": chosen,
@@ -530,6 +722,53 @@ async def get_visualization_raw(
     await _ensure_member(doc["project_id"], user)
 
     hydrated = _with_series(doc)
+    source_type = (hydrated.get("source_type") or "tabular").lower().strip()
+
+    if source_type == "mat":
+        tiles_list = hydrated.get("tiles") or []
+        if series >= len(tiles_list):
+            return {"data": []}
+
+        tile_entry = tiles_list[series] or {}
+        series_tiles = tile_entry.get("tiles") or []
+        finest = max(series_tiles, key=lambda t: t.get("level", 0), default=None)
+        if not finest:
+            return {"data": []}
+
+        series_info = tile_entry.get("series") or {}
+        x_axis = series_info.get("x_axis")
+        y_axis = series_info.get("y_axis")
+        if not x_axis or not y_axis:
+            raise HTTPException(status_code=400, detail="MAT tile metadata missing x_axis/y_axis")
+
+        minio = get_minio_client()
+        buffer = io.BytesIO()
+        response = minio.get_object(settings.visualization_bucket, finest["object_name"])
+        try:
+            for chunk in response.stream(1024 * 1024):
+                buffer.write(chunk)
+        finally:
+            response.close()
+            response.release_conn()
+        buffer.seek(0)
+
+        frame = pd.read_parquet(buffer, columns=[x_axis, y_axis])
+        if x_min is not None:
+            frame = frame[frame[x_axis] >= x_min]
+        if x_max is not None:
+            frame = frame[frame[x_axis] <= x_max]
+        if len(frame) > max_points:
+            frame = frame.sample(n=max_points, random_state=42)
+        frame = frame.sort_values(x_axis)
+
+        return {
+            "series": series_info,
+            "rows": len(frame),
+            "x_axis": x_axis,
+            "y_axis": y_axis,
+            "data": frame.to_dict(orient="records"),
+        }
+
     if not hydrated.get("series"):
         raise HTTPException(status_code=400, detail="No series configured")
     if series >= len(hydrated["series"]):
@@ -540,6 +779,62 @@ async def get_visualization_raw(
     x_axis = series_doc.get("x_axis")
     y_axis = series_doc.get("y_axis")
     derived_specs = series_doc.get("derived_columns") or []
+    x_values = series_doc.get("x_values")
+    y_values = series_doc.get("y_values")
+    x_scale = (series_doc.get("x_scale") or "linear").lower().strip()
+    y_scale = (series_doc.get("y_scale") or "linear").lower().strip()
+
+    if x_values is not None or y_values is not None:
+        has_x_literal = x_values is not None
+        has_y_literal = y_values is not None
+        xv = np.asarray(x_values or [], dtype=float).reshape(-1)
+        yv = np.asarray(y_values or [], dtype=float).reshape(-1)
+
+        if (not has_x_literal or not has_y_literal) and job_id:
+            job = await ingestions.get_job(job_id)
+            if job:
+                if not has_x_literal:
+                    xv = _read_axis_values_from_job(job, x_axis, limit=int(yv.size) if yv.size else None)
+                if not has_y_literal:
+                    yv = _read_axis_values_from_job(job, y_axis, limit=int(xv.size) if xv.size else None)
+
+        if xv.size != yv.size:
+            n = int(min(xv.size, yv.size))
+            xv = xv[:n]
+            yv = yv[:n]
+        if xv.size != yv.size:
+            raise HTTPException(status_code=400, detail="Row-literal series has mismatched x/y lengths")
+
+        finite = np.isfinite(xv) & np.isfinite(yv)
+        xv = xv[finite]
+        yv = yv[finite]
+        if x_scale == "log":
+            mask = xv > 0
+            xv = xv[mask]
+            yv = yv[mask]
+        if y_scale == "log":
+            mask = yv > 0
+            xv = xv[mask]
+            yv = yv[mask]
+        if xv.size == 0:
+            return {"series": series_doc, "rows": 0, "x_axis": x_axis, "y_axis": y_axis, "data": []}
+
+        frame = pd.DataFrame({x_axis: xv, y_axis: yv})
+        if x_min is not None:
+            frame = frame[frame[x_axis] >= x_min]
+        if x_max is not None:
+            frame = frame[frame[x_axis] <= x_max]
+        if len(frame) > max_points:
+            frame = frame.sample(n=max_points, random_state=42)
+        frame = frame.sort_values(x_axis)
+
+        return {
+            "series": series_doc,
+            "rows": len(frame),
+            "x_axis": x_axis,
+            "y_axis": y_axis,
+            "data": frame.to_dict(orient="records"),
+        }
 
     if not job_id or not x_axis or not y_axis:
         raise HTTPException(status_code=400, detail="Series missing job_id/x_axis/y_axis")
@@ -648,6 +943,36 @@ async def visualization_status(viz_id: str, user: CurrentUser = Depends(get_curr
         progress=prepared.get("progress", 0),
         message=prepared.get("message"),
     )
+
+
+@router.get("/{viz_id}/html")
+async def visualization_html(viz_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await repo.get(viz_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Visualization not found")
+    await _ensure_member(doc["project_id"], user)
+
+    html_key = doc.get("html_key")
+    if not html_key:
+        raise HTTPException(status_code=404, detail="Visualization output missing")
+
+    minio = get_minio_client()
+    bucket = settings.visualization_bucket
+    if not minio.bucket_exists(bucket):
+        raise HTTPException(status_code=404, detail="Visualization store missing")
+
+    obj = None
+    try:
+        obj = minio.get_object(bucket_name=bucket, object_name=html_key)
+        html_bytes = obj.read()
+    except S3Error as exc:
+        raise HTTPException(status_code=404, detail="Visualization HTML not found in object store") from exc
+    finally:
+        if obj is not None:
+            obj.close()
+            obj.release_conn()
+
+    return Response(content=html_bytes, media_type="text/html; charset=utf-8")
 
 
 @router.get("/{viz_id}/download")

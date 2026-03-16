@@ -67,6 +67,13 @@ export const visualizationApi = {
     return data
   },
 
+  html: async (vizId) => {
+    const { data } = await axiosClient.get(`/api/visualizations/${vizId}/html`, {
+      responseType: 'text',
+    })
+    return data
+  },
+
   tileData: async (vizId, params = {}) => {
     const { data } = await axiosClient.get(`/api/visualizations/${vizId}/tiles`, { params })
     return data

@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import tempfile
@@ -74,6 +75,21 @@ def _coerce_progress(value: Any, fallback: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return int(fallback or 0)
+
+
+def _sanitize_json_value(value: Any):
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _sanitize_json_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_json_value(v) for v in value]
+    if hasattr(value, "item"):
+        try:
+            return _sanitize_json_value(value.item())
+        except Exception:
+            return value
+    return value
 
 
 async def _ensure_project_member(project_id: str, user: CurrentUser):
@@ -232,17 +248,15 @@ async def start_ingestion_batch(
                 all_sheets = []
         await file.close()
 
-        # Decide which sheets to process for spreadsheet files
-        sheet_queue: list[str | None]
-        # if visualize_enabled and ext in excel_exts:
-        if visualize_enabled and ext in spreadsheet_exts:
-            sheet_queue = requested_sheets or [None]
-        else:
-            sheet_queue = [None]
-
-        # if not visualize_enabled and ext in excel_exts and len(all_sheets) > 1:
-        if not visualize_enabled and ext in spreadsheet_exts and len(all_sheets) > 1:
-            sheet_queue = []
+        # Decide which sheets to process for spreadsheet files.
+        # Raw should keep only one workbook entry; processed keeps selected sheet jobs.
+        sheet_queue: list[str | None] = [None]
+        if ext in spreadsheet_exts and len(all_sheets) > 1:
+            if visualize_enabled:
+                sheet_queue = requested_sheets or [None]
+            else:
+                # For raw-only multi-sheet workbooks, create just one raw workbook job.
+                sheet_queue = []
 
         # Store the full workbook as a raw-only entry for multi-sheet spreadsheet files
         # if ext in excel_exts and len(all_sheets) > 1:
@@ -347,45 +361,6 @@ async def start_ingestion_batch(
                 )
             )
 
-        # Store raw-only entries for any sheets not selected for visualization
-        # if ext in excel_exts and all_sheets:
-        if ext in spreadsheet_exts and all_sheets:
-            selected_set = {s for s in sheet_queue if isinstance(s, str)}
-            for sheet_name in all_sheets:
-                if sheet_name in selected_set:
-                    continue
-                raw_sheet_job_id = await repo.create_job(
-                    project_id=project_id,
-                    filename=original_name,
-                    storage_key=raw_key,
-                    owner_email=user.email,
-                    dataset_type=dataset_type,
-                    header_mode=header_mode_for_file,
-                    custom_headers=custom_headers_for_file,
-                    tag_name=tag_folder,
-                    visualize_enabled=False,
-                    processed_key=None,
-                    content_type=file.content_type,
-                    size_bytes=size_bytes,
-                    sheet_name=sheet_name,
-                )
-                await repo.update_job(raw_sheet_job_id, status="stored", progress=100)
-                responses.append(
-                    IngestionCreateResponse(
-                        job_id=raw_sheet_job_id,
-                        project_id=project_id,
-                        filename=original_name,
-                        storage_key=raw_key,
-                        dataset_type=dataset_type,
-                        tag_name=tag_folder,
-                        visualize_enabled=False,
-                        header_mode=header_mode,
-                        status="stored",
-                        autoscale=describe_autoscale(),
-                        sheet_name=sheet_name,
-                    )
-                )
-
     return IngestionBatchCreateResponse(
         batch_id=batch_id,
         project_id=project_id,
@@ -404,6 +379,84 @@ async def get_job(job_id: str, user: CurrentUser = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Job not found")
     await _ensure_project_member(doc["project_id"], user)
     return IngestionJobOut(**doc)
+
+
+@router.get("/jobs/{job_id}/preview")
+async def job_data_preview(
+    job_id: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Returns paginated rows from the processed parquet for a tabular job.
+    For jobs without processed parquet, falls back to metadata sample_rows.
+    """
+    doc = await repo.get_job(job_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await _ensure_project_member(doc["project_id"], user)
+
+    filename = (doc.get("filename") or "").lower()
+    if filename.endswith(".mat"):
+        raise HTTPException(status_code=400, detail="Use MAT preview endpoint for .mat files")
+
+    sample_rows = list(doc.get("sample_rows") or [])
+    columns = list(doc.get("columns") or [])
+    processed_key = doc.get("processed_key")
+
+    if not processed_key:
+        return {
+            "rows": sample_rows[offset: offset + limit],
+            "total": int(doc.get("rows_seen") or len(sample_rows)),
+            "columns": columns,
+        }
+
+    minio = get_minio_client()
+    data_url = minio.presigned_get_object(
+        bucket_name=settings.ingestion_bucket,
+        object_name=processed_key,
+        expires=timedelta(minutes=10),
+    )
+
+    try:
+        pf = pq.ParquetFile(data_url, pre_buffer=True)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Unable to read processed parquet: {exc}") from exc
+
+    total_rows = int(pf.metadata.num_rows)
+    if not columns:
+        columns = [pf.schema_arrow.field(i).name for i in range(pf.schema_arrow.num_fields)]
+
+    rows_collected: list[pd.DataFrame] = []
+    rows_skipped = 0
+    rows_needed = limit
+
+    for batch in pf.iter_batches(batch_size=1000, columns=columns, use_threads=True):
+        batch_len = len(batch)
+        if rows_skipped + batch_len <= offset:
+            rows_skipped += batch_len
+            continue
+
+        start = max(0, offset - rows_skipped)
+        take = min(rows_needed, batch_len - start)
+        if take <= 0:
+            rows_skipped += batch_len
+            continue
+
+        chunk_df = batch.slice(start, take).to_pandas()
+        rows_collected.append(chunk_df)
+
+        rows_needed -= take
+        rows_skipped += batch_len
+        if rows_needed <= 0:
+            break
+
+    result = pd.concat(rows_collected, ignore_index=True) if rows_collected else pd.DataFrame(columns=columns)
+    result = result.where(result.notna(), other=None)
+    rows = [{k: _sanitize_json_value(v) for k, v in row.items()} for row in result.to_dict(orient="records")]
+
+    return {"rows": rows, "total": total_rows, "columns": columns}
 
 
 @router.get("/jobs/{job_id}/download")
@@ -586,7 +639,7 @@ async def list_tags(
         tag_name_value = str(r.get("tag_name") or "").strip()
         r["active_job"] = active_by_tag.get(tag_name_value)
         r["active_job_count"] = active_counts.get(tag_name_value, 0)
-    return rows
+    return [_sanitize_json_value(row) for row in rows]
 
 
 
@@ -613,7 +666,7 @@ async def list_files_in_tag(
     for d in docs:
         d["job_id"] = str(d["_id"])
         d.pop("_id", None)
-    return docs
+    return [_sanitize_json_value(doc) for doc in docs]
 
 
 class TagRenameIn(BaseModel):

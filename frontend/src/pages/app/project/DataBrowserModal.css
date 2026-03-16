@@ -1,0 +1,244 @@
+.db-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.db-modal__container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80vw;
+  max-width: 1100px;
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-primary, #fff);
+  color: var(--color-text-primary, #111);
+  border: 1px solid var(--color-border-tertiary, #d4d4d8);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.db-modal__header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: var(--color-background-primary, #fff);
+}
+
+.db-modal__close {
+  border: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: transparent;
+  color: inherit;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.db-modal__hint {
+  position: sticky;
+  top: 42px;
+  z-index: 19;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: var(--color-background-primary, #fff);
+  font-size: 12px;
+}
+
+.db-modal__table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  will-change: transform;
+}
+
+.db-modal__table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.db-modal__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.db-modal__head-cell {
+  vertical-align: top;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: var(--color-background-primary, #fff);
+}
+
+.db-modal__row-index-head {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 21;
+  min-width: 90px;
+  max-width: 90px;
+  padding: 8px;
+  border-right: 1px solid var(--color-border-tertiary, #d4d4d8);
+  border-bottom: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: var(--color-background-secondary, #f8fafc);
+  font-size: 11px;
+  color: var(--color-text-tertiary, #64748b);
+}
+
+.db-modal__head-cell.is-x {
+  background: color-mix(in srgb, #0ea5e9 14%, var(--color-background-primary, #fff));
+}
+
+.db-modal__head-cell.is-y {
+  background: color-mix(in srgb, #16a34a 14%, var(--color-background-primary, #fff));
+}
+
+.db-modal__head-cell.is-z {
+  background: color-mix(in srgb, #f59e0b 14%, var(--color-background-primary, #fff));
+}
+
+.db-modal__head-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.db-modal__head-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-modal__check-wrap {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.db-modal__head-cell:hover .db-modal__check-wrap {
+  opacity: 1;
+}
+
+.db-modal__axis-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.db-modal__head-cell:hover .db-modal__axis-actions {
+  opacity: 1;
+}
+
+.db-modal__axis-actions button {
+  border: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: transparent;
+  color: inherit;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.db-modal__table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--color-border-tertiary, #e4e4e7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.db-modal__table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, #94a3b8 8%, var(--color-background-primary, #fff));
+}
+
+.db-modal__row-index-cell {
+  position: sticky;
+  left: 0;
+  z-index: 9;
+  min-width: 90px;
+  max-width: 90px;
+  border-right: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: var(--color-background-secondary, #f8fafc);
+  color: var(--color-text-tertiary, #64748b);
+  font-size: 11px;
+  user-select: none;
+}
+
+.db-modal__row-index-cell > span:first-child {
+  margin-right: 4px;
+}
+
+.row-axis-btns {
+  visibility: hidden;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.db-modal__table tbody tr:hover .row-axis-btns {
+  visibility: visible;
+}
+
+.axis-tag-btn {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border-tertiary, #d4d4d8);
+  background: var(--color-background-primary, #fff);
+  color: var(--color-text-secondary, #334155);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.axis-tag-btn:hover {
+  background: var(--color-background-secondary, #f8fafc);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.db-modal__loading {
+  text-align: center;
+  padding: 14px;
+}
+
+.db-modal__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--color-border-tertiary, #d4d4d8);
+  font-size: 12px;
+}
+
+.db-modal__error {
+  padding: 8px 14px;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.db-modal__warning {
+  padding: 8px 14px;
+  color: #b45309;
+  font-size: 12px;
+}
+
+.db-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px 14px;
+}
