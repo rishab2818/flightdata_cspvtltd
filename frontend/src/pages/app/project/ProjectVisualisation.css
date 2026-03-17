@@ -337,7 +337,7 @@ min-width: 0;
   cursor: pointer;
   white-space: nowrap;
   margin-top: 23px;
-  width: 150px;
+  width: 170px;
 }
 
 .plot-btn:disabled {
@@ -863,8 +863,6 @@ min-width: 0;
   font-size: 12px;
 }
 
-
-
 .calc-token--function {
   color: #156c46;
   font-weight: 700;
@@ -896,7 +894,6 @@ min-width: 0;
   justify-content: center;
   margin-top: 40px;
 }
-
 
 /* .project-card,
 .project-cardpage,
@@ -987,7 +984,6 @@ min-width: 0;
   background: #f3f3f5;
   overflow-x: auto;     /* allow horizontal scroll if long */
   overflow-y: hidden;
-
   white-space: nowrap;  /* prevent wrapping */
 }
 
@@ -1005,6 +1001,20 @@ min-width: 0;
 
 .calc-preview-label {
   font-weight: 500;
+}
+
+.icon-Btn {
+  height: 21px;
+  width: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: none;
+    background: #F3F3F5;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-left: 10px;
 }
 
 /* .calc-syntax-preview {

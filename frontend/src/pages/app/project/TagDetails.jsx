@@ -326,7 +326,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                   <img style={{ width: '20px', height: '20px' }} src={ViewIcon} alt="view" />
                 </button>
 
-                {tab !== 'plot' && (
+                {tab !== 'plot' && tab !== 'processed' &&(
                   <button
                     onClick={() => handleDownload(f)}
                     title="Download"

@@ -281,7 +281,7 @@ export default function ProjectVisualisation() {
   const matPlotFrameRef = useRef(null)
   const skipNextCalcMatAutoPreviewRef = useRef(false)
   const autoLoadedVizRef = useRef('')
-  const [isExpanded, setIsExpanded] = useState(true)
+  // const [isExpanded, setIsExpanded] = useState(true)
 
   /* ================= helpers ================= */
   useEffect(() => {
@@ -1235,12 +1235,25 @@ const activeSeriesIndex = useMemo(
     }
   }
 
+  useEffect(() => {
+  if (!dataProjectId) return
+  fetchVisualizations(1, true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [dataProjectId])
+
+  // const savedVizLoadRef = useInfiniteScrollTrigger({
+  //   enabled: isExpanded,
+  //   hasMore: isExpanded && hasMoreViz,
+  //   isLoading: loadingViz,
+  //   onLoadMore: () => fetchVisualizations(vizPage + 1),
+  // })
+
   const savedVizLoadRef = useInfiniteScrollTrigger({
-    enabled: isExpanded,
-    hasMore: isExpanded && hasMoreViz,
-    isLoading: loadingViz,
-    onLoadMore: () => fetchVisualizations(vizPage + 1),
-  })
+  enabled: hasMoreViz,
+  hasMore: hasMoreViz,
+  isLoading: loadingViz,
+  onLoadMore: () => fetchVisualizations(vizPage + 1),
+})
 
   /* ================= columns for active series ================= */
   
@@ -1726,7 +1739,6 @@ const activeSeriesIndex = useMemo(
       }, 3000);
     }
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -2824,7 +2836,23 @@ pollVisualization(res.viz_id)
   </div> */}
 
   <div className="ps-field">
-  <label>File</label>
+  <label>File {activeIsMat && (
+      <button
+        type="button"
+        className="icon-Btn"
+        onClick={() =>
+          openMatPreviewInNewTab({
+            projectId: dataProjectId,
+            datasetType: activeSeries?.datasetType,
+            tagName: activeSeries?.tag,
+            jobId: activeSeries?.jobId,
+          })
+        }
+        title="View MAT File"
+      >
+        <img src={ViewIcon} alt="view" style={{ width: 14, height: 14 }} />
+      </button>
+    )}</label>
 
   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
     
@@ -2855,23 +2883,7 @@ pollVisualization(res.viz_id)
       ))}
     </select>
 
-    {activeIsMat && (
-      <button
-        type="button"
-        className="icon-btn"
-        onClick={() =>
-          openMatPreviewInNewTab({
-            projectId: dataProjectId,
-            datasetType: activeSeries?.datasetType,
-            tagName: activeSeries?.tag,
-            jobId: activeSeries?.jobId,
-          })
-        }
-        title="View MAT File"
-      >
-        <img src={ViewIcon} alt="view" style={{ width: 18, height: 18 }} />
-      </button>
-    )}
+    
 
   </div>
 </div>
@@ -2971,7 +2983,7 @@ pollVisualization(res.viz_id)
                       {activeSeries?.jobId && !activeIsMat && (
                         <button
                           type="button"
-                          className="icon-btn"
+                          className="icon-Btn"
                           title="Browse file data"
                           onClick={() => { setDataBrowserTarget('x'); setDataBrowserOpen(true) }}
                         >
@@ -3000,7 +3012,7 @@ pollVisualization(res.viz_id)
                       {activeSeries?.jobId && !activeIsMat && (
                         <button
                           type="button"
-                          className="icon-btn"
+                          className="icon-Btn"
                           title="Browse file data"
                           onClick={() => { setDataBrowserTarget('y'); setDataBrowserOpen(true) }}
                         >
@@ -3065,7 +3077,7 @@ pollVisualization(res.viz_id)
                         {activeSeries?.jobId && !activeIsMat && (
                           <button
                             type="button"
-                            className="icon-btn"
+                            className="icon-Btn"
                             title="Browse file data"
                             onClick={() => { setDataBrowserTarget('z'); setDataBrowserOpen(true) }}
                           >
@@ -3349,7 +3361,7 @@ pollVisualization(res.viz_id)
 
                   <div className="actionsrow__right">
 
-                    <button
+                    {/* <button
                       type="button"
                       className="expand-btn"
                       // onClick={() => {
@@ -3375,7 +3387,7 @@ pollVisualization(res.viz_id)
                     >
                       <span className={`chevron ${isExpanded ? 'open' : ''}`}>▾</span>
                       {isExpanded ? 'Collapse' : 'Expand'}
-                    </button>
+                    </button> */}
 
                     {/* {isExpanded && hasMoreViz && (
   <div style={{ textAlign: 'center', marginTop: 12 }}>
@@ -3406,7 +3418,7 @@ pollVisualization(res.viz_id)
                   </div>
                 </div>
 
-                <div className={`expand-container ${isExpanded ? 'open' : ''}`}>
+                <div className="expand-container open">
                   <div className="expand-inner">
                     {/* {visualizations.length === 0 && <div className="emptystate">No visualizations yet</div>} */}
                     {!loadingViz && visualizations.length === 0 && (
@@ -3460,12 +3472,19 @@ pollVisualization(res.viz_id)
                       ))}
                     </div>
 
-                    {isExpanded && hasMoreViz && <div ref={savedVizLoadRef} style={{ height: 1 }} />}
+                    {/* {isExpanded && hasMoreViz && <div ref={savedVizLoadRef} style={{ height: 1 }} />}
                     {isExpanded && loadingViz && visualizations.length > 0 && (
                       <div style={{ textAlign: 'center', marginTop: 12, color: '#64748b' }}>
                         Loading more...
                       </div>
-                    )}
+                    )} */}
+
+                    {hasMoreViz && <div ref={savedVizLoadRef} style={{ height: 1 }} />}
+{loadingViz && visualizations.length > 0 && (
+  <div style={{ textAlign: 'center', marginTop: 12, color: '#64748b' }}>
+    Loading more...
+  </div>
+)}
 
                   </div>
                 </div>

@@ -154,7 +154,7 @@ export default function RawPreviewPage() {
   return (
     <div className="project-page"> 
     <div
-      className="project-card"
+      className="Project-card"
       style={{ width: '100%', margin: '0 auto', background: '#fff', padding: 24 }}
     >
       {/* HEADER */}
