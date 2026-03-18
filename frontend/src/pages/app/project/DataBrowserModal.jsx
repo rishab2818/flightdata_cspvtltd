@@ -208,14 +208,15 @@ export default function DataBrowserModal({
       >
         <div className="db-modal__header">
           <strong>Data Browser</strong>
-          <button type="button" className="db-modal__close" onClick={handleClose}>Close</button>
+          <button type="button" className="db-modal__close" onClick={handleClose}>X</button>
         </div>
 
-        <div className="db-modal__hint">
+        {/* <div className="db-modal__hint">
           Select columns for axes{targetAxis ? ` (current target: ${String(targetAxis).toUpperCase()})` : ''}
-        </div>
+        </div> */}
 
         <div className="db-modal__table-wrap" ref={tableRef}>
+           <div className="db-modal__table-inner">
           <table className="db-modal__table">
             <thead>
               <tr>
@@ -299,6 +300,7 @@ export default function DataBrowserModal({
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="db-modal__meta">

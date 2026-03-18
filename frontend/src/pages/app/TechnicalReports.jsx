@@ -254,7 +254,7 @@ export default function TechnicalReports() {
         }}
       >
         <div style={{ marginTop: 10, flex: 1, overflowX: "auto", overflowY: "auto" }}>
-          <div style={{ marginBottom: 10, marginLeft: 5, color: "#0A0A0A", fontSize: 16, fontWeight: 600 }}>
+          <div style={{ marginBottom: 10, marginLeft: 5, color: "#0A0A0A", fontSize: 16, fontWeight: 600,fontFamily:"Inter-semiBold, Helvetica" }}>
             Technical Reports
           </div>
 

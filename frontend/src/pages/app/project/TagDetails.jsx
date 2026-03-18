@@ -8,6 +8,7 @@ import DownloadSimple from '../../../assets/DownloadSimple.svg'
 import Delete from '../../../assets/Delete.svg'
 import ViewIcon from '../../../assets/ViewIcon.svg'
 import { PROJECT_TABULAR_EXTENSIONS } from '../../../uploadPreview/fileTypes'
+import { useLoader } from '../../../context/LoaderContext'
 
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal";
@@ -116,6 +117,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     file: null,
   })
 
+  const { showLoader, hideLoader } = useLoader()
+
   useEffect(() => {
     setLoading(true)
     setError('')
@@ -201,24 +204,53 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
   }
 
   const handleDeleteFile = async () => {
-    if (!confirmDelete.file) return
+  if (!confirmDelete.file) return
 
-    try {
-      if (tab === 'plot') {
-        await visualizationApi.remove(confirmDelete.file.viz_id)
-        setPlots((prev) =>
-          prev.filter((p) => p.viz_id !== confirmDelete.file.viz_id)
-        )
-      } else {
-        await ingestionApi.remove(confirmDelete.file.job_id)
-        setFiles((prev) => prev.filter((f) => f.job_id !== confirmDelete.file.job_id))
-      }
-    } catch (err) {
-      window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
-    } finally {
-      setConfirmDelete({ open: false, file: null })
+  const fileToDelete = confirmDelete.file
+  const isPlotTab = tab === 'plot'
+
+  setConfirmDelete({ open: false, file: null })
+
+  try {
+    showLoader(isPlotTab ? 'Deleting plot...' : 'Deleting file...')
+
+    if (isPlotTab) {
+      await visualizationApi.remove(fileToDelete.viz_id)
+      setPlots((prev) =>
+        prev.filter((p) => p.viz_id !== fileToDelete.viz_id)
+      )
+    } else {
+      await ingestionApi.remove(fileToDelete.job_id)
+      setFiles((prev) =>
+        prev.filter((f) => f.job_id !== fileToDelete.job_id)
+      )
     }
+  } catch (err) {
+    window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
+  } finally {
+    hideLoader()
   }
+}
+
+  // const handleDeleteFile = async () => {
+  //   if (!confirmDelete.file) return
+
+  //   try {
+  //     if (tab === 'plot') {
+  //       await visualizationApi.remove(confirmDelete.file.viz_id)
+  //       setPlots((prev) =>
+  //         prev.filter((p) => p.viz_id !== confirmDelete.file.viz_id)
+  //       )
+  //     } else {
+  //       await ingestionApi.remove(confirmDelete.file.job_id)
+  //       setFiles((prev) => prev.filter((f) => f.job_id !== confirmDelete.file.job_id))
+  //     }
+  //   } catch (err) {
+  //     window.alert(err?.response?.data?.detail || err.message || 'Delete failed')
+  //   } finally {
+  //     setConfirmDelete({ open: false, file: null })
+  //   }
+  // }
 
   const showEmptyState = !loading && !error && rows.length === 0
 

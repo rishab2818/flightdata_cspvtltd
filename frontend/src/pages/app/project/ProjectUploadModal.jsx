@@ -1,8 +1,7 @@
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
-import { ingestionApi } from '../../../api/ingestionApi';
+import { ingestionApi } from '../../../api/ingestionApi'
 import {
     PROJECT_TABULAR_EXTENSIONS,
     getFileExtension,
@@ -14,11 +13,11 @@ import {
     readLocalTextHead,
     readLocalTextRange,
 } from '../../../uploadPreview/localTextPreview'
-import './ProjectUploadModal.css';
-// import './ProjectUpload.css';
+import { useLoader } from '../../../context/LoaderContext'
+import './ProjectUploadModal.css'
 
-import Plus from "../../../assets/Plus.svg";
-import InfoButton from "../../../components/common/InfoButton";
+import Plus from "../../../assets/Plus.svg"
+import InfoButton from "../../../components/common/InfoButton"
 
 const DATASET_OPTIONS = [
     { key: 'cfd', label: 'CFD' },
@@ -44,7 +43,6 @@ const NUM_TOKEN_RE = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
-// For the ignoring the special charcter for the header 
 const stripLeadingJunk = (line) => {
     return line.replace(/^[\s#\$%&@!;:,._-]+/, '')
 }
@@ -146,6 +144,24 @@ const makeUniqueHeaders = (headers) => {
     })
 }
 
+const looksLikeUnitsRow = (tokens) => {
+    const values = tokens.filter((tok) => tok !== '').map((tok) => String(tok).trim())
+    if (!values.length) return false
+
+    const unitLikeCount = values.filter((tok) => {
+        const t = tok.toLowerCase()
+        return (
+            /^[a-zA-Z%°/_\-0-9.]+$/.test(tok) &&
+            (
+                t.includes('/') ||
+                ['m', 'km', 'cm', 'mm', 's', 'ms', 'deg', 'rad', 'kg', 'g', 'pa', 'kpa', 'mpa', 'n', 'kn', 'm/s', 'km/h', 'ft/s', 'rpm', 'hz'].includes(t)
+            )
+        )
+    }).length
+
+    return unitLikeCount / values.length >= 0.5
+}
+
 const buildTableFromLines = (lines) => {
     const cleanLines = lines.filter((ln) => ln.trim() !== '')
     if (!cleanLines.length) return { headers: [], rows: [] }
@@ -158,13 +174,30 @@ const buildTableFromLines = (lines) => {
 
     const firstRow = candidateRows[0]
     const secondRow = candidateRows.length > 1 ? candidateRows[1] : null
-    const headerIsPresent =
-        tokenCount(firstRow) >= 2
-        && firstRow.some((tok) => tok && !NUM_TOKEN_RE.test(tok))
-        && (!secondRow || mostlyNumeric(secondRow))
+    const thirdRow = candidateRows.length > 2 ? candidateRows[2] : null
 
-    const rowsRaw = (headerIsPresent ? candidateRows.slice(1) : candidateRows)
-        .filter((row) => tokenCount(row) > 0)
+    const firstRowHasText =
+        tokenCount(firstRow) >= 2 &&
+        firstRow.some((tok) => tok && !NUM_TOKEN_RE.test(tok))
+
+    const secondRowIsUnits = secondRow ? looksLikeUnitsRow(secondRow) : false
+    const secondRowIsNumeric = secondRow ? mostlyNumeric(secondRow) : false
+    const thirdRowIsNumeric = thirdRow ? mostlyNumeric(thirdRow) : false
+
+    const headerIsPresent =
+        firstRowHasText &&
+        (
+            secondRowIsNumeric ||
+            (secondRowIsUnits && thirdRowIsNumeric) ||
+            (!secondRow && firstRowHasText)
+        )
+
+    const rowsRaw = (
+        headerIsPresent
+            ? (secondRowIsUnits ? candidateRows.slice(2) : candidateRows.slice(1))
+            : candidateRows
+    ).filter((row) => tokenCount(row) > 0)
+
     const maxCols = rowsRaw.reduce((m, r) => Math.max(m, r.length), 0)
     if (maxCols === 0) return { headers: [], rows: [] }
 
@@ -174,6 +207,7 @@ const buildTableFromLines = (lines) => {
     } else {
         headers = Array.from({ length: maxCols }, (_, i) => `column${i + 1}`)
     }
+
     if (headers.length < maxCols) {
         headers = headers.concat(
             Array.from({ length: maxCols - headers.length }, (_, i) => `column${headers.length + i + 1}`)
@@ -181,6 +215,7 @@ const buildTableFromLines = (lines) => {
     } else {
         headers = headers.slice(0, maxCols)
     }
+
     headers = makeUniqueHeaders(headers)
 
     const rows = rowsRaw.slice(0, 10).map((r) => {
@@ -193,6 +228,54 @@ const buildTableFromLines = (lines) => {
 
     return { headers, rows }
 }
+
+// const buildTableFromLines = (lines) => {
+//     const cleanLines = lines.filter((ln) => ln.trim() !== '')
+//     if (!cleanLines.length) return { headers: [], rows: [] }
+
+//     const delim = inferDelimiter(cleanLines)
+//     const parsedRows = cleanLines.map((ln) => splitForMode(ln, delim))
+//     const startIdx = findTabularStartIndex(parsedRows)
+//     const candidateRows = parsedRows.slice(startIdx).filter((row) => tokenCount(row) > 0)
+//     if (!candidateRows.length) return { headers: [], rows: [] }
+
+//     const firstRow = candidateRows[0]
+//     const secondRow = candidateRows.length > 1 ? candidateRows[1] : null
+//     const headerIsPresent =
+//         tokenCount(firstRow) >= 2
+//         && firstRow.some((tok) => tok && !NUM_TOKEN_RE.test(tok))
+//         && (!secondRow || mostlyNumeric(secondRow))
+
+//     const rowsRaw = (headerIsPresent ? candidateRows.slice(1) : candidateRows)
+//         .filter((row) => tokenCount(row) > 0)
+//     const maxCols = rowsRaw.reduce((m, r) => Math.max(m, r.length), 0)
+//     if (maxCols === 0) return { headers: [], rows: [] }
+
+//     let headers = []
+//     if (headerIsPresent) {
+//         headers = firstRow.map((h, i) => (h || `column${i + 1}`))
+//     } else {
+//         headers = Array.from({ length: maxCols }, (_, i) => `column${i + 1}`)
+//     }
+//     if (headers.length < maxCols) {
+//         headers = headers.concat(
+//             Array.from({ length: maxCols - headers.length }, (_, i) => `column${headers.length + i + 1}`)
+//         )
+//     } else {
+//         headers = headers.slice(0, maxCols)
+//     }
+//     headers = makeUniqueHeaders(headers)
+
+//     const rows = rowsRaw.slice(0, 10).map((r) => {
+//         const obj = {}
+//         headers.forEach((h, i) => {
+//             obj[h] = r[i] ?? ''
+//         })
+//         return obj
+//     })
+
+//     return { headers, rows }
+// }
 
 function sanitizeTag(tag) {
     return (tag || '').trim()
@@ -210,24 +293,20 @@ export default function UploadModal({
     projectId,
     projectName,
     onClose,
-    mode = 'create',              // "create" | "edit"
-    initialTag = '',              // old tag name when edit
-    initialDatasetType = 'cfd',   // ✅ ONLY initial value from parent; modal controls after that
+    mode = 'create',
+    initialTag = '',
+    initialDatasetType = 'cfd',
 }) {
-    // ✅ dataset is controlled INSIDE modal
     const [datasetType, setDatasetType] = useState(initialDatasetType || 'cfd')
-
-    // ✅ prefill tag in edit mode
     const [tagName, setTagName] = useState(initialTag || '')
 
     const [headerMode, setHeaderMode] = useState('file')
     const [customHeadersText, setCustomHeadersText] = useState('')
 
-
-    const [files, setFiles] = useState([]) // [{ file, visualize, sheetNames, selectedSheets, activeSheet }]
+    const [files, setFiles] = useState([])
     const hasHeaderModeFiles = useMemo(() => {
-    return files.some(item => isHeaderModeCapable(item.file))
-}, [files])
+        return files.some(item => isHeaderModeCapable(item.file))
+    }, [files])
     const [selectedIdx, setSelectedIdx] = useState(null)
     const [preview, setPreview] = useState({ type: 'none' })
     const [rangeInput, setRangeInput] = useState({ start: '1', end: '10' })
@@ -239,17 +318,15 @@ export default function UploadModal({
     const [error, setError] = useState(null)
     const [result, setResult] = useState(null)
 
-    const [excelSheets, setExcelSheets] = useState([])   // ['Sheet1', 'Sheet2']
+    const [excelSheets, setExcelSheets] = useState([])
     const [activeSheet, setActiveSheet] = useState(null)
-    const [excelWb, setExcelWb] = useState(null)         // cached workbook
+    const [excelWb, setExcelWb] = useState(null)
     const filesRef = useRef(files)
     const selectedIdxRef = useRef(selectedIdx)
     const lineCountTaskRef = useRef({ token: 0, fileId: null })
 
-    
+    const { showLoader, hideLoader } = useLoader()
 
-
-    // lock background scroll
     useEffect(() => {
         const prev = document.body.style.overflow
         document.body.style.overflow = 'hidden'
@@ -270,8 +347,6 @@ export default function UploadModal({
         selectedIdxRef.current = selectedIdx
     }, [selectedIdx])
 
-    // ✅ When modal opens / mode changes, reset things.
-    // IMPORTANT: we set datasetType ONLY ONCE per open.
     useEffect(() => {
         setDatasetType(initialDatasetType || 'cfd')
         setTagName(initialTag || '')
@@ -287,7 +362,7 @@ export default function UploadModal({
         setApplyRangeToAll(false)
         setApplyCustomHeadersToAll(false)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialTag, mode]) // intentionally NOT depending on initialDatasetType to avoid overriding user clicks
+    }, [initialTag, mode])
 
     const headersList = useMemo(() => {
         if (headerMode !== 'custom') return null
@@ -629,7 +704,7 @@ export default function UploadModal({
             return
         }
 
-       if (isDatLike(file)) {
+        if (isDatLike(file)) {
             await loadInitialTextPreview(file, targetIdx)
             return
         }
@@ -681,112 +756,6 @@ export default function UploadModal({
 
             parseExcelSheet(wb, nextActiveSheet, file.name)
             return
-            /* legacy preview block (kept for reference)
-            if (ext === '.xlsx' || ext === '.xls') {
-    const buf = await file.arrayBuffer()
-    const wb = XLSX.read(buf, { type: 'array' })
-
-    if (!wb.SheetNames?.length) {
-        setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-        return
-    }
-
-    const parseExcelSheet = (wb, sheetName, fileName) => {
-    const ws = wb.Sheets[sheetName]
-    if (!ws) return
-
-    const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-    const rowsRaw = (json || []).slice(0, 15)
-
-    if (!rowsRaw.length) {
-        setPreview({ type: 'message', message: 'Selected sheet is empty.' })
-        return
-    }
-
-    let headers = []
-    let dataRows = []
-
-    if (headerMode === 'file') {
-        headers = rowsRaw[0].map((h) => String(h || '').trim())
-        dataRows = rowsRaw.slice(1)
-    } else if (headerMode === 'none') {
-        headers = rowsRaw[0].map((_, i) => `column${i + 1}`)
-        dataRows = rowsRaw
-    } else {
-        headers = headersList?.length
-            ? headersList
-            : rowsRaw[0].map((_, i) => `column${i + 1}`)
-        dataRows = rowsRaw
-    }
-
-    const rows = dataRows.slice(0, 10).map((r) => {
-        const obj = {}
-        headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-        return obj
-    })
-
-    setPreview({
-        type: 'table',
-        headers,
-        rows,
-        name: `${fileName} — ${sheetName}`
-    })
-}
-
-const onSelectSheet = (sheetName) => {
-    setActiveSheet(sheetName)
-    if (excelWb) {
-        parseExcelSheet(excelWb, sheetName, selectedFile.name)
-    }
-}
-
-
-    // store workbook + sheets
-    setExcelWb(wb)
-    setExcelSheets(wb.SheetNames)
-
-    // default sheet (first one OR previously selected)
-    const sheetToUse = activeSheet && wb.SheetNames.includes(activeSheet)
-        ? activeSheet
-        : wb.SheetNames[0]
-
-    setActiveSheet(sheetToUse)
-
-    parseExcelSheet(wb, sheetToUse, file.name)
-    return
-}
-
-            if (!sheetName) return setPreview({ type: 'message', message: 'No sheets found in Excel file.' })
-
-            const ws = wb.Sheets[sheetName]
-            const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-            const rowsRaw = (json || []).slice(0, 15).filter((r) => Array.isArray(r))
-
-            if (!rowsRaw.length) return setPreview({ type: 'message', message: 'Excel sheet appears empty.' })
-
-            let headers = []
-            let dataRows = []
-
-            if (headerMode === 'file') {
-                headers = rowsRaw[0].map((h) => String(h || '').trim())
-                dataRows = rowsRaw.slice(1)
-            } else if (headerMode === 'none') {
-                headers = rowsRaw[0].map((_, i) => `column${i + 1}`)
-                dataRows = rowsRaw
-            } else {
-                headers = headersList?.length ? headersList : rowsRaw[0].map((_, i) => `column${i + 1}`)
-                dataRows = rowsRaw
-            }
-
-            const rows = dataRows.slice(0, 10).map((r) => {
-                const obj = {}
-                headers.forEach((h, i) => (obj[h] = r[i] ?? ''))
-                return obj
-            })
-
-            setPreview({ type: 'table', headers, rows, name: file.name })
-            return
-            */
         }
 
         if (ext === '.mat') {
@@ -799,8 +768,6 @@ const onSelectSheet = (sheetName) => {
 
         setPreview({ type: 'message', message: 'Preview is not supported for this file type.' })
     }
-
-
 
     const onPickFiles = async (fileList) => {
         const incoming = Array.from(fileList || [])
@@ -955,24 +922,24 @@ const onSelectSheet = (sheetName) => {
         })
     }
 
-    // ✅ Rename only (edit mode)
     const onSaveRename = async () => {
         setError(null)
         const newTag = sanitizeTag(tagName)
         if (!newTag) return setError('Tag Name is required.')
 
-        // no change -> just close
         if (sanitizeTag(initialTag) === newTag) {
             onClose()
             return
         }
 
         try {
-            // ✅ Use datasetType controlled by modal
+            showLoader('Saving tag name...')
             await ingestionApi.renameTag(projectId, datasetType, initialTag, newTag)
             onClose()
         } catch (err) {
             setError(err?.response?.data?.detail || err.message || 'Rename failed')
+        } finally {
+            hideLoader()
         }
     }
 
@@ -983,10 +950,8 @@ const onSelectSheet = (sheetName) => {
         const tag = sanitizeTag(tagName)
         if (!tag) return setError('Tag Name is required.')
 
-        // ✅ In create mode, files are required. In edit mode, uploading files is optional.
         if (mode !== 'edit' && !files.length) return setError('Please select at least one file.')
 
-        // if edit mode and no files, treat as rename-only
         if (mode === 'edit' && files.length === 0) {
             await onSaveRename()
             return
@@ -1000,7 +965,12 @@ const onSelectSheet = (sheetName) => {
                     return setError("Provide custom headers when header_mode is 'custom'.")
                 }
             } else {
-                const anyCustom = files.some((it) => isCustomHeaderCapable(it.file) && Array.isArray(it.customHeaders) && it.customHeaders.length)
+                const anyCustom = files.some(
+                    (it) =>
+                        isCustomHeaderCapable(it.file) &&
+                        Array.isArray(it.customHeaders) &&
+                        it.customHeaders.length
+                )
                 if (!anyCustom) {
                     return setError("Provide custom headers for at least one file or enable 'Apply custom headers to all files'.")
                 }
@@ -1035,6 +1005,8 @@ const onSelectSheet = (sheetName) => {
         setUploadProgress(0)
 
         try {
+            showLoader('Uploading files...')
+
             const manifest = finalItems.map((it) => {
                 const entry = { visualize: it.visualize }
                 if (it.visualize && isExcel(it.file) && Array.isArray(it.sheetNames) && it.sheetNames.length) {
@@ -1047,16 +1019,21 @@ const onSelectSheet = (sheetName) => {
                         end_line: Number(it.parseRange.end),
                     }
                 }
-                if (headerMode === 'custom' && isCustomHeaderCapable(it.file) && Array.isArray(it.customHeaders) && it.customHeaders.length) {
+                if (
+                    headerMode === 'custom' &&
+                    isCustomHeaderCapable(it.file) &&
+                    Array.isArray(it.customHeaders) &&
+                    it.customHeaders.length
+                ) {
                     entry.custom_headers = it.customHeaders
                 }
                 return entry
             })
+
             const res = await ingestionApi.startBatch(
                 projectId,
                 finalItems.map((it) => it.file),
                 {
-                    // ✅ Use datasetType selected in modal
                     datasetType,
                     tagName: tag,
                     headerMode,
@@ -1073,6 +1050,7 @@ const onSelectSheet = (sheetName) => {
         } catch (err) {
             setError(err?.response?.data?.detail || err.message || 'Upload failed')
         } finally {
+            hideLoader()
             setUploading(false)
             setUploadProgress(null)
         }
@@ -1084,10 +1062,6 @@ const onSelectSheet = (sheetName) => {
     }
 
     const title = mode === 'edit' ? 'Edit Tag' : 'Upload Files'
-    const subtitle =
-        mode === 'edit'
-            ? `${projectName} · Update Tag Name. Upload new files (optional).`
-            : `${projectName} · Choose category, tag, header handling, and which files should be processed.`
 
     const modalUi = (
         <div className="fd-modal__backdrop" role="dialog" aria-modal="true" onMouseDown={onClose}>
@@ -1095,7 +1069,6 @@ const onSelectSheet = (sheetName) => {
                 <div className="fd-modal__header">
                     <div className="div_wapper">
                         <h3 className="text_wapper">{title}<InfoButton message="Choose category, tag, header handling, and which files should be processed." /></h3>
-                        {/* <p className="subtitle" style={{ margin: '4px 0 0 0' }}>{subtitle}</p> */} 
                     </div>
                     <button className="close_icon" onClick={onClose} type="button">✕</button>
                 </div>
@@ -1103,14 +1076,12 @@ const onSelectSheet = (sheetName) => {
                 {error && <div className="project-shell__error" style={{ margin: 14 }}>{error}</div>}
 
                 <div className="fd-modal__grid">
-                    {/* Left */}
                     <div className="fd-modal__left1">
                         <div className="project-card">
-
                             <div className="UploadBox">
                                 <label className="uploadTile" htmlFor="fd-modal-file-input" style={{ marginTop: 0 }}>
                                     <p className='button' style={{ width: '200px' }}>
-                                        <img src={Plus} ait="Browse" className='icon' />
+                                        <img src={Plus} alt="Browse" className='icon' />
                                         {mode === 'edit' ? 'Browse new files (optional)' : 'Browse Plot files'}
                                     </p>
                                     <p className='uploadtext'>
@@ -1127,8 +1098,7 @@ const onSelectSheet = (sheetName) => {
                             </div>
 
                             <div className="form-field">
-
-                                <label className="summaryLabel" style={{ marginTop: 20 }}>Folder / Tag Name <span style={{ color: "red",fontSize: "18px" }}>*</span></label>
+                                <label className="summaryLabel" style={{ marginTop: 20 }}>Folder / Tag Name <span style={{ color: "red", fontSize: "18px" }}>*</span></label>
                                 <input
                                     className="input"
                                     placeholder="Write Folder / Tag Name"
@@ -1138,12 +1108,12 @@ const onSelectSheet = (sheetName) => {
                             </div>
 
                             <div className="form-field">
-                                <label className="summaryLabel" style={{ marginTop: 10 }}>Data Type <span style={{ color: "red",fontSize: "18px" }}>*</span></label>
+                                <label className="summaryLabel" style={{ marginTop: 10 }}>Data Type <span style={{ color: "red", fontSize: "18px" }}>*</span></label>
                                 <select
                                     className="input-data"
                                     value={datasetType}
                                     onChange={(e) => setDatasetType(e.target.value)}
-                                    disabled={mode === 'edit'} // ✅ disable in edit mode
+                                    disabled={mode === 'edit'}
                                 >
                                     <option value="" disabled>Select Data Category</option>
                                     {DATASET_OPTIONS.map((opt) => (
@@ -1154,231 +1124,101 @@ const onSelectSheet = (sheetName) => {
                                 </select>
                             </div>
 
-                            {/* ✅ Dataset selector stays in modal; no parent control needed
-                            {mode !== 'edit' && (
-                                <>
-                                    <label className="summary-label">Data Type</label>
-                                    <div className="tablist" style={{ marginTop: 6 }}>
-                                        {DATASET_OPTIONS.map((opt) => (
-                                            <button
-                                                key={opt.key}
-                                                type="button"
-                                                className={datasetType === opt.key ? 'active' : ''}
-                                                onClick={() => setDatasetType(opt.key)}
+                            {hasHeaderModeFiles && (
+                                <div className="form-field">
+                                    <label style={{ marginTop: 10 }} className="summaryLabel">
+                                        Plot File Header
+                                        <InfoButton message="Specify whether the uploaded file contains column headers. If not selected, columns will be automatically named (Column1, Column2, etc.)." />
+                                    </label>
+
+                                    <select
+                                        className="input-data"
+                                        value={headerMode}
+                                        onChange={(e) => setHeaderMode(e.target.value)}
+                                    >
+                                        <option value="file">Use headers from file</option>
+                                        <option value="none">File has no headers</option>
+                                        <option value="custom">Provide custom headers</option>
+                                    </select>
+
+                                    {headerMode === 'custom' && (
+                                        <div className="header-options__inputs">
+                                            <label
+                                                style={{
+                                                    marginTop: '5px',
+                                                    fontSize: '13px',
+                                                    fontWeight: 600
+                                                }}
+                                                className="summary-label1"
                                             >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </>
-                            )} */}
+                                                Comma separated headers
+                                            </label>
 
-                            {/* In edit mode we keep category display (still uses datasetType state) */}
-                            {/* {mode === 'edit' && (
-                                <div style={{ marginBottom: 10 }}>
-                                    <div className="summaryLabel">Data Type</div>
-                                    <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 10 }}>
-                                        {DATASET_OPTIONS.find(d => d.key === datasetType)?.label || datasetType}
-                                    </div>
-                                </div>
-                            )} */}
-
-
-
-                            {/* Header handling (affects new uploads) */}
-                            {/* <div className="header-options" style={{ marginTop: 12 }}>
-                                <strong>Header handling</strong>
-                                <div className="actions-row">
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <input type="radio" name="header-mode" checked={headerMode === 'file'} onChange={() => setHeaderMode('file')} />
-                                        Use headers from file
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <input type="radio" name="header-mode" checked={headerMode === 'none'} onChange={() => setHeaderMode('none')} />
-                                        File has no headers
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <input type="radio" name="header-mode" checked={headerMode === 'custom'} onChange={() => setHeaderMode('custom')} />
-                                        Provide custom headers
-                                    </label>
-                                </div> */}
-
-                                {hasHeaderModeFiles && (
-    <div className="form-field">
-        <label style={{ marginTop: 10 }} className="summaryLabel">
-            Plot File Header
-            <InfoButton message="Specify whether the uploaded file contains column headers. If not selected, columns will be automatically named (Column1, Column2, etc.)." />
-        </label>
-
-        <select
-            className="input-data"
-            value={headerMode}
-            onChange={(e) => setHeaderMode(e.target.value)}
-        >
-            <option value="file">Use headers from file</option>
-            <option value="none">File has no headers</option>
-            <option value="custom">Provide custom headers</option>
-        </select>
-
-        {headerMode === 'custom' && (
-            <div className="header-options__inputs">
-                <label
-                    style={{
-                        marginTop: '5px',
-                        fontSize: '13px',
-                        fontWeight: 600
-                    }}
-                    className="summary-label1"
-                >
-                    Comma separated headers
-                </label>
-
-                <input
-                    className="input-data"
-                    placeholder="e.g. time, alpha, mach"
-                    value={customHeadersText}
-                    onChange={(e) => {
-                        const value = e.target.value
-                        setCustomHeadersText(value)
-
-                        const nextHeaders = value
-                            .split(',')
-                            .map(h => h.trim())
-                            .filter(Boolean)
-
-                        if (applyCustomHeadersToAll) {
-                            setFiles(prev =>
-                                prev.map(item =>
-                                    isCustomHeaderCapable(item.file)
-                                        ? { ...item, customHeaders: nextHeaders }
-                                        : item
-                                )
-                            )
-                        } else if (selectedIdx != null) {
-                            setFiles(prev => {
-                                const clone = [...prev]
-                                const item = clone[selectedIdx]
-                                if (!item || !isCustomHeaderCapable(item.file)) return prev
-                                clone[selectedIdx] = { ...item, customHeaders: nextHeaders }
-                                return clone
-                            })
-                        }
-                    }}
-                />
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                    <input
-                        type="checkbox"
-                        checked={applyCustomHeadersToAll}
-                        onChange={(e) => {
-                            const checked = e.target.checked
-                            setApplyCustomHeadersToAll(checked)
-                            if (!checked) return
-
-                            const nextHeaders = customHeadersText
-                                .split(',')
-                                .map(h => h.trim())
-                                .filter(Boolean)
-
-                            setFiles(prev =>
-                                prev.map(item =>
-                                    isCustomHeaderCapable(item.file)
-                                        ? { ...item, customHeaders: nextHeaders }
-                                        : item
-                                )
-                            )
-                        }}
-                    />
-                    <span className="summaryLabel" style={{ margin: 0 }}>
-                        Apply custom headers to all files
-                    </span>
-                </label>
-            </div>
-        )}
-    </div>
-)}
-
-
-                            {/* <div className="form-field">
-                                <label style={{ marginTop: 10 }} className="summaryLabel">Plot File Header</label>
-
-                                <select
-                                    className="input-data"
-                                    value={headerMode}
-                                    onChange={(e) => setHeaderMode(e.target.value)}
-                                >
-                                    <option value="file">Use headers from file</option>
-                                    <option value="none">File has no headers</option>
-                                    <option value="custom">Provide custom headers</option>
-                                </select>
-
-                                {headerMode === 'custom' && (
-                                    <div className="header-options__inputs">
-                                        <label style={{ marginTop: '5px', color: '#000000', fontSize: '13px', fontWeight: '600', fontFamily: 'inter-regular,Helvetica' }} className="summary-label">Comma separated headers</label>
-                                        <input
-                                            className="input-data"
-                                            placeholder="e.g. time, alpha, mach"
-                                            value={customHeadersText}
-                                            onChange={(e) => {
-                                                const value = e.target.value
-                                                setCustomHeadersText(value)
-                                                if (applyCustomHeadersToAll) {
-                                                    const nextHeaders = value
-                                                        .split(',')
-                                                        .map((h) => h.trim())
-                                                        .filter(Boolean)
-                                                    setFiles((prev) =>
-                                                        prev.map((item) =>
-                                                            isCustomHeaderCapable(item.file)
-                                                                ? { ...item, customHeaders: nextHeaders }
-                                                                : item
-                                                        )
-                                                    )
-                                                } else if (selectedIdx != null) {
-                                                    const nextHeaders = value
-                                                        .split(',')
-                                                        .map((h) => h.trim())
-                                                        .filter(Boolean)
-                                                    setFiles((prev) => {
-                                                        const clone = [...prev]
-                                                        const item = clone[selectedIdx]
-                                                        if (!item) return prev
-                                                        clone[selectedIdx] = { ...item, customHeaders: nextHeaders }
-                                                        return clone
-                                                    })
-                                                }
-                                            }}
-                                        />
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
                                             <input
-                                                type="checkbox"
-                                                checked={applyCustomHeadersToAll}
+                                                className="input-data"
+                                                placeholder="e.g. time, alpha, mach"
+                                                value={customHeadersText}
                                                 onChange={(e) => {
-                                                    const checked = e.target.checked
-                                                    setApplyCustomHeadersToAll(checked)
-                                                    if (!checked) return
-                                                    const nextHeaders = customHeadersText
+                                                    const value = e.target.value
+                                                    setCustomHeadersText(value)
+
+                                                    const nextHeaders = value
                                                         .split(',')
-                                                        .map((h) => h.trim())
+                                                        .map(h => h.trim())
                                                         .filter(Boolean)
-                                                    setFiles((prev) =>
-                                                        prev.map((item) =>
-                                                            isCustomHeaderCapable(item.file)
-                                                                ? { ...item, customHeaders: nextHeaders }
-                                                                : item
+
+                                                    if (applyCustomHeadersToAll) {
+                                                        setFiles(prev =>
+                                                            prev.map(item =>
+                                                                isCustomHeaderCapable(item.file)
+                                                                    ? { ...item, customHeaders: nextHeaders }
+                                                                    : item
+                                                            )
                                                         )
-                                                    )
+                                                    } else if (selectedIdx != null) {
+                                                        setFiles(prev => {
+                                                            const clone = [...prev]
+                                                            const item = clone[selectedIdx]
+                                                            if (!item || !isCustomHeaderCapable(item.file)) return prev
+                                                            clone[selectedIdx] = { ...item, customHeaders: nextHeaders }
+                                                            return clone
+                                                        })
+                                                    }
                                                 }}
                                             />
-                                            <span className="summaryLabel" style={{ margin: 0 }}>Apply custom headers to all files</span>
-                                        </label>
-                                    </div>
-                                )}
-                            </div> */}
 
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={applyCustomHeadersToAll}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked
+                                                        setApplyCustomHeadersToAll(checked)
+                                                        if (!checked) return
 
+                                                        const nextHeaders = customHeadersText
+                                                            .split(',')
+                                                            .map(h => h.trim())
+                                                            .filter(Boolean)
 
-                            {/* Edit mode: Save rename button */}
+                                                        setFiles(prev =>
+                                                            prev.map(item =>
+                                                                isCustomHeaderCapable(item.file)
+                                                                    ? { ...item, customHeaders: nextHeaders }
+                                                                    : item
+                                                            )
+                                                        )
+                                                    }}
+                                                />
+                                                <span className="summaryLabel" style={{ margin: 0 }}>
+                                                    Apply custom headers to all files
+                                                </span>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {mode === 'edit' && (
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
                                     <button
@@ -1393,7 +1233,6 @@ const onSelectSheet = (sheetName) => {
                             )}
                         </div>
 
-                        {/* File list + Upload button */}
                         <div className="project-card2" >
                             <div className="actions-row">
                                 <strong>Selected Files ({files.length})</strong>
@@ -1440,16 +1279,6 @@ const onSelectSheet = (sheetName) => {
                                                     {item.file.type || 'unknown'} · {Math.round(item.file.size / 1024)} KB · {visualizeInfo(item.file, item.visualize)}
                                                 </div>
                                             </div>
-                                            
-                                            {/* <label className="toggle" onClick={(e) => e.stopPropagation()}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isTabular(item.file) ? item.visualize : false}
-                                                    onChange={() => toggleVisualize(idx)}
-                                                    disabled={!isTabular(item.file)}
-                                                />
-                                                <span className="slider" />
-                                            </label> */}
                                         </div>
                                     ))}
                                 </div>
@@ -1466,21 +1295,20 @@ const onSelectSheet = (sheetName) => {
                         </div>
                     </div>
 
-                    {/* Right */}
                     <div className="fd-modal__right1">
                         <div className="project-card1" >
                             <div className='card'>
-                                <h3 style={{ marginTop: "20px", fontSize:'18px', fontWeight:600 }}>Preview</h3>
-                                <div style={{fontSize:'11px',fontFamily:'"Inter-Regular", Helvetica',fontWeight:400}} >
+                                <h3 style={{ marginTop: "20px", fontSize: '18px', fontWeight: 600 }}>Preview</h3>
+                                <div style={{ fontSize: '11px', fontFamily: '"Inter-Regular", Helvetica', fontWeight: 400 }} >
                                     {selectedFile ? selectedFile.name : 'Select a file to preview'}
                                 </div>
 
                                 {preview.type === 'text-lines' && (
                                     <div style={{ marginTop: 10 }}>
-                                     <div className="summaryLabel" style={{ marginTop:"20px" }}>
+                                        <div className="summaryLabel" style={{ marginTop: "20px" }}>
                                             Header is auto-detected from the first selected line.
                                         </div>
-                                        <div style={{fontSize:'11px',fontFamily:'"Inter-Regular", Helvetica',fontWeight:400}}>
+                                        <div style={{ fontSize: '11px', fontFamily: '"Inter-Regular", Helvetica', fontWeight: 400 }}>
                                             {preview.totalLines != null
                                                 ? `Total Line Count: ${preview.totalLines}`
                                                 : preview.lineCountStatus === 'counting'
@@ -1488,10 +1316,9 @@ const onSelectSheet = (sheetName) => {
                                                     : 'Preparing line count...'}
                                         </div>
 
-                                    <div style={{ marginTop:"10px",display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                                        
-                                        <label className="summaryLabel" style={{ margin: 0, marginRight:"-8px" }}>Start line</label>
-                                        <input
+                                        <div style={{ marginTop: "10px", display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                                            <label className="summaryLabel" style={{ margin: 0, marginRight: "-8px" }}>Start line</label>
+                                            <input
                                                 type="number"
                                                 min={1}
                                                 max={preview.totalLines || undefined}
@@ -1500,12 +1327,11 @@ const onSelectSheet = (sheetName) => {
                                                     setRangeInput((prev) => ({ ...prev, start: e.target.value }))
                                                 }}
                                                 onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                            style={{ width: 120, background:"#f3f3f5", height:"25px", border:"1px solid #e2e8f0", borderRadius:"4px", padding:"8px", marginRight:"10px" }}
-                                        />
-                                    
+                                                style={{ width: 120, background: "#f3f3f5", height: "25px", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px", marginRight: "10px" }}
+                                            />
 
-                                        <label className="summaryLabel" style={{ margin: 0, marginRight:"-8px" }}>End line</label>
-                                        <input
+                                            <label className="summaryLabel" style={{ margin: 0, marginRight: "-8px" }}>End line</label>
+                                            <input
                                                 type="number"
                                                 min={1}
                                                 max={preview.totalLines || undefined}
@@ -1514,29 +1340,28 @@ const onSelectSheet = (sheetName) => {
                                                     setRangeInput((prev) => ({ ...prev, end: e.target.value }))
                                                 }}
                                                 onBlur={() => commitRangeInput(rangeInput.start, rangeInput.end)}
-                                            style={{ width: 120, background:"#f3f3f5", height:"25px", border:"1px solid #e2e8f0", borderRadius:"4px", padding:"8px" }}
-                                        />
-                                        <label style={{ marginTop:'-8px',display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={applyRangeToAll}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked
-                                                    setApplyRangeToAll(checked)
-                                                    if (!checked || !preview?.range) return
-                                                    setFiles((prev) =>
-                                                        prev.map((item) =>
-                                                            isDatLike(item.file)
-                                                                ? { ...item, parseRange: { ...preview.range } }
-                                                                : item
-                                                        )
-                                                    )
-                                                }}
+                                                style={{ width: 120, background: "#f3f3f5", height: "25px", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px" }}
                                             />
-                                            <span  style={{ margin: 0, fontSize:'11px', fontFamily:'"Inter-Regular", Helvetica', fontWeight:400 }}>Apply range to all line-based text files</span>
-                                        </label>
-                                    </div>
-                                       
+                                            <label style={{ marginTop: '-8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={applyRangeToAll}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked
+                                                        setApplyRangeToAll(checked)
+                                                        if (!checked || !preview?.range) return
+                                                        setFiles((prev) =>
+                                                            prev.map((item) =>
+                                                                isDatLike(item.file)
+                                                                    ? { ...item, parseRange: { ...preview.range } }
+                                                                    : item
+                                                            )
+                                                        )
+                                                    }}
+                                                />
+                                                <span style={{ margin: 0, fontSize: '11px', fontFamily: '"Inter-Regular", Helvetica', fontWeight: 400 }}>Apply range to all line-based text files</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 )}
 
@@ -1571,7 +1396,6 @@ const onSelectSheet = (sheetName) => {
                                     </>
                                 )}
 
-
                                 <div className="fd-preview">
                                     {preview.type === 'none' && <div className="EmptyState">No preview</div>}
                                     {preview.type === 'message' && <div className="EmptyState" style={{ textAlign: 'left' }}>{preview.message}</div>}
@@ -1579,8 +1403,8 @@ const onSelectSheet = (sheetName) => {
                                         <img src={preview.url} alt={preview.name} style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain' }} />
                                     )}
                                     {preview.type === 'text-lines' && (
-                                        <div style={{ marginTop:"10px",display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                            <div style={{ padding:"12px",maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
+                                        <div style={{ marginTop: "10px", display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                            <div style={{ padding: "12px", maxHeight: 260, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
                                                 {preview.lines.map((line) => {
                                                     const lineNo = line.number
                                                     const inRange = lineNo >= (preview.range?.start || 1) && lineNo <= (preview.range?.end || 1)
@@ -1600,7 +1424,7 @@ const onSelectSheet = (sheetName) => {
                                                             }}
                                                         >
                                                             <span style={{ minWidth: 32, color: '#6b7280', textAlign: 'right', paddingTop: 2 }}>{lineNo}</span>
-                                                            
+
                                                             <span style={{ flex: 1, minWidth: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                                                 {line.text === '' ? ' ' : line.text}
                                                             </span>
@@ -1658,17 +1482,6 @@ const onSelectSheet = (sheetName) => {
                                         </div>
                                     )}
                                 </div>
-
-                                {/* <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-                                <button
-                                    type="button"
-                                    className="project-shell__nav-link"
-                                    onClick={onClose}
-                                    style={{ background: '#fff', color: '#0f172a', border: '1px solid #cbd5e1' }}
-                                >
-                                    Close
-                                </button>
-                            </div> */}
                             </div>
                         </div>
                     </div>

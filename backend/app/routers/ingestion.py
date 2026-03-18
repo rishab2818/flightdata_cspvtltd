@@ -403,14 +403,31 @@ async def job_data_preview(
 
     sample_rows = list(doc.get("sample_rows") or [])
     columns = list(doc.get("columns") or [])
+    rename_map: Dict[str, str] = doc.get("column_rename_map") or {}
     processed_key = doc.get("processed_key")
 
+    # if not processed_key:
+    #     return {
+    #         "rows": sample_rows[offset: offset + limit],
+    #         "total": int(doc.get("rows_seen") or len(sample_rows)),
+    #         "columns": columns,
+    #     }
+
     if not processed_key:
-        return {
-            "rows": sample_rows[offset: offset + limit],
-            "total": int(doc.get("rows_seen") or len(sample_rows)),
-            "columns": columns,
-        }
+       display_columns = [rename_map.get(col, col) for col in columns]
+
+       mapped_rows = []
+       for row in sample_rows[offset: offset + limit]:
+          mapped_row = {}
+          for key, value in row.items():
+             mapped_row[rename_map.get(key, key)] = _sanitize_json_value(value)
+          mapped_rows.append(mapped_row)
+
+       return {
+          "rows": mapped_rows,
+          "total": int(doc.get("rows_seen") or len(sample_rows)),
+          "columns": display_columns,
+    }
 
     minio = get_minio_client()
     data_url = minio.presigned_get_object(
@@ -427,6 +444,8 @@ async def job_data_preview(
     total_rows = int(pf.metadata.num_rows)
     if not columns:
         columns = [pf.schema_arrow.field(i).name for i in range(pf.schema_arrow.num_fields)]
+
+    display_columns = [rename_map.get(col, col) for col in columns]
 
     rows_collected: list[pd.DataFrame] = []
     rows_skipped = 0
@@ -452,11 +471,24 @@ async def job_data_preview(
         if rows_needed <= 0:
             break
 
+    # result = pd.concat(rows_collected, ignore_index=True) if rows_collected else pd.DataFrame(columns=columns)
+    # result = result.where(result.notna(), other=None)
+    # rows = [{k: _sanitize_json_value(v) for k, v in row.items()} for row in result.to_dict(orient="records")]
+
+    # return {"rows": rows, "total": total_rows, "columns": columns}
+
     result = pd.concat(rows_collected, ignore_index=True) if rows_collected else pd.DataFrame(columns=columns)
     result = result.where(result.notna(), other=None)
-    rows = [{k: _sanitize_json_value(v) for k, v in row.items()} for row in result.to_dict(orient="records")]
 
-    return {"rows": rows, "total": total_rows, "columns": columns}
+    raw_rows = result.to_dict(orient="records")
+    rows = []
+    for row in raw_rows:
+        mapped_row = {}
+    for key, value in row.items():
+        mapped_row[rename_map.get(key, key)] = _sanitize_json_value(value)
+    rows.append(mapped_row)
+
+    return {"rows": rows, "total": total_rows, "columns": display_columns}
 
 
 @router.get("/jobs/{job_id}/download")

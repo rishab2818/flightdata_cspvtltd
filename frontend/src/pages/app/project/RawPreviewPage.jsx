@@ -214,7 +214,7 @@ export default function RawPreviewPage() {
                 style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  maxHeight: 600,
+                  maxHeight: 700,
                   overflow: 'auto',
                   background: '#f7f7f7',
                   padding: 12,

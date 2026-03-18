@@ -897,6 +897,7 @@ export default function CustomerFeedbacks() {
               color: "#0A0A0A",
               fontSize: 16,
               fontWeight: "600",
+              fontFamily:"Inter-semiBold, Helvetica",
             }}
           >
             Feedbacks Records

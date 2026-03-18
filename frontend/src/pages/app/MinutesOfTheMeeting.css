@@ -140,7 +140,7 @@
   font-size: 20px;
   font-weight: 600;
   color: #0a0a0a;
-  font-family: "Inter-semi-bold, Helvetica";
+  /* font-family: "Inter-semi-bold, Helvetica"; */
   margin: 0;
 }
 
@@ -404,7 +404,7 @@
   border-radius: 6px;
   font-size: 14px;
    background: #F3F3F5;
-   color: #9ca3af;
+   /* color: #000000; */
 }
 
 .textInput2 {
@@ -415,7 +415,7 @@
   border-radius: 6px;
   font-size: 14px;
    background: #F3F3F5;
-   color: #9ca3af;
+   /* color: #9ca3af; */
 }
 
 .ModalActions {

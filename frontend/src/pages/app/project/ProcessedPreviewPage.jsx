@@ -173,7 +173,7 @@ export default function ProcessedPreviewPage() {
 
     return (
         <div className="project-page">
-        <div className="project-card" style={{  width: "100%", margin: "0px auto", background: "#fff", padding: 24 }}>
+        <div className="project-card" style={{  width: "100%", margin: "0px auto", background: "#fff", padding: 24, height:"100%" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <div>
                     <h2 style={{ margin: 0 }}>Processed Preview</h2>

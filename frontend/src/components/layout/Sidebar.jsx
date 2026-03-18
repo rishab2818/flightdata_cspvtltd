@@ -10,7 +10,7 @@ export default function Sidebar() {
   const { pathname } = useLocation();
   const role = user?.role?.toUpperCase?.();
 
-  const allowedRoles = ["GD", "DH"];
+  const allowedRoles = ["GD", "DH", "ADMIN"];
 
   const items = useMemo(() => {
     if (!allowedRoles.includes(role)) return [];

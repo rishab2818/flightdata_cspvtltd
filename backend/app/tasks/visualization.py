@@ -924,6 +924,8 @@ def _build_mat_figure(
         template="plotly_white",
         title=f"{var_name} ({chart})",
         legend_title_text="MAT Variable",
+        
+
     )
     return fig
 

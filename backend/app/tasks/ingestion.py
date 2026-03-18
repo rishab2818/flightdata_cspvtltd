@@ -580,11 +580,19 @@ def ingest_file(
                     message="Streaming + parsing line-based text data",
                 )
                 columns, row_count, sample_rows, stats = text_range_stream_to_parquet(
-                    response.stream(MINIO_STREAM_CHUNK_SIZE),
-                    parquet_path,
-                    parse_range,
-                    on_chunk=parse_progress.on_chunk,
-                )
+    response.stream(MINIO_STREAM_CHUNK_SIZE),
+    parquet_path,
+    parse_range,
+    header_mode=header_mode,
+    custom_headers=custom_headers,
+    on_chunk=parse_progress.on_chunk,
+)
+                # columns, row_count, sample_rows, stats = text_range_stream_to_parquet(
+                #     response.stream(MINIO_STREAM_CHUNK_SIZE),
+                #     parquet_path,
+                #     parse_range,
+                #     on_chunk=parse_progress.on_chunk,
+                # )
                 parse_progress.finish()
             elif ext == ".csv":
                 if not parquet_path:
