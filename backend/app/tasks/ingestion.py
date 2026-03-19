@@ -1,3 +1,5 @@
+
+
 import io
 import json
 import logging
@@ -331,9 +333,12 @@ def _csv_to_parquet(csv_source, parquet_path: str, header_mode: str, custom_head
     else:
         read_kwargs["header"] = 0
 
-    chunks = pd.read_csv(csv_source, chunksize=200_000, **read_kwargs)
+    # low_memory=False prevents per-chunk dtype guessing that causes mixed-type
+    # object columns (e.g. run_id inferred as str in chunk-0, int in chunk-1).
+    chunks = pd.read_csv(csv_source, chunksize=200_000, low_memory=False, **read_kwargs)
 
     writer = None
+    writer_schema = None  # locked after first chunk — all later chunks cast to this
     stats = {}
     columns = None
     rows = 0
@@ -357,14 +362,46 @@ def _csv_to_parquet(csv_source, parquet_path: str, header_mode: str, custom_head
         if sample_rows is None:
             sample_rows = chunk.head(10).to_dict(orient="records")
 
+        # Coerce mixed object columns to a stable dtype before Arrow conversion.
+        # Without this, a column like run_id that pandas infers as object (str)
+        # in chunk-0 but contains ints in chunk-1 raises ArrowTypeError.
+        chunk = _coerce_object_columns_for_parquet(chunk)
+
         _update_numeric_stats(stats, chunk)
         rows += len(chunk)
 
         if pa and pq:
-            table = pa.Table.from_pandas(chunk, preserve_index=False)
             if writer is None:
-                writer = pq.ParquetWriter(parquet_path, table.schema, compression="snappy")
-            writer.write_table(table)
+                # First chunk: lock the schema
+                table = pa.Table.from_pandas(chunk, preserve_index=False)
+                writer_schema = table.schema
+                writer = pq.ParquetWriter(parquet_path, writer_schema, compression="snappy")
+                writer.write_table(table)
+            else:
+                # Later chunks: cast to the locked schema so mixed-type columns
+                # (e.g. object→int64 drift between chunks) never cause a type error.
+                try:
+                    table = pa.Table.from_pandas(chunk, preserve_index=False)
+                    table = table.cast(writer_schema)
+                except (pa.lib.ArrowInvalid, pa.lib.ArrowTypeError):
+                    # Fallback: coerce each column individually to match schema
+                    arrays = []
+                    for field in writer_schema:
+                        col_name = field.name
+                        if col_name in chunk.columns:
+                            try:
+                                arr = pa.array(chunk[col_name].tolist(), type=field.type, from_pandas=True)
+                            except Exception:
+                                # Last resort: stringify the column
+                                arr = pa.array(chunk[col_name].astype(str).tolist(), type=pa.string(), from_pandas=True)
+                                # If schema expects non-string, cast to string field
+                                if field.type != pa.string():
+                                    arr = pa.array([None] * len(chunk), type=field.type, from_pandas=True)
+                        else:
+                            arr = pa.array([None] * len(chunk), type=field.type, from_pandas=True)
+                        arrays.append(arr)
+                    table = pa.table(dict(zip(writer_schema.names, arrays)), schema=writer_schema)
+                writer.write_table(table)
         else:
             # fallback (less efficient): write once at end
             # NOTE: if pyarrow missing, this will be memory heavy for big files.
@@ -580,19 +617,11 @@ def ingest_file(
                     message="Streaming + parsing line-based text data",
                 )
                 columns, row_count, sample_rows, stats = text_range_stream_to_parquet(
-    response.stream(MINIO_STREAM_CHUNK_SIZE),
-    parquet_path,
-    parse_range,
-    header_mode=header_mode,
-    custom_headers=custom_headers,
-    on_chunk=parse_progress.on_chunk,
-)
-                # columns, row_count, sample_rows, stats = text_range_stream_to_parquet(
-                #     response.stream(MINIO_STREAM_CHUNK_SIZE),
-                #     parquet_path,
-                #     parse_range,
-                #     on_chunk=parse_progress.on_chunk,
-                # )
+                    response.stream(MINIO_STREAM_CHUNK_SIZE),
+                    parquet_path,
+                    parse_range,
+                    on_chunk=parse_progress.on_chunk,
+                )
                 parse_progress.finish()
             elif ext == ".csv":
                 if not parquet_path:

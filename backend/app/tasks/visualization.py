@@ -31,7 +31,8 @@ from app.calculations.derived import (
 # Increased from 250k → 500k: cuts Python loop iterations in half for large files
 CHUNK_SIZE = 500_000
 LOD_LEVELS = (256, 1024, 4096)
-ZOOM_RAW_POINT_BUDGET = 400_000
+# ZOOM_RAW_POINT_BUDGET = 400_000
+ZOOM_RAW_POINT_BUDGET = 50_000
 
 
 # ─── Redis / DB helpers ───────────────────────────────────────────────────────
@@ -932,6 +933,226 @@ def _build_mat_figure(
 
 # ─── Zoom loader script (injected into the plot HTML) ────────────────────────
 
+# def _build_zoom_loader_script(
+#     viz_id: str,
+#     chart_type: str,
+#     series_meta: list[dict],
+#     series_stats: list[dict],
+# ):
+#     """
+#     JavaScript injected via pio.to_html post_script.
+#     Handles dynamic LOD switching on x-axis zoom inside the iframe.
+
+#     Key fixes applied here:
+#     1. waitForPlotly — post_script runs before Plotly async-renders the div;
+#        we poll for gd._fullLayout before attaching any listeners.
+#     2. Token via window.parent.__FD_TOKEN__ — srcDoc iframes have null origin
+#        so window.parent.localStorage throws SecurityError; token is exposed on
+#        the parent window object instead and read safely.
+#     3. No credentials: "include" — avoids credentialed CORS preflight failures
+#        from null-origin iframes; Authorization header is sufficient.
+#     """
+#     if chart_type not in {"scatter", "scatterline", "line", "bar"}:
+#         return ""
+
+#     payload = {
+#         "vizId": viz_id,
+#         "levels": list(LOD_LEVELS),
+#         "seriesMeta": series_meta,
+#         "seriesStats": series_stats,
+#     }
+
+#     return f"""
+# (function() {{
+#   const cfg = {json.dumps(payload)};
+
+#   // FIX 1: Read token from parent window object (not localStorage).
+#   // srcDoc iframes have null origin — accessing window.parent.localStorage
+#   // throws a SecurityError caught silently, returning null and causing 401s.
+#   function getToken() {{
+#     const sources = [
+#       () => window.__FD_TOKEN__,
+#       () => window.parent && window.parent.__FD_TOKEN__,
+#       () => window.localStorage && window.localStorage.getItem("token"),
+#       () => window.localStorage && window.localStorage.getItem("access_token"),
+#       () => window.parent && window.parent.localStorage && window.parent.localStorage.getItem("token"),
+#       () => window.parent && window.parent.localStorage && window.parent.localStorage.getItem("access_token"),
+#     ];
+#     for (const fn of sources) {{
+#       try {{
+#         const t = fn();
+#         if (t && typeof t === "string" && t.length > 10) return t;
+#       }} catch (e) {{}}
+#     }}
+#     return null;
+#   }}
+
+#   // FIX 2: post_script runs synchronously at body-end before Plotly async-renders
+#   // the graph div. Poll until gd._fullLayout exists (set only after newPlot completes)
+#   // then attach listeners. Without this, gd is null and no events are ever wired up.
+#   function waitForPlotly(maxWaitMs, cb) {{
+#     const start = Date.now();
+#     function attempt() {{
+#       const gd = document.querySelector('.plotly-graph-div');
+#       if (gd && gd._fullLayout) {{
+#         cb(gd);
+#         return;
+#       }}
+#       if (Date.now() - start > maxWaitMs) {{
+#         console.warn("zoom-loader: timed out waiting for Plotly graph div");
+#         return;
+#       }}
+#       setTimeout(attempt, 80);
+#     }}
+#     attempt();
+#   }}
+
+#   const API_BASE =
+#     (window.__FD_API_BASE__ && String(window.__FD_API_BASE__)) ||
+#     (window.parent && window.parent.__FD_API_BASE__ && String(window.parent.__FD_API_BASE__)) ||
+#     "http://localhost:8000";
+
+#   function joinUrl(base, path) {{
+#     const b = base.endsWith("/") ? base.slice(0, -1) : base;
+#     const p = path.startsWith("/") ? path : ("/" + path);
+#     return b + p;
+#   }}
+
+#   let timer = null;
+#   function debounce(fn) {{
+#     if (timer) clearTimeout(timer);
+#     timer = setTimeout(fn, 250);
+#   }}
+
+#   function chooseMode(stat, xmin, xmax, plotWidthPx) {{
+#     const total = Math.abs(
+#       (stat && stat.x_max !== undefined ? stat.x_max : NaN) -
+#       (stat && stat.x_min !== undefined ? stat.x_min : NaN)
+#     );
+#     const span = Math.abs(xmax - xmin);
+#     if (!isFinite(total) || total <= 0 || !isFinite(span) || span <= 0) {
+#       return { mode: "tile", level: cfg.levels[1] };
+#     }
+#     const ratio = span / total;
+#     const totalRows = Number(stat && stat.rows ? stat.rows : 0);
+#     const expected = totalRows ? (totalRows * ratio) : Infinity;
+#     const RAW_BUDGET = {ZOOM_RAW_POINT_BUDGET};
+#     if (expected > RAW_BUDGET) {
+#       if (ratio > 0.40) return { mode: "tile", level: cfg.levels[0] };
+#       if (ratio > 0.12) return { mode: "tile", level: cfg.levels[1] };
+#       return { mode: "tile", level: cfg.levels[2] };
+#     }
+#     const px = (plotWidthPx && plotWidthPx > 100) ? plotWidthPx : 1200;
+#     if ((expected / px) > 2 && expected > 20000) {
+#       if (ratio > 0.40) return { mode: "tile", level: cfg.levels[0] };
+#       if (ratio > 0.12) return { mode: "tile", level: cfg.levels[1] };
+#       return { mode: "tile", level: cfg.levels[2] };
+#     }
+#     return { mode: "raw" };
+#   }
+
+#   // FIX 3: No credentials: "include" — causes credentialed CORS preflight
+#   // failure from null-origin iframes. Authorization header is sufficient.
+#   async function fetchJson(url) {{
+#     let res;
+#     try {{
+#       const token = getToken();
+#       const headers = {{}};
+#       if (token) headers["Authorization"] = `Bearer ${{token}}`;
+#       res = await fetch(url, {{ headers }});
+#       console.log("Yes the zoom is working ");
+#     }} catch (e) {{
+#       console.warn("zoom-fetch network error", e);
+#       return null;
+#     }}
+#     const contentType = (res.headers.get("content-type") || "").toLowerCase();
+#     if (!res.ok) {{
+#       const txt = await res.text();
+#       console.warn("zoom-api error", res.status, txt.slice(0, 200));
+#       return null;
+#     }}
+#     if (!contentType.includes("application/json")) {{
+#       const txt = await res.text();
+#       console.warn("zoom-api non-json", contentType, txt.slice(0, 200));
+#       return null;
+#     }}
+#     try {{
+#       return await res.json();
+#     }} catch (e) {{
+#       console.warn("zoom-api json parse failed", e);
+#       return null;
+#     }}
+#   }}
+
+#   async function restoreOverview(gd) {{
+#     const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+#     if (!n) return;
+#     const level = cfg.levels[0];
+#     for (let i = 0; i < n; i++) {{
+#       const meta = cfg.seriesMeta[i] || {{}};
+#       const xAxis = meta.x_axis;
+#       const yAxis = meta.y_axis;
+#       if (!xAxis || !yAxis) continue;
+#       const path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{level}}`;
+#       const js = await fetchJson(joinUrl(API_BASE, path));
+#       if (!js) continue;
+#       const rows = js.data || [];
+#       if (!rows.length) continue;
+#       Plotly.restyle(gd, {{ x: [rows.map(r => r[xAxis])], y: [rows.map(r => r[yAxis])] }}, [i]);
+#     }}
+#   }}
+
+#   async function updateTrace(gd, i, xmin, xmax) {{
+#     const meta = cfg.seriesMeta[i] || {{}};
+#     const stat = cfg.seriesStats[i] || {{}};
+#     const plotWidthPx = (gd.offsetWidth && gd.offsetWidth > 100) ? gd.offsetWidth : 1200;
+#     const mode = chooseMode(stat, xmin, xmax, plotWidthPx);
+#     const xAxis = meta.x_axis;
+#     const yAxis = meta.y_axis;
+#     if (!xAxis || !yAxis) return;
+#     let path = "";
+#     if (mode.mode === "raw") {{
+#       path = `/api/visualizations/${{cfg.vizId}}/raw?series=${{i}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}&max_points={ZOOM_RAW_POINT_BUDGET}`;
+#     }} else {{
+#       path = `/api/visualizations/${{cfg.vizId}}/tiles?series=${{i}}&level=${{mode.level}}&x_min=${{encodeURIComponent(xmin)}}&x_max=${{encodeURIComponent(xmax)}}`;
+#     }}
+#     const js = await fetchJson(joinUrl(API_BASE, path));
+#     if (!js) return;
+#     const rows = js.data || [];
+#     if (!rows.length) return;
+#     Plotly.restyle(gd, {{ x: [rows.map(r => r[xAxis])], y: [rows.map(r => r[yAxis])] }}, [i]);
+#   }}
+
+#   // FIX 2 applied: wait for Plotly before attaching listeners
+#   waitForPlotly(8000, function(gd) {{
+#     gd.on('plotly_doubleclick', () => {{
+#       debounce(() => restoreOverview(gd));
+#     }});
+
+#     gd.on('plotly_relayout', (ev) => {{
+#       if (ev && ev["xaxis.autorange"] === true) {{
+#         debounce(() => restoreOverview(gd));
+#         return;
+#       }}
+#       const r0 = ev ? ev["xaxis.range[0]"] : undefined;
+#       const r1 = ev ? ev["xaxis.range[1]"] : undefined;
+#       if (r0 === undefined || r1 === undefined) return;
+#       const xmin = Number(r0);
+#       const xmax = Number(r1);
+#       if (!isFinite(xmin) || !isFinite(xmax)) return;
+#       debounce(() => {{
+#         const n = (gd.data && gd.data.length) ? gd.data.length : 0;
+#         for (let i = 0; i < n; i++) {{
+#           updateTrace(gd, i, xmin, xmax);
+#         }}
+#       }});
+#     }});
+#   }});
+
+# }})();
+# """
+# ─── Zoom loader script (injected into the plot HTML) ────────────────────────
+
 def _build_zoom_loader_script(
     viz_id: str,
     chart_type: str,
@@ -1023,7 +1244,7 @@ def _build_zoom_loader_script(
     timer = setTimeout(fn, 250);
   }}
 
-  function chooseMode(stat, xmin, xmax) {{
+  function chooseMode(stat, xmin, xmax, plotWidthPx) {{
     const total = Math.abs(
       (stat && stat.x_max !== undefined ? stat.x_max : NaN) -
       (stat && stat.x_min !== undefined ? stat.x_min : NaN)
@@ -1036,10 +1257,29 @@ def _build_zoom_loader_script(
     const totalRows = Number(stat && stat.rows ? stat.rows : 0);
     const expected = totalRows ? (totalRows * ratio) : Infinity;
     const RAW_BUDGET = {ZOOM_RAW_POINT_BUDGET};
-    if (expected <= RAW_BUDGET) return {{ mode: "raw" }};
-    if (ratio > 0.40) return {{ mode: "tile", level: cfg.levels[0] }};
-    if (ratio > 0.12) return {{ mode: "tile", level: cfg.levels[1] }};
-    return {{ mode: "tile", level: cfg.levels[2] }};
+
+    // Hard cap: never go raw if estimated points exceed budget.
+    // This is the primary fix for wind tunnel data (alpha sweep, polar) where
+    // X has a tiny range but millions of rows are all clustered inside it —
+    // the old 400k budget was too permissive and crashed WebGL on large zooms.
+    if (expected > RAW_BUDGET) {{
+      if (ratio > 0.40) return {{ mode: "tile", level: cfg.levels[0] }};
+      if (ratio > 0.12) return {{ mode: "tile", level: cfg.levels[1] }};
+      return {{ mode: "tile", level: cfg.levels[2] }};
+    }}
+
+    // Pixel-density guard: even when expected < RAW_BUDGET, if the point
+    // density per screen pixel is very high (clustered data), force tile mode.
+    // Without this, alpha-sweep data with 41 discrete X values sends all points
+    // in a narrow zoom window which still overloads lower-end GPU contexts.
+    const px = (plotWidthPx && plotWidthPx > 100) ? plotWidthPx : 1200;
+    if ((expected / px) > 2 && expected > 20000) {{
+      if (ratio > 0.40) return {{ mode: "tile", level: cfg.levels[0] }};
+      if (ratio > 0.12) return {{ mode: "tile", level: cfg.levels[1] }};
+      return {{ mode: "tile", level: cfg.levels[2] }};
+    }}
+
+    return {{ mode: "raw" }};
   }}
 
   // FIX 3: No credentials: "include" — causes credentialed CORS preflight
@@ -1051,7 +1291,7 @@ def _build_zoom_loader_script(
       const headers = {{}};
       if (token) headers["Authorization"] = `Bearer ${{token}}`;
       res = await fetch(url, {{ headers }});
-      console.log("Yes the zoom is working ");
+      console.log("Yes the zoom is working ❤️ ");
     }} catch (e) {{
       console.warn("zoom-fetch network error", e);
       return null;
@@ -1096,7 +1336,8 @@ def _build_zoom_loader_script(
   async function updateTrace(gd, i, xmin, xmax) {{
     const meta = cfg.seriesMeta[i] || {{}};
     const stat = cfg.seriesStats[i] || {{}};
-    const mode = chooseMode(stat, xmin, xmax);
+    const plotWidthPx = (gd.offsetWidth && gd.offsetWidth > 100) ? gd.offsetWidth : 1200;
+    const mode = chooseMode(stat, xmin, xmax, plotWidthPx);
     const xAxis = meta.x_axis;
     const yAxis = meta.y_axis;
     if (!xAxis || !yAxis) return;
@@ -1141,7 +1382,6 @@ def _build_zoom_loader_script(
 
 }})();
 """
-
 
 # ─── Celery task ──────────────────────────────────────────────────────────────
 
