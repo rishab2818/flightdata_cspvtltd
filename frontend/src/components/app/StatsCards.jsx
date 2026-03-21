@@ -68,7 +68,7 @@ export default function StatsCardsImproved({ className = 'stats-grid' }) {
     { title: 'Wind Data', value: formatTotal(counts?.wind), icon: Windmill },
     { title: 'Flight Data', value: formatTotal(counts?.flight), icon: AirplaneInFlight },
     { title: 'Aero Data', value: formatTotal(counts?.aero), icon: Airplane },
-    { title: 'Total Reports', value: '12k', icon: Note },
+    { title: 'Total Reports', value: formatTotal(counts?.total_reports), icon: Note },
   ];
 
   return (

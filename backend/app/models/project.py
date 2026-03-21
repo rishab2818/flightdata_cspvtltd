@@ -54,3 +54,9 @@ class ProjectUpdate(BaseModel):
 class MembersPatch(BaseModel):
     add_emails: List[str] = Field(default_factory=list)
     remove_emails: List[str] = Field(default_factory=list)
+
+
+class ReportExportTrackIn(BaseModel):
+    project_id: str
+    dataset_type: str
+    tag_name: Optional[str] = None

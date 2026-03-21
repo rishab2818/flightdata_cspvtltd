@@ -5,6 +5,7 @@ from bson import ObjectId
 from app.db.mongo import get_db
 
 DATA_COUNTER_KEYS = ("cfd", "wind", "flight", "others")
+REPORT_COUNTER_KEYS = ("cfd", "wind", "flight")
 
 
 # -----------------------------
@@ -140,6 +141,23 @@ class ProjectRepository:
             if key in counts:
                 counts[key] = max(0, int(row.get("total") or 0))
 
+        report_rows = await db.report_counters.aggregate(
+            [
+                {"$match": {"owner_email": user_email}},
+                {
+                    "$group": {
+                        "_id": "$dataset_type",
+                        "total": {"$sum": {"$ifNull": ["$count", 0]}},
+                    }
+                },
+            ]
+        ).to_list(length=len(REPORT_COUNTER_KEYS) + 2)
+        report_counts = {key: 0 for key in REPORT_COUNTER_KEYS}
+        for row in report_rows:
+            key = str(row.get("_id") or "").strip().lower()
+            if key in report_counts:
+                report_counts[key] = max(0, int(row.get("total") or 0))
+
         return {
             "total_projects": total_projects,
             "cfd": counts["cfd"],
@@ -147,7 +165,57 @@ class ProjectRepository:
             "flight": counts["flight"],
             "others": counts["others"],
             "aero": counts["cfd"] + counts["wind"] + counts["flight"],
+            "report_cfd": report_counts["cfd"],
+            "report_wind": report_counts["wind"],
+            "report_flight": report_counts["flight"],
+            "total_reports": report_counts["cfd"] + report_counts["wind"] + report_counts["flight"],
         }
+
+    async def increment_report_counter(
+        self,
+        *,
+        user_email: str,
+        project_id: str,
+        dataset_type: str,
+        tag_name: str | None = None,
+        amount: int = 1,
+    ) -> dict | None:
+        db = await get_db()
+        normalized_type = str(dataset_type or "").strip().lower()
+
+        if normalized_type not in REPORT_COUNTER_KEYS or amount <= 0:
+            return None
+
+        pid = _oid(project_id)
+        has_access = await db.projects.find_one(
+            {"_id": pid, "members.email": user_email},
+            {"_id": 1},
+        )
+        if not has_access:
+            return None
+
+        now = datetime.utcnow()
+        await db.report_counters.update_one(
+            {"owner_email": user_email, "dataset_type": normalized_type},
+            {
+                "$inc": {"count": int(amount)},
+                "$set": {
+                    "project_id": project_id,
+                    "tag_name": tag_name,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "owner_email": user_email,
+                    "dataset_type": normalized_type,
+                    "created_at": now,
+                },
+            },
+            upsert=True,
+        )
+
+        return await db.report_counters.find_one(
+            {"owner_email": user_email, "dataset_type": normalized_type}
+        )
 
     async def get_if_member(self, project_id: str, user_email: str) -> Optional[dict]:
         db = await get_db()

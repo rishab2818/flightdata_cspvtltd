@@ -114,8 +114,7 @@ export default function PieChartCard({ title, value, data = [] }) {
     [chartData]
   );
 
-  const isDistributionCard = title === "Data Distribution";
-  const showChart = isDistributionCard && total > 0;
+  const showChart = chartData.length > 0 && total > 0;
 
   return (
     <div
@@ -323,7 +322,7 @@ export default function PieChartCard({ title, value, data = [] }) {
         </div>
       )}
 
-      {!showChart && title !== "Data Distribution" && value ? (
+      {!showChart && value ? (
         <div
           style={{
             marginTop: "auto",

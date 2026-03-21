@@ -2,7 +2,13 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.auth import get_current_user, require_head, CurrentUser
-from app.models.project import ProjectCreate, ProjectOut, ProjectUpdate, MembersPatch
+from app.models.project import (
+    MembersPatch,
+    ProjectCreate,
+    ProjectOut,
+    ProjectUpdate,
+    ReportExportTrackIn,
+)
 from app.project_search import search_project_resources
 from app.repositories.projects import ProjectRepository
 from app.db.mongo import get_db
@@ -42,6 +48,27 @@ async def list_projects(
 @router.get("/count")
 async def count_projects(user: CurrentUser = Depends(get_current_user)):
     return await repo.aggregated_counts_for_user(user.email)
+
+
+@router.post("/report-exports/track")
+async def track_report_export(
+    payload: ReportExportTrackIn,
+    user: CurrentUser = Depends(get_current_user),
+):
+    project = await repo.get_if_member(payload.project_id, user.email)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found or no access")
+
+    updated = await repo.increment_report_counter(
+        user_email=user.email,
+        project_id=payload.project_id,
+        dataset_type=payload.dataset_type,
+        tag_name=payload.tag_name,
+    )
+    if not updated:
+        raise HTTPException(status_code=400, detail="Unsupported report dataset type")
+
+    return {"ok": True}
 
 
 # ------- GD/DH-only member search over entire user DB -------

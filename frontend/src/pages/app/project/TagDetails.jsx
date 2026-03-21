@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ingestionApi } from '../../../api/ingestionApi'
+import { projectApi } from '../../../api/projectapi'
 import { rawPreviewApi } from '../../../api/rawPreviewApi'
 import { visualizationApi } from '../../../api/visualizationApi'
 import ArrowLeft from '../../../assets/ArrowLeft.svg'
@@ -1000,7 +1001,20 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
       addCanvasAsPage(pdf, plotCanvas, { addNewPage: true })
     }
 
-    pdf.save(`${tagName}-${file.filename}-export.pdf`)
+    await pdf.save(`${tagName}-${file.filename}-export.pdf`, { returnPromise: true })
+
+    const normalizedDatasetType = String(datasetType || '').trim().toLowerCase()
+    if (['cfd', 'wind', 'flight'].includes(normalizedDatasetType)) {
+      try {
+        await projectApi.trackReportExport({
+          project_id: projectId,
+          dataset_type: normalizedDatasetType,
+          tag_name: tagName,
+        })
+      } catch (trackErr) {
+        console.error('Failed to track report export', trackErr)
+      }
+    }
   } catch (err) {
     console.error(err)
     window.alert(err?.message || 'Failed to export PDF')

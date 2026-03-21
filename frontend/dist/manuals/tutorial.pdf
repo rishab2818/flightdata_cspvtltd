@@ -1,0 +1,1193 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 11 /Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2849 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(TUTORIAL GUIDE) Tj
+0 -15 Td
+(Data Integration and Visualization Tool) Tj
+0 -15 Td
+(Version 1.0) Tj
+0 -15 Td
+(CHANGMA SHRISTI) Tj
+0 -15 Td
+(1st Floor, Earthen Phoenix, 10th E Cross Rd, Sanjeevappa Layout, Nagavarapalya, C V) Tj
+0 -15 Td
+(Raman Nagar, Bengaluru, Karnataka 560093.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Table of Contents) Tj
+0 -15 Td
+(1. Introduction ) Tj
+0 -15 Td
+(.........................................................................................................................................) Tj
+0 -15 Td
+( 1) Tj
+0 -15 Td
+(2. Purpose of the Tutorial ) Tj
+0 -15 Td
+(........................................................................................................................) Tj
+0 -15 Td
+( 1) Tj
+0 -15 Td
+(3. System Overview ) Tj
+0 -15 Td
+(................................................................................................................................) Tj
+0 -15 Td
+( 1) Tj
+0 -15 Td
+(4. Accessing the Application ) Tj
+0 -15 Td
+(..................................................................................................................) Tj
+0 -15 Td
+( 2) Tj
+0 -15 Td
+(5. Dashboard Overview ) Tj
+0 -15 Td
+(..........................................................................................................................) Tj
+0 -15 Td
+( 2) Tj
+0 -15 Td
+(6. Creating and Accessing a Project ) Tj
+0 -15 Td
+(........................................................................................................) Tj
+0 -15 Td
+( 5) Tj
+0 -15 Td
+(7. Uploading and Previewing Datasets ) Tj
+0 -15 Td
+(...................................................................................................) Tj
+0 -15 Td
+( 7) Tj
+0 -15 Td
+(8. MATLAB \(.MAT\) File Handling ) Tj
+0 -15 Td
+(.....................................................................................................) Tj
+0 -15 Td
+( 11) Tj
+0 -15 Td
+(9. Generating Data Visualizations ) Tj
+0 -15 Td
+(........................................................................................................) Tj
+0 -15 Td
+( 14) Tj
+0 -15 Td
+(10. Creating Multiple Plots \(Over-Plot\) ) Tj
+0 -15 Td
+(................................................................................................) Tj
+0 -15 Td
+( 16) Tj
+0 -15 Td
+(11. Performing Calculations ) Tj
+0 -15 Td
+(.................................................................................................................) Tj
+0 -15 Td
+( 17) Tj
+0 -15 Td
+(12. Management Dashboard ) Tj
+0 -15 Td
+(.................................................................................................................) Tj
+0 -15 Td
+( 19) Tj
+0 -15 Td
+(13. Notifications ) Tj
+0 -15 Td
+(....................................................................................................................................) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 2952 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+( 22) Tj
+0 -15 Td
+(14. Changing the Account Password ) Tj
+0 -15 Td
+(....................................................................................................) Tj
+0 -15 Td
+( 22) Tj
+0 -15 Td
+(15. Conclusion ) Tj
+0 -15 Td
+(......................................................................................................................................) Tj
+0 -15 Td
+( 23) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. Introduction) Tj
+0 -15 Td
+(This tutorial provides a step-by-step guide to help users operate the Data Integration ) Tj
+0 -15 Td
+(and) Tj
+0 -15 Td
+(Visualization Tool. The purpose of this tutorial is to help users understand how to ) Tj
+0 -15 Td
+(navigate) Tj
+0 -15 Td
+(the system, upload datasets, generate visualizations, and manage project information.) Tj
+0 -15 Td
+(The application is designed to integrate multiple sources of aerodynamic data into a) Tj
+0 -15 Td
+(centralized platform. Users can upload datasets, organize project records, perform ) Tj
+0 -15 Td
+(analysis,) Tj
+0 -15 Td
+(and generate visual plots for comparison and interpretation.) Tj
+0 -15 Td
+(This tutorial is written for new users who may not have prior experience with the ) Tj
+0 -15 Td
+(system.) Tj
+0 -15 Td
+(Each section explains the basic operations of the application in a simple and structured) Tj
+0 -15 Td
+(manner.) Tj
+0 -15 Td
+(2. Purpose of the Tutorial) Tj
+0 -15 Td
+(The main objectives of this tutorial are:) Tj
+0 -15 Td
+(- To guide users through the basic functions of the system) Tj
+0 -15 Td
+(- To demonstrate how to upload and manage datasets) Tj
+0 -15 Td
+(- To explain how to generate data visualizations) Tj
+0 -15 Td
+(- To show how project information and records can be maintained) Tj
+0 -15 Td
+(- To help users perform analysis using the available tools) Tj
+0 -15 Td
+(By following this tutorial, users will be able to operate the system efficiently and ) Tj
+0 -15 Td
+(perform) Tj
+0 -15 Td
+(their required tasks without difficulty.) Tj
+0 -15 Td
+(3. System Overview) Tj
+0 -15 Td
+(The Data Integration and Visualization Tool is a web-based platform that allows users to) Tj
+0 -15 Td
+(manage projects, organize datasets, and generate visual representations of aerodynamic) Tj
+0 -15 Td
+(data.) Tj
+0 -15 Td
+(The system integrates multiple data sources including:) Tj
+0 -15 Td
+(- Computational Fluid Dynamics \(CFD\) data) Tj
+0 -15 Td
+(- Wind Tunnel data) Tj
+0 -15 Td
+(- Flight test data) Tj
+0 -15 Td
+(- Aerodynamic datasets) Tj
+0 -15 Td
+(1) Tj
+0 -15 Td
+(The application provides a centralized environment where users can upload files, manage) Tj
+0 -15 Td
+(records, generate analytical plots, and store reports for future reference.) Tj
+0 -15 Td
+(4. Accessing the Application) Tj
+0 -15 Td
+(The application can be accessed using a standard web browser.) Tj
+0 -15 Td
+(Step 1: Open the Application) Tj
+0 -15 Td
+(- Open a web browser such as Google Chrome, Microsoft Edge, or Firefox.) Tj
+0 -15 Td
+(- Enter the application URL.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2251 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- The login page of the system will appear.) Tj
+0 -15 Td
+(Step 2: Login to the System) Tj
+0 -15 Td
+(- Enter your registered Email ID in the login field.) Tj
+0 -15 Td
+(- Enter your Password.) Tj
+0 -15 Td
+(- Click the Login button.) Tj
+0 -15 Td
+(- After successful authentication, the system will open the main dashboard page.) Tj
+0 -15 Td
+(If login credentials are incorrect, the system will display an error message and the ) Tj
+0 -15 Td
+(user must) Tj
+0 -15 Td
+(re-enter the correct credentials.) Tj
+0 -15 Td
+(Login Page) Tj
+0 -15 Td
+(5. Dashboard Overview) Tj
+0 -15 Td
+(After logging into the application, the user will see the Dashboard.) Tj
+0 -15 Td
+(The Dashboard shows a summary of projects and datasets in the system. From here, users) Tj
+0 -15 Td
+(can open projects and navigate to different modules.) Tj
+0 -15 Td
+(2) Tj
+0 -15 Td
+(The dashboard view depends on the role assigned to the user.) Tj
+0 -15 Td
+(5.1 User Roles) Tj
+0 -15 Td
+(The system supports multiple user roles. Each role has different levels of access.) Tj
+0 -15 Td
+(User Type) Tj
+0 -15 Td
+(Roles) Tj
+0 -15 Td
+(Access Level) Tj
+0 -15 Td
+(Type 1) Tj
+0 -15 Td
+(GD \(Group Director\), DH \(Division Head\) Full access to the system) Tj
+0 -15 Td
+(Type 2) Tj
+0 -15 Td
+(TL \(Team Lead\), SM \(System Manager\),) Tj
+0 -15 Td
+(OIC \(Officer in Charge\)) Tj
+0 -15 Td
+(Access to assigned projects) Tj
+0 -15 Td
+(Type 3) Tj
+0 -15 Td
+(JRF, SRF, CE, Students) Tj
+0 -15 Td
+(Access to view and work with) Tj
+0 -15 Td
+(project data) Tj
+0 -15 Td
+(5.2 Group Director / Division Head Dashboard) Tj
+0 -15 Td
+(Users with GD or DH roles can see a complete system overview.) Tj
+0 -15 Td
+(The dashboard shows:) Tj
+0 -15 Td
+(- Total Projects) Tj
+0 -15 Td
+(- CFD Data Count) Tj
+0 -15 Td
+(- Wind Data Count) Tj
+0 -15 Td
+(- Flight Data Count) Tj
+0 -15 Td
+(- Aero Data Count) Tj
+0 -15 Td
+(- Total Reports) Tj
+0 -15 Td
+(Below the summary, the list of projects is displayed.) Tj
+0 -15 Td
+(Users can open a project by clicking View Project.) Tj
+0 -15 Td
+(GD Dashboard) Tj
+0 -15 Td
+(3) Tj
+0 -15 Td
+(5.3 Administrator Dashboard) Tj
+0 -15 Td
+(The Admin dashboard is used to manage system users.) Tj
+0 -15 Td
+(Admin can:) Tj
+0 -15 Td
+(- View total users) Tj
+0 -15 Td
+(- See user roles) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 2312 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Create new users) Tj
+0 -15 Td
+(To create a new user:) Tj
+0 -15 Td
+(- Enter User Name) Tj
+0 -15 Td
+(- Select Role) Tj
+0 -15 Td
+(- Enter Login ID) Tj
+0 -15 Td
+(- Enter Password) Tj
+0 -15 Td
+(- Click Create) Tj
+0 -15 Td
+(5.4 TL / Student Dashboard) Tj
+0 -15 Td
+(Admin Dashboard) Tj
+0 -15 Td
+(Users such as Team Leads, JRF, SRF, CE, and Students will see a simpler dashboard.) Tj
+0 -15 Td
+(This dashboard mainly shows the projects assigned to the user.) Tj
+0 -15 Td
+(To open a project:) Tj
+0 -15 Td
+(- Find the project in the list) Tj
+0 -15 Td
+(- Click View Project) Tj
+0 -15 Td
+(4) Tj
+0 -15 Td
+(Student Dashboard) Tj
+0 -15 Td
+(6. Creating and Accessing a Project) Tj
+0 -15 Td
+(Projects are used to organize datasets and records within the system.) Tj
+0 -15 Td
+(Steps to Create a New Project) Tj
+0 -15 Td
+(- Open the Dashboard after logging into the system.) Tj
+0 -15 Td
+(- Click the + New Project button located in the Projects section.) Tj
+0 -15 Td
+(Dashboard with New Project Button) Tj
+0 -15 Td
+(- The Add Project window will appear.) Tj
+0 -15 Td
+(5) Tj
+0 -15 Td
+(Add Project Form) Tj
+0 -15 Td
+(- Enter the required details:) Tj
+0 -15 Td
+(1. Project Name - Name of the project) Tj
+0 -15 Td
+(2. Description - Short description of the project) Tj
+0 -15 Td
+(3. Add Members - Select users who will be part of the project) Tj
+0 -15 Td
+(- Click the Create button to create the project.) Tj
+0 -15 Td
+(- After the project is created, it will appear in the Projects list on the Dashboard.) Tj
+0 -15 Td
+(- To open the project, click the View Project button.) Tj
+0 -15 Td
+(- The system will open the Project Workspace, where users can manage project datasets) Tj
+0 -15 Td
+(and records.) Tj
+0 -15 Td
+(Project Workspace screen) Tj
+0 -15 Td
+(6) Tj
+0 -15 Td
+(7. Uploading and Previewing Datasets) Tj
+0 -15 Td
+(The system allows users to upload aerodynamic datasets and preview them before analysis.) Tj
+0 -15 Td
+(Supported dataset types include:) Tj
+0 -15 Td
+(o CFD Data) Tj
+0 -15 Td
+(o Wind Tunnel Data) Tj
+0 -15 Td
+(o Flight Data) Tj
+0 -15 Td
+(o Other data files) Tj
+0 -15 Td
+(Steps to Upload a Dataset) Tj
+0 -15 Td
+(- Open the Project Workspace.) Tj
+0 -15 Td
+(- Select the required dataset tab such as:) Tj
+0 -15 Td
+(1. CFD Data) Tj
+0 -15 Td
+(2. Wind Tunnel Data) Tj
+0 -15 Td
+(3. Flight Data) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 2613 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(4. Others) Tj
+0 -15 Td
+(Dataset Tabs in Project Workspace) Tj
+0 -15 Td
+(- Click the Upload File button.) Tj
+0 -15 Td
+(- The Upload Files window will appear.) Tj
+0 -15 Td
+(7) Tj
+0 -15 Td
+(Upload Files Window) Tj
+0 -15 Td
+(- Click Browse Plot Files and select the dataset file from your system.) Tj
+0 -15 Td
+(- Enter a Folder / Tag Name to organize the uploaded files.) Tj
+0 -15 Td
+(- Select the Data Type from the dropdown list.) Tj
+0 -15 Td
+(- Click Upload.) Tj
+0 -15 Td
+(The dataset will now be uploaded and stored in the project workspace.) Tj
+0 -15 Td
+(Viewing Uploaded Datasets) Tj
+0 -15 Td
+(After uploading the dataset, the files will appear inside the selected Tag / Folder.) Tj
+0 -15 Td
+(Users can see:) Tj
+0 -15 Td
+(- File name) Tj
+0 -15 Td
+(- Created date) Tj
+0 -15 Td
+(- Available actions) Tj
+0 -15 Td
+(8) Tj
+0 -15 Td
+(Uploaded Files List) Tj
+0 -15 Td
+(Previewing Dataset Files) Tj
+0 -15 Td
+(After uploading datasets, users can preview the files before performing analysis.) Tj
+0 -15 Td
+(Steps to Preview a Dataset) Tj
+0 -15 Td
+(- Open the Project Workspace.) Tj
+0 -15 Td
+(- In the dataset section \(for example CFD Data\), you will see a list of Tag/Folder) Tj
+0 -15 Td
+(names.) Tj
+0 -15 Td
+(- Click the Go to \(?\) button for the required Tag/Folder.) Tj
+0 -15 Td
+(- The system will open the File List Page, where all uploaded files inside the selected) Tj
+0 -15 Td
+(folder are displayed.) Tj
+0 -15 Td
+(File List Screen) Tj
+0 -15 Td
+(- In the Action column, click the View icon \(?\) for the file you want to preview.) Tj
+0 -15 Td
+(9) Tj
+0 -15 Td
+(Raw Preview) Tj
+0 -15 Td
+(When the file is opened, the system displays the Raw Preview tab.) Tj
+0 -15 Td
+(This displays the original uploaded file including metadata.) Tj
+0 -15 Td
+(Raw Preview Screen) Tj
+0 -15 Td
+(Processed Preview) Tj
+0 -15 Td
+(To view the structured dataset:) Tj
+0 -15 Td
+(- Click the Processed tab.) Tj
+0 -15 Td
+(- The system will displays structured tabular data used for plotting and analysis.) Tj
+0 -15 Td
+(Processed Preview Screen) Tj
+0 -15 Td
+(Other Tabs) Tj
+0 -15 Td
+(Inside the file view, additional tabs are available:) Tj
+0 -15 Td
+(10) Tj
+0 -15 Td
+(- Plot - Shows generated visualization plots) Tj
+0 -15 Td
+(- Others - Displays other related files or attachments) Tj
+0 -15 Td
+(Users can switch between these tabs to explore the dataset further.) Tj
+0 -15 Td
+(8. MATLAB \(.MAT\) File Handling) Tj
+0 -15 Td
+(The system provides dedicated support for MATLAB \(.mat\) files, which contain multiple) Tj
+0 -15 Td
+(variables instead of standard tabular columns. A specialized interface is provided to) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 2158 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(preview, select variables, and generate visualizations from .mat data.) Tj
+0 -15 Td
+(Uploading MATLAB Files) Tj
+0 -15 Td
+(- Open the Project Workspace) Tj
+0 -15 Td
+(- Click Upload File) Tj
+0 -15 Td
+(- Click Browse Plot Files) Tj
+0 -15 Td
+(- Select a .mat file from your system) Tj
+0 -15 Td
+(- Enter Folder / Tag Name) Tj
+0 -15 Td
+(- Select Data Type) Tj
+0 -15 Td
+(- Click Upload) Tj
+0 -15 Td
+(After uploading, the file will be available in the dataset folder.) Tj
+0 -15 Td
+(Accessing MATLAB File) Tj
+0 -15 Td
+(- Navigate to the uploaded dataset) Tj
+0 -15 Td
+(- Click the View \(?\) icon for the .mat file) Tj
+0 -15 Td
+(- The system opens a dedicated MATLAB preview interface.) Tj
+0 -15 Td
+(MATLAB Raw Preview) Tj
+0 -15 Td
+(Unlike CSV or Excel files, .mat files contain multiple variables.) Tj
+0 -15 Td
+(The Raw Preview displays:) Tj
+0 -15 Td
+(? List of variables) Tj
+0 -15 Td
+(? Each variable shows:) Tj
+0 -15 Td
+(- Name) Tj
+0 -15 Td
+(- Dimensions) Tj
+0 -15 Td
+(- Data type) Tj
+0 -15 Td
+(- Users can:) Tj
+0 -15 Td
+(11) Tj
+0 -15 Td
+(? Select any variable) Tj
+0 -15 Td
+(? View its data in tabular format) Tj
+0 -15 Td
+(? Scroll through values) Tj
+0 -15 Td
+(MATLAB File Raw Preview) Tj
+0 -15 Td
+(Slice Selection) Tj
+0 -15 Td
+(For large datasets, users can load only a portion of data.) Tj
+0 -15 Td
+(Steps:) Tj
+0 -15 Td
+(1. Enter slice values \(example: :, 0:10, etc.\)) Tj
+0 -15 Td
+(2. Click Apply) Tj
+0 -15 Td
+(Only the selected data range will be displayed and used.) Tj
+0 -15 Td
+(Generating MATLAB Visualization) Tj
+0 -15 Td
+(Select MAT Chart Type \(e.g., Scatter\)) Tj
+0 -15 Td
+(Click Generate Plot) Tj
+0 -15 Td
+(The system generates visualization based on selected variables.) Tj
+0 -15 Td
+(12) Tj
+0 -15 Td
+(MATLAB Plot Configuration) Tj
+0 -15 Td
+(MATLAB Calculation Module) Tj
+0 -15 Td
+(The system allows performing calculations on .mat variables.) Tj
+0 -15 Td
+(Steps:) Tj
+0 -15 Td
+(- Navigate to Calculation Tab) Tj
+0 -15 Td
+(- Select Dataset, Tag, and .mat file) Tj
+0 -15 Td
+(- Enter formula) Tj
+0 -15 Td
+(- Map variables) Tj
+0 -15 Td
+(- Click Process Formula) Tj
+0 -15 Td
+(- The system calculates results and shows preview.) Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 2225 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Click Save Derived Variable to store results) Tj
+0 -15 Td
+(MATLAB File Calculation) Tj
+0 -15 Td
+(13) Tj
+0 -15 Td
+(9. Generating Data Visualizations) Tj
+0 -15 Td
+(The Visualization module allows users to create charts from uploaded datasets.) Tj
+0 -15 Td
+(Steps to Generate a Plot) Tj
+0 -15 Td
+(- Open the Project Workspace.) Tj
+0 -15 Td
+(- Click Visualize from the left menu.) Tj
+0 -15 Td
+(Visualization Module) Tj
+0 -15 Td
+(- In the Plot Setting section, select the required options.) Tj
+0 -15 Td
+(- Select the Dataset Type.) Tj
+0 -15 Td
+(- Select the Tag and File containing the dataset.) Tj
+0 -15 Td
+(- Choose the Plot Type:) Tj
+0 -15 Td
+(1. 2D) Tj
+0 -15 Td
+(2. 3D) Tj
+0 -15 Td
+(- Select the Chart Type.) Tj
+0 -15 Td
+(- For 2D plots, available options include:) Tj
+0 -15 Td
+(1. Scatter) Tj
+0 -15 Td
+(2. Line) Tj
+0 -15 Td
+(3. Bar) Tj
+0 -15 Td
+(4. Polar) Tj
+0 -15 Td
+(5. Histogram) Tj
+0 -15 Td
+(6. Box) Tj
+0 -15 Td
+(7. Violin) Tj
+0 -15 Td
+(8. Heatmap \(X vs Y\)) Tj
+0 -15 Td
+(9. Contour) Tj
+0 -15 Td
+(10. Scatter Line) Tj
+0 -15 Td
+(14) Tj
+0 -15 Td
+(- For 3D plots, available options include:) Tj
+0 -15 Td
+(1. 3D Scatter) Tj
+0 -15 Td
+(2. 3D Line) Tj
+0 -15 Td
+(3. 3D Surface) Tj
+0 -15 Td
+(- Select the X-Axis and Y-Axis parameters.) Tj
+0 -15 Td
+(- For 3D plots, also select the Z-Axis.) Tj
+0 -15 Td
+(- Choose the Scale type for the axes.) Tj
+0 -15 Td
+(- Available scale options include:) Tj
+0 -15 Td
+(1. Linear : This is normal scale used in most graphs, in this values increase evenly on) Tj
+0 -15 Td
+(the axis.) Tj
+0 -15 Td
+(2. Log : In this scale, values increase exponentially instead of evenly, Both X and Y) Tj
+0 -15 Td
+(axes use logarithmic scaling.) Tj
+0 -15 Td
+(3. Semi-Log : In this scale, only one axis \(either X or Y\) is logarithmic, while the) Tj
+0 -15 Td
+(other remains linear. This is useful when one variable has a large variation and the) Tj
+0 -15 Td
+(other does not.) Tj
+0 -15 Td
+(- Optionally enter a Plot Name.) Tj
+0 -15 Td
+(- Click Generate Plot.) Tj
+0 -15 Td
+(Contour Plot) Tj
+0 -15 Td
+(Contour plots are used when you need to analyze relationships between three variables.) Tj
+0 -15 Td
+(Required Inputs:) Tj
+0 -15 Td
+(- X-axis ? Independent variable \(Example: Alpha\)) Tj
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 18 0 R >>
+endobj
+18 0 obj
+<< /Length 2660 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Y-axis ? Independent variable \(Example: Beta\)) Tj
+0 -15 Td
+(- Z-axis ? Dependent variable \(Example: Lift Coefficient - CL\)) Tj
+0 -15 Td
+(How System Handles Missing Data:) Tj
+0 -15 Td
+(- If Z values are not directly available:) Tj
+0 -15 Td
+(- The system automatically computes them using interpolation) Tj
+0 -15 Td
+(- This ensures smooth and continuous contour visualization) Tj
+0 -15 Td
+(The system will process the selected dataset and display the generated visualization.) Tj
+0 -15 Td
+(15) Tj
+0 -15 Td
+(Generated 2D Plot) Tj
+0 -15 Td
+(Generated 3D Plot) Tj
+0 -15 Td
+(10. Creating Multiple Plots \(Over-Plot\)) Tj
+0 -15 Td
+(The system allows users to compare multiple datasets on the same visualization.) Tj
+0 -15 Td
+(Steps) Tj
+0 -15 Td
+(- Generate a plot using the steps above.) Tj
+0 -15 Td
+(- Click the + Over Plot button.) Tj
+0 -15 Td
+(Over Plot Button) Tj
+0 -15 Td
+(16) Tj
+0 -15 Td
+(- Select another dataset, file, and axis parameters.) Tj
+0 -15 Td
+(- Click Generate Plot again.) Tj
+0 -15 Td
+(- The system will add the new dataset to the existing visualization for comparison.) Tj
+0 -15 Td
+(- Overplot is typically used to compare CFD vs Wind Tunnel vs Flight data.) Tj
+0 -15 Td
+(Multiple Plots) Tj
+0 -15 Td
+(11. Performing Calculations) Tj
+0 -15 Td
+(The Calculation feature allows users to create a new column by applying a mathematical) Tj
+0 -15 Td
+(formula to existing dataset columns.) Tj
+0 -15 Td
+(This helps users generate additional values that can be used for analysis and ) Tj
+0 -15 Td
+(visualization.) Tj
+0 -15 Td
+(Steps to Perform a Calculation) Tj
+0 -15 Td
+(- Open the Project Workspace.) Tj
+0 -15 Td
+(- Click Visualize from the left menu.) Tj
+0 -15 Td
+(- Select the Calculation tab at the top of the page.) Tj
+0 -15 Td
+(Calculation Module) Tj
+0 -15 Td
+(- Select the Dataset from the dropdown list.) Tj
+0 -15 Td
+(- Available options include:) Tj
+0 -15 Td
+(? CFD) Tj
+0 -15 Td
+(17) Tj
+0 -15 Td
+(? Wind Tunnel) Tj
+0 -15 Td
+(? Flight Data) Tj
+0 -15 Td
+(? Others) Tj
+0 -15 Td
+(- Select the Tag that contains the dataset.) Tj
+0 -15 Td
+(- Select the File that you want to use for the calculation.) Tj
+0 -15 Td
+(Create a Derived Column) Tj
+0 -15 Td
+(- Enter a name in the Derived Column field.) Tj
+0 -15 Td
+(- This will be the name of the new column that will store the calculated values.) Tj
+0 -15 Td
+(Enter the Formula) Tj
+0 -15 Td
+(- In the Formula field, type the mathematical expression you want to apply.) Tj
+0 -15 Td
+(- Example:  sqrt\(a\) + b) Tj
+0 -15 Td
+(- While typing the formula, the system may show suggestions for available functions) Tj
+0 -15 Td
+(You can select a function from the suggestion list.) Tj
+ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 20 0 R >>
+endobj
+20 0 obj
+<< /Length 2939 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(Formula Input and Suggestions) Tj
+0 -15 Td
+(Map Variables to Dataset Columns) Tj
+0 -15 Td
+(- After entering the formula, the system detects the variables used in the formula.) Tj
+0 -15 Td
+(- Select the corresponding dataset column for each variable.) Tj
+0 -15 Td
+(- Click Process Formula.) Tj
+0 -15 Td
+(- The system will calculate the values using the provided formula and display a preview) Tj
+0 -15 Td
+(table showing the results.) Tj
+0 -15 Td
+(- Save the Derived Column) Tj
+0 -15 Td
+(- After verifying the preview results, click Save Derived Column.) Tj
+0 -15 Td
+(18) Tj
+0 -15 Td
+(- The new calculated column will be saved and added to the dataset.) Tj
+0 -15 Td
+(Calculation Preview) Tj
+0 -15 Td
+(12. Management Dashboard) Tj
+0 -15 Td
+(The Management Dashboard  serves as a centralized platform for monitoring, organizing,) Tj
+0 -15 Td
+(and governing all project-related and organizational records across the system.) Tj
+0 -15 Td
+(For senior roles such as Group Director \(GD\) and Department Head \(DH\), the dashboard) Tj
+0 -15 Td
+(provides a comprehensive, cross-project view of all records, enabling:) Tj
+0 -15 Td
+(- Centralized Visibility: Access to records across all projects, departments, and) Tj
+0 -15 Td
+(activities from a single interface.) Tj
+0 -15 Td
+(- Decision Support: Quick review of key documents such as Minutes of Meetings,) Tj
+0 -15 Td
+(Technical Reports, Budget Estimates, and Procurement Records to support) Tj
+0 -15 Td
+(informed decision-making.) Tj
+0 -15 Td
+(- Progress Tracking: Monitor project activities, team engagements, and record) Tj
+0 -15 Td
+(updates in real time.) Tj
+0 -15 Td
+(- Governance & Oversight: Ensure compliance, standardization, and proper) Tj
+0 -15 Td
+(documentation across all projects.) Tj
+0 -15 Td
+(- Efficient Retrieval: Easily search, filter, and access historical and current records) Tj
+0 -15 Td
+(without navigating multiple systems.) Tj
+0 -15 Td
+(The system provides several modules to store and manage important project documents) Tj
+0 -15 Td
+(and records. These modules help users upload, organize, and track project-related) Tj
+0 -15 Td
+(19) Tj
+0 -15 Td
+(information in one place. The record management modules are available in the left) Tj
+0 -15 Td
+(navigation menu.) Tj
+0 -15 Td
+(- Available Record Modules are :) Tj
+0 -15 Td
+(1. Minutes of the Meeting) Tj
+0 -15 Td
+(2. Student Engagement) Tj
+0 -15 Td
+(3. Procurement Records) Tj
+0 -15 Td
+(4. Budget Estimation) Tj
+0 -15 Td
+(5. Divisional Records) Tj
+0 -15 Td
+(6. Customer Feedback) Tj
+0 -15 Td
+(7. Training Records) Tj
+0 -15 Td
+(8. Technical Reports) Tj
+0 -15 Td
+(9. Digital Library) Tj
+0 -15 Td
+(- Users can open any module by clicking the corresponding option from the navigation) Tj
+0 -15 Td
+(menu.) Tj
+0 -15 Td
+(Project Modules) Tj
+0 -15 Td
+(Uploading a Record) Tj
+0 -15 Td
+(Users can upload documents such as reports, meeting minutes, or project files.) Tj
+0 -15 Td
+(Steps to Upload a Record) Tj
+ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 22 0 R >>
+endobj
+22 0 obj
+<< /Length 2394 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Open the required module from the left navigation menu) Tj
+0 -15 Td
+(- Click the Upload Files or Upload button.) Tj
+0 -15 Td
+(- The Upload Document window will appear.) Tj
+0 -15 Td
+(20) Tj
+0 -15 Td
+(- Click Browse File and select the document from your computer.) Tj
+0 -15 Td
+(- Supported file formats include PDF and Word documents.) Tj
+0 -15 Td
+(- Enter the required details) Tj
+0 -15 Td
+(- Click Upload.) Tj
+0 -15 Td
+(- The document will be stored in the selected module and will appear in the file list.) Tj
+0 -15 Td
+(Viewing Records) Tj
+0 -15 Td
+(- Uploaded records are displayed in a table format showing:) Tj
+0 -15 Td
+(1. File Name) Tj
+0 -15 Td
+(2. Type) Tj
+0 -15 Td
+(3. File Size) Tj
+0 -15 Td
+(4. Created Date) Tj
+0 -15 Td
+(- Users can open a document by clicking the View icon.) Tj
+0 -15 Td
+(Editing Record Information) Tj
+0 -15 Td
+(- If changes are required, users can update the record details.) Tj
+0 -15 Td
+(Steps) Tj
+0 -15 Td
+(- Locate the required record from the list.) Tj
+0 -15 Td
+(- Click the Edit icon.) Tj
+0 -15 Td
+(- Modify the required information.) Tj
+0 -15 Td
+(- Click Save Changes.) Tj
+0 -15 Td
+(Downloading Records) Tj
+0 -15 Td
+(Users can download stored documents for reference.) Tj
+0 -15 Td
+(Steps) Tj
+0 -15 Td
+(- Locate the required record.) Tj
+0 -15 Td
+(- Click the Download icon.) Tj
+0 -15 Td
+(- The file will be downloaded to the user's computer.) Tj
+0 -15 Td
+(Deleting Records) Tj
+0 -15 Td
+(If a record is no longer required, it can be removed from the system.) Tj
+0 -15 Td
+(Steps) Tj
+0 -15 Td
+(21) Tj
+0 -15 Td
+(- Locate the record in the list.) Tj
+0 -15 Td
+(- Click the Delete icon.) Tj
+0 -15 Td
+(- Confirm the deletion.) Tj
+0 -15 Td
+(13. Notifications) Tj
+0 -15 Td
+(- The system includes a notification feature to inform users about system activities.) Tj
+0 -15 Td
+(- Users can view notifications by clicking the notification icon located in the ) Tj
+0 -15 Td
+(top-right) Tj
+0 -15 Td
+(corner of the interface.) Tj
+0 -15 Td
+(Notification Section) Tj
+0 -15 Td
+(14. Changing the Account Password) Tj
+0 -15 Td
+(Users can update their account password using the Settings option available in the ) Tj
+0 -15 Td
+(system.) Tj
+0 -15 Td
+(This helps keep the account secure and prevents unauthorized access.) Tj
+0 -15 Td
+(Steps to Change the Password) Tj
+0 -15 Td
+(- Open the Settings option from the left navigation menu.) Tj
+0 -15 Td
+(22) Tj
+ET
+endstream
+endobj
+23 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 25 0 R >> >> /Contents 24 0 R >>
+endobj
+24 0 obj
+<< /Length 1727 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- The Reset Password section will appear.) Tj
+0 -15 Td
+(- Enter your Current Password in the first field.) Tj
+0 -15 Td
+(- Enter a New Password in the next field.) Tj
+0 -15 Td
+(- The new password must contain at least 8 characters and one special character.) Tj
+0 -15 Td
+(- Re-enter the New Password in the Re-Enter New Password field to confirm it.) Tj
+0 -15 Td
+(- Click the Save Password button.) Tj
+0 -15 Td
+(- After clicking Save Password, the system will update the password successfully.) Tj
+0 -15 Td
+(Password Reset Page) Tj
+0 -15 Td
+(15. Conclusion) Tj
+0 -15 Td
+(The Data Integration and Visualization Tool provides a structured and centralized) Tj
+0 -15 Td
+(environment for managing aerodynamic datasets and generating analytical visualizations.) Tj
+0 -15 Td
+(The system enables integrated analysis of CFD, Wind Tunnel, and Flight data, supporting) Tj
+0 -15 Td
+(advanced visualization, comparison, and decision-making for aerodynamic studies.) Tj
+0 -15 Td
+(By following the steps described in this tutorial, users can easily navigate the system,) Tj
+0 -15 Td
+(upload datasets, perform data analysis, generate visualizations, and manage project) Tj
+0 -15 Td
+(information efficiently.) Tj
+0 -15 Td
+(The platform supports key capabilities such as multi-source data integration, over-plot) Tj
+0 -15 Td
+(comparison, derived calculations, and advanced visualization techniques including 2D,) Tj
+0 -15 Td
+(3D, contour, and log-scale plots.) Tj
+0 -15 Td
+(23) Tj
+0 -15 Td
+(This tutorial ensures that new users can quickly learn how to operate the application ) Tj
+0 -15 Td
+(and) Tj
+0 -15 Td
+(effectively utilize its features for aerodynamic data analysis and engineering insights.) Tj
+0 -15 Td
+(24) Tj
+ET
+endstream
+endobj
+25 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 26
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000189 00000 n 
+0000000316 00000 n 
+0000003217 00000 n 
+0000003344 00000 n 
+0000006348 00000 n 
+0000006475 00000 n 
+0000008778 00000 n 
+0000008906 00000 n 
+0000011271 00000 n 
+0000011400 00000 n 
+0000014066 00000 n 
+0000014195 00000 n 
+0000016406 00000 n 
+0000016535 00000 n 
+0000018813 00000 n 
+0000018942 00000 n 
+0000021655 00000 n 
+0000021784 00000 n 
+0000024776 00000 n 
+0000024905 00000 n 
+0000027352 00000 n 
+0000027481 00000 n 
+0000029261 00000 n 
+trailer
+<< /Size 26 /Root 1 0 R >>
+startxref
+29332
+%%EOF

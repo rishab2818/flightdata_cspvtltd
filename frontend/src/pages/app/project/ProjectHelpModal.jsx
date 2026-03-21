@@ -24,7 +24,7 @@ export default function ProjectHelpModal({ open, onClose }) {
   if (!open) return null;
 
   const manualUrl = "/manuals/user-manual.pdf";
-  const tutorialUrl = manualUrl;
+  const tutorialUrl = "/manuals/tutorial.pdf";
 
   const handleViewManual = () => {
     window.open(manualUrl, "_blank", "noopener,noreferrer");

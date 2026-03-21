@@ -6,6 +6,10 @@ export const projectApi = {
     const { data } = await axiosClient.get("/api/projects/count");
     return data;
   },
+  trackReportExport: async (payload) => {
+    const { data } = await axiosClient.post("/api/projects/report-exports/track", payload);
+    return data;
+  },
   list: async (pagination = {}) => {
     const { page = 1, limit = 30 } = pagination;
     const { data } = await axiosClient.get('/api/projects', { params: { page, limit } });

@@ -50,6 +50,12 @@ export default function Dashboard() {
     { name: "CFD", shortName: "CFD", value: Number(counts?.cfd || 0), color: "#43C0DF" },
   ];
 
+  const reportDistributionData = [
+    { name: "Wind", shortName: "WTD", value: Number(counts?.report_wind || 0), color: "#FF8E86" },
+    { name: "Flight", shortName: "Flight", value: Number(counts?.report_flight || 0), color: "#FFC3C0" },
+    { name: "CFD", shortName: "CFD", value: Number(counts?.report_cfd || 0), color: "#43C0DF" },
+  ];
+
   return (
     <div className="dashboard-page">
       <div className="dashboard-container">
@@ -61,7 +67,7 @@ export default function Dashboard() {
           {isGDorDH && (
             <div className="dashboard-charts">
               <PieChartCard title="Data Distribution" data={distributionData} />
-              <PieChartCard title="Reports" value={4089} />
+              <PieChartCard title="Reports" value={counts?.total_reports} data={reportDistributionData} />
             </div>
           )}
         </div>
