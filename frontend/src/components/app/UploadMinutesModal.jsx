@@ -5,6 +5,7 @@ import { documentsApi } from "../../api/documentsApi";
 import AssigneeSearchInput from "./AssigneeSearchInput";
 import UploadSimple from "../../assets/UploadSimple.svg";
 import load from "../../assets/load.svg";
+import { getRestrictedFileTypeMessage, isRestrictedFileType } from "../../lib/fileRestrictions";
 import "./UploadMinutesModal.css";
 
 const BORDER = "#E5E7EB";
@@ -289,7 +290,15 @@ export default function UploadMinutesModal({
 
   const handleFileChange = (e) => {
     const f = e.target.files && e.target.files[0];
-    if (f) setFile(f);
+    if (!f) return;
+    if (isRestrictedFileType(f)) {
+      setFile(null);
+      setError(getRestrictedFileTypeMessage(f));
+      e.target.value = "";
+      return;
+    }
+    setError("");
+    setFile(f);
   };
 
   const handleActionPointKeyDown = (e) => {

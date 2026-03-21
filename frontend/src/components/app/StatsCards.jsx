@@ -21,11 +21,19 @@ function formatTotal(value) {
   if (value === null || value === undefined) return '--';
   const n = Number(value);
   if (!Number.isFinite(n)) return '--';
-  return n.toString().padStart(2, '0');
+  if (Math.abs(n) >= 1000000) {
+    const formatted = (n / 1000000).toFixed(n >= 10000000 ? 0 : 1);
+    return `${formatted.replace(/\.0$/, '')}m`;
+  }
+  if (Math.abs(n) >= 1000) {
+    const formatted = (n / 1000).toFixed(n >= 10000 ? 0 : 1);
+    return `${formatted.replace(/\.0$/, '')}k`;
+  }
+  return `${n}`;
 }
 
 export default function StatsCardsImproved({ className = 'stats-grid' }) {
-  const [totalProjects, setTotalProjects] = useState(null);
+  const [counts, setCounts] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,12 +42,18 @@ export default function StatsCardsImproved({ className = 'stats-grid' }) {
       try {
         const data = await projectApi.getCounts();
         if (!cancelled) {
-          setTotalProjects(data?.total ?? 0);
+          setCounts(data || {});
         }
       } catch (e) {
         console.error('Failed to fetch project count', e);
         if (!cancelled) {
-          setTotalProjects(0);
+          setCounts({
+            total_projects: 0,
+            cfd: 0,
+            wind: 0,
+            flight: 0,
+            aero: 0,
+          });
         }
       }
     }
@@ -49,11 +63,11 @@ export default function StatsCardsImproved({ className = 'stats-grid' }) {
   }, []);
 
   const stats = [
-    { title: 'Total Projects', value: formatTotal(totalProjects), icon: FolderOpen },
-    { title: 'CFD Data', value: '143k', icon: Wind },
-    { title: 'Wind Data', value: '124k', icon: Windmill },
-    { title: 'Flight Data', value: '240k', icon: AirplaneInFlight },
-    { title: 'Aero Data', value: '123k', icon: Airplane },
+    { title: 'Total Projects', value: formatTotal(counts?.total_projects), icon: FolderOpen },
+    { title: 'CFD Data', value: formatTotal(counts?.cfd), icon: Wind },
+    { title: 'Wind Data', value: formatTotal(counts?.wind), icon: Windmill },
+    { title: 'Flight Data', value: formatTotal(counts?.flight), icon: AirplaneInFlight },
+    { title: 'Aero Data', value: formatTotal(counts?.aero), icon: Airplane },
     { title: 'Total Reports', value: '12k', icon: Note },
   ];
 

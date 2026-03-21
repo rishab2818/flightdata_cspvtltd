@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { FiUploadCloud, FiCalendar } from "react-icons/fi";
 import { documentsApi } from "../../api/documentsApi";
+import { getRestrictedFileTypeMessage, isRestrictedFileType } from "../../lib/fileRestrictions";
 
 const BORDER = "#E5E7EB";
 const PRIMARY = "#1976D2";
@@ -126,7 +127,15 @@ export default function UploadSectionDocumentModal({
 
   const handleFileChange = (e) => {
     const f = e.target.files && e.target.files[0];
-    if (f) setFile(f);
+    if (!f) return;
+    if (isRestrictedFileType(f)) {
+      setFile(null);
+      setError(getRestrictedFileTypeMessage(f));
+      e.target.value = "";
+      return;
+    }
+    setError("");
+    setFile(f);
   };
 
   return (

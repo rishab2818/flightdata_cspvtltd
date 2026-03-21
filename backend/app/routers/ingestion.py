@@ -13,6 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.config import settings
+from app.core.file_restrictions import ensure_allowed_filename
 from app.core.minio_client import get_minio_client
 from app.core.redis_client import get_async_redis
 from app.core.system_info import describe_autoscale
@@ -142,6 +143,7 @@ async def start_ingestion_batch(
     files: list[UploadFile] = File(...),
     dataset_type: str = Form(...),          # cfd/wind/flight
     tag_name: str = Form(...),
+    source: str | None = Form(None),
     header_mode: str = Form("file"),
     custom_headers: str | None = Form(None),
     manifest: str | None = Form(None),      # JSON list aligned with files order: [{visualize:true/false}]
@@ -186,6 +188,7 @@ async def start_ingestion_batch(
 
     for idx, file in enumerate(files):
         original_name = file.filename or f"file_{idx}"
+        ensure_allowed_filename(original_name)
         ext = os.path.splitext(original_name.lower())[-1]
         requested_visualize = False
         requested_sheets: list[str] = []
@@ -360,6 +363,14 @@ async def start_ingestion_batch(
                     parse_range=None,
                 )
             )
+
+    if str(source or "").strip().lower() == "project_overview":
+        await projects.increment_data_counter(
+            project_id=project_id,
+            dataset_key=dataset_type,
+            actor_email=user.email,
+            amount=1,
+        )
 
     return IngestionBatchCreateResponse(
         batch_id=batch_id,

@@ -4,6 +4,8 @@ from datetime import datetime
 from bson import ObjectId
 from app.db.mongo import get_db
 
+DATA_COUNTER_KEYS = ("cfd", "wind", "flight", "others")
+
 
 # -----------------------------
 # Helpers
@@ -11,6 +13,27 @@ from app.db.mongo import get_db
 def _oid(v: str | ObjectId):
     """Return ObjectId if string is valid; else return as-is."""
     return ObjectId(v) if isinstance(v, str) and ObjectId.is_valid(v) else v
+
+
+def _default_data_counters() -> list[dict]:
+    return [{"key": key, "count": 0} for key in DATA_COUNTER_KEYS]
+
+
+def _normalize_data_counters(counters) -> list[dict]:
+    counts_by_key = {key: 0 for key in DATA_COUNTER_KEYS}
+
+    for item in counters or []:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key") or "").strip().lower()
+        if key not in counts_by_key:
+            continue
+        try:
+            counts_by_key[key] = max(0, int(item.get("count") or 0))
+        except (TypeError, ValueError):
+            counts_by_key[key] = 0
+
+    return [{"key": key, "count": counts_by_key[key]} for key in DATA_COUNTER_KEYS]
 
 
 def _normalize(doc: dict) -> dict:
@@ -30,6 +53,7 @@ def _normalize(doc: dict) -> dict:
                 "user_id": str(mid) if isinstance(mid, ObjectId) else mid
             })
     doc["members"] = members
+    doc["data_counters"] = _normalize_data_counters(doc.get("data_counters"))
     return doc
 
 
@@ -66,6 +90,7 @@ class ProjectRepository:
             "project_name": name,
             "project_description": desc or "",
             "members": members,  # [{email, user_id:ObjectId}]
+            "data_counters": _default_data_counters(),
             "created_by": creator_email,
             "created_at": datetime.utcnow(),
         }
@@ -93,10 +118,76 @@ class ProjectRepository:
         db = await get_db()
         return await db.projects.count_documents({"members.email": user_email})
 
+    async def aggregated_counts_for_user(self, user_email: str) -> dict:
+        db = await get_db()
+        match_query = {"members.email": user_email}
+
+        total_projects = await db.projects.count_documents(match_query)
+        pipeline = [
+            {"$match": match_query},
+            {"$unwind": {"path": "$data_counters", "preserveNullAndEmptyArrays": True}},
+            {
+                "$group": {
+                    "_id": "$data_counters.key",
+                    "total": {"$sum": {"$ifNull": ["$data_counters.count", 0]}},
+                }
+            },
+        ]
+        rows = await db.projects.aggregate(pipeline).to_list(length=len(DATA_COUNTER_KEYS) + 2)
+        counts = {key: 0 for key in DATA_COUNTER_KEYS}
+        for row in rows:
+            key = str(row.get("_id") or "").strip().lower()
+            if key in counts:
+                counts[key] = max(0, int(row.get("total") or 0))
+
+        return {
+            "total_projects": total_projects,
+            "cfd": counts["cfd"],
+            "wind": counts["wind"],
+            "flight": counts["flight"],
+            "others": counts["others"],
+            "aero": counts["cfd"] + counts["wind"] + counts["flight"],
+        }
+
     async def get_if_member(self, project_id: str, user_email: str) -> Optional[dict]:
         db = await get_db()
         d = await db.projects.find_one({"_id": _oid(project_id), "members.email": user_email})
         return _normalize(d) if d else None
+
+    async def increment_data_counter(
+        self,
+        project_id: str,
+        dataset_key: str,
+        actor_email: str,
+        amount: int = 1,
+    ) -> Optional[dict]:
+        db = await get_db()
+        pid = _oid(project_id)
+        normalized_key = str(dataset_key or "").strip().lower()
+        if normalized_key not in DATA_COUNTER_KEYS:
+            return None
+        if amount <= 0:
+            doc = await db.projects.find_one({"_id": pid, "members.email": actor_email})
+            return _normalize(doc) if doc else None
+
+        has_access = await db.projects.find_one({"_id": pid, "members.email": actor_email}, {"_id": 1})
+        if not has_access:
+            return None
+
+        await db.projects.update_one(
+            {"_id": pid, "data_counters.key": {"$ne": normalized_key}},
+            {"$push": {"data_counters": {"key": normalized_key, "count": 0}}},
+        )
+        await db.projects.update_one(
+            {"_id": pid, "data_counters.key": normalized_key},
+            {
+                "$inc": {"data_counters.$.count": int(amount)},
+                "$set": {"updated_at": datetime.utcnow()},
+            },
+        )
+
+        doc = await db.projects.find_one({"_id": pid})
+        return _normalize(doc) if doc else None
 
     # -------------------------
     # UPDATE (description only)

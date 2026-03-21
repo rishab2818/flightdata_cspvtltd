@@ -13,6 +13,7 @@ import {
     readLocalTextHead,
     readLocalTextRange,
 } from '../../../uploadPreview/localTextPreview'
+import { getRestrictedFileTypeMessage, isRestrictedFileType } from '../../../lib/fileRestrictions'
 import { useLoader } from '../../../context/LoaderContext'
 import './ProjectUploadModal.css'
 
@@ -776,6 +777,14 @@ export default function UploadModal({
         setError(null)
         setResult(null)
 
+        const blockedFile = incoming.find((file) => isRestrictedFileType(file))
+        if (blockedFile) {
+            setError(getRestrictedFileTypeMessage(blockedFile))
+            const el = document.getElementById('fd-modal-file-input')
+            if (el) el.value = ''
+            return
+        }
+
         setFiles((prev) => {
             const existingKeys = new Set(prev.map((x) => fileKey(x.file)))
             const appended = []
@@ -1036,6 +1045,7 @@ export default function UploadModal({
                 {
                     datasetType,
                     tagName: tag,
+                    source: 'project_overview',
                     headerMode,
                     customHeaders: headerMode === 'custom' && hasCustomHeaderFiles && applyCustomHeadersToAll ? headersList : null,
                     manifest,

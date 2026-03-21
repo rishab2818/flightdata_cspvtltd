@@ -13,7 +13,16 @@ async function computeSha256(file) {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export default function DigitalLibraryUploadModal({ open, onClose, onUploaded }) {
+export default function DigitalLibraryUploadModal({
+  open,
+  onClose,
+  onUploaded,
+  section = "digital_library",
+  title = "Upload File",
+  uploadLabel = "Upload Document",
+  description = "Attach training related file here",
+  supported = "PDF/Word",
+}) {
   const [file, setFile] = useState(null);
   const [tag, setTag] = useState("");
   const [docDate, setDocDate] = useState(() => toIsoDate(new Date()));
@@ -55,7 +64,7 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
       const contentType = file.type || "application/octet-stream";
 
       const initPayload = {
-        section: "digital_library",
+        section,
         tag: tag.trim(),
         doc_date: docDate,
         filename: file.name,
@@ -73,7 +82,7 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
       });
 
       const confirmPayload = {
-        section: "digital_library",
+        section,
         tag: tag.trim(),
         doc_date: docDate,
         storage_key: initRes.storage_key,
@@ -98,12 +107,12 @@ export default function DigitalLibraryUploadModal({ open, onClose, onUploaded })
     <>
       <div className="upload-backdrop">
         <div className="upload-card">
-          <div className="upload-title">Upload File</div>
+          <div className="upload-title">{title}</div>
 
           <FileUploadBox
-  label="Upload Document"
-  description="Attach training related file here"
-  supported="PDF/Word"
+  label={uploadLabel}
+  description={description}
+  supported={supported}
   file={file}
   onFileSelected={(f) => setFile(f)}
   currentFileName={file ? file.name : null}

@@ -4,6 +4,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, validator
 
+from app.core.file_restrictions import ensure_allowed_filename
+
 
 class RecordSection(str, Enum):
     INVENTORY_RECORDS = "inventory-records"
@@ -21,6 +23,12 @@ class BaseRecordFile(BaseModel):
     content_hash: Optional[str] = Field(
         None, description="Hash of the uploaded file to prevent duplicates"
     )
+
+    @validator("original_name")
+    def validate_original_name(cls, value):
+        if value is None:
+            return value
+        return ensure_allowed_filename(value)
 
 
 class QuantityAssignee(BaseModel):
@@ -159,3 +167,7 @@ class InitRecordUpload(BaseModel):
     content_type: Optional[str] = None
     size_bytes: Optional[int] = None
     content_hash: str = Field(..., min_length=32)
+
+    @validator("filename")
+    def validate_filename(cls, value):
+        return ensure_allowed_filename(value)

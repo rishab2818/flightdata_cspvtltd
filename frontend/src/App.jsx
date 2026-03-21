@@ -7,7 +7,6 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import UserManagement from './pages/admin/UserManagement'
 import "./styles/common.css";
 
-
 // User app
 import AppShell from './pages/app/AppShell'
 import Dashboard from './pages/app/Dashboard'
@@ -39,12 +38,11 @@ export default function App() {
   return (
     <Routes>
 
-       <Route
+      <Route
         path="/app/projects/:projectId/visualisation/full/:vizId"
         element={<ProjectVisualisationFullScreen />}
-      /> 
+      />
 
-    
       <Route path="/login" element={<Login />} />
 
       <Route element={<ProtectedAdmin />}>
@@ -77,11 +75,12 @@ export default function App() {
           <Route path="data" element={<ProjectOverview />} />
           <Route index element={<ProjectOverview />} />
           <Route path="visualisation" element={<ProjectVisualisation />} />
+          <Route path="help" element={<Navigate to=".." replace />} />
           <Route path="meeting" element={<MinutesOfTheMeeting />} />
           <Route path="report" element={<TechnicalReports />} />
           <Route path="digital" element={<DigitalLibrary />} />
           <Route path="student" element={<StudentEngagement />} />
-          <Route path="procurement" element={<InventoryRecords/>} />
+          <Route path="procurement" element={<InventoryRecords />} />
           <Route path="divisional" element={<DivisionalRecords />} />
           <Route path="feedback" element={<CustomerFeedbacks />} />
           <Route path="training" element={<TrainingRecords />} />
@@ -96,9 +95,6 @@ export default function App() {
       />
       <Route path="/processed-preview/:jobId" element={<ProcessedPreviewPage />} />
       <Route path="/raw-preview/:jobId" element={<RawPreviewPage />} />
-     
-   
-
     </Routes>
   )
 }

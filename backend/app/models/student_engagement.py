@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
+from app.core.file_restrictions import ensure_allowed_filename
+
 
 class ApprovalStatus(str, Enum):
     APPROVED = "approved"
@@ -30,6 +32,12 @@ class StudentEngagementCreate(BaseModel):
     content_hash: Optional[str] = Field(
         None, description="Hash of the uploaded file to avoid duplicate uploads"
     )
+
+    @validator("original_name")
+    def validate_original_name(cls, value):
+        if value is None:
+            return value
+        return ensure_allowed_filename(value)
 
     @validator("end_date")
     def validate_end_date(cls, v, values):
@@ -61,3 +69,7 @@ class InitEngagementUpload(BaseModel):
     content_type: Optional[str] = None
     size_bytes: Optional[int] = None
     content_hash: str = Field(..., min_length=32)
+
+    @validator("filename")
+    def validate_filename(cls, value):
+        return ensure_allowed_filename(value)

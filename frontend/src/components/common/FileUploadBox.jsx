@@ -1,6 +1,7 @@
 import React from "react";
 import UploadSimple from "../../assets/UploadSimple.svg";
 import { FiUploadCloud } from "react-icons/fi";
+import { getRestrictedFileTypeMessage, isRestrictedFileType } from "../../lib/fileRestrictions";
 
 const BORDER = "#E2E8F0";
 const PRIMARY = "#1976D2";
@@ -14,6 +15,11 @@ export default function FileUploadBox({
 }) {
   const handleChange = (e) => {
     const file = e.target.files?.[0] || null;
+    if (file && isRestrictedFileType(file)) {
+      window.alert(getRestrictedFileTypeMessage(file));
+      e.target.value = "";
+      return;
+    }
     if (onFileSelected) onFileSelected(file);
   };
 

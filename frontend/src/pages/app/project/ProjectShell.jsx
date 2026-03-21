@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { FiHelpCircle } from "react-icons/fi";
 import { projectApi } from '../../../api/projectapi'
 import TopBarActions from '../../../components/layout/TopBarActions'
 import ProjectSearchButton from '../../../projectSearch/components/ProjectSearchButton'
+import ProjectHelpModal from './ProjectHelpModal'
 import '../../../styles/project.css'
 
 import Database2 from "../../../assets/Database2.svg";
@@ -54,9 +56,10 @@ export default function ProjectShell() {
   // search
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebouncedValue(searchQuery, 350);
-  // const [searchResults, setSearchResults] = useState([]);
-  // const [searchLoading, setSearchLoading] = useState(false);
-  // const [searchOpen, setSearchOpen] = useState(false);
+
+  // keep this because your outside click effect uses it
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const searchWrapRef = useRef(null);
 
@@ -66,7 +69,6 @@ export default function ProjectShell() {
     setError(null);
   };
 
-  // project fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -87,79 +89,6 @@ export default function ProjectShell() {
     };
   }, [projectId]);
 
-  // GLOBAL SEARCH (across app)
-  // useEffect(() => {
-  //   let cancelled = false;
-
-  //   (async () => {
-  //     const q = (debouncedQuery || "").trim();
-
-  //     if (!q) {
-  //       setSearchResults([]);
-  //       setSearchLoading(false);
-  //       setSearchOpen(false);
-  //       return;
-  //     }
-
-  //     try {
-  //       setSearchLoading(true);
-  //       setSearchOpen(true);
-
-  //       // ✅ global app search
-  //       const data = await projectApi.searchAllFiles(q);
-  //       if (!cancelled) setSearchResults(Array.isArray(data) ? data : []);
-  //     } catch (e) {
-  //       if (!cancelled) setSearchResults([]);
-  //       console.error(e);
-  //     } finally {
-  //       if (!cancelled) setSearchLoading(false);
-  //     }
-  //   })();
-
-  //   return () => {
-  //     cancelled = true;
-  //   };
-  // }, [debouncedQuery]);
-
-//   useEffect(() => {
-//   let cancelled = false;
-
-//   (async () => {
-//     const q = (debouncedQuery || "")
-//       .trim()
-//       .replace(/[\\\/]+$/, ""); // remove trailing \ or /
-
-//     if (!q) {
-//       setSearchResults([]);
-//       setSearchLoading(false);
-//       setSearchOpen(false);
-//       return;
-//     }
-
-//     try {
-//       setSearchLoading(true);
-//       setSearchOpen(true);
-
-//       // ✅ Use project search (most reliable / already exists)
-//       const data = await projectApi.searchAllFiles(q);
-
-//       if (!cancelled) setSearchResults(Array.isArray(data) ? data : []);
-//     } catch (err) {
-//       // show the REAL reason
-//       console.log("SEARCH STATUS:", err?.response?.status);
-//       console.log("SEARCH DETAIL:", err?.response?.data);
-//       setSearchResults([]);
-//     } finally {
-//       if (!cancelled) setSearchLoading(false);
-//     }
-//   })();
-
-//   return () => {
-//     cancelled = true;
-//   };
-// }, [debouncedQuery, projectId]);
-
-  // close dropdown on outside click / ESC
   useEffect(() => {
     const onDown = (e) => {
       if (!searchWrapRef.current) return;
@@ -179,8 +108,6 @@ export default function ProjectShell() {
   const openFile = (file) => {
     if (!file) return;
 
-    // If your backend returns "download_url", use it.
-    // Otherwise you can navigate to a viewer route etc.
     if (file.download_url) {
       window.open(file.download_url, "_blank", "noopener,noreferrer");
     } else {
@@ -225,51 +152,25 @@ export default function ProjectShell() {
         <header className="project-shell__header">
           <div className="project-shell__header-main">
             <div className="project-shell__title-area">
-              <p className="project-shell__header-label">{loading ? "Loading…" : project?.project_name}</p>
-
-              {/* <div className="project-search" ref={searchWrapRef}>
-                <input
-                  type="text"
-                  placeholder="Search files across the app..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => {
-                    if ((searchQuery || "").trim()) setSearchOpen(true);
-                  }}
-                  className="project-search-input"
-                />
-
-                {searchLoading && <div className="search-loading">Searching...</div>}
-
-                {searchOpen && searchResults.length > 0 && (
-                  <div className="search-results">
-                    {searchResults.map((file) => (
-                      <div key={file.id || file._id || file.file_id} className="search-item" onClick={() => openFile(file)}>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          <span>{file.file_name || file.name || "Untitled file"}</span>
-                          {file.project_name && (
-                            <span style={{ fontSize: 12, opacity: 0.7 }}>
-                              {file.project_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {searchOpen && !searchLoading && (debouncedQuery || "").trim() && searchResults.length === 0 && (
-                  <div className="search-results">
-                    <div className="search-item" style={{ cursor: "default", opacity: 0.7 }}>
-                      No files found
-                    </div>
-                  </div>
-                )}
-              </div> */}
+              <p className="project-shell__header-label">
+                {loading ? "Loading…" : project?.project_name}
+              </p>
             </div>
           </div>
+
           <div className="project-shell__header-right">
             <ProjectSearchButton projectId={projectId} />
+
+            <button
+              type="button"
+              className="project-shell__help-btn"
+              onClick={() => setShowHelpModal(true)}
+              title="Help"
+            >
+              <FiHelpCircle size={26} />
+             
+            </button>
+
             <TopBarActions />
           </div>
         </header>
@@ -281,6 +182,11 @@ export default function ProjectShell() {
           <Outlet context={{ project, refreshProject }} />
         )}
       </div>
+
+      <ProjectHelpModal
+        open={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
     </div>
   );
 }

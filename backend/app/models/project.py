@@ -2,6 +2,11 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
+class ProjectDataCounter(BaseModel):
+    key: str
+    count: int = 0
+
+
 # Your base persisted model (Mongo doc)
 class Project(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
@@ -9,6 +14,7 @@ class Project(BaseModel):
     project_description: Optional[str] = Field(None, max_length=1000)
     # store members as objects for future-proofing: {"email":..., "user_id": "..."}
     members: List[dict] = Field(default_factory=list)
+    data_counters: List[ProjectDataCounter] = Field(default_factory=list)
     created_by: str = Field(..., description="Creator's email")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -35,6 +41,7 @@ class ProjectOut(BaseModel):
     project_name: str
     project_description: Optional[str] = None
     members: List[ProjectMember]
+    data_counters: List[ProjectDataCounter] = Field(default_factory=list)
     created_by: str
     created_at: datetime
 

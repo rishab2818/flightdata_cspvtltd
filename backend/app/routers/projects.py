@@ -41,8 +41,7 @@ async def list_projects(
 
 @router.get("/count")
 async def count_projects(user: CurrentUser = Depends(get_current_user)):
-    total = await repo.count_for_user(user.email)
-    return {"total": total}
+    return await repo.aggregated_counts_for_user(user.email)
 
 
 # ------- GD/DH-only member search over entire user DB -------

@@ -79,6 +79,11 @@ export const visualizationApi = {
     return data
   },
 
+  raw: async (vizId, params = {}) => {
+    const { data } = await axiosClient.get(`/api/visualizations/${vizId}/raw`, { params })
+    return data
+  },
+
   remove: async (vizId) => {
     await axiosClient.delete(`/api/visualizations/${vizId}`)
   },

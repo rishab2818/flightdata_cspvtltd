@@ -160,6 +160,7 @@ export const ingestionApi = {
 
     if (options.datasetType) form.append('dataset_type', options.datasetType)
     if (options.tagName) form.append('tag_name', options.tagName)
+    if (options.source) form.append('source', options.source)
 
     if (options.headerMode) form.append('header_mode', options.headerMode)
     if (options.customHeaders?.length) form.append('custom_headers', JSON.stringify(options.customHeaders))

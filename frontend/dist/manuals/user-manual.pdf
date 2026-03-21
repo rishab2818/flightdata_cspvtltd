@@ -1,0 +1,2596 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 24 /Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R 25 0 R 27 0 R 29 0 R 31 0 R 33 0 R 35 0 R 37 0 R 39 0 R 41 0 R 43 0 R 45 0 R 47 0 R 49 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2683 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(USER MANUAL) Tj
+0 -15 Td
+(Data Integration and Visualization Tool) Tj
+0 -15 Td
+(Version 1.0) Tj
+0 -15 Td
+(CHANGMA SHRISTI) Tj
+0 -15 Td
+(1st Floor, Earthen Phoenix, 10th E Cross Rd, Sanjeevappa Layout, Nagavarapalya, C V) Tj
+0 -15 Td
+(Raman Nagar, Bengaluru, Karnataka 560093.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Table of Contents) Tj
+0 -15 Td
+(1. Introduction ) Tj
+0 -15 Td
+(..............................................................................................................) Tj
+0 -15 Td
+( 1) Tj
+0 -15 Td
+(2. User Roles and Access Levels ) Tj
+0 -15 Td
+(.................................................................................... 1) Tj
+0 -15 Td
+(3. Login Procedure ) Tj
+0 -15 Td
+(........................................................................................................) Tj
+0 -15 Td
+( 2) Tj
+0 -15 Td
+(4. Admin ) Tj
+0 -15 Td
+(Dashboard......................................................................................................) Tj
+0 -15 Td
+( 2) Tj
+0 -15 Td
+(5. User Management card: ) Tj
+0 -15 Td
+(.............................................................................................) Tj
+0 -15 Td
+( 4) Tj
+0 -15 Td
+(5.1 Manage User Login ) Tj
+0 -15 Td
+(...............................................................................................) Tj
+0 -15 Td
+( 4) Tj
+0 -15 Td
+(5.2 Change User Password \(Admin\) ) Tj
+0 -15 Td
+(............................................................................ 5) Tj
+0 -15 Td
+(6.Dashboard overview: ) Tj
+0 -15 Td
+(..................................................................................................) Tj
+0 -15 Td
+( 6) Tj
+0 -15 Td
+(6.1 Summary Cards ) Tj
+0 -15 Td
+(...................................................................................................) Tj
+0 -15 Td
+( 6) Tj
+0 -15 Td
+(6.2 Add New Project ) Tj
+0 -15 Td
+(..................................................................................................) Tj
+0 -15 Td
+( 7) Tj
+0 -15 Td
+(6.3 Notification ) Tj
+0 -15 Td
+(Panel.................................................................................................) Tj
+0 -15 Td
+( 8) Tj
+0 -15 Td
+(7. Minutes of Meeting ) Tj
+0 -15 Td
+(....................................................................................................) Tj
+0 -15 Td
+( 9) Tj
+0 -15 Td
+(7.1 Meeting Categories ) Tj
+0 -15 Td
+(..............................................................................................) Tj
+0 -15 Td
+( 9) Tj
+0 -15 Td
+(7.2 Upload Meeting Minutes ) Tj
+0 -15 Td
+(..................................................................................... 10) Tj
+0 -15 Td
+(7.3 My Action - View and Edit ) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 2834 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(................................................................................... 11) Tj
+0 -15 Td
+(8. Student Engagement ) Tj
+0 -15 Td
+(...............................................................................................) Tj
+0 -15 Td
+( 12) Tj
+0 -15 Td
+(8.1 Dashboard Overview ) Tj
+0 -15 Td
+(..........................................................................................) Tj
+0 -15 Td
+( 13) Tj
+0 -15 Td
+(8.2 Add Student ) Tj
+0 -15 Td
+(Program..........................................................................................) Tj
+0 -15 Td
+( 14) Tj
+0 -15 Td
+(9. Procurement Records ) Tj
+0 -15 Td
+(..............................................................................................) Tj
+0 -15 Td
+( 15) Tj
+0 -15 Td
+(9.1 Dashboard Summary ) Tj
+0 -15 Td
+(.........................................................................................) Tj
+0 -15 Td
+( 15) Tj
+0 -15 Td
+(9.2 Add Supply Order ) Tj
+0 -15 Td
+(...............................................................................................) Tj
+0 -15 Td
+( 17) Tj
+0 -15 Td
+(9.3 Assigning Quantities ) Tj
+0 -15 Td
+(...........................................................................................) Tj
+0 -15 Td
+( 18) Tj
+0 -15 Td
+(10. Budget Estimation ) Tj
+0 -15 Td
+(.................................................................................................) Tj
+0 -15 Td
+( 19) Tj
+0 -15 Td
+(10.1 Budget Overview ) Tj
+0 -15 Td
+(..............................................................................................) Tj
+0 -15 Td
+( 19) Tj
+0 -15 Td
+(10. 2 Upload Forecast Budget ) Tj
+0 -15 Td
+(................................................................................... 21) Tj
+0 -15 Td
+(11. Divisional Records ) Tj
+0 -15 Td
+(.................................................................................................) Tj
+0 -15 Td
+( 22) Tj
+0 -15 Td
+(11.1 Summary Overview ) Tj
+0 -15 Td
+(..........................................................................................) Tj
+0 -15 Td
+( 23) Tj
+0 -15 Td
+(11.2 Upload Divisional Record ) Tj
+0 -15 Td
+(.................................................................................. 24) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(12. Customer Feedbacks ) Tj
+0 -15 Td
+(.............................................................................................) Tj
+0 -15 Td
+( 25) Tj
+0 -15 Td
+(12.1 Feedback Overview Dashboard ) Tj
+0 -15 Td
+(......................................................................... 25) Tj
+0 -15 Td
+(12.2 Upload / Edit Feedback ) Tj
+0 -15 Td
+(..................................................................................... 26) Tj
+0 -15 Td
+(13. Training Records ) Tj
+0 -15 Td
+(....................................................................................................) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2795 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+( 27) Tj
+0 -15 Td
+(13.2 Upload / Edit Training Record ) Tj
+0 -15 Td
+(............................................................................ 29) Tj
+0 -15 Td
+(14. Technical & Design Reports ) Tj
+0 -15 Td
+(.................................................................................... 30) Tj
+0 -15 Td
+(14.1 Overview Section ) Tj
+0 -15 Td
+(.............................................................................................) Tj
+0 -15 Td
+( 30) Tj
+0 -15 Td
+(14.2 Upload / Edit Report ) Tj
+0 -15 Td
+(.........................................................................................) Tj
+0 -15 Td
+( 31) Tj
+0 -15 Td
+(15. Digital Library ) Tj
+0 -15 Td
+(........................................................................................................) Tj
+0 -15 Td
+( 32) Tj
+0 -15 Td
+(15.1 Search and Filtering ) Tj
+0 -15 Td
+(..........................................................................................) Tj
+0 -15 Td
+( 32) Tj
+0 -15 Td
+(15.2 Upload File ) Tj
+0 -15 Td
+(......................................................................................................) Tj
+0 -15 Td
+( 33) Tj
+0 -15 Td
+(16. Settings ) Tj
+0 -15 Td
+(................................................................................................................) Tj
+0 -15 Td
+( 34) Tj
+0 -15 Td
+(16.1 Reset Password ) Tj
+0 -15 Td
+(................................................................................................) Tj
+0 -15 Td
+( 34) Tj
+0 -15 Td
+(17. Project Overview ) Tj
+0 -15 Td
+(...................................................................................................) Tj
+0 -15 Td
+( 35) Tj
+0 -15 Td
+(17.1 Dataset Tabs ) Tj
+0 -15 Td
+(....................................................................................................) Tj
+0 -15 Td
+( 36) Tj
+0 -15 Td
+(17.2 Global Search ) Tj
+0 -15 Td
+(..................................................................................................) Tj
+0 -15 Td
+( 37) Tj
+0 -15 Td
+(17.3 Edit Project ) Tj
+0 -15 Td
+(......................................................................................................) Tj
+0 -15 Td
+( 37) Tj
+0 -15 Td
+(17.4 Project Members ) Tj
+0 -15 Td
+(..............................................................................................) Tj
+0 -15 Td
+( 38) Tj
+0 -15 Td
+(17.4 Upload File ) Tj
+0 -15 Td
+(......................................................................................................) Tj
+0 -15 Td
+( 39) Tj
+0 -15 Td
+(17.5 Configure Plot File Headers \(if applicable\) ) Tj
+0 -15 Td
+(.......................................................... 41) Tj
+0 -15 Td
+(17.6 Select file for preview ) Tj
+0 -15 Td
+(....................................................................................... ) Tj
+0 -15 Td
+(41) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 2876 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(Image files: ) Tj
+0 -15 Td
+(..........................................................................................................) Tj
+0 -15 Td
+( 41) Tj
+0 -15 Td
+(Excel files: ) Tj
+0 -15 Td
+(...........................................................................................................) Tj
+0 -15 Td
+( 42) Tj
+0 -15 Td
+(Dat / .c text files: ) Tj
+0 -15 Td
+(..................................................................................................) Tj
+0 -15 Td
+( 42) Tj
+0 -15 Td
+(17.7 Raw preview page: ) Tj
+0 -15 Td
+(............................................................................................) Tj
+0 -15 Td
+( 45) Tj
+0 -15 Td
+(17.8 Processed Preview Page: ) Tj
+0 -15 Td
+(.................................................................................. 45) Tj
+0 -15 Td
+(18 Visualization: ) Tj
+0 -15 Td
+(.........................................................................................................) Tj
+0 -15 Td
+( 46) Tj
+0 -15 Td
+(18.1 2D Chart Type ) Tj
+0 -15 Td
+(..................................................................................................) Tj
+0 -15 Td
+( 47) Tj
+0 -15 Td
+(18.2 3D Chart Type ) Tj
+0 -15 Td
+(..................................................................................................) Tj
+0 -15 Td
+( 48) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(18.3 Axis Scale Configuration \(Log\) ) Tj
+0 -15 Td
+(........................................................................... 50) Tj
+0 -15 Td
+(18.4 Create multiple plot \(Over-plot\) ) Tj
+0 -15 Td
+(......................................................................... 52) Tj
+0 -15 Td
+(19 Calculation Module ) Tj
+0 -15 Td
+(................................................................................................) Tj
+0 -15 Td
+( 53) Tj
+0 -15 Td
+(20. Aircraft Performance Module ) Tj
+0 -15 Td
+(.................................................................................. 55) Tj
+0 -15 Td
+(1. Introduction) Tj
+0 -15 Td
+(The Data Integration and Visualization Software is a web-based application designed to) Tj
+0 -15 Td
+(manage projects, administrative records, and generate interactive data visualizations ) Tj
+0 -15 Td
+(from) Tj
+0 -15 Td
+(uploaded datasets. The system allows authorized users to organize files, track project) Tj
+0 -15 Td
+(related activities, upload structured data, and create analytical plots for comparative) Tj
+0 -15 Td
+(analysis.) Tj
+0 -15 Td
+(This manual provides step-by-step guidance for using the system, including login, ) Tj
+0 -15 Td
+(project) Tj
+0 -15 Td
+(management, record handling, data upload, visualization, and system settings.) Tj
+0 -15 Td
+(2. User Roles and Access Levels) Tj
+0 -15 Td
+(Access to system features depends on the assigned user role.) Tj
+0 -15 Td
+(Admin) Tj
+0 -15 Td
+(- Create and manage users) Tj
+0 -15 Td
+(- Assign roles and permissions) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 2405 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- View dashboard statistics) Tj
+0 -15 Td
+(- Manage projects) Tj
+0 -15 Td
+(- Access all modules) Tj
+0 -15 Td
+(User) Tj
+0 -15 Td
+(- Access assigned projects) Tj
+0 -15 Td
+(- Upload and manage datasets) Tj
+0 -15 Td
+(- Generate visualizations) Tj
+0 -15 Td
+(- Manage records within allowed modules) Tj
+0 -15 Td
+(1) Tj
+0 -15 Td
+(3. Login Procedure) Tj
+0 -15 Td
+(- Open the application.) Tj
+0 -15 Td
+(- Enter your registered email address.) Tj
+0 -15 Td
+(- Enter your password.) Tj
+0 -15 Td
+(- Click Login.) Tj
+0 -15 Td
+(If login fails, verify credentials or contact the administrator.) Tj
+0 -15 Td
+(Figure 1: Login Page) Tj
+0 -15 Td
+(4. Admin Dashboard) Tj
+0 -15 Td
+(After successful login, the system opens the Dashboard page. The dashboard provides an) Tj
+0 -15 Td
+(overview of system users and allows administrators to create new users.) Tj
+0 -15 Td
+(4.1 User Overview) Tj
+0 -15 Td
+(The User Overview panel displays a summary of all registered users in the system.) Tj
+0 -15 Td
+(The panel includes:) Tj
+0 -15 Td
+(- Total number of users) Tj
+0 -15 Td
+(- Role-wise distribution of users:) Tj
+0 -15 Td
+(2) Tj
+0 -15 Td
+(- Group Directors) Tj
+0 -15 Td
+(- Team Leads) Tj
+0 -15 Td
+(- System Managers) Tj
+0 -15 Td
+(- Junior Research Fellows) Tj
+0 -15 Td
+(- Contract Engineers) Tj
+0 -15 Td
+(Each role displays the total count along with a visual icon for quick identification. ) Tj
+0 -15 Td
+(This) Tj
+0 -15 Td
+(section helps administrators monitor user distribution across different roles.) Tj
+0 -15 Td
+(Figure 2: Admin Dashboard Page) Tj
+0 -15 Td
+(4.2 Create New User) Tj
+0 -15 Td
+(The "Create New User" section allows administrators to add new users to the system.) Tj
+0 -15 Td
+(To create a new user:) Tj
+0 -15 Td
+(- Enter the User Name.) Tj
+0 -15 Td
+(- Select the appropriate Role from the dropdown list.) Tj
+0 -15 Td
+(- Enter the Login ID \(email address\).) Tj
+0 -15 Td
+(- Enter the Password.) Tj
+0 -15 Td
+(3) Tj
+0 -15 Td
+(- Click the Create button.) Tj
+0 -15 Td
+(The system performs validation to ensure all required fields are completed. A ) Tj
+0 -15 Td
+(confirmation) Tj
+0 -15 Td
+(message is displayed upon successful user creation. The password field includes a) Tj
+0 -15 Td
+(visibility toggle to allow users to view or hide the entered password.) Tj
+0 -15 Td
+(5. User Management card:) Tj
+0 -15 Td
+(The User Management page allows administrators to view, search, and manage all ) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 2567 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(registered) Tj
+0 -15 Td
+(users in the system.) Tj
+0 -15 Td
+(Figure 3: User Management Page) Tj
+0 -15 Td
+(5.1 Manage User Login) Tj
+0 -15 Td
+(This section displays a tabular list of all users with the following details:) Tj
+0 -15 Td
+(- Name - Registered user name) Tj
+0 -15 Td
+(- Role - Assigned role \(e.g., TL, SM, GD, ADMIN\)) Tj
+0 -15 Td
+(- Email - User login ID) Tj
+0 -15 Td
+(- Access - Access level identifier) Tj
+0 -15 Td
+(- Active Status - Indicates whether the user account is active) Tj
+0 -15 Td
+(- Created Date - Date and time of user creation) Tj
+0 -15 Td
+(4) Tj
+0 -15 Td
+(- Last Login - Most recent login timestamp) Tj
+0 -15 Td
+(5.1.1 Search Functionality) Tj
+0 -15 Td
+(The search bar allows administrators to search users by:) Tj
+0 -15 Td
+(- Name) Tj
+0 -15 Td
+(- Email) Tj
+0 -15 Td
+(- Role) Tj
+0 -15 Td
+(This enables quick filtering of user records) Tj
+0 -15 Td
+(5.1.2 User Actions) Tj
+0 -15 Td
+(The Actions column provides administrative controls:) Tj
+0 -15 Td
+(- Change Password - Reset or update the user's password) Tj
+0 -15 Td
+(- Delete User - Remove a user from the system) Tj
+0 -15 Td
+(5.2 Change User Password \(Admin\)) Tj
+0 -15 Td
+(The Admin user can reset or change the password of any registered user through the) Tj
+0 -15 Td
+(User Management section. In the Manage User Login page, the administrator can view the) Tj
+0 -15 Td
+(list of users and their details. To change a password, click the Change Password icon in) Tj
+0 -15 Td
+( the) Tj
+0 -15 Td
+(Actions column for the selected user. A Change Password dialog box will appear where the) Tj
+0 -15 Td
+(administrator can enter a new password and click Save to update it or Cancel to discard ) Tj
+0 -15 Td
+(the) Tj
+0 -15 Td
+(changes.) Tj
+0 -15 Td
+(Figure 4: Change Password Dialog Page) Tj
+0 -15 Td
+(5) Tj
+0 -15 Td
+(6.Dashboard overview:) Tj
+0 -15 Td
+(The Dashboard Overview page provides a summary of project statistics and quick access to) Tj
+0 -15 Td
+(project management features.) Tj
+0 -15 Td
+(Figure 5: Dashboard Overview Page) Tj
+0 -15 Td
+(6.1 Summary Cards) Tj
+0 -15 Td
+(At the top of the dashboard, statistical summary cards display:) Tj
+0 -15 Td
+(- Total Projects) Tj
+0 -15 Td
+(- CFD Data Count) Tj
+0 -15 Td
+(- Wind Data Count) Tj
+0 -15 Td
+(- Flight Data Count) Tj
+0 -15 Td
+(- Aero Data Count) Tj
+0 -15 Td
+(- Total Reports) Tj
+0 -15 Td
+(These cards provide a quick overview of system activity and uploaded dataset volumes.) Tj
+0 -15 Td
+(6.1.1 Projects Section) Tj
+0 -15 Td
+(The Projects panel displays all available projects in a structured list format.) Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 2735 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(6) Tj
+0 -15 Td
+(Each project entry includes:) Tj
+0 -15 Td
+(- Project Name) Tj
+0 -15 Td
+(- Status \(Active/Inactive\)) Tj
+0 -15 Td
+(- Short Description) Tj
+0 -15 Td
+(- Created Date) Tj
+0 -15 Td
+(- Member Count) Tj
+0 -15 Td
+(- View Project Button) Tj
+0 -15 Td
+(Clicking the View Project button navigates to the selected project's detailed page.) Tj
+0 -15 Td
+(6.1.2 Data Distribution and Reports Panel) Tj
+0 -15 Td
+(The right-side panel displays:) Tj
+0 -15 Td
+(- Data Distribution Overview) Tj
+0 -15 Td
+(- Reports Summary) Tj
+0 -15 Td
+(If no data is available, a placeholder message is shown. Once datasets and reports are) Tj
+0 -15 Td
+(added, the panels update automatically.) Tj
+0 -15 Td
+(6.2 Add New Project) Tj
+0 -15 Td
+(Figure 6: Add Project Page) Tj
+0 -15 Td
+(7) Tj
+0 -15 Td
+(To create a new project:) Tj
+0 -15 Td
+(- Click the + New Project button.) Tj
+0 -15 Td
+(- Enter the Project Name.) Tj
+0 -15 Td
+(- Provide a Project Description.) Tj
+0 -15 Td
+(- Add Members \(search by name or email\).) Tj
+0 -15 Td
+(- Click Create.) Tj
+0 -15 Td
+(The newly created project will appear in the Projects list.) Tj
+0 -15 Td
+(6.3 Notification Panel) Tj
+0 -15 Td
+(Figure 7: Notification Panel Page) Tj
+0 -15 Td
+(? The Notification Panel allows users to receive updates about important) Tj
+0 -15 Td
+(activities performed within the project, such as completion of visualization) Tj
+0 -15 Td
+(processing or other system events. The notification icon is located at the top) Tj
+0 -15 Td
+(right corner of the application header. When a new event occurs, the icon) Tj
+0 -15 Td
+(displays a notification count badge indicating the number of unread) Tj
+0 -15 Td
+(notifications.) Tj
+0 -15 Td
+(? By clicking on the notification icon, users can view a list of recent notifications) Tj
+0 -15 Td
+(along with the corresponding message and timestamp. Notifications inform) Tj
+0 -15 Td
+(users about events such as visualization completion, system updates, or) Tj
+0 -15 Td
+(other processing results. Users can also mark all notifications as read by) Tj
+0 -15 Td
+(selecting the "Mark all as read" option available in the notification panel.) Tj
+0 -15 Td
+(8) Tj
+0 -15 Td
+(7. Minutes of Meeting) Tj
+0 -15 Td
+(The Minutes of Meeting module allows users to upload, manage, and track meeting minutes) Tj
+0 -15 Td
+(along with associated action items. Meetings can be organized under different meeting) Tj
+0 -15 Td
+(categories and linked to specific projects where applicable.) Tj
+0 -15 Td
+(Figure 8: Minutes of meeting Page) Tj
+0 -15 Td
+(7.1 Meeting Categories) Tj
+0 -15 Td
+(Users can switch between different meeting types using the tabs:) Tj
+0 -15 Td
+(- Technology Council \(TCM\)) Tj
+0 -15 Td
+(- PMRC) Tj
+0 -15 Td
+(- Executive Board Meeting) Tj
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 18 0 R >>
+endobj
+18 0 obj
+<< /Length 2196 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Group Director Meeting) Tj
+0 -15 Td
+(For PMRC and Executive Board meetings, users have the option to associate the meeting) Tj
+0 -15 Td
+(minutes with a specific project.) Tj
+0 -15 Td
+(9) Tj
+0 -15 Td
+(7.2 Upload Meeting Minutes) Tj
+0 -15 Td
+(Figure 9: Upload Meeting Minutes Page) Tj
+0 -15 Td
+(To upload a new meeting record:) Tj
+0 -15 Td
+(- Click Upload Minutes.) Tj
+0 -15 Td
+(- Browse and select a PDF or Word file.) Tj
+0 -15 Td
+(- Enter Action Points.) Tj
+0 -15 Td
+(- Assign action owners \(optional\).) Tj
+0 -15 Td
+(- Select the Meeting Date.) Tj
+0 -15 Td
+(- Enter a Tag Name.) Tj
+0 -15 Td
+(- Click Upload MOM.) Tj
+0 -15 Td
+(Supported formats include PDF and Word documents.) Tj
+0 -15 Td
+(7.2.1 Managing Action Points) Tj
+0 -15 Td
+(Each meeting can contain multiple action points assigned to users.) Tj
+0 -15 Td
+(Users can:) Tj
+0 -15 Td
+(10) Tj
+0 -15 Td
+(- Add new action points) Tj
+0 -15 Td
+(- Assign responsibilities to individuals or teams) Tj
+0 -15 Td
+(- Edit existing actions) Tj
+0 -15 Td
+(- Mark actions as completed) Tj
+0 -15 Td
+(7.3 My Action - View and Edit) Tj
+0 -15 Td
+(The "My Action" window allows users to view or modify assigned action points.) Tj
+0 -15 Td
+(The page displays:) Tj
+0 -15 Td
+(- Tag Name) Tj
+0 -15 Td
+(- Meeting Date) Tj
+0 -15 Td
+(- Assigned Person) Tj
+0 -15 Td
+(- Action Description) Tj
+0 -15 Td
+(- Completion Status) Tj
+0 -15 Td
+(Users can switch between:) Tj
+0 -15 Td
+(- View Action - Displays action details) Tj
+0 -15 Td
+(- Edit Action - Modify action description or assignment) Tj
+0 -15 Td
+(Actions can be marked as completed when tasks are finished.) Tj
+0 -15 Td
+(Figure 10: View Action Page) Tj
+0 -15 Td
+(11) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(12) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Figure 11: Edit Action Page) Tj
+0 -15 Td
+(8. Student Engagement) Tj
+0 -15 Td
+(The Student Engagement module allows users to manage student internship and academic) Tj
+0 -15 Td
+(programs. It provides functionality to add, edit, view, filter, and delete student ) Tj
+0 -15 Td
+(program) Tj
+0 -15 Td
+(records while tracking program progress and associated documentation.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Figure 12: Student Engagement Dashboard Page) Tj
+ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 20 0 R >>
+endobj
+20 0 obj
+<< /Length 2200 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(8.1 Dashboard Overview) Tj
+0 -15 Td
+(The top section displays summary cards such as:) Tj
+0 -15 Td
+(- Total Students) Tj
+0 -15 Td
+(- Internships) Tj
+0 -15 Td
+(- Ongoing Programs) Tj
+0 -15 Td
+(- Completed Programs) Tj
+0 -15 Td
+(These cards provide a quick overview of student engagement statistics.) Tj
+0 -15 Td
+(Users can also:) Tj
+0 -15 Td
+(- Filter records by Type) Tj
+0 -15 Td
+(- Filter records by Status) Tj
+0 -15 Td
+(Add new student program using the Add Student button) Tj
+0 -15 Td
+(8.1.1 Student Programs Table) Tj
+0 -15 Td
+(The Student Programs table displays all registered student records with the following) Tj
+0 -15 Td
+(details:) Tj
+0 -15 Td
+(- Student Name) Tj
+0 -15 Td
+(- College Name) Tj
+0 -15 Td
+(- Project Title) Tj
+0 -15 Td
+(- Program Type) Tj
+0 -15 Td
+(- Duration) Tj
+0 -15 Td
+(- Start Date) Tj
+0 -15 Td
+(- End Date) Tj
+0 -15 Td
+(- Guide / Mentor) Tj
+0 -15 Td
+(- Status \(Ongoing / Completed\)) Tj
+0 -15 Td
+(- Actions \(View, Edit, Delete\)) Tj
+0 -15 Td
+(13) Tj
+0 -15 Td
+(Users can perform the following actions:) Tj
+0 -15 Td
+(- View program details) Tj
+0 -15 Td
+(- Edit existing program information) Tj
+0 -15 Td
+(- Delete a program record) Tj
+0 -15 Td
+(8.2 Add Student Program) Tj
+0 -15 Td
+(To add a new student program:) Tj
+0 -15 Td
+(- Click Add Student.) Tj
+0 -15 Td
+(- Upload supporting document \(PDF/Word format\).) Tj
+0 -15 Td
+(- Enter Student Name.) Tj
+0 -15 Td
+(- Enter College Name.) Tj
+0 -15 Td
+(- Enter Project Title.) Tj
+0 -15 Td
+(- Select Program Type \(e.g., Internship\).) Tj
+0 -15 Td
+(- Select Start Date and End Date.) Tj
+0 -15 Td
+(- Enter Program Duration \(in months\).) Tj
+0 -15 Td
+(- Enter Guide Name.) Tj
+0 -15 Td
+(- Select Program Status \(Ongoing / Completed\).) Tj
+0 -15 Td
+(- Click Add Program to save.) Tj
+0 -15 Td
+(Figure 13: Student Program Modal Page) Tj
+0 -15 Td
+(14) Tj
+0 -15 Td
+(9. Procurement Records) Tj
+0 -15 Td
+(The Procurement Records module enables users to manage supply orders, track) Tj
+0 -15 Td
+(procurement expenses, allocate items to individuals or teams, and monitor order status.) Tj
+0 -15 Td
+(9.1 Dashboard Summary) Tj
+0 -15 Td
+(At the top of the page, summary cards display key procurement statistics:) Tj
+ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 22 0 R >>
+endobj
+22 0 obj
+<< /Length 1907 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Total BO \(Number of supply orders\)) Tj
+0 -15 Td
+(- Total Cost) Tj
+0 -15 Td
+(- Ongoing Orders) Tj
+0 -15 Td
+(- Completed Orders) Tj
+0 -15 Td
+(These summary indicators provide a quick overview of procurement activity.) Tj
+0 -15 Td
+(Figure 14: Procurement Record Dashboard Page) Tj
+0 -15 Td
+(9.1.1 Supply Order Table) Tj
+0 -15 Td
+(The Supply Order table displays all procurement entries with the following details:) Tj
+0 -15 Td
+(- ID) Tj
+0 -15 Td
+(- Particulars) Tj
+0 -15 Td
+(- Budget Name) Tj
+0 -15 Td
+(15) Tj
+0 -15 Td
+(- Quantity \(QTY\)) Tj
+0 -15 Td
+(- Duration) Tj
+0 -15 Td
+(- Start Date) Tj
+0 -15 Td
+(- Delivery Date) Tj
+0 -15 Td
+(- BO Order Number) Tj
+0 -15 Td
+(- Purchase Order Number) Tj
+0 -15 Td
+(- Amount) Tj
+0 -15 Td
+(- Status) Tj
+0 -15 Td
+(- Actions) Tj
+0 -15 Td
+(Users can search records using the search bar and apply filters based on type or status.) Tj
+0 -15 Td
+(9.1.2 Status Tracking) Tj
+0 -15 Td
+(Each procurement record displays its current status:) Tj
+0 -15 Td
+(- Ongoing) Tj
+0 -15 Td
+(- Completed) Tj
+0 -15 Td
+(Status can be updated when delivery is completed or procurement is finalized.) Tj
+0 -15 Td
+(9.1.3 Available Actions) Tj
+0 -15 Td
+(In the Actions column, users can:) Tj
+0 -15 Td
+(- View details) Tj
+0 -15 Td
+(- Edit procurement record) Tj
+0 -15 Td
+(- Delete record) Tj
+0 -15 Td
+(16) Tj
+0 -15 Td
+(9.2 Add Supply Order) Tj
+0 -15 Td
+(Figure 15: Add Supply Order Page) Tj
+0 -15 Td
+(1. To create a new procurement record:) Tj
+0 -15 Td
+(2. Click the Procurement Record button.) Tj
+0 -15 Td
+(3. Upload a supporting document \(if required\).) Tj
+0 -15 Td
+(4. Enter the following details:) Tj
+0 -15 Td
+(- BO Number) Tj
+0 -15 Td
+(- Particulars) Tj
+0 -15 Td
+(- Supply Name) Tj
+0 -15 Td
+(- Quantity) Tj
+0 -15 Td
+(- Delivery Date) Tj
+0 -15 Td
+(- Start Date) Tj
+0 -15 Td
+(17) Tj
+0 -15 Td
+(- BO Order) Tj
+0 -15 Td
+(- Purchase Order Number) Tj
+0 -15 Td
+(- Status) Tj
+ET
+endstream
+endobj
+23 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 24 0 R >>
+endobj
+24 0 obj
+<< /Length 2192 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Quantity Allocation) Tj
+0 -15 Td
+(- Amount) Tj
+0 -15 Td
+(5. Click Submit Record to save.) Tj
+0 -15 Td
+(9.3 Assigning Quantities) Tj
+0 -15 Td
+(The system allows splitting the total quantity among different individuals, teams, or) Tj
+0 -15 Td
+(locations.) Tj
+0 -15 Td
+(To assign quantities:) Tj
+0 -15 Td
+(1. Click Manage Assignees.) Tj
+0 -15 Td
+(2. Enter:) Tj
+0 -15 Td
+(- Number of Items) Tj
+0 -15 Td
+(- Assign To \(Name or Location\)) Tj
+0 -15 Td
+(3. Click Add Assignee.) Tj
+0 -15 Td
+(4. Review:) Tj
+0 -15 Td
+(- Total Quantity) Tj
+0 -15 Td
+(- Assigned Quantity) Tj
+0 -15 Td
+(- Remaining Quantity) Tj
+0 -15 Td
+(5. Click Done to confirm.) Tj
+0 -15 Td
+(The system automatically calculates remaining quantity and prevents over-allocation.) Tj
+0 -15 Td
+(18) Tj
+0 -15 Td
+(Figure 16: Assignees Allocation Page) Tj
+0 -15 Td
+(10. Budget Estimation) Tj
+0 -15 Td
+(The Budget Estimation module allows users to create, manage, and track forecast budget) Tj
+0 -15 Td
+(records for different financial years. Users can upload supporting documents, enter) Tj
+0 -15 Td
+(f) Tj
+0 -15 Td
+(inancial details, and categorize expenses based on project requirements.) Tj
+0 -15 Td
+(Figure 17: Budget Estimation Dashboard Page) Tj
+0 -15 Td
+(10.1 Budget Overview) Tj
+0 -15 Td
+(The top section of the page includes:) Tj
+0 -15 Td
+(- Search bar) Tj
+0 -15 Td
+(- Financial Year selector) Tj
+0 -15 Td
+(- Type filter) Tj
+0 -15 Td
+(- Additional filter options) Tj
+0 -15 Td
+(- Upload Forecast Budget button) Tj
+0 -15 Td
+(These controls allow users to filter and manage budget records efficiently.) Tj
+0 -15 Td
+(19) Tj
+0 -15 Td
+(10.1.1 Forecast Budget Table) Tj
+0 -15 Td
+(The Forecast Budget table displays all recorded budget entries with details such as:) Tj
+0 -15 Td
+(- Cash Outgo Split Year) Tj
+0 -15 Td
+(- TDCC Feasibility) Tj
+0 -15 Td
+(- Reusability for Other Projects) Tj
+0 -15 Td
+(- Necessity of Hardware Technologies) Tj
+0 -15 Td
+(- Initiation of Condemnation of Store) Tj
+0 -15 Td
+(- Capital or Revenue Classification) Tj
+0 -15 Td
+(- Notes) Tj
+0 -15 Td
+(- Attachment) Tj
+0 -15 Td
+(- Action options) Tj
+0 -15 Td
+(Users can:) Tj
+0 -15 Td
+(- View attachment) Tj
+0 -15 Td
+(- Edit budget record) Tj
+ET
+endstream
+endobj
+25 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 26 0 R >>
+endobj
+26 0 obj
+<< /Length 2224 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Download document) Tj
+0 -15 Td
+(- Delete record) Tj
+0 -15 Td
+(10.1.2 Document Attachment) Tj
+0 -15 Td
+(Each budget record can include a document attachment for reference. Users can:) Tj
+0 -15 Td
+(- View attached file) Tj
+0 -15 Td
+(- Download file) Tj
+0 -15 Td
+(- Replace file during edit) Tj
+0 -15 Td
+(- Supported formats: PDF and Word.) Tj
+0 -15 Td
+(10.1.3 Editing and Deleting Records) Tj
+0 -15 Td
+(Users can:) Tj
+0 -15 Td
+(- Edit financial details) Tj
+0 -15 Td
+(20) Tj
+0 -15 Td
+(- Modify classification fields) Tj
+0 -15 Td
+(- Update notes) Tj
+0 -15 Td
+(- Delete records if no longer required) Tj
+0 -15 Td
+(10. 2 Upload Forecast Budget) Tj
+0 -15 Td
+(To add a new forecast budget:) Tj
+0 -15 Td
+(1. Click Upload Forecast Budget.) Tj
+0 -15 Td
+(2. Upload supporting document \(PDF/Word format\).) Tj
+0 -15 Td
+(3. Select Forecast Year.) Tj
+0 -15 Td
+(4. Enter Division Name.) Tj
+0 -15 Td
+(5. Enter Item details.) Tj
+0 -15 Td
+(6. Enter Quantity \(QTY\).) Tj
+0 -15 Td
+(7. Enter Existing Stock.) Tj
+0 -15 Td
+(8. Enter Estimated Cost.) Tj
+0 -15 Td
+(9. Enter Demand Indication Months.) Tj
+0 -15 Td
+(10. Select Capital or Revenue.) Tj
+0 -15 Td
+(11. Enter Project or Build details.) Tj
+0 -15 Td
+(12. Enter DPP 2020 Serial Number.) Tj
+0 -15 Td
+(13. Enter Likely Cash Outgo amount.) Tj
+0 -15 Td
+(14. Select TDCC feasibility.) Tj
+0 -15 Td
+(15. Select Reusability for other projects.) Tj
+0 -15 Td
+(16. Select necessity of hardware technologies.) Tj
+0 -15 Td
+(17. Select initiation of condemnation of store.) Tj
+0 -15 Td
+(18. Add Notes \(if required\).) Tj
+0 -15 Td
+(19. Click Upload to save.) Tj
+0 -15 Td
+(21) Tj
+0 -15 Td
+(Figure 18: Upload Forecast Budget Page) Tj
+0 -15 Td
+(11. Divisional Records) Tj
+0 -15 Td
+(The Divisional Records module allows users to manage and maintain departmental records) Tj
+0 -15 Td
+(with document attachments. Users can upload, view, edit, filter, download, and delete) Tj
+0 -15 Td
+(records based on type and status.) Tj
+0 -15 Td
+(22) Tj
+0 -15 Td
+(Figure 19: Division Record Dashboard Page) Tj
+0 -15 Td
+(11.1 Summary Overview) Tj
+0 -15 Td
+(At the top of the page, summary cards display:) Tj
+0 -15 Td
+(- Total Records) Tj
+0 -15 Td
+(- Budget Records) Tj
+0 -15 Td
+(- AMC Records) Tj
+ET
+endstream
+endobj
+27 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 28 0 R >>
+endobj
+28 0 obj
+<< /Length 2318 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Other Records) Tj
+0 -15 Td
+(These cards provide a quick overview of record distribution by category.) Tj
+0 -15 Td
+(11.1.1 Filtering Options) Tj
+0 -15 Td
+(Users can filter records using:) Tj
+0 -15 Td
+(- Filter by Type \(All Types, Budget, AMC, etc.\)) Tj
+0 -15 Td
+(- Filter by Status \(All Status, Active, etc.\)) Tj
+0 -15 Td
+(This helps in quickly locating specific divisional entries.) Tj
+0 -15 Td
+(11.1.2 Divisional Records Table) Tj
+0 -15 Td
+(The table displays the following details) Tj
+0 -15 Td
+(- Record Name) Tj
+0 -15 Td
+(- Type) Tj
+0 -15 Td
+(23) Tj
+0 -15 Td
+(- Created Date) Tj
+0 -15 Td
+(- Note) Tj
+0 -15 Td
+(- Action) Tj
+0 -15 Td
+(Under the Action column, users can:) Tj
+0 -15 Td
+(- View record details) Tj
+0 -15 Td
+(- Edit record information) Tj
+0 -15 Td
+(- Download attachment) Tj
+0 -15 Td
+(- Delete record) Tj
+0 -15 Td
+(All updates reflect immediately after saving changes.) Tj
+0 -15 Td
+(11.2 Upload Divisional Record) Tj
+0 -15 Td
+(To add a new divisional record:) Tj
+0 -15 Td
+(- Click Upload Record.) Tj
+0 -15 Td
+(- Upload a document \(PDF/Word format\).) Tj
+0 -15 Td
+(- Enter Division Name.) Tj
+0 -15 Td
+(- Select Type \(Budget / AMC / Others\).) Tj
+0 -15 Td
+(- Select Created Date.) Tj
+0 -15 Td
+(- Enter Rating \(if applicable\).) Tj
+0 -15 Td
+(- Add Note \(optional\).) Tj
+0 -15 Td
+(- Click Upload to save.) Tj
+0 -15 Td
+(24) Tj
+0 -15 Td
+(Figure 20: Upload Division Record Page) Tj
+0 -15 Td
+(12. Customer Feedbacks) Tj
+0 -15 Td
+(The Customer Feedbacks module allows users to record, manage, and review feedback) Tj
+0 -15 Td
+(submitted for various projects and divisions. The module supports ratings, document) Tj
+0 -15 Td
+(attachments, filtering, and complete feedback lifecycle management.) Tj
+0 -15 Td
+(Figure 21: Customer Feedback Page) Tj
+0 -15 Td
+(12.1 Feedback Overview Dashboard) Tj
+0 -15 Td
+(The top section displays summary cards including:) Tj
+0 -15 Td
+(- Total Feedbacks) Tj
+0 -15 Td
+(- Average Rating) Tj
+0 -15 Td
+(These provide a quick performance overview across divisions.) Tj
+0 -15 Td
+(25) Tj
+0 -15 Td
+(12.1.1 Filtering Feedback) Tj
+0 -15 Td
+(Users can filter feedback records using:) Tj
+0 -15 Td
+(- Filter by Division dropdown) Tj
+0 -15 Td
+(This allows users to narrow down results based on specific divisions.) Tj
+0 -15 Td
+(12.1.2 Feedback Records Table) Tj
+ET
+endstream
+endobj
+29 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 30 0 R >>
+endobj
+30 0 obj
+<< /Length 2057 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(The table displays:) Tj
+0 -15 Td
+(- Project Name) Tj
+0 -15 Td
+(- Division) Tj
+0 -15 Td
+(- Note) Tj
+0 -15 Td
+(- Ratings \(displayed with star indicators\)) Tj
+0 -15 Td
+(- Feedback Date) Tj
+0 -15 Td
+(- Action) Tj
+0 -15 Td
+(Under the Action column, users can:) Tj
+0 -15 Td
+(- View feedback details) Tj
+0 -15 Td
+(- Edit feedback) Tj
+0 -15 Td
+(- Download attached document) Tj
+0 -15 Td
+(- Delete feedback) Tj
+0 -15 Td
+(All updates are reflected immediately after saving changes.) Tj
+0 -15 Td
+(12.2 Upload / Edit Feedback) Tj
+0 -15 Td
+(To add or modify feedback:) Tj
+0 -15 Td
+(- Click Upload Feedback.) Tj
+0 -15 Td
+(- Upload a supporting document \(PDF/Word format\).) Tj
+0 -15 Td
+(- Enter Project Name.) Tj
+0 -15 Td
+(- Enter Division.) Tj
+0 -15 Td
+(- Provide Rating.) Tj
+0 -15 Td
+(26) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(27) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(- Select Feedback Date.) Tj
+0 -15 Td
+(- Add Notes \(optional\).) Tj
+0 -15 Td
+(- Click Save.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+( Figure 22: Upload Document Page) Tj
+0 -15 Td
+(13. Training Records) Tj
+0 -15 Td
+(The Training Records module allows users to manage and track employee training ) Tj
+0 -15 Td
+(activities.) Tj
+0 -15 Td
+(It supports uploading training documents, maintaining training status, and performing ) Tj
+0 -15 Td
+(full) Tj
+0 -15 Td
+(record lifecycle operations including view, edit, download, and deletion.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Figure 23: Training record Document Page) Tj
+0 -15 Td
+(13.1 Overview Section) Tj
+0 -15 Td
+(At the top of the page, summary cards display:) Tj
+0 -15 Td
+(- Total Trainings) Tj
+0 -15 Td
+(- Number of Participants) Tj
+0 -15 Td
+(- Ongoing Trainings) Tj
+0 -15 Td
+(These cards provide a quick overview of training activity status.) Tj
+0 -15 Td
+(13.1.1 Search and Filters) Tj
+0 -15 Td
+(Users can manage records using:) Tj
+0 -15 Td
+(- Search bar \(Search training name or trainee\)) Tj
+0 -15 Td
+(- Filter by Type \(e.g., Pre-Training, Post-Training\)) Tj
+0 -15 Td
+(- Filter by Status \(Ongoing, Completed\)) Tj
+0 -15 Td
+(13.1.2 Training Records Table) Tj
+ET
+endstream
+endobj
+31 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 32 0 R >>
+endobj
+32 0 obj
+<< /Length 2181 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(The table includes:) Tj
+0 -15 Td
+(- Name) Tj
+0 -15 Td
+(- Training Name) Tj
+0 -15 Td
+(- Type) Tj
+0 -15 Td
+(- Start Date) Tj
+0 -15 Td
+(- End Date) Tj
+0 -15 Td
+(- Status) Tj
+0 -15 Td
+(- Remarks) Tj
+0 -15 Td
+(- Action) Tj
+0 -15 Td
+(Under the Action column, users can:) Tj
+0 -15 Td
+(- View training details) Tj
+0 -15 Td
+(- Edit training record) Tj
+0 -15 Td
+(- Download attachment) Tj
+0 -15 Td
+(28) Tj
+0 -15 Td
+(- Delete record) Tj
+0 -15 Td
+(Status indicators clearly show whether a training is Ongoing or Completed.) Tj
+0 -15 Td
+(13.2.1 Deletion and Confirmation) Tj
+0 -15 Td
+(Before deleting a training record, the system prompts a confirmation message to prevent) Tj
+0 -15 Td
+(accidental data loss.) Tj
+0 -15 Td
+(13.2 Upload / Edit Training Record) Tj
+0 -15 Td
+(To add or update a training record:) Tj
+0 -15 Td
+(- Click Upload Training.) Tj
+0 -15 Td
+(- Upload supporting document \(PDF/Word format\).) Tj
+0 -15 Td
+(- Enter Trainee Name.) Tj
+0 -15 Td
+(- Enter Training Name.) Tj
+0 -15 Td
+(- Select Training Type.) Tj
+0 -15 Td
+(- Enter Start Date.) Tj
+0 -15 Td
+(- Enter End Date.) Tj
+0 -15 Td
+(- Select Status.) Tj
+0 -15 Td
+(- Add Notes \(optional\).) Tj
+0 -15 Td
+(- Click Upload to save.) Tj
+0 -15 Td
+(Figure 24: Upload Document Page) Tj
+0 -15 Td
+(29) Tj
+0 -15 Td
+(14. Technical & Design Reports) Tj
+0 -15 Td
+(Figure 25: Technical and Design Report Dashboard Page) Tj
+0 -15 Td
+(The Technical & Design Reports module allows users to manage technical, design, and ) Tj
+0 -15 Td
+(other) Tj
+0 -15 Td
+(categorized reports. Users can upload documents, classify reports by type, search ) Tj
+0 -15 Td
+(records,) Tj
+0 -15 Td
+(and perform complete lifecycle operations including view, edit, download, and deletion.) Tj
+0 -15 Td
+(14.1 Overview Section) Tj
+0 -15 Td
+(At the top of the page, summary cards display:) Tj
+0 -15 Td
+(- Total Records) Tj
+0 -15 Td
+(- Technical Reports Count) Tj
+0 -15 Td
+(- Design Reports Count) Tj
+0 -15 Td
+(These cards provide a quick statistical overview of stored reports.) Tj
+0 -15 Td
+(14.1.1 Search and Filter Options) Tj
+0 -15 Td
+(Users can locate specific reports using:) Tj
+0 -15 Td
+(- Search bar \(Search reports, tags, projects\)) Tj
+ET
+endstream
+endobj
+33 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 34 0 R >>
+endobj
+34 0 obj
+<< /Length 2025 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Filter by Type \(Technical, Design, Other\)) Tj
+0 -15 Td
+(This improves navigation and record accessibility.) Tj
+0 -15 Td
+(30) Tj
+0 -15 Td
+(14.1.2 Reports Table) Tj
+0 -15 Td
+(The table displays:) Tj
+0 -15 Td
+(- Report Name) Tj
+0 -15 Td
+(- Type) Tj
+0 -15 Td
+(- Created Date) Tj
+0 -15 Td
+(- Note) Tj
+0 -15 Td
+(- Action) Tj
+0 -15 Td
+(Under the Action column, users can:) Tj
+0 -15 Td
+(- View report details) Tj
+0 -15 Td
+(- Edit report metadata) Tj
+0 -15 Td
+(- Download attached document) Tj
+0 -15 Td
+(- Delete report) Tj
+0 -15 Td
+(Changes are reflected immediately after saving.) Tj
+0 -15 Td
+(14.2 Upload / Edit Report) Tj
+0 -15 Td
+(To add or modify a report:) Tj
+0 -15 Td
+(- Click Upload Document.) Tj
+0 -15 Td
+(Figure 26: Upload Document Page) Tj
+0 -15 Td
+(31) Tj
+0 -15 Td
+(- Upload a document \(PDF/Word format\).) Tj
+0 -15 Td
+(- Enter Report Name.) Tj
+0 -15 Td
+(- Select Report Type \(Technical / Design / Other\).) Tj
+0 -15 Td
+(- Select Created Date.) Tj
+0 -15 Td
+(- Add Note \(optional\).) Tj
+0 -15 Td
+(- Click Upload to save.) Tj
+0 -15 Td
+(15. Digital Library) Tj
+0 -15 Td
+(The Digital Library module allows users to store, manage, and organize uploaded) Tj
+0 -15 Td
+(documents. Users can upload files, search records, apply filters, sort results, and ) Tj
+0 -15 Td
+(perform) Tj
+0 -15 Td
+(f) Tj
+0 -15 Td
+(ile operations such as view, edit, download, and delete.) Tj
+0 -15 Td
+(Figure 27: Digital Library dashboard Page) Tj
+0 -15 Td
+(15.1 Search and Filtering) Tj
+0 -15 Td
+(Users can manage files using:) Tj
+0 -15 Td
+(- Search bar \(Search by file name, tags, or keywords\)) Tj
+0 -15 Td
+(- Filter by Type) Tj
+0 -15 Td
+(- Sort option \(Newest, etc.\)) Tj
+0 -15 Td
+(These options allow quick retrieval and organization of stored documents.) Tj
+0 -15 Td
+(32) Tj
+0 -15 Td
+(15.1.2 Files Table) Tj
+0 -15 Td
+(The table displays:) Tj
+0 -15 Td
+(- File Name) Tj
+0 -15 Td
+(- Type) Tj
+0 -15 Td
+(- Size) Tj
+0 -15 Td
+(- Created Date) Tj
+0 -15 Td
+(- Action) Tj
+0 -15 Td
+(Under the Action column, users can:) Tj
+ET
+endstream
+endobj
+35 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 36 0 R >>
+endobj
+36 0 obj
+<< /Length 2344 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- View file) Tj
+0 -15 Td
+(- Edit file metadata) Tj
+0 -15 Td
+(- Download file) Tj
+0 -15 Td
+(- Delete file) Tj
+0 -15 Td
+(All changes are reflected immediately after saving.) Tj
+0 -15 Td
+(15.2 Upload File) Tj
+0 -15 Td
+(To upload a new file:) Tj
+0 -15 Td
+(- Click Upload File.) Tj
+0 -15 Td
+(- Select document \(PDF/Word format\).) Tj
+0 -15 Td
+(- Click Upload to save the file.) Tj
+0 -15 Td
+(Figure 28: Upload Document Page) Tj
+0 -15 Td
+(33) Tj
+0 -15 Td
+(16. Settings) Tj
+0 -15 Td
+(The Settings module allows users to manage their account credentials and view system) Tj
+0 -15 Td
+(related information, including application details and version information.) Tj
+0 -15 Td
+(Figure 29: Settings Page) Tj
+0 -15 Td
+(16.1 Reset Password) Tj
+0 -15 Td
+(The Reset Password section allows users to securely change their account password.) Tj
+0 -15 Td
+(Users must:) Tj
+0 -15 Td
+(- Enter Current Password.) Tj
+0 -15 Td
+(- Enter New Password.) Tj
+0 -15 Td
+(- Re-enter New Password for confirmation.) Tj
+0 -15 Td
+(- Click Save Password.) Tj
+0 -15 Td
+(Password requirements:) Tj
+0 -15 Td
+(- Minimum 8 characters) Tj
+0 -15 Td
+(- At least one special character) Tj
+0 -15 Td
+(If the entered passwords do not match or do not meet requirements, validation messages) Tj
+0 -15 Td
+(are displayed. The system ensures secure password handling.) Tj
+0 -15 Td
+(16.1.1 About the Tool) Tj
+0 -15 Td
+(The About section provides a brief description of the application, explaining its ) Tj
+0 -15 Td
+(purpose and) Tj
+0 -15 Td
+(functionality. It highlights:) Tj
+0 -15 Td
+(34) Tj
+0 -15 Td
+(- Data analysis capabilities) Tj
+0 -15 Td
+(- Visualization features) Tj
+0 -15 Td
+(- Interactive reporting support) Tj
+0 -15 Td
+(This section helps users understand the purpose and scope of the system.) Tj
+0 -15 Td
+(16.1.2 Version Information) Tj
+0 -15 Td
+(The version section displays the current application version \(e.g., Version 2025.0\).) Tj
+0 -15 Td
+(This helps in:) Tj
+0 -15 Td
+(Tracking system updates) Tj
+0 -15 Td
+(- Identifying build versions) Tj
+0 -15 Td
+(- Supporting maintenance and troubleshooting) Tj
+0 -15 Td
+(17. Project Overview) Tj
+0 -15 Td
+(At the top of the page, basic project information is displayed:) Tj
+0 -15 Td
+(- Project Name) Tj
+0 -15 Td
+(- Project Status \(e.g., Active\)) Tj
+0 -15 Td
+(- Project Description) Tj
+0 -15 Td
+(- Created Date) Tj
+ET
+endstream
+endobj
+37 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 38 0 R >>
+endobj
+38 0 obj
+<< /Length 2626 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- Member Count) Tj
+0 -15 Td
+(Figure 30: Project Overview Page) Tj
+0 -15 Td
+(35) Tj
+0 -15 Td
+(17.1 Dataset Tabs) Tj
+0 -15 Td
+(Project data is categorized into four dataset types:) Tj
+0 -15 Td
+(- CFD Data) Tj
+0 -15 Td
+(- Wind Tunnel Data) Tj
+0 -15 Td
+(- Flight Data) Tj
+0 -15 Td
+(- Others) Tj
+0 -15 Td
+(Key behavior:) Tj
+0 -15 Td
+(- Only one dataset tab can be active at a time.) Tj
+0 -15 Td
+(- Switching between dataset tabs refreshes the displayed tags and file list.) Tj
+0 -15 Td
+(- Each dataset maintains its own independent set of tags and associated files.) Tj
+0 -15 Td
+(This ensures structured organization of project data by category.) Tj
+0 -15 Td
+(17.1.1 Tag / Folder Management) Tj
+0 -15 Td
+(Within each dataset, files are organized under Tags or Folders.) Tj
+0 -15 Td
+(The table displays:) Tj
+0 -15 Td
+(- Tag / Folder Name) Tj
+0 -15 Td
+(- Processing Status \(if applicable\)) Tj
+0 -15 Td
+(- Created Date) Tj
+0 -15 Td
+(- Action options \(Edit, Delete\)) Tj
+0 -15 Td
+(- Go To navigation button) Tj
+0 -15 Td
+(Users can:) Tj
+0 -15 Td
+(- Rename a tag) Tj
+0 -15 Td
+(- Delete a tag) Tj
+0 -15 Td
+(- Navigate to tag-specific data) Tj
+0 -15 Td
+(36) Tj
+0 -15 Td
+(17.2 Global Search) Tj
+0 -15 Td
+(The Global Search feature allows users to quickly find different sections, tags, files,) Tj
+0 -15 Td
+(and visualizations within a project. The search bar is located at the top-right corner) Tj
+0 -15 Td
+(of the Project Overview page.) Tj
+0 -15 Td
+(Users can enter keywords related to project sections or content. As the user types,) Tj
+0 -15 Td
+(the system displays matching results such as Project Overview, Visualize, Minutes of) Tj
+0 -15 Td
+(the Meeting, Technical Reports, Digital Library, Student Engagement, and other) Tj
+0 -15 Td
+(available sections within the project. Selecting a result will automatically navigate) Tj
+0 -15 Td
+(the user to the corresponding section.) Tj
+0 -15 Td
+(This feature helps users quickly access specific project components without) Tj
+0 -15 Td
+(manually browsing through the navigation menu.) Tj
+0 -15 Td
+(Figure 31: Global Search Page) Tj
+0 -15 Td
+(This section provides a quick summary of the selected project.) Tj
+0 -15 Td
+(17.3 Edit Project) Tj
+0 -15 Td
+(Users can edit project details using the Edit option.) Tj
+0 -15 Td
+(The Edit Project modal allows:) Tj
+0 -15 Td
+(- Viewing the Project Name \(cannot be changed after creation\).) Tj
+0 -15 Td
+(- Updating the Project Description.) Tj
+0 -15 Td
+(- Adding new members using name or email search.) Tj
+0 -15 Td
+(- Removing existing members.) Tj
+0 -15 Td
+(37) Tj
+0 -15 Td
+(- Saving changes or cancelling the update.) Tj
+ET
+endstream
+endobj
+39 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 40 0 R >>
+endobj
+40 0 obj
+<< /Length 2304 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(The project name remains fixed to maintain data integrity.) Tj
+0 -15 Td
+(Figure 32: Project Edit Page) Tj
+0 -15 Td
+(17.4 Project Members) Tj
+0 -15 Td
+(The Project Members view displays:) Tj
+0 -15 Td
+(- Member Name) Tj
+0 -15 Td
+(- Member Email ID) Tj
+0 -15 Td
+(This provides a clear list of all users assigned to the project.) Tj
+0 -15 Td
+(Figure 33: Project Members Page) Tj
+0 -15 Td
+(38) Tj
+0 -15 Td
+(17.4 Upload File) Tj
+0 -15 Td
+(Figure 34: Upload Files Page) Tj
+0 -15 Td
+(Clicking the Upload File button opens the upload modal.) Tj
+0 -15 Td
+(The upload modal allows users to:) Tj
+0 -15 Td
+(- Browse and select plot files.) Tj
+0 -15 Td
+(- Preview selected files \(if supported\).) Tj
+0 -15 Td
+(- Enter Folder / Tag Name.) Tj
+0 -15 Td
+(- Select Data Type \(e.g., CFD\).) Tj
+0 -15 Td
+(- Upload selected files.) Tj
+0 -15 Td
+(Upload Modal Modes) Tj
+0 -15 Td
+(The upload modal operates in two modes:) Tj
+0 -15 Td
+(Create Mode) Tj
+0 -15 Td
+(- Upload files under a new tag.) Tj
+0 -15 Td
+(- A new folder is created for the selected dataset.) Tj
+0 -15 Td
+(39) Tj
+0 -15 Td
+(Edit Mode) Tj
+0 -15 Td
+(- Rename an existing tag.) Tj
+0 -15 Td
+(- Upload additional files to an existing tag.) Tj
+0 -15 Td
+(17.4.1 File Processing and Navigation) Tj
+0 -15 Td
+(After upload:) Tj
+0 -15 Td
+(- Files are associated with the selected dataset and tag.) Tj
+0 -15 Td
+(- Users can navigate to the dataset view using the "Go To" action button.) Tj
+0 -15 Td
+(- Processing status indicators \(if applicable\) are displayed next to tags.) Tj
+0 -15 Td
+(17.4.2 File Selection) Tj
+0 -15 Td
+(Select Files) Tj
+0 -15 Td
+(- The user clicks Browse Plot Files to select one or more files.) Tj
+0 -15 Td
+(- Multiple files can be selected at once.) Tj
+0 -15 Td
+(Supported File Types) Tj
+0 -15 Td
+(File behavior depends on the format:) Tj
+0 -15 Td
+(1. CSV / Excel / TXT / DAT / C files) Tj
+0 -15 Td
+(- Eligible for preview.) Tj
+0 -15 Td
+(- Can be used for visualization.) Tj
+0 -15 Td
+(2. Images and other file formats) Tj
+0 -15 Td
+(- Stored as raw files only.) Tj
+0 -15 Td
+(After selection, the system displays:) Tj
+0 -15 Td
+(- File Name) Tj
+0 -15 Td
+(- File Type) Tj
+0 -15 Td
+(- File Size) Tj
+0 -15 Td
+(- Visualization eligibility \(enabled only for supported tabular files\)) Tj
+0 -15 Td
+(Provide tag and data type) Tj
+ET
+endstream
+endobj
+41 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 42 0 R >>
+endobj
+42 0 obj
+<< /Length 3133 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(- the user enters a Folder / Tag Name, which groups the uploaded files.) Tj
+0 -15 Td
+(- The user selects a Data Type \(CFD, Wind Data, Flight Data. Others\). In edit mode, the) Tj
+0 -15 Td
+(data type is fixed and cannot be changed.) Tj
+0 -15 Td
+(40) Tj
+0 -15 Td
+(17.5 Configure Plot File Headers \(if applicable\)) Tj
+0 -15 Td
+(Once tabular file is selected, the Plot File Header option appears.) Tj
+0 -15 Td
+(Users can choose how headers are handled:) Tj
+0 -15 Td
+(- Use headers from file - system reads the first row) Tj
+0 -15 Td
+(- File has no headers - system auto-generates column names.) Tj
+0 -15 Td
+(- Provide custom headers - user manually enters comma-separated headers.) Tj
+0 -15 Td
+(- When custom headers are used: users can manually define custom headers, which can be) Tj
+0 -15 Td
+(applied to one or multiple selected files using the "Apply custom headers to all files") Tj
+0 -15 Td
+(option) Tj
+0 -15 Td
+(Figure 35: Upload Files Page) Tj
+0 -15 Td
+(17.6 Select file for preview) Tj
+0 -15 Td
+(? Clicking a file from the list loads it into the Preview panel.) Tj
+0 -15 Td
+(? The preview adapts automatically based on file type.) Tj
+0 -15 Td
+(Image files: a visual preview of the image is displayed.) Tj
+0 -15 Td
+(41) Tj
+0 -15 Td
+(Figure 36: Image Files Upload and preview Page) Tj
+0 -15 Td
+(Excel files: all available sheets are listed. Users can switch between sheets and) Tj
+0 -15 Td
+(select which sheets should be included for visualization.) Tj
+0 -15 Td
+(Figure 37: Upload and preview of Excel Files) Tj
+0 -15 Td
+(Dat / .c text files:) Tj
+0 -15 Td
+(1. The preview displays the line-by-line with line numbers.) Tj
+0 -15 Td
+(2. Total line count is shown.) Tj
+0 -15 Td
+(3. The user can select start line and end line.) Tj
+0 -15 Td
+(42) Tj
+0 -15 Td
+(4. Only the selected range is parsed, used for data extraction, used for plotting) Tj
+0 -15 Td
+(graphs.) Tj
+0 -15 Td
+(5. Selected range is visually highlighted.) Tj
+0 -15 Td
+(6. The system auto-detects headers from the first selected line.) Tj
+0 -15 Td
+(7. The parsed data range is also shown as a table preview.) Tj
+0 -15 Td
+(Figure 38: Upload and preview for .Dat Files) Tj
+0 -15 Td
+(- Apply line range to multiple files) Tj
+0 -15 Td
+(Figure 39: Apply range for Files Page) Tj
+0 -15 Td
+(43) Tj
+0 -15 Td
+(? For .Dat and .c files, users can enable "Apply range to all .Dat /.c files".) Tj
+0 -15 Td
+(? This applies the same start and end line selection to all similar files, ensuing) Tj
+0 -15 Td
+(consistency and reducing manual effort.) Tj
+0 -15 Td
+(- .MAT \(MATLAB\) Files:) Tj
+0 -15 Td
+(? The preview displays all variables available in the .mat file along with their) Tj
+0 -15 Td
+(dimensions and data types.) Tj
+0 -15 Td
+(? When a variable is selected, its data is shown in a tabular format.) Tj
+0 -15 Td
+(? Users can define a slice range to load only a specific portion of the data.) Tj
+0 -15 Td
+(? After clicking Apply, only the selected slice is displayed and processed.) Tj
+0 -15 Td
+(? The selected data is prepared for further parsing and visualization.) Tj
+0 -15 Td
+(Figure 40: .MAT file preview) Tj
+0 -15 Td
+(? Upload and processing) Tj
+ET
+endstream
+endobj
+43 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 44 0 R >>
+endobj
+44 0 obj
+<< /Length 2711 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(? When user clicks upload.) Tj
+0 -15 Td
+(? A progress bar shows upload status.) Tj
+0 -15 Td
+(? Files are uploaded along with: dataset type, tag name, header configuration,) Tj
+0 -15 Td
+(selected sheets, selected line ranges.) Tj
+0 -15 Td
+(? Visualization-enabled files are queued for processing.) Tj
+0 -15 Td
+(? Non- visualized files are stored as raw files.) Tj
+0 -15 Td
+(44) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(45) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Figure 41: Stored Files Page) Tj
+0 -15 Td
+(17.7 Raw preview page:) Tj
+0 -15 Td
+(The Raw Preview page displays the data exactly as it was uploaded, without any changes.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Figure 42: Raw Preview Page) Tj
+0 -15 Td
+(17.8 Processed Preview Page:) Tj
+0 -15 Td
+(The Processed Preview page displays data that has been parsed and prepared for plotting.) Tj
+0 -15 Td
+(Users can edit the column headers on this page.) Tj
+0 -15 Td
+(Figure 43: Processed Preview Page) Tj
+0 -15 Td
+(18 Visualization:) Tj
+0 -15 Td
+(This page allows users to configure datasets, select plot types and axes, generate ) Tj
+0 -15 Td
+(interactive) Tj
+0 -15 Td
+(visualizations, preview results in real time, and manage saved plots for a project.) Tj
+0 -15 Td
+(? Select dataset) Tj
+0 -15 Td
+(? The user starts by choosing a dataset type \(e.g., CFD, Wind Tunnel, Flight) Tj
+0 -15 Td
+(Data\).) Tj
+0 -15 Td
+(? Based on the dataset, relevant tags are automatically loaded.) Tj
+0 -15 Td
+(? Choose tag and file) Tj
+0 -15 Td
+(? After selecting a tag, the system displays all processed files available under) Tj
+0 -15 Td
+(that tag.) Tj
+0 -15 Td
+(? The user selects a file to be used for visualization.) Tj
+0 -15 Td
+(? Configure plot type and chart type) Tj
+0 -15 Td
+(? The user chooses whether the visualization is 2D or 3D.) Tj
+0 -15 Td
+(? Based on this selection, only the applicable chart types are shown \(Line,) Tj
+0 -15 Td
+(scatter, bar, polar, heatmap, contour, scatter line, histogram, violin, 3D) Tj
+0 -15 Td
+(scatters, 3D line, 3D surfaces\).) Tj
+0 -15 Td
+(46) Tj
+0 -15 Td
+(18.1 2D Chart Type) Tj
+0 -15 Td
+(Figure 44: 2D Chart Type) Tj
+0 -15 Td
+(- 2D Chart Visualization) Tj
+0 -15 Td
+(Figure 45: 2D Violon Chart Visualization Page) Tj
+0 -15 Td
+(This figure shows a 2D Violon chart visualization where the relationship between) Tj
+0 -15 Td
+(two variables is displayed. Users can analyze trends and patterns using) Tj
+0 -15 Td
+(interactive features such as zooming and panning.) Tj
+0 -15 Td
+(Figure 46: 2D Linear Chart Visualization Page) Tj
+0 -15 Td
+(47) Tj
+0 -15 Td
+(The line chart connects data points sequentially to represent changes in the) Tj
+0 -15 Td
+(dataset over the selected axis values. This type of visualization is useful for) Tj
+ET
+endstream
+endobj
+45 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 46 0 R >>
+endobj
+46 0 obj
+<< /Length 2829 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(analyzing patterns, variations, and trends in continuous data.) Tj
+0 -15 Td
+(Figure 47: 2D Bar Chart Visualization Page) Tj
+0 -15 Td
+(Bar charts are useful for comparing values across different categories or intervals) Tj
+0 -15 Td
+(in the dataset. Users can easily identify variations, differences, and distribution of) Tj
+0 -15 Td
+(data through the bar representation.) Tj
+0 -15 Td
+(18.2 3D Chart Type) Tj
+0 -15 Td
+(Figure 48: 3D Chart Type) Tj
+0 -15 Td
+(48) Tj
+0 -15 Td
+(- 3D Chart Visualization) Tj
+0 -15 Td
+(Figure 49: 3D Chart Visualization Page) Tj
+0 -15 Td
+(This figure illustrates a 3D visualization where three parameters are plotted along) Tj
+0 -15 Td
+(the X, Y, and Z axes. Users can rotate and inspect the plot interactively.) Tj
+0 -15 Td
+(? Assign Axes) Tj
+0 -15 Td
+(? Once a file is selected, available columns from the file are loaded.) Tj
+0 -15 Td
+(? X-axis and Y-axis scales \(Linear or Log\) can also be configured.) Tj
+0 -15 Td
+(? The user assigns:) Tj
+0 -15 Td
+(? X-axis and Y-axis for all plots) Tj
+0 -15 Td
+(? Z-axis, if the selected chart type requires it \(e.g., 3D or contour plots\)) Tj
+0 -15 Td
+(? Plot name \(Optional\)) Tj
+0 -15 Td
+(? User can provide a custom plot name.) Tj
+0 -15 Td
+(? If no custom name given, the system automatically generates a meaningful) Tj
+0 -15 Td
+(name based on the dataset and axis selection.) Tj
+0 -15 Td
+(Figure 50: Plot Setting) Tj
+0 -15 Td
+(49) Tj
+0 -15 Td
+(? Generate Visualization) Tj
+0 -15 Td
+(? After configuration, the user clicks Generate plot.) Tj
+0 -15 Td
+(? The system submits the selected configuration and starts processing file) Tj
+0 -15 Td
+(visualization.) Tj
+0 -15 Td
+(Figure 51: Visualization Page) Tj
+0 -15 Td
+(18.3 Axis Scale Configuration \(Log\)) Tj
+0 -15 Td
+(? In the visualization settings, users can configure the Log scale for the X-axis) Tj
+0 -15 Td
+(and Y-axis to represent data on a logarithmic scale.) Tj
+0 -15 Td
+(? The Log scale is useful when the dataset values span across multiple orders) Tj
+0 -15 Td
+(of magnitude, allowing better visualization of variations in the data.) Tj
+0 -15 Td
+(? When the Log option is selected in the X Scale and Y Scale dropdown menus,) Tj
+0 -15 Td
+(the axis values are displayed in logarithmic format instead of a standard linear) Tj
+0 -15 Td
+(progression) Tj
+0 -15 Td
+(? When the Log option is selected for either the X Scale or Y Scale, the chart is) Tj
+0 -15 Td
+(displayed in semi-log format, where one axis uses a logarithmic scale while) Tj
+0 -15 Td
+(the other axis remains in standard linear scale. This helps visualize data that) Tj
+0 -15 Td
+(spans multiple orders of magnitude along one axis.) Tj
+0 -15 Td
+(50) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(51) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Figure 52: Log Scale Selection in Axis Configuration) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+ET
+endstream
+endobj
+47 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 48 0 R >>
+endobj
+48 0 obj
+<< /Length 2969 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(Figure 53: Visualization with Logarithmic Axis Scale) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+( Figure 54: Visualization with semi-log Axis Scale) Tj
+0 -15 Td
+(18.4 Create multiple plot \(Over-plot\)) Tj
+0 -15 Td
+(? Users can add multiple plot series to overlay data on the same chart.) Tj
+0 -15 Td
+(? Each series can:) Tj
+0 -15 Td
+(? Use a different dataset, file, or axis configuration.) Tj
+0 -15 Td
+(? Be individually enabled or disabled) Tj
+0 -15 Td
+(? Removeable if not required) Tj
+0 -15 Td
+(Figure 55: Overplot Visualization Page) Tj
+0 -15 Td
+(- Preview Visualization) Tj
+0 -15 Td
+(? While processing, the system displays status updates.) Tj
+0 -15 Td
+(? Once ready, the generated plot is shown in an interactive preview area.) Tj
+0 -15 Td
+(? Users can zoom, pan, and inspect the plot directly in the preview.) Tj
+0 -15 Td
+(Figure 56: Preview Visualization Page) Tj
+0 -15 Td
+(52) Tj
+0 -15 Td
+(? View data tiles \(optional\)) Tj
+0 -15 Td
+(? For large datasets, the system allows users to preview subsets \(tiles\) of the) Tj
+0 -15 Td
+(underlying data.) Tj
+0 -15 Td
+(? This helps users validate the plots are automatically saved.) Tj
+0 -15 Td
+(? Save and manage visualizations) Tj
+0 -15 Td
+(? Saved visualization are listed on the same page, where users can:) Tj
+0 -15 Td
+(? Reload a visualization.) Tj
+0 -15 Td
+(? Open in full-screen view) Tj
+0 -15 Td
+(? Delete it if no longer needed) Tj
+0 -15 Td
+(Figure 57: Saved visualization files Page) Tj
+0 -15 Td
+(19 Calculation Module) Tj
+0 -15 Td
+(The Calculation module allows users to compute derived parameters required for aircraft) Tj
+0 -15 Td
+(performance, air load, and post-flight analysis. Users select the Dataset, Tag, and ) Tj
+0 -15 Td
+(File, enter) Tj
+0 -15 Td
+(the required mathematical formula, and map the variables to the corresponding dataset) Tj
+0 -15 Td
+(columns. After clicking Process Formula, the system calculates the result and displays a) Tj
+0 -15 Td
+(preview of the computed values. Once verified, the derived column can be saved.) Tj
+0 -15 Td
+(53) Tj
+0 -15 Td
+(Figure 58: Calculation Page) Tj
+0 -15 Td
+(Figure 59: Turn Radius Estimation) Tj
+0 -15 Td
+(54) Tj
+0 -15 Td
+(Figure 60: True Air Speed \(TAS\) from Mach) Tj
+0 -15 Td
+(20. Aircraft Performance Module) Tj
+0 -15 Td
+(The Aircraft Performance Module enables users to analyze aircraft performance) Tj
+0 -15 Td
+(characteristics using the available dataset. The system allows users to generate ) Tj
+0 -15 Td
+(different) Tj
+0 -15 Td
+(performance plots based on the selected parameters from the input dataset.) Tj
+0 -15 Td
+(Using the available aircraft performance data, users can generate plots to analyze ) Tj
+0 -15 Td
+(aircraft) Tj
+0 -15 Td
+(operational limits, climb performance, aerodynamic characteristics, and maneuvering) Tj
+0 -15 Td
+(behavior. These plots help in understanding how the aircraft performs under different ) Tj
+0 -15 Td
+(flight) Tj
+0 -15 Td
+(conditions such as varying speed, altitude, and load factors.) Tj
+ET
+endstream
+endobj
+49 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 51 0 R >> >> /Contents 50 0 R >>
+endobj
+50 0 obj
+<< /Length 170 >>
+stream
+BT
+/F1 11 Tf
+48 790 Td
+(Figure 61: Rate of Climb vs Mach Number Plot) Tj
+0 -15 Td
+(55) Tj
+0 -15 Td
+(Figure 62: Aircraft Turn Rate Performance Plot) Tj
+0 -15 Td
+(56) Tj
+ET
+endstream
+endobj
+51 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 52
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000280 00000 n 
+0000000407 00000 n 
+0000003142 00000 n 
+0000003269 00000 n 
+0000006155 00000 n 
+0000006282 00000 n 
+0000009129 00000 n 
+0000009257 00000 n 
+0000012186 00000 n 
+0000012315 00000 n 
+0000014773 00000 n 
+0000014902 00000 n 
+0000017522 00000 n 
+0000017651 00000 n 
+0000020439 00000 n 
+0000020568 00000 n 
+0000022817 00000 n 
+0000022946 00000 n 
+0000025199 00000 n 
+0000025328 00000 n 
+0000027288 00000 n 
+0000027417 00000 n 
+0000029662 00000 n 
+0000029791 00000 n 
+0000032068 00000 n 
+0000032197 00000 n 
+0000034568 00000 n 
+0000034697 00000 n 
+0000036807 00000 n 
+0000036936 00000 n 
+0000039170 00000 n 
+0000039299 00000 n 
+0000041377 00000 n 
+0000041506 00000 n 
+0000043903 00000 n 
+0000044032 00000 n 
+0000046711 00000 n 
+0000046840 00000 n 
+0000049197 00000 n 
+0000049326 00000 n 
+0000052512 00000 n 
+0000052641 00000 n 
+0000055405 00000 n 
+0000055534 00000 n 
+0000058416 00000 n 
+0000058545 00000 n 
+0000061567 00000 n 
+0000061696 00000 n 
+0000061918 00000 n 
+trailer
+<< /Size 52 /Root 1 0 R >>
+startxref
+61989
+%%EOF

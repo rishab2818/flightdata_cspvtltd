@@ -23,11 +23,13 @@ const typeLabelFromName = (name = "", contentType = "") => {
     if (contentType.includes("pdf")) return "PDF";
     if (contentType.includes("word")) return "DOCX";
     if (contentType.includes("sheet")) return "XLSX";
+    if (contentType.includes("video")) return "VIDEO";
   }
   if (["pdf"].includes(ext)) return "PDF";
   if (["doc", "docx"].includes(ext)) return "DOCX";
   if (["xls", "xlsx"].includes(ext)) return "XLSX";
   if (["ppt", "pptx"].includes(ext)) return "PPTX";
+  if (["mp4", "mov", "avi", "mkv", "webm", "m4v"].includes(ext)) return "VIDEO";
   return "Others";
 };
 
@@ -56,6 +58,28 @@ const toIsoInput = (value) => {
 };
 
 export default function DigitalLibrary() {
+  return (
+    <DocumentLibraryPage
+      section="digital_library"
+      uploadTitle="Upload File"
+      uploadLabel="Upload Document"
+      uploadDescription="Attach training related file here"
+      supportedText="PDF/Word"
+      tableTitle="My Files"
+      searchPlaceholder="Search reports, tags, projects..."
+    />
+  );
+}
+
+export function DocumentLibraryPage({
+  section = "digital_library",
+  uploadTitle = "Upload File",
+  uploadLabel = "Upload Document",
+  uploadDescription = "Attach training related file here",
+  supportedText = "PDF/Word",
+  tableTitle = "My Files",
+  searchPlaceholder = "Search reports, tags, projects...",
+}) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("newest");
@@ -82,13 +106,13 @@ export default function DigitalLibrary() {
 
   const fetchDocumentsPage = useCallback(
     async ({ page, limit }) => {
-      const data = await documentsApi.listBySection("digital_library", {
+      const data = await documentsApi.listBySection(section, {
         page,
         limit,
       });
       return (data || []).map(mapDocument);
     },
-    [mapDocument]
+    [mapDocument, section]
   );
 
   const {
@@ -101,7 +125,7 @@ export default function DigitalLibrary() {
     loadMore,
   } = useLazyCollection({
     fetchPage: fetchDocumentsPage,
-    deps: ["digital_library"],
+    deps: [section],
     errorMessage: "Unable to load your documents. Please try again.",
   });
 
@@ -233,7 +257,7 @@ const confirmDelete = async () => {
           <FiSearch size={16} color="#64748b" />
           <input
             className={styles.searchInput}
-            placeholder="Search reports, tags, projects..."
+            placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -249,6 +273,7 @@ const confirmDelete = async () => {
           <option value="DOCX">DOC/DOCX</option>
           <option value="XLSX">Excel</option>
           <option value="PPTX">PowerPoint</option>
+          <option value="VIDEO">Video</option>
           <option value="Others">Others</option>
         </select>
 
@@ -269,7 +294,7 @@ const confirmDelete = async () => {
       </div>
 
       <div className={styles.tableWrapper}>
-        <div style={{marginTop:"20px",marginBottom:"15px",width:"100%",fontSize:16, fontWeight:600, color: "#0A0A0A",fontfamily: "Inter-semiBold, Helvetica"}}>My Files</div>
+        <div style={{marginTop:"20px",marginBottom:"15px",width:"100%",fontSize:16, fontWeight:600, color: "#0A0A0A",fontfamily: "Inter-semiBold, Helvetica"}}>{tableTitle}</div>
         <div className={styles.tableHeader}>
           <table className={styles.table}>
             <thead>
@@ -380,6 +405,11 @@ const confirmDelete = async () => {
         open={showUpload}
         onClose={() => setShowUpload(false)}
         onUploaded={handleUploaded}
+        section={section}
+        title={uploadTitle}
+        uploadLabel={uploadLabel}
+        description={uploadDescription}
+        supported={supportedText}
       />
 
        {showDeleteModal && (

@@ -2,7 +2,9 @@ from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.file_restrictions import ensure_allowed_filename
 
 
 class DocumentSection(str, Enum):
@@ -13,6 +15,7 @@ class DocumentSection(str, Enum):
     TECHNICAL_REPORTS = "technical_reports"
     MINUTES_OF_MEETING = "minutes_of_meeting"
     DIGITAL_LIBRARY = "digital_library"
+    HELP = "help"
 
 
 class MoMSubsection(str, Enum):
@@ -69,6 +72,11 @@ class DocumentInitUpload(BaseModel):
         description="Optional project ID to link PMRC minutes to a project",
     )
 
+    @field_validator("filename")
+    @classmethod
+    def validate_filename(cls, value: str) -> str:
+        return ensure_allowed_filename(value)
+
 
 class DocumentConfirm(BaseModel):
     """Called after file is uploaded to storage to register metadata."""
@@ -95,6 +103,11 @@ class DocumentConfirm(BaseModel):
         default=None,
         description="Optional project ID to link PMRC minutes to a project",
     )
+
+    @field_validator("original_name")
+    @classmethod
+    def validate_original_name(cls, value: str) -> str:
+        return ensure_allowed_filename(value)
 
 
 class UserDocumentOut(BaseModel):
