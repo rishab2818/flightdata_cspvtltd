@@ -335,6 +335,10 @@ export default function MinutesOfTheMeeting() {
   //   setSelectedActions(actionPoints || []);
   //   setShowActionsModal(true);
   // };
+  const hasNextMeeting =
+  Boolean(nextMeeting?.title) ||
+  Boolean(nextMeeting?.meeting_date) ||
+  Boolean(nextMeeting?.meeting_time);
 
   const handleView = (row) => {
     if (!row?.record_id) return;
@@ -447,6 +451,7 @@ export default function MinutesOfTheMeeting() {
       <NextMeetingModal
         open={showMeetingModal}
         onClose={() => setShowMeetingModal(false)}
+        isEditMode={hasNextMeeting}
         initialMeeting={{
           title:
             nextMeeting?.title ||
@@ -547,16 +552,21 @@ function NextMeetingBanner({
   missingProject,
   projectLoading,
 }) {
+  const hasMeeting =
+    Boolean(meeting?.title) ||
+    Boolean(meeting?.meeting_date) ||
+    Boolean(meeting?.meeting_time);
+
   const meetingDate = meeting?.meeting_date
     ? new Date(meeting.meeting_date)
     : null;
 
   const dateLabel = meetingDate
     ? meetingDate.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
     : "Meeting date not set";
 
   const dayLabel = meetingDate
@@ -589,26 +599,106 @@ function NextMeetingBanner({
     <div className="Banner">
       <div className="BannerContent">
         <div className="BannerInfo">
-          <div className="BannerTitle">Next {sectionLabel}</div>
+          <div className="BannerTitle">{title}</div>
 
           <span className="metaItem">{dateLabel}</span>
-          <span className="metaItem">{dayLabel}</span>
-
-          <span className="metaItem timeMeta">
-            <FiClock size={14} />
-            {timeLabel}
-          </span>
+          {dayLabel && <span className="metaItem">{dayLabel}</span>}
+          {timeLabel && (
+            <span className="metaItem timeMeta">
+              <FiClock size={14} />
+              {timeLabel}
+            </span>
+          )}
         </div>
 
-        <button className="BannerEdit" onClick={onEdit}>
-          <FiEdit2 size={16} />
+        <button
+          className="BannerEdit"
+          onClick={onEdit}
+          type="button"
+          title={hasMeeting ? "Edit meeting" : "Create meeting"}
+        >
+          {hasMeeting ? <FiEdit2 size={16} /> : <FiPlus size={18} />}
         </button>
       </div>
+
+      {loading && <p className="helperText">Loading next meeting...</p>}
+      {error && <p className="errorText">{error}</p>}
     </div>
-
-
   );
 }
+
+// function NextMeetingBanner({
+//   sectionLabel,
+//   meeting,
+//   loading,
+//   error,
+//   onEdit,
+//   projectName,
+//   missingProject,
+//   projectLoading,
+// }) {
+//   const meetingDate = meeting?.meeting_date
+//     ? new Date(meeting.meeting_date)
+//     : null;
+
+//   const dateLabel = meetingDate
+//     ? meetingDate.toLocaleDateString("en-US", {
+//       month: "short",
+//       day: "numeric",
+//       year: "numeric",
+//     })
+//     : "Meeting date not set";
+
+//   const dayLabel = meetingDate
+//     ? meetingDate.toLocaleDateString("en-US", { weekday: "long" })
+//     : "";
+
+//   const timeLabel = formatTimeLabel(meeting?.meeting_time);
+//   const title =
+//     meeting?.title ||
+//     `Next ${sectionLabel}${projectName ? ` - ${projectName}` : ""}`;
+
+//   if (missingProject) {
+//     return (
+//       <div className="Banner">
+//         <div className="BannerContent">
+//           <div className="BannerInfo">
+//             <div className="BannerTitle">Next {sectionLabel}</div>
+//             <div className="BannerMeta">
+//               {projectLoading
+//                 ? "Loading projects..."
+//                 : "Select a project to view and update the next PMRC meeting."}
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="Banner">
+//       <div className="BannerContent">
+//         <div className="BannerInfo">
+//           <div className="BannerTitle">Next {sectionLabel}</div>
+
+//           <span className="metaItem">{dateLabel}</span>
+//           <span className="metaItem">{dayLabel}</span>
+
+//           <span className="metaItem timeMeta">
+//             <FiClock size={14} />
+//             {timeLabel}
+//           </span>
+//         </div>
+
+//         <button className="BannerEdit" onClick={onEdit}>
+//           <FiEdit2 size={16} />
+//         </button>
+//       </div>
+//     </div>
+
+
+//   );
+// }
 
 function UploadHeader({ onUploadClick, search, onSearchChange }) {
   return (
@@ -1216,7 +1306,7 @@ function ActionPointsModal({ open, onClose, actionPoints }) {
   );
 }
 
-function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
+function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving, isEditMode }) {
   const [title, setTitle] = useState(initialMeeting?.title || "");
   const [meetingDate, setMeetingDate] = useState(initialMeeting?.meeting_date || "");
   const [meetingTime, setMeetingTime] = useState(initialMeeting?.meeting_time || "");
@@ -1255,14 +1345,16 @@ function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
     <div className="LightModalOverlay">
       <div className="LightModalCard">
         <div className="ModalHeader">
-          <h3>Edit Next Meeting</h3>
+          <h3>{isEditMode ? "Edit Next Meeting" : "Add Next Meeting"}</h3>
           <button type="button" className="CloseButton" onClick={onClose}>
             X
           </button>
         </div>
 
         <form className="ModalForm" onSubmit={handleSubmit}>
-          <label className="Meetinglabel" style={{ marginBottom: "-10px", marginTop: "10px" }}>Meeting title</label>
+          <label className="Meetinglabel" style={{ marginBottom: "-10px", marginTop: "10px" }}>
+            Meeting title
+          </label>
           <input
             type="text"
             value={title}
@@ -1299,7 +1391,7 @@ function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
               Cancel
             </button>
             <button type="submit" className="submitBtn" disabled={saving}>
-              {saving ? "Saving..." : "Save meeting"}
+              {saving ? "Saving..." : isEditMode ? "Update meeting" : "Add meeting"}
             </button>
           </div>
         </form>
@@ -1307,6 +1399,98 @@ function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving }) {
     </div>
   );
 }
+
+// function NextMeetingModal({ open, onClose, initialMeeting, onSave, saving, isEditMode }) {
+//   const [title, setTitle] = useState(initialMeeting?.title || "");
+//   const [meetingDate, setMeetingDate] = useState(initialMeeting?.meeting_date || "");
+//   const [meetingTime, setMeetingTime] = useState(initialMeeting?.meeting_time || "");
+//   const [error, setError] = useState("");
+
+//   useEffect(() => {
+//     setTitle(initialMeeting?.title || "");
+//     setMeetingDate(normalizeDate(initialMeeting?.meeting_date));
+//     setMeetingTime(initialMeeting?.meeting_time || "");
+//     setError("");
+//   }, [initialMeeting, open]);
+
+//   if (!open) return null;
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setError("");
+
+//     if (!title.trim() || !meetingDate || !meetingTime) {
+//       setError("Please provide a title, date, and time for the next meeting.");
+//       return;
+//     }
+
+//     const result = await onSave({
+//       title: title.trim(),
+//       meeting_date: meetingDate,
+//       meeting_time: meetingTime,
+//     });
+
+//     if (!result?.ok && result?.error) {
+//       setError(result.error);
+//     }
+//   };
+
+//   return (
+//     <div className="LightModalOverlay">
+//       <div className="LightModalCard">
+//         <div className="ModalHeader">
+//           <h3>Edit Next Meeting</h3>
+//           <button type="button" className="CloseButton" onClick={onClose}>
+//             X
+//           </button>
+//         </div>
+
+//         <form className="ModalForm" onSubmit={handleSubmit}>
+//           <label className="Meetinglabel" style={{ marginBottom: "-10px", marginTop: "10px" }}>Meeting title</label>
+//           <input
+//             type="text"
+//             value={title}
+//             onChange={(e) => setTitle(e.target.value)}
+//             className="textInput1"
+//             placeholder={`Next ${initialMeeting?.sectionLabel || "Meeting"}`}
+//           />
+
+//           <div className="row gap16">
+//             <div className="flex1">
+//               <label className="Meetinglabel">Meeting date</label>
+//               <input
+//                 type="date"
+//                 value={meetingDate}
+//                 onChange={(e) => setMeetingDate(e.target.value)}
+//                 className="textInput2"
+//               />
+//             </div>
+//             <div className="flex1">
+//               <label className="Meetinglabel">Time</label>
+//               <input
+//                 type="time"
+//                 value={meetingTime}
+//                 onChange={(e) => setMeetingTime(e.target.value)}
+//                 className="textInput2"
+//               />
+//             </div>
+//           </div>
+
+//           {error && <p className="errorText">{error}</p>}
+
+//           <div className="ModalActions">
+//             <button type="button" className="cancelBtn" onClick={onClose}>
+//               Cancel
+//             </button>
+//             <button type="submit" className="submitBtn" disabled={saving}>
+//               {saving ? "Saving..." : "Save meeting"}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
 
 function normalizeDate(value) {
   if (!value) return "";

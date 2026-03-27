@@ -8,8 +8,6 @@ import "../../styles/dashboard.css";
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
-  const role = user?.role?.toUpperCase?.();
-  const isGDorDH = role === "GD" || role === "DH";
   const [counts, setCounts] = useState(null);
 
   useEffect(() => {
@@ -29,19 +27,21 @@ export default function Dashboard() {
             wind: 0,
             flight: 0,
             others: 0,
+            report_wind: 0,
+            report_flight: 0,
+            report_cfd: 0,
+            total_reports: 0
           });
         }
       }
     }
 
-    if (isGDorDH) {
-      fetchCounts();
-    }
+    fetchCounts();
 
     return () => {
       cancelled = true;
     };
-  }, [isGDorDH]);
+  }, []);
 
   const distributionData = [
     { name: "Other", shortName: "Aero", value: Number(counts?.others || 0), color: "#7B6CF6" },
@@ -64,15 +64,21 @@ export default function Dashboard() {
         <div className="dashboard-lower">
           <ProjectsSection />
 
-          {isGDorDH && (
-            <div className="dashboard-charts">
-              <PieChartCard title="Data Distribution" data={distributionData} />
-              <PieChartCard title="Reports" value={counts?.total_reports} data={reportDistributionData} />
-            </div>
-          )}
+          <div className="dashboard-charts">
+            <PieChartCard 
+              title="Data Distribution" 
+              data={distributionData} 
+            />
+
+            <PieChartCard 
+              title="Reports" 
+              value={counts?.total_reports || 0}
+              data={reportDistributionData} 
+            />
+          </div>
+
         </div>
       </div>
     </div>
   );
 }
-

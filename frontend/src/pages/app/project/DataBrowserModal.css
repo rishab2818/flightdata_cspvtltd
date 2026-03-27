@@ -266,3 +266,25 @@
   padding: 10px 14px 14px;
   flex-shrink: 0;
 }
+
+.db-modal__first-row {
+  background: #f7f7f7;
+}
+
+.db-modal__first-column {
+  background: #f7f7f7;
+}
+
+/* .db-modal__blocked-text {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+}
+
+.db-modal__nonplottable-cell {
+  background: #fafafa;
+}
+
+.db-modal__head-cell.is-blocked {
+  background: #fcfcfc;
+} */
