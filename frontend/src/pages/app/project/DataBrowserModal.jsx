@@ -7,8 +7,6 @@ const MAX_CHECKED_Y = 10
 const DOM_ROW_CAP = 200
 const SCROLL_DEBOUNCE_MS = 60
 
-const toInitialRows = (rows) => (Array.isArray(rows) ? rows.slice(0, PAGE_SIZE) : [])
-
 const formatCell = (value) => {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'number') {
@@ -50,7 +48,7 @@ export default function DataBrowserModal({
   const abortRef = useRef(null)
   const debounceRef = useRef(null)
 
-  const [rows, setRows] = useState(() => toInitialRows(initialRows))
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [checkedColumns, setCheckedColumns] = useState(() => new Set())
@@ -75,7 +73,7 @@ export default function DataBrowserModal({
       debounceRef.current = null
     }
 
-    setRows(toInitialRows(initialRows))
+    setRows([])
     setLoading(false)
     setError('')
     setWarning('')
@@ -87,16 +85,7 @@ export default function DataBrowserModal({
     if (tableRef.current) {
       tableRef.current.scrollTop = 0
     }
-  }, [columns, currentX, initialRows, totalRows])
-
-  useEffect(() => {
-    if (isOpen) {
-      resetState()
-      return undefined
-    }
-    resetState()
-    return undefined
-  }, [isOpen, resetState])
+  }, [columns, currentX, totalRows])
 
   const displayColumns = useMemo(() => {
     if (resolvedColumns.length) return resolvedColumns
@@ -201,6 +190,57 @@ export default function DataBrowserModal({
     [displayColumns, noHeaderMatrixMode]
   )
 
+  const fetchInitialPage = useCallback(async () => {
+    if (!isOpen || !jobId) return
+
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const payload = await ingestionApi.previewRows(jobId, {
+        limit: PAGE_SIZE,
+        offset: 0,
+        signal: controller.signal,
+      })
+
+      const nextRows = Array.isArray(payload?.rows) ? payload.rows : []
+      const nextTotal = Number(payload?.total)
+      const nextColumns = Array.isArray(payload?.columns) ? payload.columns : []
+
+      setRows(nextRows)
+
+      if (Number.isFinite(nextTotal) && nextTotal >= 0) {
+        setResolvedTotal(nextTotal)
+      }
+
+      if (nextColumns.length) {
+        setResolvedColumns(nextColumns)
+      }
+    } catch (err) {
+      if (
+        controller.signal.aborted ||
+        err?.code === 'ERR_CANCELED' ||
+        err?.name === 'CanceledError'
+      ) {
+        return
+      }
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load preview rows.')
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null
+      }
+      setLoading(false)
+    }
+  }, [jobId])
+
   const fetchNextPage = useCallback(async () => {
     if (!isOpen || !jobId || loading || !hasMore) return
 
@@ -251,6 +291,16 @@ export default function DataBrowserModal({
       setLoading(false)
     }
   }, [hasMore, isOpen, jobId, loading, rows.length])
+
+  useEffect(() => {
+    if (isOpen) {
+      resetState()
+      void fetchInitialPage()
+      return undefined
+    }
+    resetState()
+    return undefined
+  }, [fetchInitialPage, isOpen, resetState])
 
   useEffect(() => {
     if (!isOpen) return undefined

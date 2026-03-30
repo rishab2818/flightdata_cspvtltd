@@ -440,15 +440,8 @@ async def job_data_preview(
           "columns": display_columns,
     }
 
-    minio = get_minio_client()
-    data_url = minio.presigned_get_object(
-        bucket_name=settings.ingestion_bucket,
-        object_name=processed_key,
-        expires=timedelta(minutes=10),
-    )
-
     try:
-        pf = pq.ParquetFile(data_url, pre_buffer=True)
+        pf = _open_parquet_file_from_minio(settings.ingestion_bucket, processed_key)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Unable to read processed parquet: {exc}") from exc
 
@@ -495,9 +488,9 @@ async def job_data_preview(
     rows = []
     for row in raw_rows:
         mapped_row = {}
-    for key, value in row.items():
-        mapped_row[rename_map.get(key, key)] = _sanitize_json_value(value)
-    rows.append(mapped_row)
+        for key, value in row.items():
+            mapped_row[rename_map.get(key, key)] = _sanitize_json_value(value)
+        rows.append(mapped_row)
 
     return {"rows": rows, "total": total_rows, "columns": display_columns}
 
@@ -752,6 +745,20 @@ def _read_parquet_from_minio(bucket: str, object_key: str):
 
     buf = io.BytesIO(data)
     return pq.read_table(buf)  # pyarrow Table
+
+
+def _open_parquet_file_from_minio(bucket: str, object_key: str) -> pq.ParquetFile:
+    minio = get_minio_client()
+    resp = minio.get_object(bucket, object_key)
+    try:
+        data = resp.read()
+    finally:
+        resp.close()
+        resp.release_conn()
+
+    # PyArrow in this environment does not recognize presigned MinIO HTTP URLs
+    # as a filesystem, so we open the parquet from an in-memory buffer instead.
+    return pq.ParquetFile(io.BytesIO(data), pre_buffer=True)
 
 
 def _rows_to_json_records(df: pd.DataFrame, limit: int | None = None) -> list[dict]:
