@@ -498,9 +498,20 @@ const activeSeriesIndex = useMemo(
     )
   }, [activeSeriesId])
 
+  const resolveAxisSelectionName = useCallback((selection) => {
+    if (!selection) return ''
+    if (typeof selection === 'string') return selection.trim()
+    if (typeof selection === 'object') {
+      return String(selection.label || selection.key || '').trim()
+    }
+    return String(selection).trim()
+  }, [])
+
   const handleBrowserSelectY = useCallback((colOrCols) => {
     if (Array.isArray(colOrCols) && colOrCols.length > 1) {
-      const cleaned = colOrCols.map((item) => String(item || '').trim()).filter(Boolean)
+      const cleaned = colOrCols
+        .map((item) => resolveAxisSelectionName(item))
+        .filter(Boolean)
       if (!cleaned.length) {
         setDataBrowserOpen(false)
         setDataBrowserTarget(null)
@@ -515,12 +526,12 @@ const activeSeriesIndex = useMemo(
       updateActiveSeries(patch)
     } else {
       const col = Array.isArray(colOrCols) ? colOrCols[0] : colOrCols
-      const safe = String(col || '').trim()
+      const safe = resolveAxisSelectionName(col)
       if (safe) {
         const patch = {
           yAxis: safe,
           yAxisList: [],
-          rowYData: null,
+          rowYData: typeof col === 'object' ? col : null,
           label: '',
         }
         updateActiveSeries(patch)
@@ -528,32 +539,36 @@ const activeSeriesIndex = useMemo(
     }
     setDataBrowserOpen(false)
     setDataBrowserTarget(null)
-  }, [activeSeries, updateActiveSeries])
+  }, [resolveAxisSelectionName, updateActiveSeries])
 
-  const handleBrowserSelectRowX = useCallback((rowIndex, rowData, columns) => {
-    const values = (columns || []).map((col) => {
-      const value = rowData?.[col]
-      return value === null || value === undefined ? NaN : Number(value)
-    })
+  const handleBrowserSelectRowX = useCallback((rowSelection) => {
+    const values = Array.isArray(rowSelection?.values) ? rowSelection.values : []
+    const rowIndex = Number(rowSelection?.rowIndex)
     updateActiveSeries({
-      xAxis: `Row ${rowIndex}`,
-      rowXData: { rowIndex, values, label: `Row ${rowIndex}` },
+      xAxis: rowSelection?.label || `Row ${rowIndex + 1}`,
+      rowXData: {
+        rowIndex,
+        values,
+        label: rowSelection?.label || `Row ${rowIndex + 1}`,
+      },
     })
     setDataBrowserOpen(false)
     setDataBrowserTarget(null)
   }, [updateActiveSeries])
 
-  const handleBrowserSelectRowY = useCallback((rowIndex, rowData, columns) => {
-    const values = (columns || []).map((col) => {
-      const value = rowData?.[col]
-      return value === null || value === undefined ? NaN : Number(value)
-    })
+  const handleBrowserSelectRowY = useCallback((rowSelection) => {
+    const values = Array.isArray(rowSelection?.values) ? rowSelection.values : []
+    const rowIndex = Number(rowSelection?.rowIndex)
     const indexValues = values.map((_, idx) => idx + 1)
     const hasRowX = String(activeSeries?.xAxis || '').startsWith('Row ')
     updateActiveSeries({
-      yAxis: `Row ${rowIndex}`,
+      yAxis: rowSelection?.label || `Row ${rowIndex + 1}`,
       yAxisList: [],
-      rowYData: { rowIndex, values, label: `Row ${rowIndex}` },
+      rowYData: {
+        rowIndex,
+        values,
+        label: rowSelection?.label || `Row ${rowIndex + 1}`,
+      },
       xAxis: hasRowX ? activeSeries?.xAxis : 'Row Index',
       rowXData: hasRowX ? activeSeries?.rowXData : { rowIndex: 0, values: indexValues, label: 'Row Index' },
       label: '',
@@ -3530,13 +3545,16 @@ pollVisualization(res.viz_id)
             initialRows={activeJob?.sample_rows || []}
             totalRows={activeJob?.rows_seen || 0}
             onSelectX={(col) => {
-              updateActiveSeries({ xAxis: col, rowXData: null })
+              updateActiveSeries({
+                xAxis: resolveAxisSelectionName(col),
+                rowXData: typeof col === 'object' ? col : null,
+              })
               setDataBrowserOpen(false)
               setDataBrowserTarget(null)
             }}
             onSelectY={handleBrowserSelectY}
             onSelectZ={(col) => {
-              updateActiveSeries({ zAxis: col })
+              updateActiveSeries({ zAxis: resolveAxisSelectionName(col) })
               setDataBrowserOpen(false)
               setDataBrowserTarget(null)
             }}
@@ -3544,14 +3562,10 @@ pollVisualization(res.viz_id)
             currentX={activeSeries.xAxis || ''}
             currentY={activeSeries.yAxis || ''}
             currentZ={activeSeries.zAxis || ''}
-            targetAxis={dataBrowserTarget}
-            onSelectRowX={(rowIndex, rowData) =>
-              handleBrowserSelectRowX(rowIndex, rowData, activeAxisColumns)
-            }
-            onSelectRowY={(rowIndex, rowData) =>
-              handleBrowserSelectRowY(rowIndex, rowData, activeAxisColumns)
-            }
+            onSelectRowX={handleBrowserSelectRowX}
+            onSelectRowY={handleBrowserSelectRowY}
             showRowSelect={!requiresZ}
+            noHeaderMatrixMode={activeJob?.header_mode === 'none'}
           />
         )}
       </div>
