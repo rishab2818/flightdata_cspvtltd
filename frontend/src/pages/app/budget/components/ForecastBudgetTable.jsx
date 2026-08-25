@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from 'react-icons/fi';
+import { AuthContext } from '../../../../context/AuthContext';
 import Delete from '../../../../assets/Delete.svg'
 import PencilSimple from '../../../../assets/PencilSimple.svg'
 import ViewIcon from '../../../../assets/ViewIcon.svg'
@@ -24,6 +25,10 @@ const formatCurrency = (value) => {
 };
 
 export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onDelete, onDownload }) {
+  const { user } = useContext(AuthContext);
+  const role = user?.role?.toUpperCase?.();
+  const canDelete = role === 'GD' || role === 'DH';
+
   return (
     <div className={styles.tableWrapper}>
       <table className={styles.table}>
@@ -116,10 +121,20 @@ export default function ForecastBudgetTable({ columns, rows, onView, onEdit, onD
                     <img style={{ width: '20px', height: '20px' }} src={DownloadSimple} alt="download" />
                   </button>
                   <button
-                     style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
-                    title="Delete"
+                     style={{
+                       background: '#ffffff',
+                       border: '0.67px solid #0000001A',
+                       width: '40px',
+                       height: '35px',
+                       borderRadius: '8px',
+                       alignItems: 'center',
+                       opacity: canDelete ? 1 : 0.4,
+                       cursor: canDelete ? 'pointer' : 'not-allowed',
+                     }}
+                    title={canDelete ? 'Delete' : 'Only GD/DH can delete'}
                     type="button"
-                    onClick={() => onDelete?.(row)}
+                    disabled={!canDelete}
+                    onClick={() => canDelete && onDelete?.(row)}
                   >
                      <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                   </button>

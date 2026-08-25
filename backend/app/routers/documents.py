@@ -27,6 +27,20 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 project_repo = ProjectRepository()
 
 
+async def _ensure_document_access(row: dict, user: CurrentUser) -> None:
+    """Allow access if the document belongs to a project the user is a
+    member of, or (for documents with no project_id) if the user is the
+    owner."""
+    project_id = row.get("project_id")
+    if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if project:
+            return
+    if row.get("owner_email") == user.email:
+        return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+
 def _validate_section_and_subsection(
     section: DocumentSection, subsection: Optional[MoMSubsection]
 ) -> None:
@@ -404,7 +418,6 @@ async def list_user_documents(
     db = await get_db()
 
     query = {
-        "owner_email": user.email,
         "section": section.value,
     }
     if section == DocumentSection.MINUTES_OF_MEETING and subsection is not None:
@@ -417,6 +430,8 @@ async def list_user_documents(
                 detail="Project not found or access denied",
             )
         query["project_id"] = project_id
+    else:
+        query["owner_email"] = user.email
 
     cursor = (
         db.user_documents.find(query)
@@ -494,19 +509,15 @@ async def get_document_download_url(
     doc_id: str,
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Return a presigned URL to download a document the user owns."""
+    """Return a presigned URL to download a document."""
 
     db = await get_db()
-    row = await db.user_documents.find_one(
-        {
-            "_id": ObjectId(doc_id),
-            "owner_email": user.email,
-        }
-    )
+    row = await db.user_documents.find_one({"_id": ObjectId(doc_id)})
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
         )
+    await _ensure_document_access(row, user)
 
     minio_client = get_minio_client()
     bucket = settings.minio_docs_bucket
@@ -536,14 +547,13 @@ async def update_document(
     """Update tag, meeting date, action owners, and action points for a document."""
 
     db = await get_db()
-    row = await db.user_documents.find_one(
-        {"_id": ObjectId(doc_id), "owner_email": user.email}
-    )
+    row = await db.user_documents.find_one({"_id": ObjectId(doc_id)})
 
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
         )
+    await _ensure_document_access(row, user)
 
     updates: dict = {}
     if payload.tag is not None:
@@ -597,20 +607,17 @@ async def delete_document(
 ):
     """Delete a document completely (MinIO object + metadata).
 
-    Only the owner can delete it.
+    Only GD/DH can delete.
     """
+    require_head(user)
 
     db = await get_db()
-    row = await db.user_documents.find_one(
-        {
-            "_id": ObjectId(doc_id),
-            "owner_email": user.email,
-        }
-    )
+    row = await db.user_documents.find_one({"_id": ObjectId(doc_id)})
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
         )
+    await _ensure_document_access(row, user)
 
     minio_client = get_minio_client()
     bucket = settings.minio_docs_bucket

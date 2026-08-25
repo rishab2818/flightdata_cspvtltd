@@ -48,3 +48,20 @@ export function formatDistanceToNowWithExactTime(dateString) {
 
   return `${relative} (${exactTime})`;
 }
+
+export function formatDateTimeShort(dateInput) {
+  if (!dateInput) return '-';
+
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = String(date.getFullYear()).slice(-2);
+  const hours24 = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 || 12;
+
+  return `${day}/${month}/${year} : ${hours12}:${minutes} ${period}`;
+}

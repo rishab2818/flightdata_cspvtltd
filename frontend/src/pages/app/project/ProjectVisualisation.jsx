@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 
+import { AuthContext } from '../../../context/AuthContext'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { projectApi } from '../../../api/projectapi'
 import { visualizationApi } from '../../../api/visualizationApi'
@@ -192,6 +193,9 @@ export default function ProjectVisualisation() {
   const [searchParams] = useSearchParams()
   const requestedVizId = String(searchParams.get('vizId') || '').trim()
   const { project } = useOutletContext()
+  const { user } = useContext(AuthContext)
+  const role = user?.role?.toUpperCase?.()
+  const canDelete = role === 'GD' || role === 'DH'
   const [dataProjectId, setDataProjectId] = useState(projectId || '')
   const [memberProjects, setMemberProjects] = useState([])
   const [loadingMemberProjects, setLoadingMemberProjects] = useState(false)
@@ -278,7 +282,7 @@ export default function ProjectVisualisation() {
   const [dataBrowserTarget, setDataBrowserTarget] = useState(null) // 'x' | 'y' | 'z'
 
   const pollTimer = useRef(null)
-  const matPlotFrameRef = useRef(null)
+  const plotFrameRef = useRef(null)
   const skipNextCalcMatAutoPreviewRef = useRef(false)
   const autoLoadedVizRef = useRef('')
   // const [isExpanded, setIsExpanded] = useState(true)
@@ -579,6 +583,15 @@ const activeSeriesIndex = useMemo(
 
   const setSeriesEnabled = (id, enabled) => {
     setSeriesList((prev) => prev.map((s) => (s.id === id ? { ...s, enabled } : s)))
+    // Instant frontend-only toggle: if this series already has a trace in the
+    // currently rendered plot (tagged via trace.meta === series_id), just
+    // restyle its visibility inside the iframe — no backend regeneration.
+    // If the series was never generated yet, this is a harmless no-op; it
+    // will actually appear once "Generate Plot" is clicked.
+    const win = plotFrameRef.current?.contentWindow
+    if (win) {
+      win.postMessage({ type: 'fd-toggle-series-visibility', seriesId: id, visible: enabled }, '*')
+    }
   }
 
   const addSeriesSlot = () => {
@@ -603,6 +616,13 @@ const activeSeriesIndex = useMemo(
     setSeriesList(remaining)
     if (activeSeriesId === id) {
       setActiveSeriesId(remaining[0]?.id)
+    }
+    // Instantly delete this series' trace(s) from the rendered plot too —
+    // same postMessage channel as the enable/disable toggle, but this one
+    // actually removes the trace (and its legend entry) instead of hiding it.
+    const win = plotFrameRef.current?.contentWindow
+    if (win) {
+      win.postMessage({ type: 'fd-toggle-series-visibility', seriesId: id, visible: false, remove: true }, '*')
     }
   }
 
@@ -1763,9 +1783,13 @@ const activeSeriesIndex = useMemo(
       return
     }
 
-    const configured = enabledSeries.filter((s) => s.jobId)
-    const matSeries = configured.filter((s) => isMatFileName(jobsById[s.jobId]?.filename || ''))
-    const tabularSeries = configured.filter((s) => !isMatFileName(jobsById[s.jobId]?.filename || ''))
+    // Tabular series are sent regardless of their enabled/disabled toggle state —
+    // disabled ones render hidden (legendonly) so the toggle can be a pure
+    // frontend Plotly.restyle afterwards, with no backend round-trip. MAT stays
+    // enabled-only since it supports a single series and has no overplot toggle.
+    const configuredAll = seriesList.filter((s) => s.jobId)
+    const matSeries = configuredAll.filter((s) => s.enabled && isMatFileName(jobsById[s.jobId]?.filename || ''))
+    const tabularSeries = configuredAll.filter((s) => !isMatFileName(jobsById[s.jobId]?.filename || ''))
 
     if (matSeries.length && tabularSeries.length) {
       setError('Mixing MAT and tabular series in one visualization is not supported.')
@@ -1858,6 +1882,8 @@ const activeSeriesIndex = useMemo(
           .flatMap((s) => {
             const derivedColumns = normalizeDerivedColumns(s)
             const baseEntry = {
+              series_id: s.id,
+              enabled: !!s.enabled,
               job_id: s.jobId,
               x_axis: s.xAxis,
               x_scale: xScale,
@@ -1938,7 +1964,7 @@ const activeSeriesIndex = useMemo(
         }
 
         const firstSeries = payloadSeries.length
-          ? configured.find(s => s.jobId === payloadSeries[0].job_id)
+          ? tabularSeries.find(s => s.jobId === payloadSeries[0].job_id)
           : null
         
          const plotName =
@@ -2123,7 +2149,7 @@ pollVisualization(res.viz_id)
   }, [enabledSeries, chartType, jobsById, buildAutoLabel])
 
   const { isLoading: matZoomLoading } = useMatZoomLoader({
-    iframeRef: matPlotFrameRef,
+    iframeRef: plotFrameRef,
     enabled: activeIsMat && !!plotHtml,
     onZoomUpdate: useCallback(async () => { }, []),
     debounceMs: 120,
@@ -3305,7 +3331,7 @@ pollVisualization(res.viz_id)
                 {hasPlotContent ? (
                   <iframe
                     title="plot"
-                    ref={activeIsMat ? matPlotFrameRef : undefined}
+                    ref={plotFrameRef}
                     srcDoc={plotHtml}
                     style={{ width: '100%', height: '100%', border: 'none' }}
                   />
@@ -3470,14 +3496,16 @@ pollVisualization(res.viz_id)
                             <button
                               type="button"
                               className="danger"
+                              title={canDelete ? 'Delete' : 'Only GD/DH can delete'}
                               // onClick={() => deleteVisualization(viz.viz_id)}
                               onClick={() =>
-                                setConfirmDelete({
+                                canDelete && setConfirmDelete({
                                   open: true,
                                   vizId: viz.viz_id
                                 })
                               }
-                              disabled={deletingViz === viz.viz_id}
+                              disabled={!canDelete || deletingViz === viz.viz_id}
+                              style={{ opacity: canDelete ? 1 : 0.4, cursor: canDelete ? 'pointer' : 'not-allowed' }}
 
                             >
                               <img className="actionBtn" src={Delete} alt="delete" />

@@ -1,6 +1,8 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useContext, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { FiDownload, FiEdit2, FiEye, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 
+import { AuthContext } from "../../context/AuthContext";
 import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUploadModal";
 import { documentsApi } from "../../api/documentsApi";
 import styles from "./DigitalLibrary.module.css";
@@ -80,6 +82,11 @@ export function DocumentLibraryPage({
   tableTitle = "My Files",
   searchPlaceholder = "Search reports, tags, projects...",
 }) {
+  const { projectId } = useParams();
+  const { user } = useContext(AuthContext);
+  const role = user?.role?.toUpperCase?.();
+  const canDelete = role === "GD" || role === "DH" || role === "TL" || role === "SM";
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("newest");
@@ -106,13 +113,13 @@ export function DocumentLibraryPage({
 
   const fetchDocumentsPage = useCallback(
     async ({ page, limit }) => {
-      const data = await documentsApi.listBySection(section, {
+      const data = await documentsApi.listBySection(section, projectId, {
         page,
         limit,
       });
       return (data || []).map(mapDocument);
     },
-    [mapDocument, section]
+    [mapDocument, section, projectId]
   );
 
   const {
@@ -125,7 +132,7 @@ export function DocumentLibraryPage({
     loadMore,
   } = useLazyCollection({
     fetchPage: fetchDocumentsPage,
-    deps: [section],
+    deps: [section, projectId],
     errorMessage: "Unable to load your documents. Please try again.",
   });
 
@@ -152,6 +159,7 @@ export function DocumentLibraryPage({
   /* -------------------- DELETE WITH CONFIRMATION -------------------- */
   // Trigger modal
 const handleDelete = (doc) => {
+  if (!canDelete) return;
   setRecordToDelete(doc);
   setShowDeleteModal(true);
 };
@@ -380,9 +388,20 @@ const confirmDelete = async () => {
                         </button>
                         <button
                           type="button"
-                          style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+                          style={{
+                            background: '#ffffff',
+                            border: '0.67px solid #0000001A',
+                            width: '40px',
+                            height: '35px',
+                            borderRadius: '8px',
+                            alignItems: 'center',
+                            opacity: canDelete ? 1 : 0.4,
+                            cursor: canDelete ? 'pointer' : 'not-allowed',
+                          }}
                           onClick={() => handleDelete(doc)}
+                          disabled={!canDelete}
                           aria-label="Delete"
+                          title={canDelete ? "Delete" : "Only GD/DH can delete"}
                         >
                           <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                         </button>
@@ -410,6 +429,7 @@ const confirmDelete = async () => {
         uploadLabel={uploadLabel}
         description={uploadDescription}
         supported={supportedText}
+        projectId={projectId}
       />
 
        {showDeleteModal && (

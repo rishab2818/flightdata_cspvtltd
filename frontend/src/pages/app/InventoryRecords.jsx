@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
@@ -127,6 +128,7 @@ function QuantityDisplay({ quantity, assignees = [], onManage }) {
 /*-------------------------- Main Component ----------------------*/
 
 export default function InventoryRecords() {
+  const { projectId } = useParams();
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ type: "all", status: "all" });
   const [showModal, setShowModal] = useState(false);
@@ -147,12 +149,12 @@ export default function InventoryRecords() {
   };
 
   const fetchOrdersPage = React.useCallback(async ({ page, limit }) => {
-    const data = await recordsApi.listInventory({ page, limit });
+    const data = await recordsApi.listInventory(projectId, { page, limit });
     return (data || []).map((item) => ({
       ...item,
       quantity_assignees: item.quantity_assignees ?? [],
     }));
-  }, []);
+  }, [projectId]);
 
   const {
     items: orders,
@@ -164,7 +166,7 @@ export default function InventoryRecords() {
     loadMore,
   } = useLazyCollection({
     fetchPage: fetchOrdersPage,
-    deps: ["inventory-records"],
+    deps: [projectId],
     errorMessage: "Failed to load inventory records.",
   });
 
@@ -529,6 +531,7 @@ export default function InventoryRecords() {
             );
           }}
           editingOrder={editingOrder}
+          projectId={projectId}
         />
       )}
 
@@ -571,7 +574,7 @@ function Input({ label, ...rest }) {
 
 /*-------------------- Modal -----------------------*/
 
-function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
+function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder, projectId }) {
   const [form, setForm] = useState({
     so_number: "",
     particular: "",
@@ -721,6 +724,7 @@ function SupplyOrderModal({ onClose, onCreated, onUpdated, editingOrder }) {
 
       const payload = {
         ...form,
+        project_id: projectId || undefined,
         quantity: form.quantity ? Number(form.quantity) : undefined,
         duration_months: form.duration_months
           ? Number(form.duration_months)

@@ -603,6 +603,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         label = series.get("label") or series.get("y_axis") or "Series"
         x_col = series.get("x_axis")
         y_col = series.get("y_axis")
+        _trace_start_idx = len(fig.data)
 
         # Avoid category axes when data is numeric
         if x_col in df.columns:
@@ -782,6 +783,14 @@ def _build_figure(series_frames: list[dict], chart_type: str):
             fig.add_trace(
                 go.Scattergl(name=label, x=df[x_col], y=df[y_col], mode="markers+lines", opacity=0.8)
             )
+
+        series_id = series.get("series_id")
+        series_enabled = series.get("enabled", True)
+        for _trace_idx in range(_trace_start_idx, len(fig.data)):
+            if series_id:
+                fig.data[_trace_idx].meta = series_id
+            if not series_enabled:
+                fig.data[_trace_idx].visible = "legendonly"
 
     # Scale validation — must be same across all series
     if len(requested_x_scales) > 1 or len(requested_y_scales) > 1:
@@ -1151,6 +1160,59 @@ def _build_mat_figure(
 
 # }})();
 # """
+# ─── Trace visibility toggle script (injected into every tabular plot HTML) ──
+# Lets the parent app show/hide an overplot series instantly (Plotly.restyle)
+# without a backend round-trip, by postMessage-ing {type, seriesId, visible}.
+# Matching is done via each trace's `meta` field, set to the frontend's
+# per-plot-slot id at figure-build time in `_build_figure`.
+
+def _build_trace_visibility_script() -> str:
+    return """
+(function() {
+  function waitForPlotly(maxWaitMs, cb) {
+    const start = Date.now();
+    function attempt() {
+      const gd = document.querySelector('.plotly-graph-div');
+      if (gd && gd._fullLayout) {
+        cb(gd);
+        return;
+      }
+      if (Date.now() - start > maxWaitMs) {
+        console.warn("trace-visibility: timed out waiting for Plotly graph div");
+        return;
+      }
+      setTimeout(attempt, 80);
+    }
+    attempt();
+  }
+
+  waitForPlotly(15000, function(gd) {
+    window.addEventListener("message", function(event) {
+      const data = event && event.data;
+      if (!data || data.type !== "fd-toggle-series-visibility") return;
+      const seriesId = data.seriesId;
+      if (!seriesId || !gd.data) return;
+
+      const indices = [];
+      for (let i = 0; i < gd.data.length; i++) {
+        if (gd.data[i].meta === seriesId) indices.push(i);
+      }
+      if (!indices.length) return;
+
+      if (data.remove) {
+        // Highest indices first so earlier deletions don't shift later ones.
+        const sorted = indices.slice().sort(function(a, b) { return b - a; });
+        Plotly.deleteTraces(gd, sorted);
+        return;
+      }
+
+      Plotly.restyle(gd, { visible: data.visible ? true : "legendonly" }, indices);
+    });
+  });
+})();
+"""
+
+
 # ─── Zoom loader script (injected into the plot HTML) ────────────────────────
 
 def _build_zoom_loader_script(
@@ -1891,7 +1953,7 @@ def generate_visualization(self, viz_id: str):
             chart_type=chart_type,
             series_meta=series_meta_for_js,
             series_stats=stats_for_js,
-        )
+        ) + _build_trace_visibility_script()
 
         # ✅ Single pio.to_html call — everything is finalised before this line
         html = pio.to_html(

@@ -5,7 +5,7 @@ from uuid import uuid4
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_head
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.db.mongo import get_db
@@ -23,8 +23,23 @@ from app.models.records import (
     TrainingRecordCreate,
     TrainingRecordOut,
 )
+from app.repositories.projects import ProjectRepository
 
 router = APIRouter(prefix="/api/records", tags=["records"])
+project_repo = ProjectRepository()
+
+
+async def _ensure_record_access(row: dict, user: CurrentUser) -> None:
+    """Allow access if the record belongs to a project the user is a member
+    of, or (for records with no project_id) if the user is the owner."""
+    project_id = row.get("project_id")
+    if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if project:
+            return
+    if row.get("owner_email") == user.email:
+        return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
 
 
 SECTION_TO_MODEL: Dict[RecordSection, Any] = {
@@ -119,11 +134,10 @@ async def _update_record(
 ):
     db = await get_db()
     oid = ObjectId(record_id)
-    row = await db.records.find_one(
-        {"_id": oid, "owner_email": user.email, "section": section.value}
-    )
+    row = await db.records.find_one({"_id": oid, "section": section.value})
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    await _ensure_record_access(row, user)
 
     now = datetime.utcnow()
     normalized_payload = {}
@@ -152,13 +166,13 @@ def _merge_record_payload(existing: dict, payload, create_model) -> dict:
 
 
 async def _delete_record(section: RecordSection, record_id: str, user: CurrentUser):
+    require_head(user)
     db = await get_db()
     oid = ObjectId(record_id)
-    row = await db.records.find_one(
-        {"_id": oid, "owner_email": user.email, "section": section.value}
-    )
+    row = await db.records.find_one({"_id": oid, "section": section.value})
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    await _ensure_record_access(row, user)
 
     if row.get("storage_key"):
         try:
@@ -175,11 +189,10 @@ async def _delete_record(section: RecordSection, record_id: str, user: CurrentUs
 async def _download_url(section: RecordSection, record_id: str, user: CurrentUser):
     db = await get_db()
     oid = ObjectId(record_id)
-    row = await db.records.find_one(
-        {"_id": oid, "owner_email": user.email, "section": section.value}
-    )
+    row = await db.records.find_one({"_id": oid, "section": section.value})
     if not row or not row.get("storage_key"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    await _ensure_record_access(row, user)
 
     url = get_minio_client().presigned_get_object(
         bucket_name=settings.minio_docs_bucket,
@@ -197,9 +210,17 @@ async def _list_records(
     limit: int = 30,
 ):
     db = await get_db()
-    query = {"section": section.value, "owner_email": user.email}
+    query = {"section": section.value}
     if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
         query["project_id"] = project_id
+    else:
+        query["owner_email"] = user.email
 
     cursor = (
         db.records.find(query)
@@ -233,11 +254,15 @@ async def create_supply_order(
 
 @router.get("/inventory-records", response_model=List[SupplyOrderOut])
 async def list_supply_orders(
+    project_id: Optional[str] = Query(
+        default=None,
+        description="Optional project filter. If provided, only returns records for that project.",
+    ),
     page: int = Query(1, ge=1),
     limit: int = Query(30, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
 ):
-    rows = await _list_records(RecordSection.INVENTORY_RECORDS, user, page=page, limit=limit)
+    rows = await _list_records(RecordSection.INVENTORY_RECORDS, user, project_id, page=page, limit=limit)
     results: List[SupplyOrderOut] = []
     for row in rows:
         row_data = {k: row.get(k) for k in SupplyOrderCreate.model_fields.keys()}

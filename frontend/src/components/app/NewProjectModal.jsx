@@ -141,9 +141,10 @@ export default function NewProjectModalImproved({
             <input
               type="text"
               required
+              minLength={2}
+              maxLength={100}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              disabled={isEditMode}
               style={{
                 width: '100%',
                 marginTop: SPACING.sm,
@@ -153,16 +154,9 @@ export default function NewProjectModalImproved({
                 // border: `1px solid ${BORDER}`,
                 fontSize: 14,
                 background:"#F3F3F5",
-                opacity: isEditMode ? 0.7 : 1,
-                cursor: isEditMode ? 'not-allowed' : 'text',
               }}
             />
           </label>
-          {isEditMode && (
-            <div style={{ marginTop: -8, fontSize: 12, color: COLORS.textMuted }}>
-              Project name cannot be changed after creation.
-            </div>
-          )}
           <label style={{ fontSize: 14, color: "#000000",fontFamily:"Inter-Regular, Helvetica"}}>
             Description
             <textarea

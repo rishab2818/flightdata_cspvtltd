@@ -11,7 +11,7 @@ from urllib.parse import unquote
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Response, Query
 from sse_starlette.sse import EventSourceResponse
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_head
 from app.core.config import settings
 from app.core.file_restrictions import ensure_allowed_filename
 from app.core.minio_client import get_minio_client
@@ -515,6 +515,7 @@ async def get_download_url(job_id: str, user: CurrentUser = Depends(get_current_
 
 @router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_job(job_id: str, user: CurrentUser = Depends(get_current_user)):
+    require_head(user)
     doc = await repo.get_job(job_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Job not found")

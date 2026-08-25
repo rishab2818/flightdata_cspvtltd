@@ -18,6 +18,7 @@ import SeeMoreText from "../../../../components/common/SeeMoreButton";
 import NewProjectModal from '../../../../components/app/NewProjectModal';
 import { useLazyCollection } from '../../../../hooks/useLazyCollection';
 import { useInfiniteScrollTrigger } from '../../../../hooks/useInfiniteScrollTrigger';
+import { formatDateTimeShort } from '../../../../lib/time';
 
 
 const DATASET_TABS = [
@@ -61,16 +62,11 @@ export default function ProjectUpload() {
 const [projectMembers, setProjectMembers] = useState([]);
 
  const role = user?.role?.toUpperCase?.();
- const canEditProject = role === 'GD' || role === 'DH';
+ const canEditProject = role === 'GD' || role === 'DH' || role === 'TL' || role === 'SM';
 
   const desc = project?.project_description || '';
 
-const date = project?.created_at
-  ? new Date(project.created_at).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-    })
-  : "-";
+const date = formatDateTimeShort(project?.created_at);
 
 const members = project?.members?.length || 0;
 
@@ -329,6 +325,7 @@ const handleViewMembers = () => {
     setSavingProjectEdit(true)
     try {
       await projectApi.update(projectId, {
+        project_name: payload.project_name,
         project_description: payload.project_description,
       })
 
@@ -623,9 +620,7 @@ const handleViewMembers = () => {
                     <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
                       <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
                         <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
-                        {tag.latest_created_at
-                          ? new Date(tag.latest_created_at).toLocaleDateString()
-                          : '-'}
+                        {formatDateTimeShort(tag.latest_created_at)}
                       </div>
                     </td>
 
@@ -638,12 +633,23 @@ const handleViewMembers = () => {
                         <img style={{ width: '20px', height: '20px' }} src={PencilSimple} alt="pencil" />
                       </button>
                       <button
-                        style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center', marginLeft: 8 }}
+                        style={{
+                          background: '#ffffff',
+                          border: '0.67px solid #0000001A',
+                          width: '40px',
+                          height: '35px',
+                          borderRadius: '8px',
+                          alignItems: 'center',
+                          marginLeft: 8,
+                          opacity: canEditProject ? 1 : 0.4,
+                          cursor: canEditProject ? 'pointer' : 'not-allowed',
+                        }}
                         type="button"
+                        title={canEditProject ? 'Delete' : 'Only GD/DH can delete'}
                         // onClick={() => handleDeleteTag(tag.tag_name)}
-                        onClick={() => setConfirmDelete({ open: true, tagName: tag.tag_name })}
+                        onClick={() => canEditProject && setConfirmDelete({ open: true, tagName: tag.tag_name })}
 
-                        disabled={deletingTag === tag.tag_name}
+                        disabled={!canEditProject || deletingTag === tag.tag_name}
                       >
                         {deletingTag === tag.tag_name ? '...' : ''}
                         <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />

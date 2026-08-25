@@ -48,8 +48,8 @@ class ProjectOut(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 class ProjectUpdate(BaseModel):
-    project_name: Optional[str] = None
-    project_description: Optional[str] = None
+    project_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    project_description: Optional[str] = Field(None, max_length=1000)
 
 class MembersPatch(BaseModel):
     add_emails: List[str] = Field(default_factory=list)

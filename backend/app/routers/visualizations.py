@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from minio.error import S3Error
 from pydantic import ValidationError
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_head
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.models.visualization import (
@@ -554,6 +554,8 @@ async def create_visualization(
 
         series_docs.append(
             {
+                "series_id": item.series_id,
+                "enabled": item.enabled,
                 "job_id": item.job_id,
                 "x_axis": item.x_axis,
                 "y_axis": item.y_axis,
@@ -598,6 +600,7 @@ async def preview_visualization(payload: VisualizationCreateRequest, user: Curre
 
 @router.delete("/{viz_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_visualization(viz_id: str, user: CurrentUser = Depends(get_current_user)):
+    require_head(user)
     doc = await repo.get(viz_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visualization not found")

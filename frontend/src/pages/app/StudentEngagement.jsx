@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import { studentEngagementApi } from "../../api/studentEngagementApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import { FiDownload, FiEdit2, FiEye, FiTrash2 } from "react-icons/fi";
@@ -98,6 +99,9 @@ function Modal({ title, onClose, children }) {
 
 export default function StudentEngagement() {
   const { projectId } = useParams();
+  const { user } = useContext(AuthContext);
+  const role = user?.role?.toUpperCase?.();
+  const canDelete = role === "GD" || role === "DH" || role === "TL" || role === "SM";
   const [approvalFilter, setApprovalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -605,12 +609,23 @@ if (!file && !existingFileMeta?.storage_key) {
                       {/* 🔴 OPEN DELETE CONFIRM MODAL */}
                       <button
                         type="button"
-                         style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
+                         style={{
+                           background: '#ffffff',
+                           border: '0.67px solid #0000001A',
+                           width: '40px',
+                           height: '35px',
+                           borderRadius: '8px',
+                           alignItems: 'center',
+                           opacity: canDelete ? 1 : 0.4,
+                           cursor: canDelete ? 'pointer' : 'not-allowed',
+                         }}
                         onClick={() => {
+                          if (!canDelete) return;
                           setRecordToDelete(row);
                           setShowDeleteModal(true);
                         }}
-                        title="Delete"
+                        disabled={!canDelete}
+                        title={canDelete ? "Delete" : "Only GD/DH can delete"}
                       >
                       <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                       </button>

@@ -263,6 +263,7 @@ class ProjectRepository:
     async def update_main(
         self,
         project_id: str,
+        name: Optional[str],
         desc: Optional[str],
         actor_email: str
     ) -> Optional[dict]:
@@ -273,6 +274,8 @@ class ProjectRepository:
             return None
 
         updates = {}
+        if name is not None:
+            updates["project_name"] = name
         if desc is not None:
             updates["project_description"] = desc
         if updates:

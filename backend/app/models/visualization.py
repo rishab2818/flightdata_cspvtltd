@@ -17,6 +17,16 @@ class DerivedColumnInput(BaseModel):
 
 
 class VisualizationSeriesInput(BaseModel):
+    series_id: Optional[str] = Field(
+        None,
+        description="Frontend-generated stable id for this plot slot, used to let the "
+        "client toggle trace visibility client-side without regenerating the chart",
+    )
+    enabled: bool = Field(
+        True,
+        description="Initial trace visibility. Disabled series are still rendered "
+        "(as legendonly) so the client can toggle them back on instantly.",
+    )
     job_id: str = Field(..., description="Ingestion job ID for this series")
     x_axis: str = Field(..., description="Column to plot on X axis for this series")
     y_axis: str = Field(..., description="Column to plot on Y axis for this series")

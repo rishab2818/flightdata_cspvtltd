@@ -17,9 +17,12 @@ export const documentsApi = {
   },
 
   // Generic list by section (no subsection)
-  listBySection: async (section, pagination = {}) => {
+  listBySection: async (section, projectId, pagination = {}) => {
     const { page = 1, limit = 30 } = pagination;
     const params = { section, page, limit }; // e.g. "inventory_records"
+    if (projectId) {
+      params.project_id = projectId;
+    }
     const { data } = await axiosClient.get("/api/documents", { params });
     return data; // array of UserDocumentOut
   },

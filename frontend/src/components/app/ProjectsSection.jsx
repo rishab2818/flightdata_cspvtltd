@@ -75,7 +75,7 @@ export default function ProjectsSectionImproved() {
     }
   };
 
-  const canCreate = role === 'GD' || role === 'DH';
+  const canCreate = role === 'GD' || role === 'DH' || role === 'TL' || role === 'SM';
 
   return (
     <div

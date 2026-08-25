@@ -5,7 +5,7 @@ from uuid import uuid4
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_head
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.db.mongo import get_db
@@ -131,6 +131,7 @@ async def update_forecast(
 
 @router.delete("/{record_id}")
 async def delete_forecast(record_id: str, user: CurrentUser = Depends(get_current_user)):
+    require_head(user)
     db = await get_db()
     oid = ObjectId(record_id)
     existing = await db.budget_forecasts.find_one({"_id": oid, "owner_email": user.email})

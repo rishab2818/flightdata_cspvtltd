@@ -11,7 +11,7 @@ export default function ProtectedGDorDH() {
 
   // only GD or DH can access these routes
   const role = user?.role?.toUpperCase?.();
-  const allowed = role === 'GD' || role === 'DH';
+  const allowed = role === 'GD' || role === 'DH' || role === 'TL' || role === 'SM';
   if (!allowed) return <Navigate to="/app" replace />;
 
   // ok → render nested routes

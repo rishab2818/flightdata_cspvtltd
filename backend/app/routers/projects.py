@@ -161,14 +161,10 @@ async def update_project(
     user: CurrentUser = Depends(get_current_user),
 ):
     require_head(user)
-    if payload.project_name is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="Project name cannot be changed after creation",
-        )
 
     d = await repo.update_main(
         project_id,
+        payload.project_name,
         payload.project_description,
         actor_email=user.email,
     )

@@ -32,5 +32,5 @@ async def get_current_user(request: Request) -> CurrentUser:
     return CurrentUser(email=sub, role=role)
 
 def require_head(user: CurrentUser):
-    if user.role not in {Role.GD, Role.DH}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="GD/DH only")
+    if user.role not in {Role.GD, Role.DH, Role.TL, Role.SM}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="GD/DH/TL/SM only")

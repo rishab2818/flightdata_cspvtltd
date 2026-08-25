@@ -87,12 +87,13 @@
 //   );
 // }
 
-import React from "react";
+import React, { useContext } from "react";
 import { FiEye, FiDownload, FiTrash2, FiEdit2 } from "react-icons/fi";
 import Delete from '../../assets/Delete.svg'
 import PencilSimple from '../../assets/PencilSimple.svg'
 import ViewIcon from '../../assets/ViewIcon.svg'
 import DownloadSimple from '../../assets/DownloadSimple.svg'
+import { AuthContext } from '../../context/AuthContext'
 
 export default function DocumentActions({
   doc,
@@ -101,6 +102,10 @@ export default function DocumentActions({
   onDownload,
   onDelete
 }) {
+  const { user } = useContext(AuthContext)
+  const role = user?.role?.toUpperCase?.()
+  const canDelete = role === 'GD' || role === 'DH'
+
   return (
     <div className="doc-actions">
 
@@ -130,8 +135,19 @@ export default function DocumentActions({
 
       <button
         type="button"
-         style={{ background: '#ffffff', border: '0.67px solid #0000001A', width: '40px', height: '35px', borderRadius: '8px', alignItems: 'center' }}
-        onClick={() => onDelete?.(doc.id)}
+         style={{
+           background: '#ffffff',
+           border: '0.67px solid #0000001A',
+           width: '40px',
+           height: '35px',
+           borderRadius: '8px',
+           alignItems: 'center',
+           opacity: canDelete ? 1 : 0.4,
+           cursor: canDelete ? 'pointer' : 'not-allowed',
+         }}
+        title={canDelete ? 'Delete' : 'Only GD/DH can delete'}
+        disabled={!canDelete}
+        onClick={() => canDelete && onDelete?.(doc.id)}
       >
          <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
       </button>

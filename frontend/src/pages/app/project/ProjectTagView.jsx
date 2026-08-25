@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react"
+import React, { useContext, useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { AuthContext } from "../../../context/AuthContext"
 import { ingestionApi } from "../../../api/ingestionApi"
 import { visualizationApi } from "../../../api/visualizationApi"
 import { PROJECT_TABULAR_EXTENSIONS } from "../../../uploadPreview/fileTypes"
@@ -61,6 +62,9 @@ const forceDownloadFromUrl = async (url, filename) => {
 export default function ProjectTagView() {
   const { projectId, datasetType, tagName } = useParams()
   const navigate = useNavigate()
+  const { user } = useContext(AuthContext)
+  const role = user?.role?.toUpperCase?.()
+  const canDelete = role === "GD" || role === "DH" || role === "TL" || role === "SM"
 
   const [files, setFiles] = useState([])
   const [plots, setPlots] = useState([])
@@ -218,6 +222,7 @@ export default function ProjectTagView() {
   }
 
   const handleDelete = async (file) => {
+    if (!canDelete) return
     if (!window.confirm(`Delete "${file.filename}"? This cannot be undone.`)) return
     try {
       await ingestionApi.remove(file.job_id)
@@ -299,7 +304,14 @@ export default function ProjectTagView() {
                 👁
               </button>
               <button onClick={() => handleDownload(f)}>⬇</button>
-              <button onClick={() => handleDelete(f)}>🗑</button>
+              <button
+                onClick={() => handleDelete(f)}
+                disabled={!canDelete}
+                title={canDelete ? "Delete" : "Only GD/DH can delete"}
+                style={{ opacity: canDelete ? 1 : 0.4, cursor: canDelete ? "pointer" : "not-allowed" }}
+              >
+                🗑
+              </button>
             </td>
           </tr>
         ))}
@@ -360,7 +372,14 @@ export default function ProjectTagView() {
                 👁
               </button>
               <button onClick={() => handleDownload(item)}>⬇</button>
-              <button onClick={() => handleDelete(item)}>🗑</button>
+              <button
+                onClick={() => handleDelete(item)}
+                disabled={!canDelete}
+                title={canDelete ? "Delete" : "Only GD/DH can delete"}
+                style={{ opacity: canDelete ? 1 : 0.4, cursor: canDelete ? "pointer" : "not-allowed" }}
+              >
+                🗑
+              </button>
             </>
           )}
         </td>

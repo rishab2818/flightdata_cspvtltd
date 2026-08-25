@@ -22,6 +22,7 @@ export default function DigitalLibraryUploadModal({
   uploadLabel = "Upload Document",
   description = "Attach training related file here",
   supported = "PDF/Word",
+  projectId = null,
 }) {
   const [file, setFile] = useState(null);
   const [tag, setTag] = useState("");
@@ -90,6 +91,7 @@ export default function DigitalLibraryUploadModal({
         content_type: contentType,
         size_bytes: file.size,
         content_hash: hash,
+        project_id: projectId || undefined,
       };
 
       const confirmed = await documentsApi.confirmUpload(confirmPayload);

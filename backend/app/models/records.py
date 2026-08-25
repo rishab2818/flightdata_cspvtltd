@@ -37,6 +37,7 @@ class QuantityAssignee(BaseModel):
 
 
 class SupplyOrderCreate(BaseRecordFile):
+    project_id: Optional[str] = None
     so_number: Optional[str] = Field(None, description="Supply order number")
     particular: Optional[str] = None
     supplier_name: Optional[str] = None

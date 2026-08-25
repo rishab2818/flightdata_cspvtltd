@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
+import { AuthContext } from '../../../context/AuthContext'
 import { ingestionApi } from '../../../api/ingestionApi'
 import { projectApi } from '../../../api/projectapi'
 import { rawPreviewApi } from '../../../api/rawPreviewApi'
@@ -13,6 +14,7 @@ import { PROJECT_TABULAR_EXTENSIONS } from '../../../uploadPreview/fileTypes'
 import { useLoader } from '../../../context/LoaderContext'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import { formatDateTimeShort } from '../../../lib/time'
 
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal"
@@ -471,6 +473,10 @@ const buildPlotsExportDom = async (plotItems = []) => {
 }
 
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
+  const { user } = useContext(AuthContext)
+  const role = user?.role?.toUpperCase?.()
+  const canDelete = role === 'GD' || role === 'DH'
+
   const [files, setFiles] = useState([])
   const [tab, setTab] = useState('raw')
   const [plots, setPlots] = useState([])
@@ -792,7 +798,7 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
               <td style={{ color: '#000000', fontFamily: 'inter-regular,Helvetica', fontSize: '14px', fontWeight: '400' }}>
                 <div style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
                   <img style={{ width: '20px', height: '20px' }} src={CalendarBlank} alt="calendar" />
-                  {new Date(f.created_at).toLocaleDateString()}
+                  {formatDateTimeShort(f.created_at)}
                 </div>
               </td>
 
@@ -835,8 +841,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                   )}
 
                   <button
-                    onClick={() => setConfirmDelete({ open: true, file: f })}
-                    title="Delete"
+                    onClick={() => canDelete && setConfirmDelete({ open: true, file: f })}
+                    title={canDelete ? 'Delete' : 'Only GD/DH can delete'}
                     style={{
                       background: '#ffffff',
                       border: '0.67px solid #0000001A',
@@ -845,8 +851,11 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
                       borderRadius: '8px',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      opacity: canDelete ? 1 : 0.4,
+                      cursor: canDelete ? 'pointer' : 'not-allowed',
                     }}
                     type="button"
+                    disabled={!canDelete}
                   >
                     <img style={{ width: '20px', height: '20px' }} src={Delete} alt="delete" />
                   </button>

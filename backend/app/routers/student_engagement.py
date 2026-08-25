@@ -5,7 +5,7 @@ from bson import ObjectId
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_head
 from app.core.config import settings
 from app.core.minio_client import get_minio_client
 from app.db.mongo import get_db
@@ -15,8 +15,21 @@ from app.models.student_engagement import (
     StudentEngagementCreate,
     StudentEngagementOut,
 )
+from app.repositories.projects import ProjectRepository
 
 router = APIRouter(prefix="/api/student-engagements", tags=["student-engagements"])
+project_repo = ProjectRepository()
+
+
+async def _ensure_engagement_access(row: dict, user: CurrentUser) -> None:
+    project_id = row.get("project_id")
+    if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if project:
+            return
+    if row.get("owner_email") == user.email:
+        return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
 
 
 async def _ensure_bucket(bucket: str) -> None:
@@ -129,11 +142,19 @@ async def list_student_engagements(
     user: CurrentUser = Depends(get_current_user),
 ):
     db = await get_db()
-    query = {"owner_email": user.email}
+    query = {}
     if approval_status:
         query["approval_status"] = approval_status.value
     if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
         query["project_id"] = project_id
+    else:
+        query["owner_email"] = user.email
 
     cursor = (
         db.student_engagements.find(query)
@@ -196,9 +217,10 @@ async def update_student_engagement(
 ):
     db = await get_db()
     oid = ObjectId(record_id)
-    row = await db.student_engagements.find_one({"_id": oid, "owner_email": user.email})
+    row = await db.student_engagements.find_one({"_id": oid})
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    await _ensure_engagement_access(row, user)
 
     now = datetime.utcnow()
     update_doc = {"updated_at": now}
@@ -261,11 +283,13 @@ async def update_student_engagement(
 async def delete_student_engagement(
     record_id: str, user: CurrentUser = Depends(get_current_user)
 ):
+    require_head(user)
     db = await get_db()
     oid = ObjectId(record_id)
-    row = await db.student_engagements.find_one({"_id": oid, "owner_email": user.email})
+    row = await db.student_engagements.find_one({"_id": oid})
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    await _ensure_engagement_access(row, user)
 
     # best-effort delete of file
     if row.get("storage_key"):
@@ -286,11 +310,12 @@ async def get_engagement_download_url(
 ):
     db = await get_db()
     oid = ObjectId(record_id)
-    row = await db.student_engagements.find_one({"_id": oid, "owner_email": user.email})
+    row = await db.student_engagements.find_one({"_id": oid})
     if not row or not row.get("storage_key"):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="File not found for this record"
         )
+    await _ensure_engagement_access(row, user)
 
     download_url = get_minio_client().presigned_get_object(
         bucket_name=settings.minio_docs_bucket,

@@ -12,9 +12,11 @@ export const recordsApi = {
   },
 
   // Inventory Records
-  listInventory: async (pagination = {}) => {
+  listInventory: async (projectId, pagination = {}) => {
     const { page = 1, limit = 30 } = pagination;
-    const { data } = await axiosClient.get("/api/records/inventory-records", { params: { page, limit } });
+    const params = { page, limit };
+    if (projectId) params.project_id = projectId;
+    const { data } = await axiosClient.get("/api/records/inventory-records", { params });
     return data;
   },
   createInventory: async (payload) => {
