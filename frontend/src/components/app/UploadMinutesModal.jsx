@@ -430,7 +430,7 @@ export default function UploadMinutesModal({
         <AssigneeSearchInput
           value={actionPointAssignee}
           projectId={projectId}
-          placeholder="Assign to (optional)"
+          placeholder="Assign to"
           className="Textinput"
           onValueChange={(nextValue) => {
             setActionPointAssignee(nextValue);

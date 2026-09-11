@@ -17,18 +17,17 @@ import DivisionalRecords from './pages/app/DivisionalRecords'
 import CustomerFeedbacks from './pages/app/CustomerFeedbacks'
 import TrainingRecords from './pages/app/TrainingRecords'
 import TechnicalReports from './pages/app/TechnicalReports'
-import Setting from './pages/app/Setting'
+import Settings from './pages/app/Settings'
 import DigitalLibrary from './pages/app/DigitalLibrary'
 import BudgetEstimation from './pages/app/budget/BudgetEstimation'
 import ProtectedGDorDH from './routes/ProtectedGDorDH'
 import ProtectedAuth from './routes/ProtectedAuth'
 import AdminShell from './pages/admin/AdminShell'
-import Settings from './pages/admin/Settings'
 import ProjectShell from './pages/app/project/ProjectShell'
 // import ProjectUpload from './pages/app/project/ProjectUpload'
 import ProjectOverview from './pages/app/project/project overview/ProjectOverview'
 import ProjectVisualisation from './pages/app/project/ProjectVisualisation'
-import ProjectSettings from './pages/app/project/ProjectSettings'
+// import ProjectSettings from './pages/app/project/ProjectSettings'
 import ProjectTagView from './pages/app/project/ProjectTagView'
 import ProcessedPreviewPage from './pages/app/project/ProcessedPreviewPage'
 import RawPreviewPage from './pages/app/project/RawPreviewPage'
@@ -66,7 +65,7 @@ export default function App() {
           <Route path="training-records" element={<TrainingRecords />} />
           <Route path="technical-reports" element={<TechnicalReports />} />
           <Route path="digital-library" element={<DigitalLibrary />} />
-          <Route path="setting" element={<Setting />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Route>
 
@@ -84,17 +83,18 @@ export default function App() {
           <Route path="divisional" element={<DivisionalRecords />} />
           <Route path="feedback" element={<CustomerFeedbacks />} />
           <Route path="training" element={<TrainingRecords />} />
-          <Route path="settings" element={<ProjectSettings />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
       <Route
         path="/projects/:projectId/data/:datasetType/:tagName"
         element={<ProjectTagView />}
       />
       <Route path="/processed-preview/:jobId" element={<ProcessedPreviewPage />} />
       <Route path="/raw-preview/:jobId" element={<RawPreviewPage />} />
+
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }

@@ -38,7 +38,7 @@ export default function Sidebar() {
   const menu = [
     { label: "Dashboard", path: "/admin", icon: dashIcon },
     { label: "User Management", path: "/admin/users", icon: usersIcon },
-    { label: "Setting", path: "/admin/setting", icon: gearIcon },
+     { label: "Settings", path: "/admin/settings", icon: gearIcon },
   ];
 
   return (

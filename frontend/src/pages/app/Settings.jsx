@@ -4,7 +4,7 @@ import styles from "./Setting.module.css";
 import passwordImage from "../../assets/passwordsecuredimage.png";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 
-export default function Setting() {
+export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,7 +17,6 @@ export default function Setting() {
   const [isError, setIsError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Password validation function
   const validatePassword = (password) => {
     const minLength = 8;
     const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
@@ -36,7 +35,6 @@ export default function Setting() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic validations
     if (!currentPassword || !newPassword || !confirmPassword) {
       setMessage("All fields are required.");
       setIsError(true);
@@ -82,14 +80,11 @@ export default function Setting() {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        {/* RESET PASSWORD */}
         <div className={styles.section}>
           <h3 className={styles.cardTitle}>Reset password</h3>
 
           <div className={styles.resetContainer}>
             <form onSubmit={handleSubmit} className={styles.form}>
-              
-              {/* Current Password */}
               <label>Current Password</label>
               <div className={styles.passwordField}>
                 <input
@@ -103,7 +98,6 @@ export default function Setting() {
                 </span>
               </div>
 
-              {/* New Password */}
               <label>New Password</label>
               <div className={styles.passwordField}>
                 <input
@@ -116,11 +110,8 @@ export default function Setting() {
                   {showNew ? <FiEyeOff /> : <FiEye />}
                 </span>
               </div>
-              <small>
-                Must be 8+ characters with at least one special character.
-              </small>
+              <small>Must be 8+ characters with at least one special character.</small>
 
-              {/* Confirm Password */}
               <label>Re-Enter New Password</label>
               <div className={styles.passwordField}>
                 <input
@@ -139,9 +130,7 @@ export default function Setting() {
               </button>
 
               {message && (
-                <p className={isError ? styles.error : styles.success}>
-                  {message}
-                </p>
+                <p className={isError ? styles.error : styles.success}>{message}</p>
               )}
             </form>
 
@@ -154,20 +143,24 @@ export default function Setting() {
         <div className={styles.section}>
           <h3>About Data Visualisation Tool</h3>
           <p>
-            Our data visualization tool transforms complex datasets 
-            into clear, actionable insights. Explore trends, identify outliers, and make data-driven decisions with ease. 
-            Interactive charts and graphs bring your data to life, empowering you to communicate findings effectively and drive strategic growth.
-             Unlock the power of your data with our intuitive and comprehensive visualization solution. </p>
+            Our data visualization tool transforms complex datasets into clear, actionable
+            insights. Explore trends, identify outliers, and make data-driven decisions with
+            ease. Interactive charts and graphs bring your data to life, empowering you to
+            communicate findings effectively and drive strategic growth. Unlock the power of
+            your data with our intuitive and comprehensive visualization solution.
+          </p>
         </div>
-        {/* Version  */}
+
         <div className={styles.section}>
           <h3>Version 2025.0</h3>
           <p>
-            Our data visualization tool transforms complex datasets 
-            into clear, actionable insights. Explore trends, identify outliers, and make data-driven decisions with ease. 
-            Interactive charts and graphs bring your data to life, empowering you to communicate findings effectively and drive strategic growth.
-             Unlock the power of your data with our intuitive and comprehensive visualization solution. </p>
-         </div>
+            Our data visualization tool transforms complex datasets into clear, actionable
+            insights. Explore trends, identify outliers, and make data-driven decisions with
+            ease. Interactive charts and graphs bring your data to life, empowering you to
+            communicate findings effectively and drive strategic growth. Unlock the power of
+            your data with our intuitive and comprehensive visualization solution.
+          </p>
+        </div>
       </div>
     </div>
   );

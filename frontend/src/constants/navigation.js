@@ -29,7 +29,7 @@ export const ROLE_MENUS = {
     { path: "/app/training-records", label: "Training Records", icon: trainingIcon },
     { path: "/app/technical-reports", label: "Technical Reports", icon: technicalIcon },
     { path: "/app/digital-library", label: "Digital Library", icon: digitalLibIcon },
-    { path: "/app/setting", label: "Settings", icon: settingsIcon },
+    { path: "/app/settings", label: "Settings", icon: settingsIcon },
   ],
 };
 
@@ -61,14 +61,11 @@ export const PAGE_META = {
     title: "Digital Library",
     // subtitle: "Browse and manage your stored documents",
   },
-  "/app/setting": { title: "Settings", subtitle: "" },
+  "/app/settings": { title: "Settings", subtitle: "" },
   "/admin": { title: "Dashboard", subtitle: "Admin" },
   "/admin/users": { title: "User Management", subtitle: "" },
   
-  "/app/settings": { 
-    title: "Settings jjkn", 
-    // subtitle: "In this section, you can manage your account settings", 
-  },
+  "/admin/settings": { title: "Settings", subtitle: "Admin" },
 };
 
 export const DEFAULT_PAGE_META = { title: "Dashboard", subtitle: "" };

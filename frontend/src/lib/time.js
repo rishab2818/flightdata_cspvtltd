@@ -1,24 +1,28 @@
-// export function formatDistanceToNow(dateInput) {
-//   if (!dateInput) return ''
-//   const date = new Date(dateInput)
-//   const diff = Date.now() - date.getTime()
-//   const seconds = Math.floor(diff / 1000)
-//   if (Number.isNaN(seconds)) return ''
-//   if (seconds < 60) return `${seconds}s ago`
-//   const minutes = Math.floor(seconds / 60)
-//   if (minutes < 60) return `${minutes}m ago`
-//   const hours = Math.floor(minutes / 60)
-//   if (hours < 24) return `${hours}h ago`
-//   const days = Math.floor(hours / 24)
-//   return `${days}d ago`
-// }
+const IST_TIME_ZONE = 'Asia/Kolkata'
+
+const parseDateInput = (dateInput) => {
+  if (!dateInput) return null
+
+  if (dateInput instanceof Date) {
+    return Number.isNaN(dateInput.getTime()) ? null : dateInput
+  }
+
+  const raw = String(dateInput).trim()
+  if (!raw) return null
+
+  // Many backend values are stored as UTC but serialized without a timezone.
+  // Treat timezone-less ISO-like values as UTC so the UI does not shift them
+  // twice when rendering in IST.
+  const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(raw)
+  const candidate = hasTimezone ? raw : `${raw}Z`
+  const date = new Date(candidate)
+
+  return Number.isNaN(date.getTime()) ? null : date
+}
 
 export function formatDistanceToNowWithExactTime(dateString) {
-  if (!dateString) return '';
-
-  // Parse as UTC first
-  const date = new Date(dateString + 'Z'); // Z ensures it's treated as UTC
-  if (isNaN(date.getTime())) return '';
+  const date = parseDateInput(dateString)
+  if (!date) return ''
 
   // Relative time
   const now = new Date();
@@ -36,7 +40,7 @@ export function formatDistanceToNowWithExactTime(dateString) {
   else relative = `${diffDays} d ago`;
 
   // Convert UTC to local time for display
-  const exactTime = date.toLocaleString([], {
+  const exactTime = date.toLocaleString('en-IN', {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
@@ -44,24 +48,33 @@ export function formatDistanceToNowWithExactTime(dateString) {
     minute: '2-digit',
     second: '2-digit',
     hour12: true,
+    timeZone: IST_TIME_ZONE,
   });
 
   return `${relative} (${exactTime})`;
 }
 
 export function formatDateTimeShort(dateInput) {
-  if (!dateInput) return '-';
+  const date = parseDateInput(dateInput)
+  if (!date) return '-'
 
-  const date = new Date(dateInput);
-  if (Number.isNaN(date.getTime())) return '-';
+  const parts = new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(date)
 
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = String(date.getFullYear()).slice(-2);
-  const hours24 = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const period = hours24 >= 12 ? 'PM' : 'AM';
-  const hours12 = hours24 % 12 || 12;
+  const pick = (type) => parts.find((part) => part.type === type)?.value || ''
+  const day = pick('day')
+  const month = pick('month')
+  const year = pick('year')
+  const hour = pick('hour')
+  const minute = pick('minute')
+  const dayPeriod = pick('dayPeriod').toUpperCase()
 
-  return `${day}/${month}/${year} : ${hours12}:${minutes} ${period}`;
+  return `${day}/${month}/${year} : ${hour}:${minute} ${dayPeriod}`.trim()
 }

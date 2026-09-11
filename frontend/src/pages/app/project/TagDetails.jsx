@@ -119,13 +119,7 @@ const escapeHtml = (value = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const formatDateTime = (value) => {
-  try {
-    return new Date(value).toLocaleString()
-  } catch {
-    return String(value || '-')
-  }
-}
+const formatDateTime = (value) => formatDateTimeShort(value)
 
 const buildRawExportDom = async (file) => {
   const wrapper = document.createElement('div')
