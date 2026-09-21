@@ -330,7 +330,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
   z-index: 120;
+  overflow: auto;
 }
 
 .LightModalCard {
@@ -346,10 +348,13 @@
   background: #ffffff;
   border-radius: 4px;
   padding: 16px;
-  width: 720px;
-  max-width: 95vw;
+  width: min(920px, 95vw);
+  max-height: calc(100vh - 48px);
   box-shadow: 0px 20px 50px rgba(15, 23, 42, 0.14);
   border: 2px solid #d7e9ff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .ModalHeader1 {
@@ -465,6 +470,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
 }
 
 .detailRow {
@@ -526,11 +532,15 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .TextInput {
   height: 42px;
-  min-width: 250px;
+  width: 100%;
+  min-width: 0;
   padding: 10px 14px;
   background:  #F3F3F5;
   border: 1px solid #e5e7eb;
@@ -545,7 +555,7 @@ border-radius: 4px;
 .TextIn {
   width: 100%;
   height: 42px;
-  min-width: 250px;
+  min-width: 0;
   padding: 10px 14px;
   background:  #F3F3F5;
   border: 1px solid #e5e7eb;
@@ -582,13 +592,20 @@ border-radius: 4px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 180px;
+  max-height: min(48vh, 460px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
 }
 
 .ActionEditItem {
   display: grid;
-  grid-template-columns: 1fr 1fr auto auto;
-  gap: 10px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1.6fr) minmax(170px, 0.9fr) max-content 36px;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: end;
+  position: relative;
   /* padding: 8px 10px; */
   /* border: 1px solid #e5e7eb; */
   /* border-radius: 10px;
@@ -597,9 +614,19 @@ border-radius: 4px;
 
 .ActionAddRow {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 10px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1.6fr) minmax(170px, 0.9fr) 36px;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: end;
+  position: relative;
+}
+
+.ActionPointField {
+  min-width: 0;
+}
+
+.ActionPointField .label {
+  white-space: nowrap;
 }
 
 .EmptyText {
@@ -645,6 +672,7 @@ border-radius: 4px;
     cursor: pointer;
     transition: background 0.2s ease;
     margin-left: 10px;
+    flex: 0 0 36px;
 }
 
 .icon-btn:hover {
@@ -653,4 +681,82 @@ border-radius: 4px;
 
 .icon-btn:active {
     background: rgba(0, 0, 0, 0.15);
+}
+
+.ActionEditTopRow {
+  flex-wrap: wrap;
+}
+
+.ActionOwnerRow {
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+}
+
+.ActionOwnerRow > div:first-child {
+  flex: 1 1 260px;
+  min-width: 0;
+  position: relative;
+}
+
+.AssigneeFieldWrap {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  overflow: visible;
+}
+
+.ActionEditForm .flex1 {
+  min-width: 0;
+}
+
+.ActionEditItem .toggleWrap {
+  min-width: max-content;
+  height: 42px;
+  align-self: end;
+  white-space: nowrap;
+}
+
+.ActionEditItem > .icon-btn,
+.ActionAddRow > .icon-btn {
+  align-self: end;
+  justify-self: end;
+  margin-left: 0;
+}
+
+.ModalActions {
+  flex-shrink: 0;
+  padding-top: 10px;
+  background: #ffffff;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+@media (max-width: 760px) {
+  .LightModalOverlay {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .ActionModalCard {
+    width: 100%;
+    max-height: calc(100vh - 32px);
+  }
+
+  .ActionEditItem,
+  .ActionAddRow {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .ActionEditItem .toggleWrap {
+    justify-content: flex-start;
+  }
+
+  .ActionEditItem .icon-btn,
+  .ActionAddRow .icon-btn {
+    justify-self: flex-start;
+    margin-left: 0;
+  }
 }

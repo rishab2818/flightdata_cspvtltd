@@ -4,7 +4,13 @@ import BudgetFilterBar from './components/BudgetFilterBar';
 import ForecastBudgetTable from './components/ForecastBudgetTable';
 import UploadForecastModal from './components/UploadForecastModal';
 import styles from './BudgetEstimation.module.css';
-import { budgetExportColumns, defaultFormState, fiscalYearOptions, forecastColumns } from './data';
+import {
+  budgetExportColumns,
+  buildFiscalYearOptions,
+  defaultFormState,
+  forecastColumns,
+  getCurrentFiscalYear,
+} from './data';
 import { budgetsApi } from '../../../api/budgetsApi';
 import { computeSha256 } from '../../../lib/fileUtils';
 import { downloadExcel } from '../../../lib/excelExport';
@@ -39,8 +45,9 @@ const toFormState = (record) => {
 
 
 export default function BudgetEstimation() {
-  const [filters, setFilters] = useState({ type: 'all', sort: 'none', search: '' });
-  const [forecastYear, setForecastYear] = useState(fiscalYearOptions[1]);
+  const [filters, setFilters] = useState({ search: '' });
+  const [yearFilter, setYearFilter] = useState('all');
+  const [forecastYear, setForecastYear] = useState(getCurrentFiscalYear());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +58,7 @@ export default function BudgetEstimation() {
   const cashSplitLabel = useMemo(() => deriveCashSplitYear(forecastYear), [forecastYear]);
   const columns = useMemo(() => forecastColumns(cashSplitLabel), [cashSplitLabel]);
   const exportColumns = useMemo(() => budgetExportColumns(cashSplitLabel), [cashSplitLabel]);
+  const fiscalYearOptions = useMemo(() => buildFiscalYearOptions(rows), [rows]);
 
   /** 🔴 NEW — Delete Modal State */
       const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -82,33 +90,21 @@ export default function BudgetEstimation() {
       cash_outgo_split_over: row.cash_outgo_split_over || deriveCashSplitYear(row.forecast_year),
     }));
 
-    const byYear = withSplit.filter((row) => !forecastYear || row.forecast_year === forecastYear);
+    const byYear = withSplit.filter(
+      (row) => yearFilter === 'all' || row.forecast_year === yearFilter
+    );
 
-    const filteredByType = filters.type === 'all'
-      ? byYear
-      : byYear.filter((row) => {
-        const haystack = `${row.item || ''} ${row.descriptions || ''} ${row.build_or_project || ''}`.toLowerCase();
-        return haystack.includes(filters.type.toLowerCase());
-      });
-
-    const filteredBySearch = filteredByType.filter((row) => {
+    return byYear.filter((row) => {
       if (!filters.search) return true;
       const search = filters.search.toLowerCase();
       return (
         (row.division_name || '').toLowerCase().includes(search) ||
         (row.item || '').toLowerCase().includes(search) ||
-        (row.descriptions || '').toLowerCase().includes(search)
+        (row.descriptions || '').toLowerCase().includes(search) ||
+        (row.build_or_project || '').toLowerCase().includes(search)
       );
     });
-
-    if (filters.sort === 'asc') {
-      return [...filteredBySearch].sort((a, b) => (a.division_name || '').localeCompare(b.division_name || ''));
-    }
-    if (filters.sort === 'desc') {
-      return [...filteredBySearch].sort((a, b) => (b.division_name || '').localeCompare(a.division_name || ''));
-    }
-    return filteredBySearch;
-  }, [filters.search, filters.sort, filters.type, forecastYear, rows]);
+  }, [filters.search, yearFilter, rows]);
 
   const handleOpenModal = (mode = 'create', record = null) => {
     setModalState({ open: true, mode, record });
@@ -284,8 +280,9 @@ const handleDownload = (row) => {
       <BudgetFilterBar
         filters={filters}
         onChange={setFilters}
-        forecastYear={forecastYear}
-        onForecastYearChange={setForecastYear}
+        yearFilter={yearFilter}
+        yearOptions={fiscalYearOptions}
+        onYearFilterChange={setYearFilter}
         onUpload={() => handleOpenModal('create')}
       />
 
@@ -293,17 +290,6 @@ const handleDownload = (row) => {
         <div className={styles.sectionHeader}>
           <div className={styles.sectionHeaderLeft}>
             <h3 className={styles.sectionTitle}>Forecast Budget</h3>
-            <select
-              className={styles.dateBadge}
-              value={forecastYear}
-              onChange={(e) => onForecastYearChange(e.target.value)}
-            >
-              {fiscalYearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
              <button type="button" className={styles.exportButton} onClick={handleExport}>
             <img src={DownloadSimple} alt="download" className={styles.icons} />
           </button>

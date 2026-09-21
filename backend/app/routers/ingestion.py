@@ -719,18 +719,29 @@ async def rename_tag(
 ):
     await _ensure_project_member(project_id, user)
 
+    dataset_type = str(payload.dataset_type or "").strip()
     old_tag = payload.old_tag.strip()
     new_tag = payload.new_tag.strip()
+    if not dataset_type:
+        raise HTTPException(status_code=400, detail="dataset_type is required")
     if not old_tag or not new_tag:
         raise HTTPException(status_code=400, detail="old_tag and new_tag are required")
+    if old_tag == new_tag:
+        return {"updated": 0, "tag_name": new_tag}
 
-    db = repo.db  # or however you access mongo in your repo
-    # DB ONLY: update tag_name field
+    db = await get_db()
+    existing = await db["ingestion_jobs"].find_one(
+        {"project_id": project_id, "dataset_type": dataset_type, "tag_name": old_tag},
+        {"_id": 1},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Tag not found for this project and dataset")
+
     res = await db["ingestion_jobs"].update_many(
-        {"project_id": project_id, "dataset_type": payload.dataset_type, "tag_name": old_tag},
+        {"project_id": project_id, "dataset_type": dataset_type, "tag_name": old_tag},
         {"$set": {"tag_name": new_tag}},
     )
-    return {"updated": res.modified_count}
+    return {"updated": res.modified_count, "tag_name": new_tag}
 
 
 # for preview of the processed data 

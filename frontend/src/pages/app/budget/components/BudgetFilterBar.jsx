@@ -1,85 +1,94 @@
-import React from 'react';
-import { FiUploadCloud, FiSearch } from 'react-icons/fi';
-import styles from '../BudgetEstimation.module.css';
-import { fiscalYearOptions } from '../data';
-import CurrencyInr from "../../../../assets/CurrencyInr.svg";
-
+import React from "react";
+import { FiSearch } from "react-icons/fi";
+import styles from "../BudgetEstimation.module.css";
 
 export default function BudgetFilterBar({
   filters,
   onChange,
-  forecastYear,
-  onForecastYearChange,
+  yearFilter,
+  yearOptions = [],
+  onYearFilterChange,
   onUpload,
 }) {
-  const handleSelect = (key) => (e) => {
-    onChange({ ...filters, [key]: e.target.value });
+  const handleSearchChange = (event) => {
+    onChange({
+      ...filters,
+      search: event.target.value,
+    });
   };
 
   return (
-    <div className={styles.filterBar}>
-      <div className={styles.filterGroup}>
+    <div className={styles.toolbar}>
+      {/* Search */}
+      <div className={styles.searchGroup}>
+        <label className={styles.filterLabel}>Search</label>
+
         <div className={styles.searchBox}>
-          <FiSearch size={16} color="#64748b" />
-        
-        <input
-          type="search"
-          placeholder="Search division or item"
-          value={filters.search}
-          onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          className={styles.searchInput}
-        />
+          <FiSearch className={styles.searchIcon} />
+
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Search division or item"
+            value={filters?.search || ""}
+            onChange={handleSearchChange}
+          />
+        </div>
       </div>
-      </div>
-     
-      <div className={styles.filterGroup}>
-        {/* <span className={styles.filterLabel}>Forecast Year</span> */}
-        <select
-          className={styles.select}
-          value={forecastYear}
-          onChange={(e) => onForecastYearChange(e.target.value)}
+
+      {/* Right-side controls */}
+      <div className={styles.rightControls}>
+        {/* Year Filter */}
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Filter by Years</label>
+
+          <select
+            className={styles.select}
+            value={yearFilter}
+            onChange={(event) =>
+              onYearFilterChange(event.target.value)
+            }
+          >
+            <option value="all">All Years</option>
+
+            {yearOptions.map((year) => {
+              const value =
+                typeof year === "string"
+                  ? year
+                  : year?.value;
+
+              const label =
+                typeof year === "string"
+                  ? year
+                  : year?.label ?? year?.value;
+
+              if (!value) return null;
+
+              return (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {/* Upload Button */}
+        <button
+          type="button"
+          className={styles.uploadButton}
+          onClick={onUpload}
         >
-          {fiscalYearOptions.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
+          <span
+            className={styles.rupeeIcon}
+            aria-hidden="true"
+          >
+            ₹
+          </span>
+
+          <span>Upload Forecast Budget</span>
+        </button>
       </div>
-
-      <div className={styles.filterGroup}>
-        {/* <span className={styles.filterLabel}>Filter by Type</span> */}
-        <select
-          className={styles.select}
-          value={filters.type}
-          onChange={handleSelect('type')}
-        >
-          <option value="all">All Types</option>
-          <option value="hardware">Hardware</option>
-          <option value="software">Software</option>
-          <option value="services">Services</option>
-        </select>
-      </div>
-
-      <div className={styles.filterGroup}>
-        {/* <span className={styles.filterLabel}>Sort by</span> */}
-        <select
-          className={styles.select}
-          value={filters.sort}
-          onChange={handleSelect('sort')}
-        >
-          <option value="none">None</option>
-          <option value="asc">A to Z</option>
-          <option value="desc">Z to A</option>
-        </select>
-      </div>
-
-      
-
-      <button type="button" className={styles.uploadButton} onClick={onUpload}>
-       <img src={CurrencyInr} alt="rupee" className={styles.icon} />
-        Upload forecast Budget
-      </button>
     </div>
   );
 }

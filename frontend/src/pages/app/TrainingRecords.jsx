@@ -584,6 +584,7 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 import { useDownload } from "../../components/common/useDownload";
 import { useLazyCollection } from "../../hooks/useLazyCollection";
 import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
+import FilterField from "../../components/common/FilterField";
 
 
 const BORDER = "#E2E8F0";
@@ -795,33 +796,33 @@ export default function TrainingRecords() {
           padding: "24px",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-end",
           gap: "18px",
         }}
       >
-           <div style={{flex:1, maxWidth:"900px", height:"42px",display:"flex",gap: "8px",background: "#f8fafc",border: "1px solid #e2e8f0",borderRadius: "0px",padding: "12px 24px"}}>
-            <FiSearch size={16} color="#64748b" />
-                <input
-                  style={{
-                     border: "none",
-                     outline: "none",
-                     minwidth: "350px",
-                     background: "transparent",
-                     flex: 1,
-                     gap:20,
-                    fontsize: "14px",
-                    color: "#0f172a",
-        
-                      }}
+          <FilterField label="Search" style={{ flex: 1, maxWidth: "900px" }}>
+            <div style={{ height:"42px",display:"flex",gap: "8px",background: "#f8fafc",border: "1px solid #e2e8f0",borderRadius: "0px",padding: "12px 24px"}}>
+              <FiSearch size={16} color="#64748b" />
+              <input
+                style={{
+                  border: "none",
+                  outline: "none",
+                  minwidth: "350px",
+                  background: "transparent",
+                  flex: 1,
+                  gap:20,
+                  fontsize: "14px",
+                  color: "#0f172a",
+                }}
                 type="text"
                 placeholder="Search training names..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                />
-        </div>
+              />
+            </div>
+          </FilterField>
           <div style={{ display: "flex", gap: "18px", flexWrap: "wrap" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {/* <span style={{ color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500}}>Filter by Type</span> */}
+            <FilterField label="Filter by Type">
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -850,9 +851,8 @@ export default function TrainingRecords() {
                 <option value="Post-Training">Post-Training</option>
                 <option value="Other">Other</option>
               </select>
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {/* <span style={{color: "#0a0a0a", fontSize: 14, fontFamily: "Inter-Medium, Helvetica", fontWeight:500 }}>Filter by Status</span> */}
+            </FilterField>
+            <FilterField label="Filter by Status">
               <select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -881,7 +881,7 @@ export default function TrainingRecords() {
                 <option value="Completed">Completed</option>
                 <option value="Planned">Planned</option>
               </select>
-            </label>
+            </FilterField>
           </div>
         
 
@@ -1223,24 +1223,19 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord, projectId
     e.preventDefault();
     setError("");
 
-    if (!file && !form.storage_key) {
-  setError("Please select a file to upload.");
-  return;
-}
+    if (!editingRecord && !file) {
+      setError("Please select a file to upload.");
+      return;
+    }
 
     try {
       setSubmitting(true);
 
-      // Initialize file-related variables with existing data if editing, or null/empty if creating
-      let storage_key = editingRecord ? editingRecord.storage_key : null;
-      let original_name = editingRecord ? editingRecord.original_name : "";
-      let content_type = editingRecord ? editingRecord.content_type : "";
-      let size_bytes = editingRecord ? editingRecord.size_bytes : null;
-      let content_hash = editingRecord ? editingRecord.content_hash : "";
+      const filePayload = {};
 
       // 1. Handle NEW file upload
       if (file) {
-        content_hash = await computeSha256(file);
+        const content_hash = await computeSha256(file);
         const initRes = await recordsApi.initUpload("training-records", {
           section: "training-records",
           filename: file.name,
@@ -1251,11 +1246,11 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord, projectId
 
         await fetch(initRes.upload_url, { method: "PUT", body: file });
 
-        storage_key = initRes.storage_key;
-        original_name = file.name;
-        content_type = file.type || "application/octet-stream";
-        size_bytes = file.size;
-        // content_hash is already set
+        filePayload.storage_key = initRes.storage_key;
+        filePayload.original_name = file.name;
+        filePayload.content_type = file.type || "application/octet-stream";
+        filePayload.size_bytes = file.size;
+        filePayload.content_hash = content_hash;
       }
 
       // 2. Prepare Payload
@@ -1264,11 +1259,7 @@ function TrainingModal({ onClose, onCreated, onUpdated, editingRecord, projectId
         project_id: projectId || undefined,
         start_date: form.start_date || undefined,
         end_date: form.end_date || undefined,
-        storage_key,
-        original_name,
-        content_type,
-        size_bytes,
-        content_hash,
+        ...filePayload,
       };
 
       let result;

@@ -8,7 +8,7 @@ import { downloadExcel } from "../../lib/excelExport";
 import Folder from "../../assets/Folder.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
 import Calculator from "../../assets/Calculator.svg";
-import DotsThreeOutline from "../../assets/DotsThreeOutline.svg";
+import Records from "../../assets/records.svg";
 import Newspaper from "../../assets/Newspaper.svg"
 import styles from "./DivisionalRecords.module.css";
 import FileUploadBox from "../../components/common/FileUploadBox";
@@ -25,15 +25,6 @@ import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 const BORDER = "#E2E8F0";
 const PRIMARY = "#2563EB";
 
-
-/* --------------------- Rating Badge --------------------- */
-function Rating({ value }) {
-  return (
-    <span style={{ color: "#F59E0B", fontWeight: 700 }}>
-      {Number(value || 0).toFixed(1)} ★
-    </span>
-  );
-}
 
 /* --------------------- Stat Card --------------------- */
 function StatCard({ title, value, icon, bg }) {
@@ -94,15 +85,6 @@ function FiltersBar({ filters, setFilters, openModal }) {
           </select>
         </label>
 
-        <label className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Filter by Status</span>
-          <select className={styles.select}>
-            <option>All Status</option>
-            <option>Approved</option>
-            <option>Pending</option>
-            <option>Rejected</option>
-          </select>
-        </label>
       </div>
 
       <button className={styles.uploadBtn} onClick={openModal}>
@@ -221,14 +203,13 @@ export default function DivisionalRecords() {
 
   const handleExport = () => {
     const columns = [
-      { header: "Division Name", key: "division_name" },
+      { header: "Record Name", key: "division_name" },
       { header: "Type", key: "record_type" },
       {
         header: "Created Date",
         accessor: (row) =>
           row.created_date ? new Date(row.created_date).toLocaleDateString("en-GB") : "",
       },
-      { header: "Rating", key: "rating" },
       { header: "Note", key: "remarks" },
       { header: "Attachment", accessor: (row) => row.original_name || "" },
     ];
@@ -248,7 +229,7 @@ export default function DivisionalRecords() {
         <StatCard title="Total Records" value={records.length} icon={Folder} bg="#DBEAFE" />
         <StatCard title="Budget" value={records.filter((r) => r.record_type === "Budget").length} icon={CurrencyInr} bg="#FFEDD4" />
         <StatCard title="AMC" value={records.filter((r) => r.record_type === "AMC").length} icon={Calculator} bg="#F3E8FF" />
-        <StatCard title="Others" value={records.filter((r) => r.record_type === "Others").length} icon={DotsThreeOutline} bg="#FFEDD4" />
+        <StatCard title="Cyber Security" value={records.filter((r) => r.record_type === "Cyber Security").length} icon={Records} bg="#F0FDF4" />
       </div>
 
       {/* Filters */}
@@ -404,7 +385,6 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
     division_name: "",
     record_type: "Budget",
     created_date: "",
-    rating: "",
     remarks: "",
     storage_key: null,
     original_name: "",
@@ -425,7 +405,6 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
       division_name: editingRecord.division_name || "",
       record_type: editingRecord.record_type || "Budget",
       created_date: editingRecord.created_date || "",
-      rating: editingRecord.rating ?? "",
       remarks: editingRecord.remarks || "",
       storage_key: editingRecord.storage_key || null,
       original_name: editingRecord.original_name || "",
@@ -476,7 +455,6 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
       const payload = {
         ...form,
         project_id: projectId || undefined,
-        rating: form.rating === "" ? undefined : Number(form.rating || 0),
         created_date: form.created_date || undefined,
         storage_key,
         original_name,
@@ -524,7 +502,7 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
                         onFileSelected={(f) => setFile(f)}
                       />
           <div className={styles.UploadGrid}>
-            <Input className={styles.input} label="Division Name" value={form.division_name} onChange={(e) => onChange("division_name", e.target.value)} />
+            <Input className={styles.input} label="Record Name" value={form.division_name} onChange={(e) => onChange("division_name", e.target.value)} />
 
             <label>
               <span>Type</span>
@@ -536,23 +514,6 @@ function DivisionalModal({ onClose, onCreated, onUpdated, editingRecord, project
             </label>
 
             <Input className={styles.input} label="Created Date" type="date" value={form.created_date} onChange={(e) => onChange("created_date", e.target.value)} />
-
-            {/* <Input className={styles.input} label="Rating" type="number" min={0} step={0.1} value={form.rating} onChange={(e) => onChange("rating", e.target.value)} /> */}
-                  <Input
-                  className={styles.input}
-  label="Ratings"
-  type="number"
-  min={0}
-  max={5}
-  step="0.1"
-  value={form.rating}
-  onChange={(e) => {
-    const value = e.target.value;
-    if (value === "" || (Number(value) >= 0 && Number(value) <= 5)) {
-      onChange("rating", value);
-    }
-  }}
-/>
 
             {/* <label >
                <span className={styles.inputLabel}>Note</span>

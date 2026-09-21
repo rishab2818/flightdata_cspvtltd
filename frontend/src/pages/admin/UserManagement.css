@@ -1,21 +1,27 @@
 /* Page background */
 .user-management-page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   background-color: #f8fafc;
   /* padding: 0px 24px; */
   display: flex;
   justify-content: center;
   width: 100%;
+  overflow: hidden;
 }
 
 /* Main card */
 .user-management-card {
   width: 100%;
   max-width: 1600px;
+  min-height: 0;
+  max-height: 100%;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Page title */
@@ -33,6 +39,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Toolbar */
@@ -88,7 +98,13 @@
   /* border: 1px solid #e5e7eb;
   border-radius: 8px; */
   margin-top: 10px;
-  overflow: hidden;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.user-management-table-wrapper table {
+  min-width: 980px;
 }
 
 /* Table header */
@@ -145,7 +161,18 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .user-management-content {
+    padding: 16px;
+    max-height: calc(100dvh - 150px);
+  }
+
+  .searchBox {
+    max-width: none;
+    width: 100%;
+  }
+
   .user-management-search {
+    min-width: 0;
     width: 100%;
   }
 }

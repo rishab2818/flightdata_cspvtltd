@@ -5,10 +5,18 @@ import {
   TextField, Button, Alert
 } from '@mui/material';
 
+import {
+  PASSWORD_REQUIREMENTS_TEXT,
+  validatePassword,
+} from '../../lib/passwordValidation';
+
 export default function ChangePasswordDialog({ open, email, onClose, onSubmit }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const passwordError = password ? validatePassword(password) : null;
+  const canSubmit = password.trim() && !passwordError;
 
   const handleClose = () => {
     if (busy) return;
@@ -19,6 +27,7 @@ export default function ChangePasswordDialog({ open, email, onClose, onSubmit })
   const submit = async (e) => {
     e.preventDefault();
     if (!password.trim()) { setError('Password is required'); return; }
+    if (passwordError) { setError(passwordError); return; }
     try {
       setBusy(true); setError('');
       await onSubmit?.(password.trim());
@@ -43,12 +52,14 @@ export default function ChangePasswordDialog({ open, email, onClose, onSubmit })
             type="password"
             value={password}
             onChange={(e)=>setPassword(e.target.value)}
+            error={Boolean(passwordError)}
+            helperText={passwordError || PASSWORD_REQUIREMENTS_TEXT}
             autoFocus
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={busy}>Cancel</Button>
-          <Button type="submit" variant="contained" disableElevation disabled={busy} sx={{ bgcolor:'#1E63E9', '&:hover':{bgcolor:'#1b58ce'} }}>
+          <Button type="submit" variant="contained" disableElevation disabled={busy || !canSubmit} sx={{ bgcolor:'#1E63E9', '&:hover':{bgcolor:'#1b58ce'} }}>
             {busy ? 'Saving…' : 'Save'}
           </Button>
         </DialogActions>

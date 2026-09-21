@@ -130,7 +130,7 @@ export const recordsApi = {
     return data;
   },
   updateTechnical: async (recordId, payload) => {
-    const { data } = await axiosClient.put(
+    const { data } = await axiosClient.patch(
       `/api/records/technical-reports/${recordId}`,
       payload,
       { headers: { "Content-Type": "application/json" } }
@@ -164,7 +164,7 @@ export const recordsApi = {
     return data;
   },
   updateTraining: async (recordId, payload) => {
-    const { data } = await axiosClient.put(
+    const { data } = await axiosClient.patch(
       `/api/records/training-records/${recordId}`,
       payload,
       { headers: { "Content-Type": "application/json" } }

@@ -18,7 +18,7 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-export default function ProjectsSectionImproved() {
+export default function ProjectsSectionImproved({ onProjectsChanged }) {
   const { user } = useContext(AuthContext);
   const role = user?.role?.toUpperCase?.();
   const navigate = useNavigate();
@@ -67,7 +67,10 @@ export default function ProjectsSectionImproved() {
 
       await projectApi.create(payload);
       setShowModal(false);
-      await refresh();
+      await Promise.all([
+        refresh(),
+        onProjectsChanged?.(),
+      ]);
     } catch (err) {
       console.error('Error creating project', err);
     } finally {
@@ -81,10 +84,11 @@ export default function ProjectsSectionImproved() {
     <div
       style={{
         width: '100%',
-        height: 'calc(100vh - 100px)', // adjust based on header height
+        height: 'min(680px, calc(100dvh - 220px))',
+        maxHeight: 'calc(100dvh - 220px)',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 0, // IMPORTANT
+        minHeight: 0,
       }}
     >
       {/* Main Card */}
@@ -98,7 +102,7 @@ export default function ProjectsSectionImproved() {
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
-          minHeight: 0, // IMPORTANT
+          minHeight: 0,
         }}
       >
         {/* Header */}
@@ -150,12 +154,15 @@ export default function ProjectsSectionImproved() {
         <div
           style={{
             flex: 1,
-            minHeight: 0, // CRITICAL FOR SCROLL
+            minHeight: 0,
+            maxHeight: 'calc(100dvh - 340px)',
             overflowY: 'auto',
+            overflowX: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             gap: SPACING.md,
             paddingRight: 4,
+            paddingBottom: SPACING.lg,
           }}
         >
           {loading && projects.length === 0 ? (

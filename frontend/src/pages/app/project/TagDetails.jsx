@@ -15,6 +15,12 @@ import { useLoader } from '../../../context/LoaderContext'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import { formatDateTimeShort } from '../../../lib/time'
+import {
+  addCanvasToPdfPage,
+  buildReportExportFilename,
+  isPdfPreviewDetail,
+  renderPdfPagesToCanvases,
+} from '../../../lib/pdfReportExport'
 
 import './ProjectVisualisation.css'
 import ConfirmationModal from "../../../components/common/ConfirmationModal"
@@ -121,7 +127,7 @@ const escapeHtml = (value = '') =>
 
 const formatDateTime = (value) => formatDateTimeShort(value)
 
-const buildRawExportDom = async (file) => {
+const buildRawExportDom = async (file, previewDetail) => {
   const wrapper = document.createElement('div')
   wrapper.style.background = '#ffffff'
   wrapper.style.padding = '24px'
@@ -140,7 +146,7 @@ const buildRawExportDom = async (file) => {
   meta.innerHTML = `<strong>Name:</strong> ${file.sheet_name ? `${file.filename} - ${file.sheet_name}` : file.filename}`
   wrapper.appendChild(meta)
 
-  const detail = await rawPreviewApi.detail(file.job_id)
+  const detail = previewDetail || await rawPreviewApi.detail(file.job_id)
 
   if (detail.kind === 'text') {
     const chunk = await rawPreviewApi.textChunk(file.job_id, { offset: 0, chunkSize: 131072 })
@@ -223,14 +229,6 @@ const buildRawExportDom = async (file) => {
   }
 
   if (detail.kind === 'pdf' && detail.download_url) {
-    const note = document.createElement('div')
-    note.textContent = 'PDF raw preview is not embedded in export. The related plots will still be included below.'
-    note.style.padding = '12px 14px'
-    note.style.background = '#f8fafc'
-    note.style.border = '1px solid #e2e8f0'
-    note.style.borderRadius = '8px'
-    note.style.fontSize = '13px'
-    wrapper.appendChild(note)
     return wrapper
   }
 
@@ -466,6 +464,181 @@ const buildPlotsExportDom = async (plotItems = []) => {
   return wrapper
 }
 
+const getUniqueVisualizationKey = (plot) => plot?.viz_id || plot?._id || `${plot?.name || plot?.filename || 'plot'}-${plot?.created_at || ''}`
+
+const getMatchingPlotsForRawFile = (visualizations = [], file, usedPlotIds = new Set()) => {
+  const matched = []
+  const seenForFile = new Set()
+
+  for (const viz of visualizations) {
+    const plotKey = getUniqueVisualizationKey(viz)
+    if (usedPlotIds.has(plotKey) || seenForFile.has(plotKey)) continue
+
+    const belongsToFile = Array.isArray(viz?.series) && viz.series.some((series) => series.job_id === file.job_id)
+    if (!belongsToFile) continue
+
+    seenForFile.add(plotKey)
+    usedPlotIds.add(plotKey)
+    matched.push(viz)
+  }
+
+  return matched
+}
+
+const buildRawFileExportSection = async ({ file, projectId, datasetType, tagName, matchingPlots }) => {
+  if (!file?.job_id) {
+    throw new Error('Raw file is missing job_id')
+  }
+
+  const rawContainer = document.createElement('div')
+  rawContainer.style.background = '#ffffff'
+  rawContainer.style.width = '1000px'
+  rawContainer.style.padding = '0'
+  rawContainer.style.position = 'absolute'
+  rawContainer.style.left = '-99999px'
+  rawContainer.style.top = '0'
+
+  const header = document.createElement('div')
+  header.style.padding = '24px'
+  header.style.fontFamily = 'Arial, sans-serif'
+  header.innerHTML = `
+    <h1 style="margin:0 0 6px;font-size:22px;color:#0f172a;">
+      ${escapeHtml(tagName)} - ${escapeHtml(file.filename)} Export
+    </h1>
+    <p style="margin:0;font-size:13px;color:#475569;">
+      Project: ${escapeHtml(projectId)} | Dataset: ${escapeHtml(datasetType)} | Tag: ${escapeHtml(tagName)}
+    </p>
+  `
+  rawContainer.appendChild(header)
+
+  const detail = await rawPreviewApi.detail(file.job_id)
+  const rawDom = await buildRawExportDom(file, detail)
+  rawContainer.appendChild(rawDom)
+
+  const plotsDom = await buildPlotsExportDom(matchingPlots)
+
+  return { rawContainer, plotsDom, detail }
+}
+
+const exportRawFilesReportPdf = async ({ rawFiles = [], projectId, datasetType, tagName }) => {
+  const mountNode = document.createElement('div')
+  mountNode.style.position = 'absolute'
+  mountNode.style.left = '-99999px'
+  mountNode.style.top = '0'
+  document.body.appendChild(mountNode)
+
+  const normalizedDatasetType = String(datasetType || '').trim().toLowerCase()
+  let savedVisualizations = []
+  try {
+    savedVisualizations = await visualizationApi.listForProject(projectId)
+  } catch (err) {
+    console.error('Failed to load visualizations for report export. Continuing without plots.', err)
+  }
+  const allVisualizations = Array.isArray(savedVisualizations)
+    ? savedVisualizations
+    : savedVisualizations?.data || []
+  const tagVisualizations = allVisualizations.filter((viz) => matchesTagAndDataset(viz, tagName, datasetType))
+  const usedPlotIds = new Set()
+  const stats = {
+    rawFilesFound: rawFiles.length,
+    rawFilesExported: 0,
+    visualizationsByFile: [],
+    failedFiles: [],
+  }
+
+  let pdf = null
+  let hasPages = false
+
+  try {
+    if (!rawFiles.length) {
+      const error = new Error('No raw files could be exported')
+      error.exportStats = stats
+      throw error
+    }
+
+    for (const file of rawFiles) {
+      let rawContainer = null
+      let plotsDom = null
+
+      try {
+        const matchingPlots = getMatchingPlotsForRawFile(tagVisualizations, file, usedPlotIds)
+        const exportSection = await buildRawFileExportSection({
+          file,
+          projectId,
+          datasetType,
+          tagName,
+          matchingPlots,
+        })
+        rawContainer = exportSection.rawContainer
+        plotsDom = exportSection.plotsDom
+        const { detail } = exportSection
+
+        mountNode.appendChild(rawContainer)
+        mountNode.appendChild(plotsDom)
+
+        const pdfPageCanvases = isPdfPreviewDetail(detail)
+          ? await renderPdfPagesToCanvases(detail.download_url)
+          : []
+
+        const rawCanvas = await renderDomToCanvas(rawContainer)
+        if (!pdf) {
+          pdf = new jsPDF('p', 'mm', 'a4')
+        }
+        addCanvasPaginated(pdf, rawCanvas, { addNewPage: hasPages })
+        hasPages = true
+
+        for (const pdfPageCanvas of pdfPageCanvases) {
+          addCanvasToPdfPage(pdf, pdfPageCanvas, { addNewPage: true })
+          hasPages = true
+        }
+
+        const plotSections = Array.from(plotsDom.children || [])
+        for (const plotSection of plotSections) {
+          const plotCanvas = await renderDomToCanvas(plotSection)
+          addCanvasAsPage(pdf, plotCanvas, { addNewPage: true })
+          hasPages = true
+        }
+
+        rawContainer.remove()
+        plotsDom.remove()
+
+        stats.rawFilesExported += 1
+        stats.visualizationsByFile.push({
+          job_id: file.job_id,
+          filename: file.filename,
+          count: matchingPlots.length,
+        })
+      } catch (err) {
+        console.error('Failed to export raw file:', {
+          job_id: file?.job_id,
+          filename: file?.filename,
+          error: err,
+        })
+        stats.failedFiles.push({
+          job_id: file?.job_id,
+          filename: file?.filename,
+          error: err?.message || 'Failed to export raw file',
+        })
+        if (rawContainer?.parentNode) rawContainer.parentNode.removeChild(rawContainer)
+        if (plotsDom?.parentNode) plotsDom.parentNode.removeChild(plotsDom)
+      }
+    }
+
+    if (!pdf || stats.rawFilesExported === 0) {
+      const error = new Error('No raw files could be exported')
+      error.exportStats = stats
+      throw error
+    }
+
+    await pdf.save(buildReportExportFilename({ tagName, datasetType: normalizedDatasetType }), { returnPromise: true })
+    return stats
+  } finally {
+    if (mountNode.parentNode) {
+      mountNode.parentNode.removeChild(mountNode)
+    }
+  }
+}
+
 export default function TagDetails({ projectId, datasetType, tagName, onBack }) {
   const { user } = useContext(AuthContext)
   const role = user?.role?.toUpperCase?.()
@@ -538,7 +711,8 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
             : []
 
   const rawFiles = files.filter(isRawFile)
-  const exportTargetFile = rawFiles[0] || null
+  const othersFiles = files.filter(isOtherFile)
+  const exportFiles = tab === 'others' ? othersFiles : rawFiles
 
   const handleView = (file, tabName) => {
     if (tabName === 'plot') {
@@ -574,69 +748,22 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
     }
   }
 
-  const handleExportPdf = async (file) => {
-    let mountNode = null
+  const handleExportPdf = async (filesToExport) => {
+    let exportError = null
 
     try {
       showLoader('Preparing PDF export...')
 
-      const savedVisualizations = await visualizationApi.listForProject(projectId)
-      const allVisualizations = Array.isArray(savedVisualizations)
-        ? savedVisualizations
-        : savedVisualizations?.data || []
-
-      const matchingPlots = allVisualizations
-        .filter((viz) => matchesTagAndDataset(viz, tagName, datasetType))
-        .filter((viz) => Array.isArray(viz.series) && viz.series.some((series) => series.job_id === file.job_id))
-
-      const rawContainer = document.createElement('div')
-      rawContainer.style.background = '#ffffff'
-      rawContainer.style.width = '1000px'
-      rawContainer.style.padding = '0'
-      rawContainer.style.position = 'absolute'
-      rawContainer.style.left = '-99999px'
-      rawContainer.style.top = '0'
-
-      const header = document.createElement('div')
-      header.style.padding = '24px'
-      header.style.fontFamily = 'Arial, sans-serif'
-      header.innerHTML = `
-        <h1 style="margin:0 0 6px;font-size:22px;color:#0f172a;">
-          ${escapeHtml(tagName)} - ${escapeHtml(file.filename)} Export
-        </h1>
-        <p style="margin:0;font-size:13px;color:#475569;">
-          Project: ${escapeHtml(projectId)} | Dataset: ${escapeHtml(datasetType)} | Tag: ${escapeHtml(tagName)}
-        </p>
-      `
-      rawContainer.appendChild(header)
-
-      const rawDom = await buildRawExportDom(file)
-      rawContainer.appendChild(rawDom)
-
-      const plotsDom = await buildPlotsExportDom(matchingPlots)
-
-      mountNode = document.createElement('div')
-      mountNode.style.position = 'absolute'
-      mountNode.style.left = '-99999px'
-      mountNode.style.top = '0'
-      mountNode.appendChild(rawContainer)
-      mountNode.appendChild(plotsDom)
-      document.body.appendChild(mountNode)
-
-      const rawCanvas = await renderDomToCanvas(rawContainer)
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      addCanvasPaginated(pdf, rawCanvas)
-
-      const plotSections = Array.from(plotsDom.children || [])
-      for (const plotSection of plotSections) {
-        const plotCanvas = await renderDomToCanvas(plotSection)
-        addCanvasAsPage(pdf, plotCanvas, { addNewPage: true })
-      }
-
-      await pdf.save(`${tagName}-${file.filename}-export.pdf`, { returnPromise: true })
+      const exportStats = await exportRawFilesReportPdf({
+        rawFiles: filesToExport,
+        projectId,
+        datasetType,
+        tagName,
+      })
+      console.info('Report export summary', exportStats)
 
       const normalizedDatasetType = String(datasetType || '').trim().toLowerCase()
-      if (['cfd', 'wind', 'flight'].includes(normalizedDatasetType)) {
+      if (['cfd', 'wind', 'flight', 'others'].includes(normalizedDatasetType)) {
         try {
           await projectApi.trackReportExport({
             project_id: projectId,
@@ -648,13 +775,17 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
         }
       }
     } catch (err) {
+      exportError = err
       console.error(err)
-      window.alert(err?.message || 'Failed to export PDF')
-    } finally {
-      if (mountNode && mountNode.parentNode) {
-        mountNode.parentNode.removeChild(mountNode)
+      if (err?.exportStats) {
+        console.error('Report export failure summary', err.exportStats)
       }
+    } finally {
       hideLoader()
+    }
+
+    if (exportError) {
+      window.alert(exportError?.message || 'Failed to export PDF')
     }
   }
 
@@ -695,9 +826,9 @@ export default function TagDetails({ projectId, datasetType, tagName, onBack }) 
           <label style={{ color: '#000000', fontFamily: '"Inter-Regular",Helvetica', fontSize: '16px', fontWeight: '600' }}>{tagName}</label>
         </div>
 
-        {tab === 'raw' && exportTargetFile && (
+        {(tab === 'raw' || tab === 'others') && exportFiles.length > 0 && (
           <button
-            onClick={() => handleExportPdf(exportTargetFile)}
+            onClick={() => handleExportPdf(exportFiles)}
             type="button"
             style={{
               minWidth: '50px',

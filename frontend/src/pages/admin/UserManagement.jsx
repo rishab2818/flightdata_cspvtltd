@@ -141,8 +141,11 @@ export default function UserManagement() {
 
               <TableBody>
                 {/* {filtered.map((u) => ( */}
-                {paginatedUsers.map((u) => (
-                  <TableRow key={u.email} className="user-management-table-row">
+                {paginatedUsers.map((u) => {
+                  const isAdminUser = u.role === "ADMIN";
+
+                  return (
+                    <TableRow key={u.email} className="user-management-table-row">
                     <TableCell>{u.first_name} {u.last_name}</TableCell>
                     <TableCell>
                       <Chip size="small" label={u.role} />
@@ -160,32 +163,39 @@ export default function UserManagement() {
                     <TableCell>{u.last_login_at || "—"}</TableCell>
                     <TableCell align="right">
                       <Tooltip title="Change password">
-                        <IconButton
+                        <span>
+                          <IconButton
                           size="small"
                           className="action-btn password"
+                          disabled={isAdminUser}
                           onClick={() =>
                             setPwdDlg({ open: true, email: u.email })
                           }
                         >
                           <img style={{width:'20px', height:'20px'}} src={password} alt="password"/>
-                        </IconButton>
+                          </IconButton>
+                        </span>
                       </Tooltip>
 
                       <Tooltip title="Delete user">
-                        <IconButton
+                        <span>
+                          <IconButton
                           size="small"
                           className="action-btn delete"
+                          disabled={isAdminUser}
                           onClick={() =>
                             setConfirm({ open: true, email: u.email })
                           }
                         > 
                           <img style={{width:'20px', height:'20px'}} src={Delete} alt="delete"/>
                           {/* <DeleteIcon fontSize="small" /> */}
-                        </IconButton>
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
             <TablePagination

@@ -5,7 +5,7 @@ from bson import ObjectId
 from app.db.mongo import get_db
 
 DATA_COUNTER_KEYS = ("cfd", "wind", "flight", "others")
-REPORT_COUNTER_KEYS = ("cfd", "wind", "flight")
+REPORT_COUNTER_KEYS = ("cfd", "wind", "flight", "others")
 
 
 # -----------------------------
@@ -168,7 +168,8 @@ class ProjectRepository:
             "report_cfd": report_counts["cfd"],
             "report_wind": report_counts["wind"],
             "report_flight": report_counts["flight"],
-            "total_reports": report_counts["cfd"] + report_counts["wind"] + report_counts["flight"],
+            "report_others": report_counts["others"],
+            "total_reports": report_counts["cfd"] + report_counts["wind"] + report_counts["flight"] + report_counts["others"],
         }
 
     async def increment_report_counter(

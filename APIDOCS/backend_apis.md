@@ -214,7 +214,7 @@ Common file metadata fields: `storage_key`, `original_name`, `content_type`, `si
 Fields: `so_number`, `particular`, `supplier_name`, `quantity`, `duration_months`, `start_date`, `delivery_date` (cannot precede start), `duty_officer`, `holder`, `amount`, `status`, plus file metadata.
 
 ### Divisional Records
-Similar patterns with fields `division_name`, `record_type`, `created_date`, `rating`, `remarks`, plus file metadata.
+Similar patterns with fields `division_name`, `record_type`, `created_date`, `remarks`, plus file metadata.
 
 Routes: POST/GET/PUT/DELETE/GET download at `/api/records/divisional-records`.
 

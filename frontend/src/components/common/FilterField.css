@@ -1,0 +1,13 @@
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-field__label {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}

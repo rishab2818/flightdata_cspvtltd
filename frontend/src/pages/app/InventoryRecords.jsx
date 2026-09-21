@@ -1,14 +1,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
+import { FiPlus, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import Users from "../../assets/Users.svg";
 import CurrencyInr from "../../assets/CurrencyInr.svg";
 import SpinnerGap from "../../assets/SpinnerGap.svg";
 import CheckSquareOffset from "../../assets/CheckSquareOffset.svg";
-import FileText1 from "../../assets/FileText1.svg"
 import load from "../../assets/load.svg";
 import { useDownload } from "../../components/common/useDownload";
 
@@ -130,7 +129,7 @@ function QuantityDisplay({ quantity, assignees = [], onManage }) {
 export default function InventoryRecords() {
   const { projectId } = useParams();
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ type: "all", status: "all" });
+  const [statusFilter, setStatusFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [assigneeModalOrder, setAssigneeModalOrder] = useState(null);
@@ -146,6 +145,16 @@ export default function InventoryRecords() {
   const openModal = () => {
     setEditingOrder(null);
     setShowModal(true);
+  };
+
+  const openEditModal = (order) => {
+    setEditingOrder(order);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingOrder(null);
   };
 
   const fetchOrdersPage = React.useCallback(async ({ page, limit }) => {
@@ -270,40 +279,23 @@ export default function InventoryRecords() {
   setRecordToDelete(null);
 };
 
-
   /*---------------------- Filtering ------------------------*/
-  // const filtered = useMemo(() => {
-  //   return orders.filter((row) => {
-  //     const matchesType =
-  //       filters.type === "all" ||
-  //       row.particular?.toLowerCase().includes(filters.type.toLowerCase());
-
-  //     const matchesStatus =
-  //       filters.status === "all" || row.status === filters.status;
-
-  //     return matchesType && matchesStatus;
-  //   });
-  // }, [orders, filters]);
-
   const filtered = useMemo(() => {
   const searchText = search.toLowerCase().trim();
 
   return orders.filter((row) => {
-    const matchesType =
-      filters.type === "all" ||
-      row.particular?.toLowerCase().includes(filters.type.toLowerCase());
-
     const matchesStatus =
-      filters.status === "all" || row.status === filters.status;
+      statusFilter === "all" ||
+      getAutoStatus(row.start_date, row.delivery_date) === statusFilter;
 
     const matchesSearch =
       !searchText ||
       row.particular?.toLowerCase().includes(searchText) ||
       row.supplier_name?.toLowerCase().includes(searchText);
 
-    return matchesType && matchesStatus && matchesSearch;
+    return matchesStatus && matchesSearch;
   });
-}, [orders, filters, search]);
+}, [orders, statusFilter, search]);
 
 
   /*------------------------ Stats ---------------------------*/
@@ -349,43 +341,29 @@ export default function InventoryRecords() {
 
       {/* Filters */}
       <div className={styles.filtersContainer}>
-          <div className={styles.searchBox}>
-                          <FiSearch size={16} color="#64748b" />
-                          <input
-                            className={styles.searchInput}
-                            placeholder="Search particulars..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                          />
+          <div className={styles.searchGroup}>
+            <span className={styles.filterLabel}>Search Particulars</span>
+            <div className={styles.searchBox}>
+              <FiSearch size={16} color="#64748b" />
+              <input
+                className={styles.searchInput}
+                placeholder="Search particulars..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-          {/* Filter by Type */}
-          <label className={styles.filterGroup}>
-            {/* <span className={styles.filterLabel}>Filter by Type</span> */}
-            <select
-              className={styles.select}
-              value={filters.type}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, type: e.target.value }))
-              }
-            >
-              <option value="all">All Types</option>
-              <option value="Budget">Budget</option>
-              <option value="AMC">AMC</option>
-              <option value="Cyber Security">Cyber Security</option>
-            </select>
-          </label>
 
           {/* Filter by Status */}
           <label className={styles.filterGroup}>
-            {/* <span className={styles.filterLabel}>Filter by Status</span> */}
+            <span className={styles.filterLabel}>Filter by Status</span>
             <select
               className={styles.select}
-              value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, status: e.target.value }))
-              }
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">All Status</option>
+              <option value="Upcoming">Upcoming</option>
               <option value="Ongoing">Ongoing</option>
               <option value="Completed">Completed</option>
             </select>
@@ -396,7 +374,7 @@ export default function InventoryRecords() {
 
         {/* Upload Button */}
         <button className={styles.uploadBtn} onClick={openModal}>
-           <img src={FileText1} alt="Record"/>
+           <FiPlus size={16} aria-hidden="true" />
            Procurement Record
         </button>
       </div>
@@ -496,6 +474,7 @@ export default function InventoryRecords() {
                   <td className="cell cell-center">
                       <DocumentActions
     doc={{ id: row.record_id, fileName: row.original_name }}
+    onEdit={() => openEditModal(row)}
     onView={() => handleView(row)}
     onDownload={() => handleDownload(row)}
     onDelete={() => {
@@ -515,7 +494,7 @@ export default function InventoryRecords() {
       {/* Modal */}
       {showModal && (
         <SupplyOrderModal
-          onClose={() => setShowModal(false)}
+          onClose={closeModal}
           onCreated={(created) =>
             setOrders((prev) => [
               {
@@ -527,7 +506,14 @@ export default function InventoryRecords() {
           }
           onUpdated={(updated) => {
             setOrders((prev) =>
-              prev.map((o) => (o.record_id === updated.record_id ? updated : o))
+              prev.map((o) =>
+                o.record_id === updated.record_id
+                  ? {
+                      ...updated,
+                      quantity_assignees: updated?.quantity_assignees ?? [],
+                    }
+                  : o
+              )
             );
           }}
           editingOrder={editingOrder}

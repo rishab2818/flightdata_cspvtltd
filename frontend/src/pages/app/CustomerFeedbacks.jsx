@@ -1173,10 +1173,10 @@ function FeedbackModal({ onClose, onCreated, onUpdated, editingRecord, projectId
     e.preventDefault();
     setError("");
 
-    if (!file && !form.storage_key) {
-  setError("Please select a file to upload.");
-  return;
-}
+    if (!editingRecord && !file) {
+      setError("Please select a file to upload.");
+      return;
+    }
 
     try {
       setSubmitting(true);

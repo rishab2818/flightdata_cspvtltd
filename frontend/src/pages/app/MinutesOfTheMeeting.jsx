@@ -185,16 +185,13 @@ export default function MinutesOfTheMeeting() {
       setProjectError("");
       const list = await projectApi.list({ page: 1, limit: 200 });
       setProjects(list || []);
-      if (!selectedProjectId && list?.length) {
-        setSelectedProjectId(list[0]?._id || list[0]?.id || "");
-      }
     } catch {
       setProjectError("Unable to load projects.");
       setProjects([]);
     } finally {
       setProjectLoading(false);
     }
-  }, [selectedProjectId]);
+  }, []);
 
   const fetchMinutesPage = useCallback(
     async ({ page, limit }) => {
@@ -971,8 +968,25 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
   if (!open || !doc) return null;
 
   const handleAddActionOn = () => {
-    if (!actionOnInput.trim()) return;
-    setActionOnList((prev) => [...prev, actionOnInput.trim()]);
+    const nextOwner = actionOnInput.trim();
+    if (!nextOwner) return;
+    setActionOnList((prev) =>
+      prev.some((owner) => owner.toLowerCase() === nextOwner.toLowerCase())
+        ? prev
+        : [...prev, nextOwner]
+    );
+    setActionOnInput("");
+  };
+
+  const handleSelectActionOn = (user) => {
+    const nextOwner = user?.name?.trim() || user?.email || "";
+    if (!nextOwner) return;
+
+    setActionOnList((prev) =>
+      prev.some((owner) => owner.toLowerCase() === nextOwner.toLowerCase())
+        ? prev
+        : [...prev, nextOwner]
+    );
     setActionOnInput("");
   };
 
@@ -1105,7 +1119,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
 
         {activeTab === "edit" && (
           <form className="ActionEditForm" onSubmit={handleSubmit}>
-            <div className="row gap16">
+            <div className="row gap16 ActionEditTopRow">
               <div className="flex1">
                 <label className="label">Tag Name</label>
                 <input
@@ -1128,16 +1142,17 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
               </div>
             </div>
 
-            <div className="row gap16">
+            <div className="row gap16 ActionEditTopRow">
               <div className="flex1">
                 <label className="label">Action on (Person / Role / Team)</label>
-                <div className="row">
-                  <input
-                    type="text"
+                <div className="row ActionOwnerRow">
+                  <AssigneeSearchInput
                     value={actionOnInput}
-                    onChange={(e) => setActionOnInput(e.target.value)}
+                    projectId={doc.projectId}
                     className="TextInput"
-                    placeholder="Add new action owner"
+                    placeholder="Search name, role, or team"
+                    onValueChange={setActionOnInput}
+                    onSelect={handleSelectActionOn}
                   />
                   <button
                     type="button"
@@ -1169,7 +1184,7 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
 
               {(actionPoints || []).map((pt, idx) => (
                 <div key={`${pt.description}-${idx}`} className="ActionEditItem">
-                  <div className="flex1">
+                  <div className="ActionPointField ActionPointDescriptionField">
                     <label className="label">Description</label>
                     <input
                       type="text"
@@ -1180,30 +1195,33 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                       className="TextInput"
                     />
                   </div>
-                  <div className="flex1">
+                  <div className="ActionPointField ActionPointAssigneeField">
                     <label className="label">Assign to</label>
-                    <AssigneeSearchInput
-                      value={pt.assigned_to}
-                      projectId={doc?.projectId}
-                      placeholder="Assign to"
-                      className="TextInput"
-                      onValueChange={(nextValue) => {
-                        handleUpdateActionPoint(idx, "assigned_to", nextValue);
-                        handleUpdateActionPoint(idx, "assigned_to_email", "");
-                      }}
-                      onSelect={(user) => {
-                        handleUpdateActionPoint(
-                          idx,
-                          "assigned_to",
-                          user?.name?.trim() || user?.email || ""
-                        );
-                        handleUpdateActionPoint(
-                          idx,
-                          "assigned_to_email",
-                          user?.email || ""
-                        );
-                      }}
-                    />
+                    <div className="AssigneeFieldWrap">
+                      <AssigneeSearchInput
+                        value={pt.assigned_to}
+                        projectId={doc?.projectId}
+                        placeholder="Assign to"
+                        className="TextInput"
+                        reserveDropdownSpace={false}
+                        onValueChange={(nextValue) => {
+                          handleUpdateActionPoint(idx, "assigned_to", nextValue);
+                          handleUpdateActionPoint(idx, "assigned_to_email", "");
+                        }}
+                        onSelect={(user) => {
+                          handleUpdateActionPoint(
+                            idx,
+                            "assigned_to",
+                            user?.name?.trim() || user?.email || ""
+                          );
+                          handleUpdateActionPoint(
+                            idx,
+                            "assigned_to_email",
+                            user?.email || ""
+                          );
+                        }}
+                      />
+                    </div>
                   </div>
                   <label className="toggleWrap">
                     <input
@@ -1234,20 +1252,23 @@ function ActionDetailsModal({ open, doc, onClose, onSave, saving, error }) {
                   placeholder="New action point"
                   className="TextInput"
                 />
-                <AssigneeSearchInput
-                  value={apAssignee}
-                  projectId={doc?.projectId}
-                  placeholder="Assign to"
-                  className="TextInput"
-                  onValueChange={(nextValue) => {
-                    setApAssignee(nextValue);
-                    setApAssigneeEmail("");
-                  }}
-                  onSelect={(user) => {
-                    setApAssignee(user?.name?.trim() || user?.email || "");
-                    setApAssigneeEmail(user?.email || "");
-                  }}
-                />
+                <div className="AssigneeFieldWrap">
+                  <AssigneeSearchInput
+                    value={apAssignee}
+                    projectId={doc?.projectId}
+                    placeholder="Assign to"
+                    className="TextInput"
+                    reserveDropdownSpace={false}
+                    onValueChange={(nextValue) => {
+                      setApAssignee(nextValue);
+                      setApAssigneeEmail("");
+                    }}
+                    onSelect={(user) => {
+                      setApAssignee(user?.name?.trim() || user?.email || "");
+                      setApAssigneeEmail(user?.email || "");
+                    }}
+                  />
+                </div>
                 <button type="button" className="icon-btn" onClick={handleAddActionPoint}>
                   <FiPlus size={16} />
                 </button>

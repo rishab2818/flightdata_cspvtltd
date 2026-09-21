@@ -1,18 +1,26 @@
-export const filterOptions = {
-  type: [
-    { value: 'all', label: 'All Types' },
-    { value: 'hardware', label: 'Hardware' },
-    { value: 'software', label: 'Software' },
-    { value: 'services', label: 'Services' },
-  ],
-  sort: [
-    { value: 'none', label: 'None' },
-    { value: 'asc', label: 'A to Z' },
-    { value: 'desc', label: 'Z to A' },
-  ],
+export const getCurrentFiscalYear = (date = new Date()) => {
+  const year = date.getFullYear();
+  const startYear = date.getMonth() >= 3 ? year : year - 1;
+  return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
 };
 
-export const fiscalYearOptions = ['2023-24', '2024-25', '2025-26', '2026-27', '2027-28'];
+export const buildFiscalYearOptions = (records = [], date = new Date()) => {
+  const currentStartYear = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
+  const generatedYears = Array.from({ length: 5 }, (_, index) => {
+    const startYear = currentStartYear - 2 + index;
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
+  });
+
+  const recordYears = records
+    .map((record) => record?.forecast_year)
+    .filter(Boolean);
+
+  return Array.from(new Set([...recordYears, ...generatedYears])).sort((a, b) => {
+    const startA = Number(String(a).slice(0, 4));
+    const startB = Number(String(b).slice(0, 4));
+    return startB - startA;
+  });
+};
 
 export const forecastColumns = (cashSplitLabel) => [
   'Sl. No.',

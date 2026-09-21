@@ -71,9 +71,9 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(190px, 240px) max-content;
+  align-items: end;
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -88,7 +88,15 @@
 .filterGroup {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.searchGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .filterLabel {
@@ -100,7 +108,8 @@
 
 .select {
   height: 42px;
-  min-width: 284px;
+  width: 100%;
+  min-width: 0;
   padding: 10px 14px;
   background:  #F3F3F5;
   border: 1px solid #e5e7eb;
@@ -124,6 +133,7 @@
   display: flex;
   width: 230px;
   height: 42px;
+  min-width: 210px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -161,8 +171,8 @@
 
 
 .searchBox {
-  flex: 1;
-  max-width: 700px;
+  width: 100%;
+  min-width: 0;
   height: 42px;
   display: flex;
   align-items: center;
@@ -176,13 +186,35 @@
 .searchInput {
   border: none;
   outline: none;
-  min-width: 350px;
+  min-width: 0;
   background: transparent;
   flex: 1;
   gap: 20px;
   font-size: 14px;
   color: #0f172a;
  
+}
+
+@media (max-width: 900px) {
+  .filtersContainer {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  }
+
+  .uploadBtn {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .filtersContainer {
+    grid-template-columns: 1fr;
+  }
+
+  .uploadBtn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* ----------- Table ----------- */

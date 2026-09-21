@@ -89,6 +89,7 @@
   padding: 24px 28px 40px 28px;
   padding: 24px;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -367,7 +368,8 @@
 
 .app-shell__main {
   flex: 1;
-  /* overflow: auto;  */
+  min-height: 0;
+  overflow: hidden;
   margin: 0 auto;
   padding: 12px 0px 12px 0px;
   width: 100%;

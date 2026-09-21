@@ -8,43 +8,50 @@ import React, {
 } from "react";
 
 import { AuthContext } from "../../../context/AuthContext";
-import { taskAcknowledgementsApi } from "../api/taskAcknowledgementsApi";
+import {
+  getPendingAcknowledgements,
+  taskAcknowledgementsApi,
+} from "../api/taskAcknowledgementsApi";
 import TaskAcknowledgementToasts from "../components/TaskAcknowledgementToasts";
 
 const TaskAcknowledgementContext = createContext(null);
+const PENDING_ACKNOWLEDGEMENT_LIMIT = 10;
 
 export function TaskAcknowledgementProvider({ children }) {
   const { isAuthenticated } = useContext(AuthContext);
-  const [items, setItems] = useState([]);
+  const [pendingAcknowledgements, setPendingAcknowledgements] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [pendingIds, setPendingIds] = useState({});
 
-  const refresh = useCallback(async () => {
+  const loadPendingAcknowledgements = useCallback(async () => {
     if (!isAuthenticated) {
-      setItems([]);
+      setPendingAcknowledgements([]);
+      setError(null);
       return;
     }
 
     try {
       setLoading(true);
-      const data = await taskAcknowledgementsApi.listPending(10);
-      setItems(data || []);
+      setError(null);
+      const data = await getPendingAcknowledgements(PENDING_ACKNOWLEDGEMENT_LIMIT);
+      setPendingAcknowledgements(data || []);
     } catch (err) {
       console.error("Failed to load task acknowledgements", err);
+      setError(err);
     } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
-  useEffect(() => {
-    refresh();
-    if (!isAuthenticated) {
-      return undefined;
-    }
+  const refreshPendingAcknowledgements = useCallback(
+    () => loadPendingAcknowledgements(),
+    [loadPendingAcknowledgements]
+  );
 
-    const id = setInterval(refresh, 5000);
-    return () => clearInterval(id);
-  }, [isAuthenticated, refresh]);
+  useEffect(() => {
+    loadPendingAcknowledgements();
+  }, [loadPendingAcknowledgements]);
 
   const acknowledge = useCallback(async (acknowledgementId) => {
     if (!acknowledgementId) {
@@ -54,8 +61,10 @@ export function TaskAcknowledgementProvider({ children }) {
     setPendingIds((prev) => ({ ...prev, [acknowledgementId]: true }));
     try {
       await taskAcknowledgementsApi.acknowledge(acknowledgementId);
-      setItems((prev) => prev.filter((item) => item.id !== acknowledgementId));
-      await refresh();
+      setPendingAcknowledgements((prev) =>
+        prev.filter((item) => item.id !== acknowledgementId)
+      );
+      await refreshPendingAcknowledgements();
     } catch (err) {
       console.error("Failed to acknowledge task item", err);
     } finally {
@@ -65,17 +74,29 @@ export function TaskAcknowledgementProvider({ children }) {
         return next;
       });
     }
-  }, [refresh]);
+  }, [refreshPendingAcknowledgements]);
 
   const value = useMemo(
     () => ({
-      items,
+      items: pendingAcknowledgements,
+      pendingAcknowledgements,
       loading,
+      error,
       pendingIds,
-      refresh,
+      loadPendingAcknowledgements,
+      refresh: refreshPendingAcknowledgements,
+      refreshPendingAcknowledgements,
       acknowledge,
     }),
-    [items, loading, pendingIds, refresh, acknowledge]
+    [
+      pendingAcknowledgements,
+      loading,
+      error,
+      pendingIds,
+      loadPendingAcknowledgements,
+      refreshPendingAcknowledgements,
+      acknowledge,
+    ]
   );
 
   return (

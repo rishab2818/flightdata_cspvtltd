@@ -1,9 +1,13 @@
 .container {
   width: 100%;
   max-width: 1640px;
-   margin: 0 auto;
-   height: 100%;
+  margin: 0 auto;
+  height: 100%;
 }
+
+/* =========================================================
+   HEADER
+========================================================= */
 
 .header {
   display: flex;
@@ -31,79 +35,161 @@
   font-size: 14px;
 }
 
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
 .toolbar {
- 
   width: 100%;
+  min-height: 100px;
+
+  display: grid;
+
+  /* Search takes all remaining space */
+  grid-template-columns:
+    minmax(300px, 1fr)
+    180px
+    180px
+    200px;
+
+  align-items: end;
+
+  /* REQUIRED GAP */
+  gap: 16px;
+
   background: #ffffff;
+
   border: 1px solid #e2e8f0;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  flex-wrap: wrap;
-  margin-bottom: 25px;
-  height: 100px;
-  flex-wrap: nowrap;
   border-radius: 8px;
+
+  padding: 16px 24px;
+
+  box-sizing: border-box;
+
+  margin-bottom: 25px;
 }
 
+/* =========================================================
+   SEARCH
+========================================================= */
 
 .searchBox {
-  flex: 1;
-  max-width: 700px;
+  width: 100%;
   height: 42px;
+
   display: flex;
   align-items: center;
+
   gap: 8px;
+
   background: #f8fafc;
+
   border: 1px solid #e2e8f0;
-  border-radius: 0px;
-  padding: 12px 24px;
+  border-radius: 0;
+
+  padding: 0 24px;
+
+  box-sizing: border-box;
 }
 
 .searchInput {
+  width: 100%;
+  min-width: 0;
+
+  flex: 1;
+
   border: none;
   outline: none;
-  min-width: 350px;
+
   background: transparent;
-  flex: 1;
-  font-size: 14px;
+
   color: #0f172a;
- 
+
+  font-size: 14px;
+  font-weight: 400;
+
+  font-family: "Inter-Regular", Helvetica, sans-serif;
 }
 
+.searchInput::placeholder {
+  color: #64748b;
+}
+
+/* =========================================================
+   SELECT
+========================================================= */
+
 .select {
-  max-width: 280px;
+  width: 100%;
   height: 42px;
+
+  box-sizing: border-box;
+
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 0 12px;
-  background:  #F3F3F5;
+
+  padding: 0 38px 0 12px;
+
+  background-color: #f3f3f5;
+
   color: #0f172a;
+
   font-size: 14px;
+  font-weight: 400;
+
+  font-family: "Inter-Regular", Helvetica, sans-serif;
+
+  cursor: pointer;
+
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
   background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23777' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+
   background-repeat: no-repeat;
+
   background-position: right 12px center;
 }
+
+.select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+/* =========================================================
+   UPLOAD BUTTON
+========================================================= */
 
 .uploadBtn {
   width: 100%;
   height: 42px;
-  max-width: 200px;
+
   display: inline-flex;
+
   align-items: center;
   justify-content: center;
+
   gap: 8px;
+
   padding: 10px 16px;
-  background: #1976D2;
+
+  box-sizing: border-box;
+
+  background: #1976d2;
   color: #ffffff;
+
   border: none;
   border-radius: 4px;
+
+  font-size: 14px;
   font-weight: 600;
+
   cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.2s ease;
+
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.2s ease;
 }
 
 .uploadBtn:hover {
@@ -114,115 +200,139 @@
   transform: translateY(1px);
 }
 
+/* =========================================================
+   TABLE WRAPPER
+========================================================= */
+
 .tableWrapper {
   margin-top: 10px;
-  background: white;
+
+  background: #ffffff;
+
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow-x: auto;     /* enables horizontal scroll */
+
+  overflow-x: auto;
   overflow-y: auto;
-  padding: 0px 24px 24px 24px;
+
+  padding: 0 24px 24px;
+
   display: block;
-  flex-direction: column;
+
   height: 83%;
 }
 
 .tableHeader {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
+
   gap: 12px;
+
   padding: 16px 0 12px;
 }
-/* .table {
-  width: 1513px;
-  max-width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 13px;
-  border: 1px solid #00000026;
-  border-radius: 8px;
-  border-color: #0000001A;
-  overflow-y: auto;
-  z-index: 60;
-  margin-top: -15px;
-} */
+
+/* =========================================================
+   TABLE
+========================================================= */
 
 .table {
   width: 1513px;
+
   max-width: 100%;
+
   border-collapse: separate;
+
   border-spacing: 0;
+
   font-size: 13px;
-  border: 1px solid #00000026;
+
+  border: 1px solid #0000001a;
+
   border-radius: 8px;
-  border-color: #0000001A;
+
   overflow-y: auto;
-  /* ✅ REMOVE this */
-  /* z-index: 60; */
+
   margin-top: -15px;
 }
 
-/* .table th {
-  text-align: left;
-  padding: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #000000;
-  background: #EFF7FF;
-  border-bottom: 1px solid #e2e8f0;
-  flex-shrink: 0;
-   font-family: "Inter-SemiBold", Helvetica;
-   z-index: 10; 
-} */
-
 .table th {
   text-align: left;
+
   padding: 12px;
+
   font-size: 14px;
+
   font-weight: 500;
+
   color: #000000;
-  background: #EFF7FF;
+
+  background: #eff7ff;
+
   border-bottom: 1px solid #e5e7eb;
-  font-family: "Inter-regular", Helvetica;
-  /* ✅ REMOVE this */
-  /* z-index: 10; */
+
+  font-family: "Inter-Regular", Helvetica, sans-serif;
 }
 
 .table td {
   text-align: left;
-  color:#717182;
+
+  color: #717182;
+
   padding: 12px;
+
   font-size: 12px;
+
   font-weight: 400;
-  font-weight: 400;
+
   border-bottom: 1px solid #0000001a;
-   font-family: "Inter-regular", Helvetica;
-}
 
-.typeBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  background: #f2f5ff;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 12px;
-  color: #0057b8;
+  font-family: "Inter-Regular", Helvetica, sans-serif;
 }
-
 
 .table td:last-child,
 .table th:last-child {
   text-align: left;
+
   vertical-align: middle;
 }
 
+/* =========================================================
+   TYPE BADGE
+========================================================= */
 
-.empty, .error, .loading {
+.typeBadge {
+  display: inline-flex;
+
+  align-items: center;
+
+  padding: 6px 12px;
+
+  background: #f2f5ff;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  color: #0057b8;
+}
+
+/* =========================================================
+   EMPTY / ERROR / LOADING
+========================================================= */
+
+.empty,
+.error,
+.loading {
   padding: 16px;
+
   color: #475569;
+
   font-size: 14px;
+
   font-family: "Inter", sans-serif;
 }
 
@@ -230,114 +340,211 @@
   color: #d32f2f;
 }
 
-/* .modalBackdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-} */
+/* =========================================================
+   MODAL
+========================================================= */
 
 .modalBackdrop {
   position: fixed;
+
   inset: 0;
+
   background: rgba(15, 23, 42, 0.35);
+
   display: flex;
+
   align-items: center;
   justify-content: center;
-  z-index: 9999; /* ✅ was 50 */
+
+  z-index: 9999;
 }
 
 .modalCard {
   width: 420px;
+
   max-width: 90vw;
+
   background: #ffffff;
+
   border-radius: 8px;
+
   padding: 20px;
+
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+
   border: 1px solid #e2e8f0;
 }
 
 .modalTitle {
   margin: 0 0 12px;
+
   font-size: 18px;
+
   font-weight: 700;
+
   color: #0a0a0a;
-  font-family: "Inter-Regular",Helvetica;
+
+  font-family: "Inter-Regular", Helvetica, sans-serif;
 }
+
+/* =========================================================
+   FORM
+========================================================= */
 
 .formGroup {
   display: flex;
+
   flex-direction: column;
+
   gap: 6px;
+
   margin-bottom: 12px;
 }
 
 .label {
   font-size: 13px;
+
   color: #0a0a0a;
+
   font-weight: 600;
-  font-family: "Inter-Regular",Helvetica;
+
+  font-family: "Inter-Regular", Helvetica, sans-serif;
 }
 
 .input {
+  width: 100%;
+
   height: 40px;
+
   padding: 0 12px;
+
+  box-sizing: border-box;
+
   border-radius: 4px;
+
   border: 1px solid #e2e8f0;
+
   background: #f3f3f5;
+
   font-size: 14px;
 }
 
 .textarea {
+  width: 100%;
+
   min-height: 68px;
+
   padding: 10px 12px;
+
+  box-sizing: border-box;
+
   border-radius: 8px;
+
   border: 1px solid #e2e8f0;
+
   background: #f8fafc;
+
   font-size: 14px;
 }
 
+/* =========================================================
+   MODAL BUTTONS
+========================================================= */
+
 .modalActions {
   display: flex;
+
   justify-content: flex-end;
+
   gap: 10px;
+
   margin-top: 15px;
 }
 
 .secondaryBtn {
   width: 120px;
+
   padding: 10px 14px;
+
   border-radius: 4px;
-  border: 1px solid #1976D2;
-  background: #fff;
+
+  border: 1px solid #1976d2;
+
+  background: #ffffff;
+
+  color: #1976d2;
+
   cursor: pointer;
-  color:#1976D2 ;
 }
 
 .primaryBtn {
   width: 120px;
+
   padding: 10px 14px;
+
   border-radius: 4px;
+
   border: none;
-  background: #1976D2;
+
+  background: #1976d2;
+
   color: #ffffff;
+
   cursor: pointer;
 }
 
 .helperText {
   font-size: 12px;
+
   color: #94a3b8;
 }
 
 .badgeSuccess {
   display: inline-block;
+
   padding: 6px 10px;
+
   background: #ecfdf3;
+
   color: #15803d;
+
   border-radius: 8px;
+
   font-size: 12px;
+
   margin-top: 6px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1050px) {
+  .toolbar {
+    grid-template-columns:
+      minmax(250px, 1fr)
+      160px
+      160px
+      170px;
+  }
+}
+
+@media (max-width: 850px) {
+  .toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .searchBox,
+  .select,
+  .uploadBtn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+
+    gap: 16px;
+  }
 }

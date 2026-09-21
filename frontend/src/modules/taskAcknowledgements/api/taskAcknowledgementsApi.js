@@ -1,12 +1,30 @@
 import { axiosClient } from "../../../lib/axiosClient";
 
-export const taskAcknowledgementsApi = {
-  async listPending(limit = 10) {
-    const { data } = await axiosClient.get("/api/task-acknowledgements/pending", {
+const pendingRequests = new Map();
+
+export async function getPendingAcknowledgements(limit = 10) {
+  const requestKey = String(limit);
+  const existingRequest = pendingRequests.get(requestKey);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = axiosClient
+    .get("/api/task-acknowledgements/pending", {
       params: { limit },
+    })
+    .then(({ data }) => data)
+    .finally(() => {
+      pendingRequests.delete(requestKey);
     });
-    return data;
-  },
+
+  pendingRequests.set(requestKey, request);
+  return request;
+}
+
+export const taskAcknowledgementsApi = {
+  listPending: getPendingAcknowledgements,
 
   async acknowledge(acknowledgementId) {
     const { data } = await axiosClient.post(

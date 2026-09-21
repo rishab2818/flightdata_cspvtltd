@@ -95,6 +95,25 @@ function Modal({ title, onClose, children }) {
   );
 }
 
+const getStudentEngagementError = (err) => {
+  const detail = err?.response?.data?.detail;
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = Array.isArray(item?.loc) ? item.loc.slice(1).join(".") : "";
+        const message = item?.msg || String(item);
+        return field ? `${field}: ${message}` : message;
+      })
+      .join("; ");
+  }
+
+  if (typeof detail === "string") return detail;
+  if (detail?.message) return detail.message;
+  if (err?.message) return err.message;
+  return "Unable to save student engagement record. Please check the details.";
+};
+
 /* -------------------- Main Component -------------------- */
 
 export default function StudentEngagement() {
@@ -307,11 +326,10 @@ export default function StudentEngagement() {
     e.preventDefault();
     setFormError("");
 
-    // 🔴 Require document upload
-if (!file && !existingFileMeta?.storage_key) {
-  setError("Please select a file to upload.");
-  return;
-}
+    if (!editingRecord && !file) {
+      setFormError("Please select a file to upload.");
+      return;
+    }
 
     if (dateError) {
       setFormError(dateError);
@@ -337,7 +355,10 @@ if (!file && !existingFileMeta?.storage_key) {
           content_hash: hash,
         });
 
-        await fetch(res.upload_url, { method: "PUT", body: file });
+        const uploadResponse = await fetch(res.upload_url, { method: "PUT", body: file });
+        if (!uploadResponse.ok) {
+          throw new Error(`Document upload failed (${uploadResponse.status})`);
+        }
 
         storage_key = res.storage_key;
         original_name = file.name;
@@ -385,7 +406,7 @@ if (!file && !existingFileMeta?.storage_key) {
       setShowModal(false);
       resetFormState();
     } catch (err) {
-      setFormError("Unable to save student engagement record. Please check the details.");
+      setFormError(getStudentEngagementError(err));
     } finally {
       setSubmitting(false);
     }

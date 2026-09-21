@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 from typing import List, Optional
 import re
+from urllib.parse import quote
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -77,6 +78,17 @@ def _serialize_user_document(row: dict) -> UserDocumentOut:
         action_on=row.get("action_on", []),
         project_id=row.get("project_id"),
     )
+
+
+def _attachment_headers(filename: str | None) -> dict[str, str]:
+    safe_name = filename or "download"
+    ascii_name = safe_name.encode("ascii", "ignore").decode("ascii") or "download"
+    return {
+        "response-content-disposition": (
+            f'attachment; filename="{ascii_name}"; '
+            f"filename*=UTF-8''{quote(safe_name)}"
+        )
+    }
 
 
 def _normalize_assignee_display_name(row: dict) -> str:
@@ -165,6 +177,7 @@ async def _search_users(
         {"email": {"$regex": safe_query, "$options": "i"}},
         {"first_name": {"$regex": safe_query, "$options": "i"}},
         {"last_name": {"$regex": safe_query, "$options": "i"}},
+        {"role": {"$regex": safe_query, "$options": "i"}},
     ]
 
     query: dict = {"$or": filters}
@@ -527,6 +540,7 @@ async def get_document_download_url(
         bucket_name=bucket,
         object_name=object_key,
         expires=timedelta(hours=1),
+        response_headers=_attachment_headers(row.get("original_name")),
     )
 
     return {
@@ -558,6 +572,8 @@ async def update_document(
     updates: dict = {}
     if payload.tag is not None:
         updates["tag"] = payload.tag
+    if payload.original_name is not None:
+        updates["original_name"] = payload.original_name
     if payload.doc_date is not None:
         updates["doc_date"] = datetime(
             payload.doc_date.year, payload.doc_date.month, payload.doc_date.day

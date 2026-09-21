@@ -12,6 +12,7 @@ export default function AssigneeSearchInput({
   placeholder = "Assign to",
   className = "",
   disabled = false,
+  reserveDropdownSpace = true,
   onValueChange,
   onSelect,
 }) {
@@ -62,8 +63,17 @@ export default function AssigneeSearchInput({
     onSelect?.(user);
   };
 
+  const dropdownHeight = options.length > 0 ? Math.min(220, options.length * 46) + 8 : 0;
+
   return (
-    <div style={{ position: "relative", width: "100%" }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        minWidth: 0,
+        paddingBottom: reserveDropdownSpace ? dropdownHeight : 0,
+      }}
+    >
       <input
         type="text"
         value={value}
@@ -78,10 +88,12 @@ export default function AssigneeSearchInput({
         <div
           style={{
             position: "absolute",
-            top: "calc(100% + 6px)",
+            top: "48px",
             left: 0,
             right: 0,
-            zIndex: 20,
+            zIndex: 1000,
+            width: "100%",
+            boxSizing: "border-box",
             border: "1px solid #dbe3ee",
             borderRadius: 6,
             background: "#ffffff",
@@ -108,8 +120,15 @@ export default function AssigneeSearchInput({
                 cursor: "pointer",
               }}
             >
-              <span style={{ color: "#0f172a", fontSize: 13 }}>
-                {getDisplayName(user)}
+              <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span style={{ color: "#0f172a", fontSize: 13 }}>
+                  {getDisplayName(user)}
+                </span>
+                {user.role && (
+                  <span style={{ color: "#64748b", fontSize: 12 }}>
+                    {user.role}
+                  </span>
+                )}
               </span>
               <span style={{ color: "#64748b", fontSize: 12 }}>{user.email}</span>
             </button>

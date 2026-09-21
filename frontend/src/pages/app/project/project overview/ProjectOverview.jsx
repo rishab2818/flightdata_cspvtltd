@@ -318,6 +318,27 @@ const handleViewMembers = () => {
     await refreshTags()
   }
 
+  const handleRenameSuccess = useCallback(({ oldTag, newTag }) => {
+    if (!oldTag || !newTag) return
+
+    setTags((prev) =>
+      prev.map((tag) =>
+        tag.tag_name === oldTag
+          ? { ...tag, tag_name: newTag }
+          : tag
+      )
+    )
+
+    setJobProgress((prev) => {
+      if (!prev[oldTag]) return prev
+      const next = { ...prev, [newTag]: prev[oldTag] }
+      delete next[oldTag]
+      return next
+    })
+
+    setSelectedTag((current) => (current === oldTag ? newTag : current))
+  }, [setTags])
+
   const normalizeEmail = (email) => (email || '').trim().toLowerCase()
 
   const handleProjectEditSubmit = async (payload) => {
@@ -700,6 +721,7 @@ const handleViewMembers = () => {
           mode={modal.mode}
           initialTag={modal.tag}
           initialDatasetType={activeDataset}
+          onRenameSuccess={handleRenameSuccess}
         />
       )}
 

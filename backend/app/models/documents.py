@@ -136,7 +136,15 @@ class DocumentUpdate(BaseModel):
     """Payload for updating an existing document."""
 
     tag: Optional[str] = None
+    original_name: Optional[str] = None
     doc_date: Optional[date] = None
     action_points: Optional[List[ActionPoint]] = None
     action_on: Optional[List[str]] = None
     project_id: Optional[str] = None
+
+    @field_validator("original_name")
+    @classmethod
+    def validate_original_name(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        return ensure_allowed_filename(value)

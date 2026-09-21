@@ -294,6 +294,7 @@ export default function UploadModal({
     projectId,
     projectName,
     onClose,
+    onRenameSuccess,
     mode = 'create',
     initialTag = '',
     initialDatasetType = 'cfd',
@@ -327,6 +328,18 @@ export default function UploadModal({
     const lineCountTaskRef = useRef({ token: 0, fileId: null })
 
     const { showLoader, hideLoader } = useLoader()
+
+    const getApiErrorMessage = (err, fallback) => {
+        const detail = err?.response?.data?.detail
+        if (Array.isArray(detail)) {
+            return detail.map((item) => item?.msg || item).join(', ')
+        }
+        if (detail) return detail
+        if (err?.message === 'Network Error') {
+            return 'Unable to reach the server while saving tag name. Please check backend connection and try again.'
+        }
+        return err?.message || fallback
+    }
 
     useEffect(() => {
         const prev = document.body.style.overflow
@@ -369,6 +382,8 @@ export default function UploadModal({
         if (headerMode !== 'custom') return null
         return customHeadersText.split(',').map((h) => h.trim()).filter(Boolean)
     }, [customHeadersText, headerMode])
+
+    const canUploadFiles = !uploading && files.length > 0
 
     const selectedFile = useMemo(() => {
         if (selectedIdx == null) return null
@@ -943,10 +958,16 @@ export default function UploadModal({
 
         try {
             showLoader('Saving tag name...')
-            await ingestionApi.renameTag(projectId, datasetType, initialTag, newTag)
+            const result = await ingestionApi.renameTag(projectId, datasetType, initialTag, newTag)
+            onRenameSuccess?.({
+                oldTag: sanitizeTag(initialTag),
+                newTag,
+                datasetType,
+                result,
+            })
             onClose()
         } catch (err) {
-            setError(err?.response?.data?.detail || err.message || 'Rename failed')
+            setError(getApiErrorMessage(err, 'Rename failed'))
         } finally {
             hideLoader()
         }
@@ -1250,7 +1271,8 @@ export default function UploadModal({
                                     className="project-button"
                                     type="button"
                                     onClick={onUpload}
-                                    disabled={uploading || (mode !== 'edit' && !files.length)}
+                                    disabled={!canUploadFiles}
+                                    title={files.length > 0 ? 'Upload selected files' : 'Browse new files before uploading'}
                                 >
                                     {uploading ? 'Uploading…' : (mode === 'edit' ? 'Upload Files' : 'Upload')}
                                 </button>

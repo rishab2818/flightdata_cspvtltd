@@ -90,7 +90,6 @@ class DivisionalRecordCreate(BaseRecordFile):
     division_name: Optional[str] = None
     record_type: Optional[str] = None
     created_date: Optional[date] = None
-    rating: Optional[float] = Field(None, ge=0)
     remarks: Optional[str] = None
 
 
@@ -129,6 +128,10 @@ class TechnicalReportCreate(BaseRecordFile):
     # rating: Optional[float] = Field(0, ge=0)
 
 
+class TechnicalReportUpdate(TechnicalReportCreate):
+    pass
+
+
 class TechnicalReportOut(TechnicalReportCreate):
     record_id: str
     owner_email: str
@@ -153,6 +156,10 @@ class TrainingRecordCreate(BaseRecordFile):
         if start_date and v and v < start_date:
             raise ValueError("end_date cannot be before start_date")
         return v
+
+
+class TrainingRecordUpdate(TrainingRecordCreate):
+    pass
 
 
 class TrainingRecordOut(TrainingRecordCreate):

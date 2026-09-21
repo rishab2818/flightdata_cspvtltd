@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 from uuid import uuid4
 from typing import List, Optional
 from bson import ObjectId
+from bson.errors import InvalidId
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -216,7 +217,13 @@ async def update_student_engagement(
     user: CurrentUser = Depends(get_current_user),
 ):
     db = await get_db()
-    oid = ObjectId(record_id)
+    try:
+        oid = ObjectId(record_id)
+    except InvalidId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid student engagement record ID",
+        )
     row = await db.student_engagements.find_one({"_id": oid})
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
@@ -256,24 +263,35 @@ async def update_student_engagement(
 
     await db.student_engagements.update_one({"_id": oid}, {"$set": update_doc})
 
-    response_payload = {**row, **payload_data}
-    if computed_duration is not None:
-        response_payload["duration_months"] = computed_duration
-
-    if start_date:
-        response_payload["start_date"] = start_date
-    elif row.get("start_date"):
-        response_payload["start_date"] = row["start_date"].date()
-
-    if end_date:
-        response_payload["end_date"] = end_date
-    elif row.get("end_date"):
-        response_payload["end_date"] = row["end_date"].date()
+    updated_row = await db.student_engagements.find_one({"_id": oid})
+    response_payload = {
+        "project_id": updated_row.get("project_id"),
+        "student": updated_row.get("student"),
+        "college_name": updated_row.get("college_name"),
+        "project_name": updated_row.get("project_name"),
+        "program_type": updated_row.get("program_type"),
+        "duration_months": updated_row.get("duration_months"),
+        "start_date": updated_row.get("start_date").date()
+        if updated_row.get("start_date")
+        else None,
+        "end_date": updated_row.get("end_date").date()
+        if updated_row.get("end_date")
+        else None,
+        "mentor": updated_row.get("mentor"),
+        "status": updated_row.get("status"),
+        "approval_status": updated_row.get("approval_status", ApprovalStatus.WAITING),
+        "notes": updated_row.get("notes"),
+        "storage_key": updated_row.get("storage_key"),
+        "original_name": updated_row.get("original_name"),
+        "content_type": updated_row.get("content_type"),
+        "size_bytes": updated_row.get("size_bytes"),
+        "content_hash": updated_row.get("content_hash"),
+    }
 
     return StudentEngagementOut(
         record_id=record_id,
-        owner_email=user.email,
-        created_at=row["created_at"],
+        owner_email=updated_row["owner_email"],
+        created_at=updated_row["created_at"],
         updated_at=now,
         **response_payload,
     )

@@ -3,6 +3,10 @@ import { usersApi } from "../../api/usersApi";
 import styles from "./Setting.module.css";
 import passwordImage from "../../assets/passwordsecuredimage.png";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import {
+  PASSWORD_REQUIREMENTS_TEXT,
+  validatePassword,
+} from "../../lib/passwordValidation";
 
 export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -16,21 +20,6 @@ export default function Settings() {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const validatePassword = (password) => {
-    const minLength = 8;
-    const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
-
-    if (password.length < minLength) {
-      return "Password must be at least 8 characters long.";
-    }
-
-    if (!specialChar.test(password)) {
-      return "Password must include at least one special character.";
-    }
-
-    return null;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,7 +99,7 @@ export default function Settings() {
                   {showNew ? <FiEyeOff /> : <FiEye />}
                 </span>
               </div>
-              <small>Must be 8+ characters with at least one special character.</small>
+              <small>{PASSWORD_REQUIREMENTS_TEXT}</small>
 
               <label>Re-Enter New Password</label>
               <div className={styles.passwordField}>

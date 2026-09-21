@@ -1,11 +1,4 @@
-// Improved StatsCards component.
-//
-// This version imports colour and spacing constants from the central
-// theme and removes hard-coded values.  It functions identically to
-// the original StatsCards component.
-
-import React, { useEffect, useState } from 'react';
-import { projectApi } from '../../api/projectapi';
+import React from 'react';
 import { COLORS, SPACING } from '../../styles/constants';
 
 import FolderOpen from '../../assets/FolderOpen.svg';
@@ -32,36 +25,7 @@ function formatTotal(value) {
   return `${n}`;
 }
 
-export default function StatsCardsImproved({ className = 'stats-grid' }) {
-  const [counts, setCounts] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchCount() {
-      try {
-        const data = await projectApi.getCounts();
-        if (!cancelled) {
-          setCounts(data || {});
-        }
-      } catch (e) {
-        console.error('Failed to fetch project count', e);
-        if (!cancelled) {
-          setCounts({
-            total_projects: 0,
-            cfd: 0,
-            wind: 0,
-            flight: 0,
-            aero: 0,
-          });
-        }
-      }
-    }
-
-    fetchCount();
-    return () => { cancelled = true };
-  }, []);
-
+export default function StatsCardsImproved({ counts = null, className = 'stats-grid' }) {
   const stats = [
     { title: 'Total Projects', value: formatTotal(counts?.total_projects), icon: FolderOpen },
     { title: 'CFD Data', value: formatTotal(counts?.cfd), icon: Wind },

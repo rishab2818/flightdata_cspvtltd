@@ -69,6 +69,11 @@ def _apply_scale_filters(
     return df
 
 
+def _axis_title(value: str | None, fallback: str) -> str:
+    title = str(value or "").strip().rstrip(",").strip()
+    return title or fallback
+
+
 # ─── Chunk iterators ──────────────────────────────────────────────────────────
 
 def _iter_parquet_batches(url: str, columns: list[str]):
@@ -806,16 +811,33 @@ def _build_figure(series_frames: list[dict], chart_type: str):
     if y_scale == "log":
         fig.update_yaxes(dtick=1, exponentformat="power", showexponent="all")
 
+    x_axis_titles = {
+        str(item.get("series", {}).get("x_axis") or "").strip()
+        for item in series_frames
+        if str(item.get("series", {}).get("x_axis") or "").strip()
+    }
+    y_axis_titles = {
+        str(item.get("series", {}).get("y_axis") or "").strip()
+        for item in series_frames
+        if str(item.get("series", {}).get("y_axis") or "").strip()
+    }
+    x_axis_title = _axis_title(next(iter(x_axis_titles)), "X") if len(x_axis_titles) == 1 else "X"
+    y_axis_title = _axis_title(next(iter(y_axis_titles)), "Y") if len(y_axis_titles) == 1 else "Y"
+
     if len(series_frames) > 1:
         fig.update_layout(
             template="plotly_white",
             title="Overplot",
             legend_title_text="Series",
+            xaxis_title=x_axis_title,
+            yaxis_title=y_axis_title,
         )
     else:
         fig.update_layout(
             template="plotly_white",
             legend_title_text="Series",
+            xaxis_title=x_axis_title,
+            yaxis_title=y_axis_title,
         )
 
     if chart_type == "polar":
@@ -827,7 +849,7 @@ def _build_figure(series_frames: list[dict], chart_type: str):
         )
 
     if chart_type == "contour":
-        fig.update_layout(xaxis_title=x_col, yaxis_title=y_col)
+        fig.update_layout(xaxis_title=x_axis_title, yaxis_title=y_axis_title)
 
     return fig
 
@@ -1936,7 +1958,7 @@ def generate_visualization(self, viz_id: str):
             autosize=True,
             height=None,
             width=None,
-            margin=dict(l=0, r=0, t=40, b=0),
+            margin=dict(l=80, r=32, t=40, b=72),
         )
 
         # ✅ Force numeric x-axis BEFORE pio.to_html.

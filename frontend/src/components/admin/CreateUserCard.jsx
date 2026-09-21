@@ -8,11 +8,14 @@ import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 
 import { usersApi } from '../../api/usersApi';
+import {
+  PASSWORD_REQUIREMENTS_TEXT,
+  validatePassword,
+} from '../../lib/passwordValidation';
 import styles from './CreateUserCard.module.css';
 import newusericon from '../../assets/UserPlus.svg'
 // Friendly label -> enum value shown by you
 const ROLE_OPTIONS = [
-  { label: 'Administrator',     value: 'ADMIN'   },
   { label: 'Group Director',    value: 'GD'      },
   { label: 'Division Head',     value: 'DH'      },
   { label: 'Team Lead',         value: 'TL'      },
@@ -33,7 +36,7 @@ function splitName(full) {
 
 export default function CreateUserCard({ onCreated }) {
   const [userName, setUserName] = useState('');          // single field (matches your mock)
-  const [role, setRole]         = useState('DH');        // default like “Division Head” from screenshot
+  const [role, setRole]         = useState('');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw]     = useState(false);
@@ -42,8 +45,13 @@ export default function CreateUserCard({ onCreated }) {
   const [ok, setOk]           = useState('');
   const [err, setErr]         = useState('');
 
+  const passwordError = useMemo(() => (
+    password ? validatePassword(password) : null
+  ), [password]);
+
   const canSubmit = useMemo(() =>
-    userName.trim() && email.trim() && password.trim() && role, [userName, email, password, role]
+    userName.trim() && email.trim() && password.trim() && role && !passwordError,
+    [userName, email, password, role, passwordError]
   );
 
   async function handleSubmit(e) {
@@ -62,7 +70,7 @@ export default function CreateUserCard({ onCreated }) {
         is_active: true,
       });
       setOk('The user has been created successfully and is now available in the User Management section.');
-      setUserName(''); setEmail(''); setPassword(''); setRole('DH');
+      setUserName(''); setEmail(''); setPassword(''); setRole('');
       onCreated?.();
     } catch (e) {
       const detail = e?.response?.data?.detail;
@@ -108,7 +116,9 @@ export default function CreateUserCard({ onCreated }) {
               className={styles.fieldSelect}
               fullWidth size="medium" select value={role}
               onChange={(e) => setRole(e.target.value)}
+              SelectProps={{ displayEmpty: true }}
             >
+              <MenuItem value="" disabled>Select Role</MenuItem>
               {ROLE_OPTIONS.map(opt => (
                 <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
               ))}
@@ -135,6 +145,8 @@ export default function CreateUserCard({ onCreated }) {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              error={Boolean(passwordError)}
+              helperText={passwordError || PASSWORD_REQUIREMENTS_TEXT}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">

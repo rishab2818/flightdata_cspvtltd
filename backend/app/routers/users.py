@@ -103,12 +103,29 @@ def _normalize_user(doc: dict) -> UserOut:
     )
 
 
+def _ensure_non_admin_role(role: Role) -> None:
+    if role == Role.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Normal Admin can manage only non-admin users",
+        )
+
+
+def _ensure_non_admin_user(doc: dict) -> None:
+    role = doc.get("role", Role.STUDENT)
+    if isinstance(role, str):
+        role = Role(role)
+    _ensure_non_admin_role(role)
+
+
 # ---------------------------
 # CRUD (Admin only)
 # ---------------------------
 
 @router.post("", response_model=UserOut)
 async def create_user(body: UserCreate, _: AdminCurrentUser = Depends(admin_required)):
+    _ensure_non_admin_role(body.role)
+
     db = await get_db()
     # Ensure unique email
     existing = await db.users.find_one({"email": body.email})
@@ -170,19 +187,23 @@ async def get_user(email: EmailStr, _: AdminCurrentUser = Depends(admin_required
 @router.patch("/{email}", response_model=UserOut)
 async def update_user(email: EmailStr, body: UserUpdate, _: AdminCurrentUser = Depends(admin_required)):
     db = await get_db()
+    current_doc = await db.users.find_one({"email": str(email)})
+    if not current_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    _ensure_non_admin_user(current_doc)
+
     updates = {}
     if body.first_name is not None: updates["first_name"] = body.first_name
     if body.last_name is not None:  updates["last_name"] = body.last_name
     if body.password is not None:   updates["password"] = body.password  # plain text
-    if body.role is not None:       updates["role"] = body.role.value
+    if body.role is not None:
+        _ensure_non_admin_role(body.role)
+        updates["role"] = body.role.value
     if body.is_active is not None:  updates["is_active"] = body.is_active
 
     if not updates:
         # nothing to do; return current
-        doc = await db.users.find_one({"email": str(email)})
-        if not doc:
-            raise HTTPException(status_code=404, detail="User not found")
-        return _normalize_user(doc)
+        return _normalize_user(current_doc)
 
     res = await db.users.update_one({"email": str(email)}, {"$set": updates})
     if res.matched_count == 0:
@@ -195,6 +216,11 @@ async def update_user(email: EmailStr, body: UserUpdate, _: AdminCurrentUser = D
 @router.delete("/{email}")
 async def delete_user(email: EmailStr, _: AdminCurrentUser = Depends(admin_required)):
     db = await get_db()
+    current_doc = await db.users.find_one({"email": str(email)})
+    if not current_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    _ensure_non_admin_user(current_doc)
+
     res = await db.users.delete_one({"email": str(email)})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")

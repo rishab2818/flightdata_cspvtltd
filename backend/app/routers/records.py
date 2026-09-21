@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 from uuid import uuid4
 
 from bson import ObjectId
@@ -20,8 +21,10 @@ from app.models.records import (
     SupplyOrderOut,
     TechnicalReportCreate,
     TechnicalReportOut,
+    TechnicalReportUpdate,
     TrainingRecordCreate,
     TrainingRecordOut,
+    TrainingRecordUpdate,
 )
 from app.repositories.projects import ProjectRepository
 
@@ -51,6 +54,17 @@ SECTION_TO_MODEL: Dict[RecordSection, Any] = {
 }
 
 
+def _attachment_headers(filename: str | None) -> dict[str, str]:
+    safe_name = filename or "download"
+    ascii_name = safe_name.encode("ascii", "ignore").decode("ascii") or "download"
+    return {
+        "response-content-disposition": (
+            f'attachment; filename="{ascii_name}"; '
+            f"filename*=UTF-8''{quote(safe_name)}"
+        )
+    }
+
+
 async def _ensure_bucket(bucket: str) -> None:
     minio_client = get_minio_client()
     if not minio_client.bucket_exists(bucket):
@@ -66,20 +80,21 @@ async def init_record_upload(
     bucket = settings.minio_docs_bucket
     await _ensure_bucket(bucket)
 
-    # prevent duplicate uploads for the same section and user
-    db = await get_db()
-    existing = await db.records.find_one(
-        {
-            "section": section.value,
-            "owner_email": user.email,
-            "content_hash": payload.content_hash,
-        }
-    )
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Duplicate upload detected for this section.",
+    if section != RecordSection.DIVISIONAL_RECORDS:
+        # prevent duplicate uploads for the same section and user
+        db = await get_db()
+        existing = await db.records.find_one(
+            {
+                "section": section.value,
+                "owner_email": user.email,
+                "content_hash": payload.content_hash,
+            }
         )
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Duplicate upload detected for this section.",
+            )
 
     object_key = (
         f"users/{user.email}/records/{section.value}/{uuid4()}_{payload.filename}"
@@ -130,7 +145,7 @@ async def _insert_record(
 
 
 async def _update_record(
-    section: RecordSection, record_id: str, payload_model, payload_data, user: CurrentUser
+    section: RecordSection, record_id: str, payload_data, user: CurrentUser
 ):
     db = await get_db()
     oid = ObjectId(record_id)
@@ -148,7 +163,8 @@ async def _update_record(
             normalized_payload[key] = value
 
     await db.records.update_one({"_id": oid}, {"$set": {**normalized_payload, "updated_at": now}})
-    return row, now
+    updated = await db.records.find_one({"_id": oid, "section": section.value})
+    return updated
 
 
 def _merge_record_payload(existing: dict, payload, create_model) -> dict:
@@ -198,6 +214,7 @@ async def _download_url(section: RecordSection, record_id: str, user: CurrentUse
         bucket_name=settings.minio_docs_bucket,
         object_name=row["storage_key"],
         expires=timedelta(hours=1),
+        response_headers=_attachment_headers(row.get("original_name")),
     )
     return {"download_url": url, "original_name": row.get("original_name")}
 
@@ -284,21 +301,20 @@ async def list_supply_orders(
 async def update_supply_order(
     record_id: str, payload: SupplyOrderCreate, user: CurrentUser = Depends(get_current_user)
 ):
-    existing, updated_at = await _update_record(
+    updated = await _update_record(
         RecordSection.INVENTORY_RECORDS,
         record_id,
-        SupplyOrderCreate,
         payload.model_dump(exclude_none=True),
         user,
     )
-    merged_payload = _merge_record_payload(existing, payload, SupplyOrderCreate)
-    if merged_payload.get("pl_holder") is None and existing.get("holder"):
-        merged_payload["pl_holder"] = existing.get("holder")
+    merged_payload = {key: updated.get(key) for key in SupplyOrderCreate.model_fields.keys()}
+    if merged_payload.get("pl_holder") is None and updated.get("holder"):
+        merged_payload["pl_holder"] = updated.get("holder")
     return SupplyOrderOut(
         record_id=record_id,
-        owner_email=user.email,
-        created_at=existing["created_at"],
-        updated_at=updated_at,
+        owner_email=updated["owner_email"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
         **merged_payload,
     )
 
@@ -361,19 +377,18 @@ async def list_divisional_records(
 async def update_divisional_record(
     record_id: str, payload: DivisionalRecordCreate, user: CurrentUser = Depends(get_current_user)
 ):
-    existing, updated_at = await _update_record(
+    updated = await _update_record(
         RecordSection.DIVISIONAL_RECORDS,
         record_id,
-        DivisionalRecordCreate,
         payload.model_dump(exclude_none=True),
         user,
     )
-    merged_payload = _merge_record_payload(existing, payload, DivisionalRecordCreate)
+    merged_payload = {key: updated.get(key) for key in DivisionalRecordCreate.model_fields.keys()}
     return DivisionalRecordOut(
         record_id=record_id,
-        owner_email=user.email,
-        created_at=existing["created_at"],
-        updated_at=updated_at,
+        owner_email=updated["owner_email"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
         **merged_payload,
     )
 
@@ -436,19 +451,18 @@ async def list_customer_feedbacks(
 async def update_customer_feedback(
     record_id: str, payload: CustomerFeedbackCreate, user: CurrentUser = Depends(get_current_user)
 ):
-    existing, updated_at = await _update_record(
+    updated = await _update_record(
         RecordSection.CUSTOMER_FEEDBACKS,
         record_id,
-        CustomerFeedbackCreate,
         payload.model_dump(exclude_none=True),
         user,
     )
-    merged_payload = _merge_record_payload(existing, payload, CustomerFeedbackCreate)
+    merged_payload = {key: updated.get(key) for key in CustomerFeedbackCreate.model_fields.keys()}
     return CustomerFeedbackOut(
         record_id=record_id,
-        owner_email=user.email,
-        created_at=existing["created_at"],
-        updated_at=updated_at,
+        owner_email=updated["owner_email"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
         **merged_payload,
     )
 
@@ -507,23 +521,23 @@ async def list_technical_reports(
     ]
 
 
+@router.patch("/technical-reports/{record_id}", response_model=TechnicalReportOut)
 @router.put("/technical-reports/{record_id}", response_model=TechnicalReportOut)
 async def update_technical_report(
-    record_id: str, payload: TechnicalReportCreate, user: CurrentUser = Depends(get_current_user)
+    record_id: str, payload: TechnicalReportUpdate, user: CurrentUser = Depends(get_current_user)
 ):
-    existing, updated_at = await _update_record(
+    updated = await _update_record(
         RecordSection.TECHNICAL_REPORTS,
         record_id,
-        TechnicalReportCreate,
         payload.model_dump(exclude_none=True),
         user,
     )
-    merged_payload = _merge_record_payload(existing, payload, TechnicalReportCreate)
+    merged_payload = {key: updated.get(key) for key in TechnicalReportCreate.model_fields.keys()}
     return TechnicalReportOut(
         record_id=record_id,
-        owner_email=user.email,
-        created_at=existing["created_at"],
-        updated_at=updated_at,
+        owner_email=updated["owner_email"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
         **merged_payload,
     )
 
@@ -582,23 +596,23 @@ async def list_training_records(
     ]
 
 
+@router.patch("/training-records/{record_id}", response_model=TrainingRecordOut)
 @router.put("/training-records/{record_id}", response_model=TrainingRecordOut)
 async def update_training_record(
-    record_id: str, payload: TrainingRecordCreate, user: CurrentUser = Depends(get_current_user)
+    record_id: str, payload: TrainingRecordUpdate, user: CurrentUser = Depends(get_current_user)
 ):
-    existing, updated_at = await _update_record(
+    updated = await _update_record(
         RecordSection.TRAINING_RECORDS,
         record_id,
-        TrainingRecordCreate,
         payload.model_dump(exclude_none=True),
         user,
     )
-    merged_payload = _merge_record_payload(existing, payload, TrainingRecordCreate)
+    merged_payload = {key: updated.get(key) for key in TrainingRecordCreate.model_fields.keys()}
     return TrainingRecordOut(
         record_id=record_id,
-        owner_email=user.email,
-        created_at=existing["created_at"],
-        updated_at=updated_at,
+        owner_email=updated["owner_email"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
         **merged_payload,
     )
 
