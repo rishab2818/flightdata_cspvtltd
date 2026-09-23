@@ -14,6 +14,7 @@ from app.routers import meetings
 from app.routers import budgets
 from app.routers import mat
 from app.routers import calculations
+from app.routers import performance_settings
 from app.raw_preview import router as raw_preview_router
 from app.task_acknowledgements import router as task_acknowledgements_router
 app = FastAPI(title="flightdv minimal backend")
@@ -43,5 +44,6 @@ app.include_router(meetings.router)
 app.include_router(budgets.router)
 app.include_router(mat.router)
 app.include_router(calculations.router)
+app.include_router(performance_settings.router)
 app.include_router(raw_preview_router)
 app.include_router(task_acknowledgements_router)

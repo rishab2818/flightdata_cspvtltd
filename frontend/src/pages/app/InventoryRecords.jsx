@@ -1,7 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FiPlus, FiUsers, FiX, FiSearch } from "react-icons/fi";
+import { FiPlus, FiUsers, FiX, FiSearch, FiTrash2 } from "react-icons/fi";
 import { recordsApi } from "../../api/recordsApi";
 import { computeSha256 } from "../../lib/fileUtils";
 import Users from "../../assets/Users.svg";

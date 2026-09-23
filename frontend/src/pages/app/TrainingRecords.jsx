@@ -582,6 +582,7 @@ import DocumentActions from "../../components/common/DocumentActions";
 import EmptySection from "../../components/common/EmptyProject";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 import { useDownload } from "../../components/common/useDownload";
+import { openFilePreview } from "../../utils/filePreview";
 import { useLazyCollection } from "../../hooks/useLazyCollection";
 import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 import FilterField from "../../components/common/FilterField";
@@ -696,7 +697,7 @@ export default function TrainingRecords() {
   const handleView = async (row) => {
     try {
       const res = await recordsApi.downloadTraining(row.record_id);
-      window.open(res.download_url, "_blank", "noopener,noreferrer");
+      await openFilePreview(res.download_url);
     } catch (err) {
       alert("Unable to open this record.");
     }

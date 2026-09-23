@@ -17,6 +17,7 @@ import { downloadExcel } from '../../../lib/excelExport';
 import DownloadSimple from "../../../assets/DownloadSimple.svg";
 import ConfirmationModal from "../../../components/common/ConfirmationModal.jsx";
 import { useDownload } from "../../../components/common/useDownload";
+import { openFilePreview } from "../../../utils/filePreview";
 
 const normalizeNumber = (value) =>
   value === '' || value === undefined || value === null ? undefined : Number(value);
@@ -254,11 +255,7 @@ const handleView = async (row) => {
   if (!row?.record_id) return;
 
   const { download_url } = await budgetsApi.download(row.record_id);
-  const response = await fetch(download_url);
-  const blob = await response.blob();
-
-  const blobUrl = window.URL.createObjectURL(blob);
-  window.open(blobUrl, "_blank");
+  await openFilePreview(download_url);
 };
 
 const handleDownload = (row) => {

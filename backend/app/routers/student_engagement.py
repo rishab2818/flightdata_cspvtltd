@@ -22,6 +22,12 @@ router = APIRouter(prefix="/api/student-engagements", tags=["student-engagements
 project_repo = ProjectRepository()
 
 
+def _inline_headers(filename: str | None) -> dict[str, str]:
+    safe_name = filename or "document"
+    ascii_name = safe_name.encode("ascii", "ignore").decode("ascii") or "document"
+    return {"response-content-disposition": f'inline; filename="{ascii_name}"'}
+
+
 async def _ensure_engagement_access(row: dict, user: CurrentUser) -> None:
     project_id = row.get("project_id")
     if project_id:
@@ -341,3 +347,26 @@ async def get_engagement_download_url(
         expires=timedelta(hours=1),
     )
     return {"download_url": download_url, "original_name": row.get("original_name")}
+
+
+@router.get("/{record_id}/view-url")
+async def get_engagement_view_url(
+    record_id: str, user: CurrentUser = Depends(get_current_user)
+):
+    db = await get_db()
+    try:
+        oid = ObjectId(record_id)
+    except InvalidId:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    row = await db.student_engagements.find_one({"_id": oid})
+    if not row or not row.get("storage_key"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found for this record")
+    await _ensure_engagement_access(row, user)
+
+    view_url = get_minio_client().presigned_get_object(
+        bucket_name=settings.minio_docs_bucket,
+        object_name=row["storage_key"],
+        expires=timedelta(hours=1),
+        response_headers=_inline_headers(row.get("original_name")),
+    )
+    return {"view_url": view_url, "original_name": row.get("original_name")}

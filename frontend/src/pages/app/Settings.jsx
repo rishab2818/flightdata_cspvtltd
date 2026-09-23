@@ -7,6 +7,7 @@ import {
   PASSWORD_REQUIREMENTS_TEXT,
   validatePassword,
 } from "../../lib/passwordValidation";
+import { usePerformanceSettingsViewModel } from "./usePerformanceSettingsViewModel";
 
 export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -20,6 +21,7 @@ export default function Settings() {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const performanceSettings = usePerformanceSettingsViewModel();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,6 +71,76 @@ export default function Settings() {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <div className={styles.section}>
+          <h3 className={styles.cardTitle}>Performance Review Period</h3>
+
+          <form onSubmit={performanceSettings.saveSettings} className={styles.form}>
+            <label>Evaluation Frequency</label>
+            <select
+              value={performanceSettings.frequency}
+              onChange={(event) => performanceSettings.setFrequency(event.target.value)}
+              disabled={performanceSettings.loading || performanceSettings.saving}
+              className={styles.input}
+            >
+              <option value="">Select frequency</option>
+              {performanceSettings.frequencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <label>First Cycle Start Date</label>
+            <input
+              type="date"
+              value={performanceSettings.firstCycleStartDate}
+              onChange={(event) =>
+                performanceSettings.setFirstCycleStartDate(event.target.value)
+              }
+              disabled={performanceSettings.loading || performanceSettings.saving}
+            />
+
+            <label>Calculated End Date</label>
+            <input
+              type="date"
+              value={performanceSettings.firstCycleEndDate}
+              readOnly
+            />
+
+            {performanceSettings.currentCycle && (
+              <div className={styles.currentCycle}>
+                <p>
+                  <strong>Current Cycle:</strong>{" "}
+                  {performanceSettings.currentCycle.start_date} -{" "}
+                  {performanceSettings.currentCycle.end_date}
+                </p>
+                <p>
+                  <strong>Status:</strong> {performanceSettings.currentCycle.status}
+                </p>
+              </div>
+            )}
+
+            <p className={styles.note}>
+              Changes made to Performance Settings will apply only to future
+              evaluations. Existing completed evaluations remain unchanged.
+            </p>
+
+            <button type="submit" disabled={performanceSettings.saving}>
+              {performanceSettings.saving ? "Saving..." : "Save Changes"}
+            </button>
+
+            {performanceSettings.message && (
+              <p
+                className={
+                  performanceSettings.isError ? styles.error : styles.success
+                }
+              >
+                {performanceSettings.message}
+              </p>
+            )}
+          </form>
+        </div>
+
         <div className={styles.section}>
           <h3 className={styles.cardTitle}>Reset password</h3>
 

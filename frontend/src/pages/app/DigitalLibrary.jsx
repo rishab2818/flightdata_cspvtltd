@@ -11,6 +11,7 @@ import { FiSearch } from "react-icons/fi";
 import { AuthContext } from "../../context/AuthContext";
 import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUploadModal";
 import { documentsApi } from "../../api/documentsApi";
+import { openFilePreview } from "../../utils/filePreview";
 import styles from "./DigitalLibrary.module.css";
 
 import uploadbutton from "../../assets/uploadbutton.svg";
@@ -379,11 +380,7 @@ export function DocumentLibraryPage({
           id
         );
 
-      window.open(
-        res.download_url,
-        "_blank",
-        "noopener,noreferrer"
-      );
+      await openFilePreview(res.download_url);
     } catch (err) {
       alert(
         "Preview unavailable. Try downloading instead."

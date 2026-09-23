@@ -46,6 +46,21 @@
   font-size: 14px;
 }
 
+.form select,
+.input {
+  padding: 10px;
+  border: 1px solid #F3F3F5;
+  background-color: #F3F3F5;
+  border-radius: 6px;
+  width: 100%;
+  font-size: 14px;
+}
+
+.form input[readonly] {
+  color: #4b5563;
+  cursor: not-allowed;
+}
+
 .form small {
   font-size: 12px;
   color: #1061db;
@@ -127,4 +142,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.currentCycle {
+  background: #F8FAFC;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 12px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.currentCycle p {
+  margin: 0 0 6px;
+}
+
+.currentCycle p:last-child {
+  margin-bottom: 0;
+}
+
+.note {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
 }

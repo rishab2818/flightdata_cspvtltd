@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { openFilePreview } from "../../utils/filePreview";
 
 /**
  * Generic per-file download hook
@@ -59,8 +60,7 @@ export const useDownload = (apiFn) => {
 
         if (!res?.download_url) throw new Error("No download URL");
 
-        const newWindow = window.open(res.download_url, "_blank", "noopener,noreferrer");
-        if (!newWindow) alert("Popup blocked. Allow popups to view the file.");
+        await openFilePreview(res.download_url);
 
       } catch (err) {
         console.error("View error:", err);
