@@ -12,6 +12,7 @@ import load from "../../assets/load.svg";
 
 import FileUploadBox from "../../components/common/FileUploadBox";
 import DocumentActions from "../../components/common/DocumentActions";
+import { openFilePreview } from "../../utils/filePreview";
 import EmptySection from "../../components/common/EmptyProject";
 import CommonStatCard from "../../components/common/common_card/common_card";
 
@@ -167,11 +168,7 @@ export default function TechnicalReports() {
           row.record_id
         );
 
-      window.open(
-        res.download_url,
-        "_blank",
-        "noopener,noreferrer"
-      );
+      await openFilePreview(res.download_url);
     } catch (err) {
       alert(
         "Unable to open this record."

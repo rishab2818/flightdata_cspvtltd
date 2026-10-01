@@ -11,6 +11,7 @@ import { FiSearch } from "react-icons/fi";
 import { AuthContext } from "../../context/AuthContext";
 import DigitalLibraryUploadModal from "../../components/app/DigitalLibraryUploadModal";
 import { documentsApi } from "../../api/documentsApi";
+import { openFilePreview } from "../../utils/filePreview";
 import styles from "./DigitalLibrary.module.css";
 
 import uploadbutton from "../../assets/uploadbutton.svg";

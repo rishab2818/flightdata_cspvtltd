@@ -434,11 +434,21 @@ export default function StudentEngagement() {
   /* -------------------- DOCUMENT VIEW / DOWNLOAD -------------------- */
 
   const handleViewDocument = async (record) => {
+    // Reserve the tab during the click event so it is not popup-blocked while
+    // the signed URL is being requested.
+    const previewWindow = window.open("about:blank", "_blank");
+    if (!previewWindow) {
+      alert("Popup blocked. Allow popups to view the document.");
+      return;
+    }
+
     try {
-      const res = await studentEngagementApi.downloadUrl(record.record_id);
-      if (!res?.download_url) throw new Error("Missing URL");
-      window.open(res.download_url, "_blank", "noopener,noreferrer");
+      const res = await studentEngagementApi.viewUrl(record.record_id);
+      if (!res?.view_url) throw new Error("Missing URL");
+      previewWindow.location.replace(res.view_url);
+      previewWindow.opener = null;
     } catch (err) {
+      previewWindow.close();
       alert("Unable to view document.");
     }
   };

@@ -19,6 +19,7 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 import DownloadSimple from "../../assets/DownloadSimple.svg";
 import load from "../../assets/load.svg"
 import { useDownload } from "../../components/common/useDownload";
+import { openFilePreview } from "../../utils/filePreview";
 import { useLazyCollection } from "../../hooks/useLazyCollection";
 import { useInfiniteScrollTrigger } from "../../hooks/useInfiniteScrollTrigger";
 
@@ -144,7 +145,7 @@ export default function DivisionalRecords() {
   const handleView = async (row) => {
     try {
       const res = await recordsApi.downloadDivisional(row.record_id);
-      window.open(res.download_url, "_blank", "noopener,noreferrer");
+      await openFilePreview(res.download_url);
     } catch (err) {
       alert("Unable to open this record.");
     }

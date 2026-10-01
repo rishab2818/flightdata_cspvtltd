@@ -18,6 +18,7 @@ export default function AssigneeSearchInput({
 }) {
   const [options, setOptions] = useState([]);
   const [skipQuery, setSkipQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     if (skipQuery && value === skipQuery) {
@@ -82,9 +83,11 @@ export default function AssigneeSearchInput({
         className={className}
         autoComplete="off"
         disabled={disabled}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
 
-      {options.length > 0 && (
+      {isFocused && options.length > 0 && (
         <div
           style={{
             position: "absolute",
@@ -106,6 +109,7 @@ export default function AssigneeSearchInput({
             <button
               key={user.email}
               type="button"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelect(user)}
               style={{
                 width: "100%",

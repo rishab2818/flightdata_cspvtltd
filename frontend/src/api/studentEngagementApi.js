@@ -53,4 +53,11 @@ export const studentEngagementApi = {
     );
     return data;
   },
+
+  viewUrl: async (recordId) => {
+    const { data } = await axiosClient.get(
+      `/api/student-engagements/${recordId}/view-url`
+    );
+    return data;
+  },
 };
