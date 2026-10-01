@@ -1,7 +1,9 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MdKeyboardArrowDown } from 'react-icons/md'
+import { FiHelpCircle } from 'react-icons/fi'
 import { AuthContext } from '../../context/AuthContext'
+import { useHelpGuideUrl, openHelpGuide } from '../../hooks/useHelpGuide'
 import NotificationBell from './NotificationBell'
 import Ellipse49 from "../../assets/Ellipse49.svg"
 
@@ -19,6 +21,7 @@ export default function TopBarActions() {
   const location = useLocation()
 
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const helpGuideUrl = useHelpGuideUrl()
 
   useEffect(() => {
     const handler = (event) => {
@@ -66,6 +69,16 @@ export default function TopBarActions() {
       </div> */}
 
       {!isAdminRoute && <NotificationBell />}
+
+      <button
+        type="button"
+        className="header__help-btn"
+        onClick={() => openHelpGuide(helpGuideUrl)}
+        title="Help"
+        aria-label="Help"
+      >
+        <FiHelpCircle size={22} />
+      </button>
 
       {/* Profile */}
       <div className="header__profile">

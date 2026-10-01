@@ -5,6 +5,7 @@ from app.routers import auth
 from app.routers import users 
 from app.routers import projects
 from app.routers import documents
+from app.routers import digital_library_backup
 from app.routers import records
 from app.routers import student_engagement
 from app.routers import ingestion
@@ -34,6 +35,8 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(documents.router)
+# Backup Digital Library backend (safe to leave enabled; it has its own prefix)
+app.include_router(digital_library_backup.router)
 app.include_router(records.router)
 app.include_router(student_engagement.router)
 app.include_router(ingestion.router)

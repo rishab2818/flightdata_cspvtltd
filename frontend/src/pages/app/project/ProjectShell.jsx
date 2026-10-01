@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FiHelpCircle } from "react-icons/fi";
 import { projectApi } from '../../../api/projectapi'
 import TopBarActions from '../../../components/layout/TopBarActions'
 import ProjectSearchButton from '../../../projectSearch/components/ProjectSearchButton'
-import ProjectHelpModal from './ProjectHelpModal'
 import '../../../styles/project.css'
 
 import Database2 from "../../../assets/Database2.svg";
@@ -59,7 +57,6 @@ export default function ProjectShell() {
 
   // keep this because your outside click effect uses it
   const [searchOpen, setSearchOpen] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const searchWrapRef = useRef(null);
 
@@ -161,16 +158,6 @@ export default function ProjectShell() {
           <div className="project-shell__header-right">
             <ProjectSearchButton projectId={projectId} />
 
-            <button
-              type="button"
-              className="project-shell__help-btn"
-              onClick={() => setShowHelpModal(true)}
-              title="Help"
-            >
-              <FiHelpCircle size={26} />
-             
-            </button>
-
             <TopBarActions />
           </div>
         </header>
@@ -182,11 +169,6 @@ export default function ProjectShell() {
           <Outlet context={{ project, refreshProject }} />
         )}
       </div>
-
-      <ProjectHelpModal
-        open={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
     </div>
   );
 }

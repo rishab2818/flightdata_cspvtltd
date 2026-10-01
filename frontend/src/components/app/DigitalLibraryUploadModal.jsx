@@ -6,13 +6,6 @@ import load from "../../assets/load.svg";
 
 const toIsoDate = (d) => d.toISOString().slice(0, 10);
 
-async function computeSha256(file) {
-  const buffer = await file.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export default function DigitalLibraryUploadModal({
   open,
   onClose,
@@ -61,41 +54,15 @@ export default function DigitalLibraryUploadModal({
     setError("");
 
     try {
-      const hash = await computeSha256(file);
-      const contentType = file.type || "application/octet-stream";
-
-      const initPayload = {
+      const uploaded = await documentsApi.uploadFile({
+        file,
         section,
         tag: tag.trim(),
-        doc_date: docDate,
-        filename: file.name,
-        content_type: contentType,
-        size_bytes: file.size,
-        content_hash: hash,
-      };
-
-      const initRes = await documentsApi.initUpload(initPayload);
-
-      await fetch(initRes.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": contentType },
-        body: file,
+        docDate,
+        projectId: projectId || undefined,
       });
 
-      const confirmPayload = {
-        section,
-        tag: tag.trim(),
-        doc_date: docDate,
-        storage_key: initRes.storage_key,
-        original_name: file.name,
-        content_type: contentType,
-        size_bytes: file.size,
-        content_hash: hash,
-        project_id: projectId || undefined,
-      };
-
-      const confirmed = await documentsApi.confirmUpload(confirmPayload);
-      onUploaded?.(confirmed);
+      onUploaded?.(uploaded);
       resetForm();
       onClose?.();
     } catch (err) {

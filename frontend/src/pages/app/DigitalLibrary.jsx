@@ -103,31 +103,6 @@ const toIsoInput = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
-const forceDownloadFromUrl = async (url, fileName) => {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error("Download failed");
-  }
-
-  const blob = await response.blob();
-
-  const blobUrl = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-
-  link.href = blobUrl;
-  link.download = fileName || "file";
-
-  document.body.appendChild(link);
-
-  link.click();
-
-  link.remove();
-
-  URL.revokeObjectURL(blobUrl);
-};
-
 /* =========================================================
    DIGITAL LIBRARY
 ========================================================= */
@@ -351,16 +326,18 @@ export function DocumentLibraryPage({
     fileName
   ) => {
     try {
-      const res =
-        await documentsApi.getDownloadUrl(
-          id
-        );
+      const { blob } = await documentsApi.fetchFileBlob(id, {
+        download: true,
+      });
 
-      await forceDownloadFromUrl(
-        res.download_url,
-        fileName ||
-          res.original_name
-      );
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName || "file";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
     } catch (err) {
       alert(
         "Download failed. Please try again."
@@ -373,18 +350,14 @@ export function DocumentLibraryPage({
   ========================================================= */
 
   const handleView = async (id) => {
+    // Open the tab synchronously so browsers don't treat it as a popup.
+    const newTab = window.open("", "_blank");
     try {
-      const res =
-        await documentsApi.getDownloadUrl(
-          id
-        );
-
-      window.open(
-        res.download_url,
-        "_blank",
-        "noopener,noreferrer"
-      );
+      const { blob } = await documentsApi.fetchFileBlob(id);
+      const blobUrl = URL.createObjectURL(blob);
+      if (newTab) newTab.location.href = blobUrl;
     } catch (err) {
+      newTab?.close();
       alert(
         "Preview unavailable. Try downloading instead."
       );

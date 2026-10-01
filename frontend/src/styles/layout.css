@@ -338,6 +338,21 @@
   align-items: center;
 }
 
+.header__help-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header__help-btn:hover {
+  color: #1976D2;
+}
+
 .header__menu {
   position: absolute;
   right: 0;
