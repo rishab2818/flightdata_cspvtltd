@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     default=[
         "http://127.0.0.1:5173",
         "http://localhost:5173",
-        "http://80.0.0.1:5173",  # ➜ Add this line
+        "http://192.168.1.10:5173",  # ➜ Add this line
     ],
     alias="CORS_ORIGINS",
 )

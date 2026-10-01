@@ -59,6 +59,41 @@ export const documentsApi = {
     return data; // { download_url, original_name, content_type, expires_in }
   },
 
+  // Upload a file through the backend (no direct browser -> MinIO hop)
+  uploadFile: async ({
+    file,
+    section,
+    subsection,
+    tag,
+    docDate,
+    projectId,
+  }) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("section", section);
+    if (subsection) form.append("subsection", subsection);
+    form.append("tag", tag);
+    form.append("doc_date", docDate);
+    if (projectId) form.append("project_id", projectId);
+
+    const { data } = await axiosClient.post("/api/documents/upload", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data; // UserDocumentOut
+  },
+
+  // Fetch a document's bytes through the backend (no direct browser -> MinIO hop)
+  fetchFileBlob: async (docId, { download = false } = {}) => {
+    const { data, headers } = await axiosClient.get(
+      `/api/documents/${docId}/file`,
+      {
+        params: download ? { download: true } : undefined,
+        responseType: "blob",
+      }
+    );
+    return { blob: data, contentType: headers?.["content-type"] };
+  },
+
   searchAssignees: async (query) => {
     const params = { q: query };
     const { data } = await axiosClient.get("/api/documents/assignees", {

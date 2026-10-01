@@ -1,15 +1,19 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 from typing import List, Optional
+import hashlib
+import io
 import re
 from urllib.parse import quote
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from app.core.auth import get_current_user, require_head, CurrentUser
 from app.core.minio_client import get_minio_client
 from app.core.config import settings
+from app.core.file_restrictions import ensure_allowed_filename
 from app.db.mongo import get_db
 from app.models.documents import (
     ActionPoint,
@@ -81,10 +85,23 @@ def _serialize_user_document(row: dict) -> UserDocumentOut:
 
 
 def _attachment_headers(filename: str | None) -> dict[str, str]:
+    """MinIO presigned-URL response header overrides (query-param style)."""
     safe_name = filename or "download"
     ascii_name = safe_name.encode("ascii", "ignore").decode("ascii") or "download"
     return {
         "response-content-disposition": (
+            f'attachment; filename="{ascii_name}"; '
+            f"filename*=UTF-8''{quote(safe_name)}"
+        )
+    }
+
+
+def _content_disposition_header(filename: str | None) -> dict[str, str]:
+    """A real HTTP Content-Disposition header for a proxied response."""
+    safe_name = filename or "download"
+    ascii_name = safe_name.encode("ascii", "ignore").decode("ascii") or "download"
+    return {
+        "Content-Disposition": (
             f'attachment; filename="{ascii_name}"; '
             f"filename*=UTF-8''{quote(safe_name)}"
         )
@@ -404,6 +421,117 @@ async def confirm_document_upload(
     )
 
 
+# ---------- 2b) Backend-proxied upload (no direct browser -> MinIO hop) ----------
+@router.post("/upload", response_model=UserDocumentOut)
+async def upload_document_via_backend(
+    file: UploadFile = File(...),
+    section: DocumentSection = Form(...),
+    subsection: Optional[MoMSubsection] = Form(None),
+    tag: str = Form(...),
+    doc_date: str = Form(...),
+    project_id: Optional[str] = Form(None),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Upload a file through the backend instead of via a presigned URL.
+
+    The browser only ever talks to this API (same host clients already use
+    for everything else), and the backend does the MinIO PUT itself. This
+    avoids requiring clients to have direct network access to MinIO's port,
+    which a presigned-URL upload does.
+    """
+    _validate_section_and_subsection(section, subsection)
+    ensure_allowed_filename(file.filename)
+
+    if project_id:
+        project = await project_repo.get_if_member(project_id, user.email)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found or access denied",
+            )
+
+    try:
+        parsed_doc_date = datetime.strptime(doc_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="doc_date must be in YYYY-MM-DD format",
+        )
+
+    file_bytes = await file.read()
+    content_hash = hashlib.sha256(file_bytes).hexdigest()
+
+    db = await get_db()
+
+    dedupe_query = {
+        "owner_email": user.email,
+        "content_hash": content_hash,
+        "section": section.value,
+    }
+    if subsection is not None:
+        dedupe_query["subsection"] = subsection.value
+    if project_id:
+        dedupe_query["project_id"] = project_id
+
+    existing = await db.user_documents.find_one(dedupe_query)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Duplicate document: this file already exists for this user.",
+        )
+
+    minio_client = get_minio_client()
+    bucket = settings.minio_docs_bucket
+
+    key_parts = ["users", user.email, section.value]
+    if section == DocumentSection.MINUTES_OF_MEETING:
+        key_parts.append(subsection.value)  # type: ignore[arg-type]
+    object_prefix = "/".join(key_parts)
+    object_key = f"{object_prefix}/{uuid4()}_{file.filename}"
+
+    content_type = file.content_type or "application/octet-stream"
+
+    try:
+        if not minio_client.bucket_exists(bucket):
+            minio_client.make_bucket(bucket)
+
+        minio_client.put_object(
+            bucket_name=bucket,
+            object_name=object_key,
+            data=io.BytesIO(file_bytes),
+            length=len(file_bytes),
+            content_type=content_type,
+        )
+    except Exception as exc:  # pragma: no cover - network dependent
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage backend is unavailable. Please try again later.",
+        ) from exc
+
+    now = datetime.utcnow()
+    doc = {
+        "owner_email": user.email,
+        "section": section.value,
+        "subsection": subsection.value if subsection else None,
+        "tag": tag,
+        "doc_date": parsed_doc_date,
+        "original_name": file.filename,
+        "storage_key": object_key,
+        "content_type": content_type,
+        "size_bytes": len(file_bytes),
+        "content_hash": content_hash,
+        "uploaded_at": now,
+        "action_points": [],
+        "action_on": [],
+        "project_id": project_id,
+    }
+
+    res = await db.user_documents.insert_one(doc)
+    doc["_id"] = res.inserted_id
+
+    return _serialize_user_document(doc)
+
+
 # ---------- 3) List documents by section (ONLY own docs) ----------
 @router.get("", response_model=List[UserDocumentOut])
 async def list_user_documents(
@@ -549,6 +677,55 @@ async def get_document_download_url(
         "content_type": row.get("content_type"),
         "expires_in": 3600,
     }
+
+
+# ---------- 4a) Backend-proxied file stream (no direct browser -> MinIO hop) ----------
+@router.get("/{doc_id}/file")
+async def stream_document_file(
+    doc_id: str,
+    download: bool = Query(False, description="Set true to force an attachment download"),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Stream a document's bytes through the backend instead of a presigned URL.
+
+    Clients only need network access to this API (same as every other
+    feature) — the backend fetches the object from MinIO itself.
+    """
+    db = await get_db()
+    row = await db.user_documents.find_one({"_id": ObjectId(doc_id)})
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
+        )
+    await _ensure_document_access(row, user)
+
+    minio_client = get_minio_client()
+    bucket = settings.minio_docs_bucket
+    object_key = row["storage_key"]
+
+    try:
+        obj_response = minio_client.get_object(bucket, object_key)
+    except Exception as exc:  # pragma: no cover - network dependent
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to fetch file from storage backend.",
+        ) from exc
+
+    def _iter_chunks():
+        try:
+            for chunk in obj_response.stream(64 * 1024):
+                yield chunk
+        finally:
+            obj_response.close()
+            obj_response.release_conn()
+
+    headers = _content_disposition_header(row.get("original_name")) if download else {}
+
+    return StreamingResponse(
+        _iter_chunks(),
+        media_type=row.get("content_type") or "application/octet-stream",
+        headers=headers,
+    )
 
 
 # ---------- 4b) Update document metadata (MoM editing) ----------

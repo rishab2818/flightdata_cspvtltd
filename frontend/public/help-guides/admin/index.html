@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial Guide - Administrator (Admin)</title>
+  <style>
+    :root {
+      --accent: #1976c9;
+      --accent-soft: #2b5f8c;
+      --text: #111111;
+      --muted: #555555;
+      --line: #d8dde3;
+      --toc-bg: #f7f9fb;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: #ffffff;
+      font-family: "Times New Roman", Georgia, serif;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    a { color: var(--accent); }
+
+    .page-shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 960px);
+      gap: 42px;
+      padding: 42px 0 80px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 28px;
+      align-self: start;
+      border-top: 3px solid var(--accent);
+      background: #e9f0f6;
+      padding: 20px 20px 18px;
+    }
+
+    .toc h2 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: 0;
+      font-family: Calibri, "Segoe UI", Arial, sans-serif;
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .toc ol {
+      margin: 0;
+      padding-left: 24px;
+    }
+
+    .toc li { margin: 8px 0; }
+
+    .toc a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .toc a:hover,
+    .toc a:focus {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    @media print {
+      .toc { position: static; }
+    }
+
+    main {
+      width: 100%;
+      max-width: 920px;
+    }
+
+    .cover {
+      text-align: center;
+      padding: 16px 34px 56px;
+      margin-bottom: 18px;
+    }
+
+    .cover-logo {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 8px;
+    }
+
+    .cover h1 {
+      margin: 0;
+      font-family: "Times New Roman", Georgia, serif;
+      font-size: 39px;
+      line-height: 1.15;
+      letter-spacing: 0.3px;
+      font-weight: 700;
+    }
+
+    .title-rule {
+      height: 3px;
+      background: var(--accent);
+      margin: 8px 0 8px;
+      border: 0;
+    }
+
+    .role-label {
+      margin: 0;
+      color: var(--accent-soft);
+      font-size: 28px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 10px 0 2px;
+      font-size: 24px;
+      line-height: 1.3;
+      font-weight: 700;
+    }
+
+    .version {
+      margin: 6px 0 46px;
+      font-size: 20px;
+    }
+
+    .publisher {
+      margin-top: 50px;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .publisher strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 21px;
+    }
+
+    h2, h3 {
+      font-family: Calibri, "Segoe UI", Arial, sans-serif;
+      color: #111111;
+      font-weight: 700;
+      scroll-margin-top: 28px;
+    }
+
+    h2 {
+      margin: 48px 0 14px;
+      padding-bottom: 7px;
+      font-size: 27px;
+      line-height: 1.2;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    h3 {
+      margin: 30px 0 10px;
+      font-size: 21px;
+      line-height: 1.25;
+    }
+
+    p { margin: 10px 0 16px; }
+
+    .role-access { border-left: 4px solid var(--accent); padding: 2px 0 2px 16px; margin: 26px 0 32px; }
+    .role-access h2 { border: 0; padding: 0; margin: 0 0 8px; font-size: 23px; color: var(--accent); }
+
+    .note { border-left: 4px solid var(--accent); background: #e9f0f6; padding: 10px 14px; margin: 16px 0; }
+
+    .section-number { color: var(--accent); font-weight: 700; margin-right: .35em; }
+
+
+    ol, ul {
+      margin: 10px 0 20px;
+      padding-left: 30px;
+    }
+
+    li { margin: 8px 0; }
+
+    figure {
+      margin: 30px auto 42px;
+      text-align: center;
+    }
+
+    figure img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+      border: 0;
+    }
+
+    figcaption {
+      font-size: 14px;
+      margin-top: 7px;
+      color: #333;
+      font-style: normal;
+    }
+
+    .end-note {
+      margin-top: 48px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="toc" aria-label="Table of contents">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#accessing-the-application">Accessing the Application</a></li>
+        <li><a href="#admin-dashboard">Admin Dashboard</a></li>
+        <li><a href="#create-a-user">Create a User</a></li>
+        <li><a href="#user-management">User Management</a></li>
+        <li><a href="#reset-another-users-password">Reset Another User&rsquo;s Password</a></li>
+      </ol>
+    </aside>
+
+    <main>
+      <header class="cover">
+        <img class="cover-logo" src="assets/logo.png" alt="Changma Shristi logo">
+        <h1 id="tutorial-guide">TUTORIAL GUIDE</h1>
+        <hr class="title-rule">
+        <p class="role-label">ADMINISTRATOR (ADMIN)</p>
+        <p class="subtitle">Data Integration and Visualization Solution</p>
+        <p class="version">Version 1.0</p>
+        <div class="publisher">
+          <strong>CHANGMA SHRISTI</strong>
+          1st Floor, Earthen Phoenix, 10th E Cross Rd, Sanjeevappa Layout, C V Raman Nagar,<br>
+          Bengaluru, Karnataka 560093.
+        </div>
+      </header>
+
+      <section class="role-access" aria-labelledby="role-access">
+        <h2 id="role-access">Role Access</h2>
+        <p>Admin access is limited to user administration: creating users, assigning the appropriate role/access, managing user accounts, and resetting user passwords.</p>
+        <p><strong>Guide scope:</strong> This tutorial includes only the workflows applicable to this role/group. Features outside the assigned access are intentionally omitted or marked as permission-based.</p>
+      </section>
+
+      <section aria-labelledby="accessing-the-application">
+        <h2 id="accessing-the-application"><span class="section-number">1.</span>Accessing the Application</h2>
+        <ol>
+          <li>Open the application in a supported web browser.</li>
+          <li>Enter your <strong>registered email address</strong>.</li>
+          <li>Enter your <strong>password</strong>.</li>
+          <li>Click <strong>Login</strong>.</li>
+          <li>After successful authentication, the system opens the dashboard permitted for your role.</li>
+        </ol>
+        <figure>
+          <img src="assets/accessing-application-login.jpg" width="1380" height="636" alt="FlightData login page showing user name, password, and Login button">
+          <figcaption>Login Page</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="admin-dashboard">
+        <h2 id="admin-dashboard"><span class="section-number">2.</span>Admin Dashboard</h2>
+        <p>The Admin Dashboard provides a User Overview and a Create New User panel. The overview shows the total number of users and role-wise user counts.</p>
+        <figure>
+          <img src="assets/admin-dashboard.jpg" width="1600" height="731" alt="Admin dashboard with user overview and create new user panels">
+          <figcaption>Admin Dashboard</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="create-a-user">
+        <h2 id="create-a-user"><span class="section-number">3.</span>Create a User</h2>
+        <ol>
+          <li>Enter the <strong>User Name</strong>.</li>
+          <li>Select the <strong>appropriate Role/access</strong>.</li>
+          <li>Enter the <strong>Login ID</strong> (email address).</li>
+          <li>Enter the <strong>Password</strong>.</li>
+          <li>Click <strong>Create</strong>.</li>
+        </ol>
+        <p>The system validates required fields and displays a confirmation after successful creation.</p>
+      </section>
+
+      <section aria-labelledby="user-management">
+        <h2 id="user-management"><span class="section-number">4.</span>User Management</h2>
+        <ol>
+          <li>Open User Management from the left navigation.</li>
+          <li>Search by name, email, or role.</li>
+          <li>Review role, active status, created date, and last login.</li>
+          <li>Use the available Actions to manage the selected user.</li>
+        </ol>
+        <figure>
+          <img src="assets/user-management.png" width="1269" height="537" alt="User Management page showing searchable user list and action controls">
+          <figcaption>User Management</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="reset-another-users-password">
+        <h2 id="reset-another-users-password"><span class="section-number">5.</span>Reset Another User&rsquo;s Password</h2>
+        <ol>
+          <li>Locate the required user in User Management.</li>
+          <li>Click the <strong>Change Password icon</strong> in the Actions column.</li>
+          <li>Enter the <strong>new password</strong>.</li>
+          <li>Click <strong>Save</strong> to update it, or Cancel to discard changes.</li>
+        </ol>
+        <figure>
+          <img src="assets/change-password-dialog.png" width="439" height="227" alt="Change password dialog with New Password field, Cancel button, and Save button">
+          <figcaption>Change Password Dialog</figcaption>
+        </figure>
+      </section>
+
+      <p class="end-note">End of tutorial guide.</p>
+    </main>
+  </div>
+</body>
+</html>

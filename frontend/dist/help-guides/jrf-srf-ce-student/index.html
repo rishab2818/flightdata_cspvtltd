@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutorial Guide - JRF / SRF / CE / Student</title>
+<style>
+  :root{
+    --accent:#1976c9;
+    --accent-soft:#e9f0f6;
+    --ink:#111;
+    --muted:#5f6f7e;
+    --rule:#245a88;
+    --border:#c9d3dc;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#fff;color:var(--ink);font-family:"Times New Roman",Georgia,serif;line-height:1.55;font-size:18px}
+  .page-shell{display:grid;grid-template-columns:260px minmax(0,960px);gap:42px;max-width:1320px;margin:0 auto;padding:34px 30px 70px}
+  .toc{position:sticky;top:28px;align-self:start;border-top:3px solid var(--accent);background:var(--accent-soft);padding:20px 20px 18px}
+  .toc h2{margin:0 0 12px;padding:0;border:0;font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:20px;color:var(--ink)}
+  .toc ol{margin:0;padding-left:24px}
+  .toc li{margin:8px 0}
+  .toc a{color:var(--ink);text-decoration:none}
+  .toc a:hover,.toc a:focus{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+  @media print{.toc{position:static}}
+  main{min-width:0}
+  .cover{text-align:center;padding:16px 34px 56px;margin-bottom:18px}
+  .cover-logo{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 8px}
+  .cover h1{margin:0;font-family:"Times New Roman",Georgia,serif;font-size:39px;line-height:1.15;letter-spacing:.3px;font-weight:700}
+  .title-rule{height:3px;background:var(--accent);margin:8px 0 8px;border:0}
+  .role-label{margin:0;color:#2b5f8c;font-size:28px;line-height:1.25;font-weight:700}
+  .subtitle{margin:10px 0 2px;font-size:24px;line-height:1.3;font-weight:700}
+  .version{margin:6px 0 46px;font-size:20px}
+  .publisher{margin-top:50px;font-size:18px;line-height:1.35}
+  .publisher strong{display:block;margin-bottom:4px;font-size:21px}
+  h2,h3,h4{font-family:Calibri,"Segoe UI",Arial,sans-serif;scroll-margin-top:24px}
+  h2{font-size:28px;line-height:1.2;color:#111;margin:46px 0 18px;padding-bottom:8px;border-bottom:2px solid var(--rule)}
+  h3{font-size:21px;line-height:1.25;margin:30px 0 10px}
+  h4{font-size:18px;line-height:1.3;margin:22px 0 8px}
+  p{margin:8px 0 14px}
+  ol,ul{margin:8px 0 16px;padding-left:28px}
+  li{margin:5px 0}
+  ul ul{margin-top:4px;margin-bottom:6px}
+  strong{font-weight:700}
+  .role-access{border-left:4px solid var(--accent);padding:2px 0 2px 16px;margin:26px 0 32px}
+  .role-access h2{border:0;padding:0;margin:0 0 8px;font-size:23px;color:var(--accent)}
+  .note{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;margin:16px 0}
+  .figure{margin:20px auto 28px;text-align:center}
+  .figure img{display:block;max-width:100%;height:auto;margin:0 auto;border:1px solid #b9c2ca}
+  .figure img.logo-only{border:0}
+  figcaption{font-size:14px;margin-top:7px;color:#333;font-style:normal}
+  .figure.compact{max-width:600px}
+  .figure.inline-icon{display:inline-block;margin:0 0 0 10px;vertical-align:middle}
+  .figure.inline-icon img{width:32px;border:0}
+  table{width:100%;border-collapse:collapse;margin:16px 0 24px;font-size:16px}
+  th,td{border:1px solid #8796a3;padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#dfeaf3;font-family:Calibri,"Segoe UI",Arial,sans-serif;color:#20394d}
+  .flow{list-style:none;padding:0;margin:16px auto 24px;max-width:420px;text-align:center;font-family:Calibri,"Segoe UI",Arial,sans-serif;font-weight:700}
+  .flow li{margin:0;padding:5px 8px}
+  .flow li:not(:last-child)::after{content:"↓";display:block;color:var(--accent);font-size:20px;line-height:1}
+  .section-number{color:var(--accent);font-weight:700;margin-right:.35em}
+  .muted{color:var(--muted)}
+  .end-note{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);font-size:15px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="page-shell">
+  <aside class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#accessing-the-application">Accessing the Application</a></li>
+      <li><a href="#assigned-project-access">Assigned Project Access</a></li>
+      <li><a href="#notifications">Notifications</a></li>
+      <li><a href="#upload-and-preview-project-files">Upload and Preview Project Files</a></li>
+      <li><a href="#visualization">Visualization</a></li>
+      <li><a href="#calculation-module">Calculation Module</a></li>
+      <li><a href="#aircraft-performance-if-permitted">Aircraft Performance (if permitted)</a></li>
+      <li><a href="#minutes-of-meeting-assigned-actions">Minutes of Meeting Assigned Actions</a></li>
+      <li><a href="#technical-design-reports-as-permitted">Technical &amp; Design Reports (as permitted)</a></li>
+      <li><a href="#digital-library-as-permitted">Digital Library (as permitted)</a></li>
+      <li><a href="#procurement-budget-training-as-permitted">Procurement / Budget / Training (as permitted)</a></li>
+      <li><a href="#settings-own-password">Settings / Own Password</a></li>
+      <li><a href="#role-restrictions">Role Restrictions</a></li>
+    </ol>
+  </aside>
+
+  <main>
+    <header class="cover">
+      <img class="cover-logo" src="assets/p01-img01.png" alt="Changma Shristi blue geometric logo">
+      <h1 id="tutorial-guide">TUTORIAL GUIDE</h1>
+      <hr class="title-rule">
+      <p class="role-label">JRF / SRF / CE / STUDENT</p>
+      <p class="subtitle">Data Integration and Visualization Solution</p>
+      <p class="version">Version 1.0</p>
+      <div class="publisher">
+        <strong>CHANGMA SHRISTI</strong>
+        1st Floor, Earthen Phoenix, 10th E Cross Rd, Sanjeevappa Layout, Nagavarapalya, C V Raman Nagar,<br>
+        Bengaluru, Karnataka 560093.
+      </div>
+    </header>
+
+    <section class="role-access" aria-labelledby="role-access">
+      <h2 id="role-access">Role Access</h2>
+      <p>JRF / SRF / CE / Student access is limited to assigned or explicitly permitted project activities. This role group can view assigned projects, upload files, preview data, use analytical modules, and work on permitted records/actions, but does not manage projects or delete/edit restricted records.</p>
+      <p><strong>Guide scope:</strong> This tutorial includes only the workflows applicable to this role/group. Features outside the assigned access are intentionally omitted or marked as permission-based.</p>
+    </section>
+
+    <section aria-labelledby="accessing-the-application">
+      <h2 id="accessing-the-application"><span class="section-number">1.</span>Accessing the Application</h2>
+      <ol>
+        <li>Open the application in a supported web browser.</li>
+        <li>Enter your registered email address.</li>
+        <li>Enter your password.</li>
+        <li>Click <strong>Login</strong>.</li>
+        <li>After successful authentication, the system opens the dashboard permitted for your role.</li>
+      </ol>
+      <figure class="figure"><img src="assets/p03-img01.jpg" alt="FlightData login page"><figcaption>Login Page</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="assigned-project-access">
+      <h2 id="assigned-project-access"><span class="section-number">2.</span>Assigned Project Access</h2>
+      <h3 id="assigned-project-dashboard">Assigned Project Dashboard</h3>
+      <p>The dashboard shows projects assigned to the logged-in user. Use <strong>View Project</strong> to open the required project.</p>
+      <figure class="figure"><img src="assets/p03-img02.png" alt="Assigned project dashboard and project list"><figcaption>Dashboard / Project List</figcaption></figure>
+
+      <h3 id="open-assigned-project">Open Assigned Project</h3>
+      <ol>
+        <li>Locate a project assigned to you.</li>
+        <li>Click <strong>View Project</strong>.</li>
+        <li>Use only the modules and activities visible/permitted for your assignment.</li>
+      </ol>
+      <figure class="figure"><img src="assets/p04-img01.png" alt="Assigned project overview workspace"><figcaption>Assigned Project Overview</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="notifications">
+      <h2 id="notifications"><span class="section-number">3.</span>Notifications</h2>
+      <ul>
+        <li>Click the notification bell at the top-right of the application.</li>
+        <li>Review the notification message and timestamp.</li>
+        <li>Open or acknowledge the notification when an action is required.</li>
+        <li>Use <strong>Mark all as read</strong> when appropriate.</li>
+      </ul>
+      <figure class="figure compact"><img src="assets/p04-img02.png" alt="Notifications panel"><figcaption>Notification Panel</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="upload-and-preview-project-files">
+      <h2 id="upload-and-preview-project-files"><span class="section-number">4.</span>Upload and Preview Project Files</h2>
+      <h3 id="project-workspace-and-dataset-management">Project Workspace and Dataset Management</h3>
+      <p>Open an assigned/available project to access its datasets and project-specific modules.</p>
+      <figure class="figure"><img src="assets/p05-img01.png" alt="Project overview workspace"><figcaption>Project Overview Workspace</figcaption></figure>
+
+      <h3 id="upload-files">Upload Files</h3>
+      <p>Clicking the <strong>Upload File</strong> button opens the upload files modal.</p>
+      <p>The upload modal allows users to:</p>
+      <ul>
+        <li>Browse and select plot files.</li>
+        <li>Preview selected files (if supported).</li>
+        <li>Enter a <strong>Folder / Tag Name</strong>.</li>
+        <li>Select <strong>Data Type</strong> (e.g., CFD).</li>
+        <li>Upload selected files.</li>
+      </ul>
+      <figure class="figure"><img src="assets/p05-img02.png" alt="Upload files modal"><figcaption>Upload Files Modal</figcaption></figure>
+
+      <h3 id="upload-modal-modes">Upload Modal Modes</h3>
+      <p>The upload modal operates in two modes:</p>
+      <h4 id="create-mode">Create Mode</h4>
+      <ul>
+        <li>Upload files under a new tag.</li>
+        <li>A new folder/tag is created for the selected dataset.</li>
+      </ul>
+      <h4 id="edit-mode">Edit Mode</h4>
+      <ul>
+        <li>Rename an existing tag.</li>
+        <li>Upload additional files to an existing tag.</li>
+        <li>The existing Data Type remains fixed and cannot be changed.</li>
+      </ul>
+
+      <h3 id="file-selection">File Selection</h3>
+      <ul>
+        <li>Click <strong>Browse Plot Files</strong>.</li>
+        <li>Select one or more files from the system.</li>
+        <li>Multiple files can be selected at the same time.</li>
+        <li>After selection, the system displays:
+          <ul>
+            <li>File Name</li>
+            <li>File Type</li>
+            <li>File Size</li>
+            <li>Visualization eligibility, where applicable</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3 id="supported-file-types">Supported File Types</h3>
+      <p>File behavior depends on the format:</p>
+      <ol>
+        <li><strong>CSV / Excel / TXT / DAT / C / FIN / KUL / ODS / FUL files</strong>
+          <ul><li>Preview supported.</li><li>Can be used for visualization.</li></ul>
+        </li>
+        <li><strong>Images, Word and PDF file formats</strong>
+          <ul><li>Stored as raw files only.</li><li>Images can be previewed.</li><li>Word and PDF files cannot be previewed.</li></ul>
+        </li>
+        <li><strong>MAT files</strong>
+          <ul><li>Preview not supported in the upload modal.</li><li>Visualization supported.</li></ul>
+        </li>
+      </ol>
+      <table>
+        <thead><tr><th>Access Area</th><th>Access for This Role</th></tr></thead>
+        <tbody>
+          <tr><td>CSV / Excel / TXT / DAT / C / FIN / KUL / ODS / FUL</td><td>Preview supported; can be used for visualization.</td></tr>
+          <tr><td>Images</td><td>Image preview supported; stored as raw files.</td></tr>
+          <tr><td>Word / PDF</td><td>Stored as raw files; preview not supported.</td></tr>
+          <tr><td>MAT</td><td>Dedicated MAT handling; visualization supported.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="folder-tag-name-and-data-type">Folder / Tag Name and Data Type</h3>
+      <ul>
+        <li>The user enters a <strong>Folder / Tag Name</strong>, which groups the uploaded files.</li>
+        <li>The user selects a <strong>Data Type</strong> (CFD, Wind Data, Flight Data, Others).</li>
+        <li>In edit mode, the data type is fixed and cannot be changed.</li>
+      </ul>
+
+      <h3 id="configure-plot-file-headers">Configure Plot File Headers</h3>
+      <p>Once a tabular file is selected, the <strong>Plot File Header</strong> option appears. Users can choose how headers are handled:</p>
+      <ul>
+        <li><strong>Use headers from file</strong> - The system reads the first row as column headers.</li>
+        <li><strong>File has no headers</strong> - The system automatically generates column names such as column1, column2, etc.</li>
+        <li><strong>Provide custom headers</strong> - User manually enters comma-separated headers.</li>
+      </ul>
+      <p>When provide custom headers is selected:</p>
+      <ul>
+        <li>Enter the required headers in comma-separated format.</li>
+        <li>To apply the same headers to multiple selected files, select <strong>Apply custom headers to all files</strong>.</li>
+        <li>Continue with the file upload after verifying the header configuration.</li>
+      </ul>
+
+      <h3 id="file-specific-preview">File-specific Preview</h3>
+      <h4 id="excel-file-preview">Excel</h4>
+      <p>All sheets are listed. Switch between sheets and use the toggle to select sheets for visualization.</p>
+      <figure class="figure compact"><img src="assets/p07-img01.png" alt="Excel sheet selection preview"><figcaption>Excel Sheet Selection</figcaption></figure>
+
+      <h4 id="image-file-preview">Image files</h4>
+      <p>A visual preview of the image is displayed.</p>
+      <figure class="figure"><img src="assets/p08-img01.jpg" alt="Image file selection and preview"><figcaption>Image File Selection</figcaption></figure>
+
+      <h4 id="dat-c-text-files">DAT / C text files</h4>
+      <ul>
+        <li>The preview displays the file line-by-line with line numbers.</li>
+        <li>Total line count is shown.</li>
+        <li>The user can select <strong>start line</strong> and <strong>end line</strong>.</li>
+        <li>Only the selected range is parsed, used for data extraction, and used for plotting graphs.</li>
+        <li>Selected range is visually highlighted.</li>
+        <li>The system auto-detects headers from the first selected line.</li>
+        <li>The parsed data range is also shown as a table preview.</li>
+        <li><strong>Apply line range to multiple files</strong>
+          <ul>
+            <li>For .Dat and .C files, users can enable <strong>Apply range to all .Dat /.c files</strong>.</li>
+            <li>This applies the same start and end line selection to all similar files, ensuring consistency and reducing manual effort.</li>
+          </ul>
+        </li>
+      </ul>
+      <figure class="figure compact"><img src="assets/p09-img01.png" alt="DAT and C line range preview"><figcaption>DAT / C Line Range Preview</figcaption></figure>
+
+      <h4 id="mat-matlab-files">MAT (MATLAB) Files</h4>
+      <ul>
+        <li>The preview displays all variables available in the .mat file along with their dimensions and data types.</li>
+        <li>When a variable is selected, its data is shown in a tabular format.</li>
+        <li>Users can define a slice range to load only a specific portion of the data.</li>
+        <li>After clicking <strong>Apply</strong>, only the selected slice is displayed and processed.</li>
+        <li>The selected data is prepared for further parsing and visualization.</li>
+      </ul>
+      <figure class="figure"><img src="assets/p09-img02.jpg" alt="MAT file preview"><figcaption>MAT file preview</figcaption></figure>
+
+      <h3 id="stored-files-and-preview">Stored Files and Preview</h3>
+      <ol>
+        <li>Click <strong>Go To</strong> for the required tag/folder.</li>
+        <li>The Stored Files page displays files under that tag.</li>
+        <li>Open a supported file to view <strong>Raw Preview</strong> or <strong>Processed Preview</strong>.</li>
+      </ol>
+      <figure class="figure" id="figure-1-project-dataset-overview"><img src="assets/p10-img01.png" alt="Project dataset overview"><figcaption>Figure 1: Project Dataset Overview</figcaption></figure>
+      <p>When the user clicks the <strong>Go To</strong> button in Figure 1, the system navigates to the Stored Files page shown in Figure 2.</p>
+      <figure class="figure" id="figure-2-stored-files"><img src="assets/p10-img02.png" alt="Stored files page"><figcaption>Figure 2: Stored Files</figcaption></figure>
+
+      <h4 id="raw-preview-page">Raw Preview</h4>
+      <p>The Raw Preview page displays the data exactly as it was uploaded, without any changes.</p>
+      <figure class="figure"><img src="assets/p11-img01.png" alt="Raw preview of an uploaded data file"><figcaption>Raw Preview</figcaption></figure>
+
+      <h4 id="processed-preview">Processed Preview</h4>
+      <p>Processed Preview displays parsed data prepared for plotting. You can edit column headers and must click <strong>Save</strong> to save the changes.</p>
+      <figure class="figure"><img src="assets/p11-img02.jpg" alt="Processed preview table"><figcaption>Processed Preview (view)</figcaption></figure>
+      <div class="note"><strong>Delete restriction:</strong> Do not expect delete actions for uploaded files/records under this role/group.</div>
+
+      <h3 id="global-search">Global Search</h3>
+      <ol>
+        <li>Click <strong>Global Search</strong> at the top-right of Project Overview.</li>
+        <li>Search sections, tags, files, or visualizations.</li>
+        <li>Select a result to navigate directly to the corresponding project area.</li>
+      </ol>
+      <figure class="figure"><img src="assets/p11-img03.png" alt="Global search bar at the top of the project overview"><figcaption>Global search</figcaption></figure>
+      <figure class="figure inline-icon"><img src="assets/p11-img04.png" alt="Global search callout icon"></figure>
+      <figure class="figure"><img src="assets/p12-img01.png" alt="Global Search results panel"><figcaption>Global Search</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="visualization">
+      <h2 id="visualization"><span class="section-number">5.</span>Visualization</h2>
+      <ol class="flow" aria-label="Visualization workflow">
+        <li>Dataset</li><li>Tag / Folder</li><li>Processed File</li><li>Column Selection</li><li>Plot Type Selection</li><li>Axis Assignment</li><li>Generate Plot</li><li>Preview / Save</li>
+      </ol>
+
+      <h3 id="generate-a-plot">Generate a Plot</h3>
+      <ul>
+        <li>Open <strong>Visualize</strong> from the left navigation menu.</li>
+        <li>Select <strong>Data Project, Dataset, Tag, and File</strong>.</li>
+        <li>Select <strong>Plot Type</strong> and <strong>Chart Type</strong>.</li>
+        <li>Select <strong>X Scale</strong> and <strong>Y Scale</strong>.</li>
+        <li>Assign X-axis and Y-axis; assign Z-axis when required.</li>
+        <li>Optionally enter a <strong>Plot Name</strong>.</li>
+        <li>Click <strong>Generate Plot</strong>.</li>
+        <li>Review the interactive preview and save/manage the visualization as required.</li>
+      </ul>
+      <p><strong>X-axis and Y-axis are required for all plots. Z-axis is required for Contour and 3D plots.</strong></p>
+
+      <figure class="figure"><img src="assets/p13-img01.png" alt="Plot settings controls"><figcaption>Plot Settings</figcaption></figure>
+      <figure class="figure"><img src="assets/p13-img02.png" alt="Generated visualization preview"><figcaption>Visualization Preview</figcaption></figure>
+
+      <h3 id="cross-plotting-data-browser">Cross Plotting / Data Browser</h3>
+      <ul>
+        <li>Select <strong>Dataset, Tag, and File</strong>.</li>
+        <li>When users click the eye icon next to the X-axis or Y-axis field, a Data Browser window is opened. Scroll through row numbers, column names, and values.</li>
+        <li>Hover over a column header or row number to display selection checkboxes.</li>
+        <li>Select multiple columns or rows if required.</li>
+        <li>Use <strong>Add Selected Columns as Y</strong> or the axis dropdowns.</li>
+        <li>Use <strong>Deselect All</strong> to clear the selection.</li>
+      </ul>
+      <figure class="figure"><img src="assets/p13-img03.jpg" alt="Data browser cross plotting interface"><figcaption>Data Browser / Cross Plotting</figcaption></figure>
+
+      <h3 id="axis-scale-configuration">Axis Scale Configuration</h3>
+      <ul>
+        <li>X = Log, Y = Linear → <strong>Semi-log</strong></li>
+        <li>X = Linear, Y = Log → <strong>Semi-log</strong></li>
+        <li>X = Log, Y = Log → <strong>Log-log</strong></li>
+        <li>X = Linear, Y = Linear → <strong>Linear</strong></li>
+      </ul>
+      <p>Semi-log is produced when only one axis is logarithmic; it is not a separate scale option.</p>
+      <figure class="figure"><img src="assets/p14-img01.png" alt="Log scale selection in plot settings"><figcaption>Log Scale Selection</figcaption></figure>
+
+      <h3 id="mat-file-visualization">MAT File Visualization</h3>
+      <ol>
+        <li>Select the <strong>Dataset, MAT tag, and required .mat file</strong>.</li>
+        <li>Choose the <strong>MAT Chart Type</strong> and plot signature.</li>
+        <li>Select the required <strong>X and Y variables</strong>.</li>
+        <li>Apply slice values when only part of a large array is required.</li>
+        <li>Click <strong>Generate Plot</strong>.</li>
+        <li>Review and save the visualization if required.</li>
+      </ol>
+      <figure class="figure"><img src="assets/p14-img02.jpg" alt="MAT file plot generation screen"><figcaption>MAT File Plot Generation</figcaption></figure>
+
+      <h3 id="create-multiple-plots-over-plot">Create Multiple Plots (Over-plot)</h3>
+      <ul>
+        <li>Generate the first plot.</li>
+        <li>Click <strong>+ Over Plot</strong> button.</li>
+        <li>Select another column, file, or dataset.</li>
+        <li>Configure its plot type, axes, and scales.</li>
+        <li>Click <strong>Generate Plot</strong> again to generate the additional plot.</li>
+        <li>Use the <strong>ON/OFF</strong> toggle to show or hide individual series.</li>
+        <li>Remove a series when it is no longer required.</li>
+      </ul>
+      <figure class="figure"><img src="assets/p15-img01.png" alt="Over-plot configuration"><figcaption>Over-plot Configuration</figcaption></figure>
+      <figure class="figure"><img src="assets/p15-img02.jpg" alt="Over-plot preview"><figcaption>Over-plot Preview</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="calculation-module">
+      <h2 id="calculation-module"><span class="section-number">6.</span>Calculation Module</h2>
+      <ul>
+        <li>Select the required <strong>Data Project</strong>.</li>
+        <li>Select the <strong>Dataset</strong>.</li>
+        <li>Select the required <strong>Tag</strong>.</li>
+        <li>Select the <strong>File</strong>.</li>
+        <li>Enter a name for the <strong>Derived Column</strong>.</li>
+        <li>Enter the mathematical <strong>Formula</strong>.</li>
+        <li>Map formula variables to the corresponding dataset columns.</li>
+        <li>Review the <strong>Formula Preview</strong>.</li>
+        <li>Click <strong>Process Formula</strong> button.</li>
+        <li>Verify calculated values in Preview.</li>
+        <li>Click <strong>Save Derived Column</strong>.</li>
+        <li>Use the saved derived column for further analysis or visualization.</li>
+      </ul>
+      <figure class="figure"><img src="assets/p16-img01.png" alt="Calculation module with formula and preview"><figcaption>Calculation Module</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="aircraft-performance-if-permitted">
+      <h2 id="aircraft-performance-if-permitted"><span class="section-number">7.</span>Aircraft Performance (if permitted)</h2>
+      <h3 id="aircraft-performance-module">Aircraft Performance Module</h3>
+      <p>The Aircraft Performance Module uses available aircraft performance data to analyze operational limits, climb performance, aerodynamic characteristics, and maneuvering behavior under different flight conditions.</p>
+      <div class="note"><strong>Access note:</strong> Available only when this activity is explicitly permitted.</div>
+      <figure class="figure"><img src="assets/p16-img02.png" alt="Rate of climb versus Mach number chart"><figcaption>Rate of Climb vs Mach Number</figcaption></figure>
+      <figure class="figure"><img src="assets/p17-img01.png" alt="Aircraft turn rate performance chart"><figcaption>Aircraft Turn Rate Performance</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="minutes-of-meeting-assigned-actions">
+      <h2 id="minutes-of-meeting-assigned-actions"><span class="section-number">8.</span>Minutes of Meeting Assigned Actions</h2>
+      <h3 id="minutes-of-meeting">Minutes of Meeting</h3>
+      <p>The Minutes of Meeting module stores meeting documents and tracks associated action items.</p>
+      <ul>
+        <li>Technology Council (TCM)</li>
+        <li>PMRC</li>
+        <li>Executive Board Meeting</li>
+        <li>Group Director Meeting</li>
+      </ul>
+      <figure class="figure"><img src="assets/p17-img02.png" alt="Minutes of Meeting module"><figcaption>Minutes of Meeting</figcaption></figure>
+
+      <h3 id="work-on-assigned-actions">Work on Assigned Actions</h3>
+      <ol>
+        <li>Open the Minutes of Meeting module or the task notification.</li>
+        <li>Open the action assigned to you.</li>
+        <li>Review the meeting tag, date, and action description.</li>
+        <li>Acknowledge the task when prompted.</li>
+        <li>Update or mark the action completed only where your assigned permission allows.</li>
+      </ol>
+      <div class="note"><strong>Restriction:</strong> This role does not assign new MoM actions unless separately permitted.</div>
+    </section>
+
+    <section aria-labelledby="technical-design-reports-as-permitted">
+      <h2 id="technical-design-reports-as-permitted"><span class="section-number">9.</span>Technical &amp; Design Reports (as permitted)</h2>
+      <p>Open Technical &amp; Design Reports to access project technical, design, and other reports.</p>
+      <figure class="figure"><img src="assets/p18-img01.jpg" alt="Technical and Design Reports module"><figcaption>Technical &amp; Design Reports</figcaption></figure>
+      <ol>
+        <li>Use search or Type filters to locate records.</li>
+        <li>Open or work with reports only as permitted for your assigned project.</li>
+      </ol>
+      <div class="note"><strong>Scope:</strong> Assigned project only. Delete is not available for this role/group.</div>
+    </section>
+
+    <section aria-labelledby="digital-library-as-permitted">
+      <h2 id="digital-library-as-permitted"><span class="section-number">10.</span>Digital Library (as permitted)</h2>
+      <ol>
+        <li>Open Digital Library.</li>
+        <li>Search by file name, tags, or keywords; filter by Type or sort when required.</li>
+      </ol>
+      <ol>
+        <li>Click <strong>Upload File</strong> when permitted.</li>
+        <li>Select a PDF/Word document.</li>
+        <li>Click <strong>Upload</strong>.</li>
+      </ol>
+      <figure class="figure"><img src="assets/p18-img02.png" alt="Digital Library module"><figcaption>Digital Library</figcaption></figure>
+      <figure class="figure compact"><img src="assets/p19-img01.png" alt="Digital Library upload dialog"><figcaption>Digital Library Upload</figcaption></figure>
+      <div class="note"><strong>Scope:</strong> Assigned/permitted project content. Delete is not available for this role/group.</div>
+    </section>
+
+    <section aria-labelledby="procurement-budget-training-as-permitted">
+      <h2 id="procurement-budget-training-as-permitted"><span class="section-number">11.</span>Procurement / Budget / Training (as permitted)</h2>
+      <h3 id="procurement-budget-training-and-related-records">Procurement / Budget / Training and Related Records</h3>
+      <p>JRF / SRF / CE / Student access to Procurement, Budget, Training, and similar modules is permission-based.</p>
+      <ul>
+        <li>Open the module only when it is visible/assigned to you.</li>
+        <li>View or perform the specific activity granted to you.</li>
+        <li>Do not edit project metadata, delete records, or perform management actions unless separately permitted.</li>
+      </ul>
+      <figure class="figure"><img src="assets/p19-img02.png" alt="Training records module"><figcaption>Example: Training Records</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="settings-own-password">
+      <h2 id="settings-own-password"><span class="section-number">12.</span>Settings / Own Password</h2>
+      <ol>
+        <li>Open Settings.</li>
+        <li>Enter the <strong>Current Password</strong>.</li>
+        <li>Enter a <strong>New Password</strong>.</li>
+        <li>Re-enter the New Password.</li>
+        <li>Click <strong>Save Password</strong>.</li>
+      </ol>
+      <p><strong>Password requirement:</strong> minimum 8 characters and at least one special character.</p>
+      <figure class="figure"><img src="assets/p20-img01.png" alt="Settings reset password page"><figcaption>Settings / Reset Password</figcaption></figure>
+    </section>
+
+    <section aria-labelledby="role-restrictions">
+      <h2 id="role-restrictions"><span class="section-number">13.</span>Role Restrictions</h2>
+      <ul>
+        <li>Cannot create or manage projects.</li>
+        <li>Cannot edit project details or manage project members.</li>
+        <li>Cannot edit data/metadata unless separately permitted.</li>
+        <li>Cannot delete uploaded files or records.</li>
+        <li>Cannot assign MoM actions.</li>
+        <li>Access to Aircraft Performance, Technical Reports, Digital Library, Procurement, Budget, Training, and similar modules is permission-based.</li>
+      </ul>
+    </section>
+
+    <p class="end-note">End of tutorial guide.</p>
+  </main>
+</div>
+</body>
+</html>
